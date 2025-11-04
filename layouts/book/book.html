@@ -1,0 +1,25 @@
+{{ define "main" }}
+<link rel="stylesheet" href="/css/book.css">
+<div class="book-page-wrapper">
+    <article class="book-page book-content">
+        <div class="prose dark:prose-invert prose-lg max-w-none
+            prose-headings:text-zinc-900 dark:prose-headings:text-gray-100
+            prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:scroll-mt-24
+            prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-3
+            prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-4 prose-p:leading-relaxed
+            prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline
+            prose-ul:mb-4 prose-ul:pl-8
+            prose-ol:mb-4 prose-ol:pl-8
+            prose-li:mb-2 prose:prose-li:text-zinc-700 dark:prose-li:text-zinc-300
+            prose-blockquote:border-l-4 prose-blockquote:border-sky-600 dark:prose-blockquote:border-sky-400
+            prose-blockquote:pl-4 prose-blockquote:italic">
+            {{ .Content }}
+        </div>
+    </article>
+
+    <nav class="book-nav">
+        <ul id="book-nav-list">
+        </ul>
+    </nav>
+</div>
+{{ end }}

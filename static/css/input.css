@@ -6,6 +6,14 @@
   body {
     @apply bg-zinc-900 text-gray-100;
   }
+
+  p {
+    margin-bottom: 0.5em;
+  }
+
+  h2 {
+    @apply text-2xl font-bold mt-12 mb-6 pb-4 border-b-2 border-sky-600 dark:border-sky-400;
+  }
 }
 
 @layer components {
@@ -176,5 +184,29 @@
 
   .no-posts a {
     @apply text-sky-400;
+  }
+
+  .book-section#blurbs blockquote {
+    @apply bg-zinc-100 dark:bg-zinc-800 p-6 rounded-xl shadow-md border-l-4 border-sky-400 mb-0;
+  }
+
+  .book-section#blurbs {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .book-section#blurbs > h2 {
+    @apply col-span-full;
+  }
+
+  .book-section h2 {
+    @apply text-3xl font-bold text-zinc-900 dark:text-gray-100 mt-8 mb-6;
+  }
+
+  .format-card {
+    @apply bg-zinc-100 dark:bg-zinc-800 p-8 rounded-lg text-center;
+  }
+
+  .format-card h3 {
+    @apply mt-0 text-zinc-900 dark:text-gray-100;
   }
 }
