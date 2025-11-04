@@ -47,6 +47,54 @@
             transform: translateX(-50%);
             z-index: 10;
         }
+        .side-button-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        .side-button {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            writing-mode: vertical-lr;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: auto;
+            z-index: 5;
+        }
+        .side-button.visible {
+            opacity: 1;
+        }
+        .side-button a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 20px;
+            text-decoration: none;
+            color: transparent;
+            font-size: 0;
+        }
+        @media (min-width: 769px) {
+            .side-button {
+                display: flex;
+            }
+            .mobile-button {
+                display: none;
+            }
+            .side-button-left {
+                left: -60px;
+                transform: rotate(180deg);
+            }
+            .side-button-right {
+                right: -60px;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 flex items-center justify-center transition-colors">
@@ -59,20 +107,28 @@
         </svg>
     </button>
     <div class="w-full min-h-screen flex flex-col items-center justify-center p-5 md:p-10 gap-10">
-        <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden select-none cursor-ew-resize mx-auto">
-            <img src="/ordinary.jpeg" alt="Ordinary" class="image-base">
-            <img src="/cathedral.jpeg" alt="Cathedral" class="image-overlay-img">
-            <div class="slider">
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] md:w-[60px] md:h-[60px] bg-white rounded-full flex items-center justify-center shadow-lg cursor-ew-resize">
-                    <svg width="30" height="30" viewBox="0 0 30 30" class="pointer-events-none">
-                        <path d="M10 5 L5 15 L10 25" stroke="#333" stroke-width="3" fill="none"/>
-                        <path d="M20 5 L25 15 L20 25" stroke="#333" stroke-width="3" fill="none"/>
-                    </svg>
+        <div class="side-button-wrapper">
+            <div class="side-button side-button-left" data-enter-button="left">
+                <a href="/open-inquiry/">Enter Site</a>
+            </div>
+            <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden select-none cursor-ew-resize mx-auto">
+                <img src="/ordinary.jpeg" alt="Ordinary" class="image-base">
+                <img src="/cathedral.jpeg" alt="Cathedral" class="image-overlay-img">
+                <div class="slider">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] md:w-[60px] md:h-[60px] bg-white rounded-full flex items-center justify-center shadow-lg cursor-ew-resize">
+                        <svg width="30" height="30" viewBox="0 0 30 30" class="pointer-events-none">
+                            <path d="M10 5 L5 15 L10 25" stroke="#333" stroke-width="3" fill="none"/>
+                            <path d="M20 5 L25 15 L20 25" stroke="#333" stroke-width="3" fill="none"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
+            <div class="side-button side-button-right" data-enter-button="right">
+                <a href="/open-inquiry/">Enter Site</a>
+            </div>
         </div>
-        <div class="w-full flex items-center justify-center py-5">
-            <a href="/open-inquiry/" class="inline-block px-12 md:px-16 py-5 md:py-6 text-xl md:text-3xl font-semibold text-zinc-900 dark:text-zinc-900 bg-gray-100 dark:bg-gray-100 no-underline rounded-xl transition-all duration-300 shadow-lg hover:bg-white dark:hover:bg-white hover:-translate-y-1 hover:shadow-2xl active:-translate-y-0.5 uppercase tracking-wider">Enter Site</a>
+        <div class="w-full flex items-center justify-center py-5 mobile-button">
+            <a href="/open-inquiry/" class="inline-block px-12 md:px-16 py-5 md:py-6 text-xl md:text-3xl font-semibold text-zinc-900 bg-gray-100 no-underline rounded-xl transition-all duration-300 shadow-lg hover:bg-white hover:-translate-y-1 hover:shadow-2xl active:-translate-y-0.5 uppercase tracking-wider">Enter Site</a>
         </div>
     </div>
     <script type="module" src="/js/main.js"></script>

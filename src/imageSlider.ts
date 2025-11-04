@@ -5,8 +5,9 @@ class ImageSlider {
   private baseImg: HTMLImageElement;
   private overlayImg: HTMLImageElement;
   private isDragging = false;
+  private onManipulated?: () => void;
 
-  constructor(containerId: string) {
+  constructor(containerId: string, onManipulated?: () => void) {
     const container = document.querySelector(containerId);
     if (!container) throw new Error(`Container ${containerId} not found`);
 
@@ -15,6 +16,7 @@ class ImageSlider {
     this.slider = this.container.querySelector('.slider')!;
     this.baseImg = this.container.querySelector('.image-base')!;
     this.overlayImg = this.container.querySelector('.image-overlay-img')!;
+    this.onManipulated = onManipulated;
 
     this.syncImageSizes();
     this.attachEventListeners();
@@ -44,12 +46,14 @@ class ImageSlider {
     this.container.addEventListener('click', (e) => {
       if (e.target === this.slider || this.slider.contains(e.target as Node)) return;
       this.updatePosition(e.clientX);
+      this.onManipulated?.();
     });
   }
 
   private startDragging(): void {
     this.isDragging = true;
     this.container.style.cursor = 'ew-resize';
+    this.onManipulated?.();
   }
 
   private stopDragging(): void {
