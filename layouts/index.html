@@ -92,6 +92,13 @@
         .dark .side-button a:hover {
             color: #fff;
         }
+        .mobile-button {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .mobile-button.visible {
+            opacity: 1;
+        }
         @media (min-width: 769px) {
             .side-button {
                 display: flex;
