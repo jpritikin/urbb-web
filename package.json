@@ -1,0 +1,18 @@
+{
+  "name": "urbb-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run watch:ts\" \"hugo server -D\"",
+    "watch:ts": "tsc --watch",
+    "build:ts": "tsc",
+    "build": "npm run build:ts && hugo --minify",
+    "start": "hugo server",
+    "deploy": "npm run build && wrangler pages deploy public"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.78.0"
+  }
+}

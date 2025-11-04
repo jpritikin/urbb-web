@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-comparison">
+            <div class="image-wrapper">
+                <img src="/ordinary.jpeg" alt="Ordinary" class="image-left">
+                <div class="image-overlay">
+                    <img src="/cathedral.jpeg" alt="Cathedral" class="image-right">
+                </div>
+            </div>
+            <div class="slider">
+                <div class="slider-button">
+                    <svg width="30" height="30" viewBox="0 0 30 30">
+                        <path d="M10 5 L5 15 L10 25" stroke="white" stroke-width="3" fill="none"/>
+                        <path d="M20 5 L25 15 L20 25" stroke="white" stroke-width="3" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>

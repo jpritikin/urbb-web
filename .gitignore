@@ -1,0 +1,8 @@
+node_modules/
+public/
+.hugo_build.lock
+*.log
+.DS_Store
+static/js/*.js
+static/js/*.d.ts
+static/js/*.js.map
