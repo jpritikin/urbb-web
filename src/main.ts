@@ -1,10 +1,12 @@
 import ImageSlider from './imageSlider.js';
+import ButtonVisibilityManager from './buttonVisibility.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize image slider on homepage
   const imageComparison = document.querySelector('.image-comparison');
   if (imageComparison) {
-    new ImageSlider('.image-comparison');
+    const buttonManager = new ButtonVisibilityManager();
+    new ImageSlider('.image-comparison', () => buttonManager.onSliderManipulated());
   }
 
   // Mobile navigation toggle
