@@ -44,9 +44,3 @@ Domain: unburdened.biz
 - TypeScript configured for strict mode with DOM types
 - Use `import/export` syntax for modules
 - HTML templates load JS with `<script type="module">`
-
-### Cloudflare Pages Deployment
-- Automatic deployment via GitHub integration
-- Build command: `npm run build` (compiles TS + builds Hugo)
-- Build output directory: `public/`
-- Deploys automatically on push to main branch
