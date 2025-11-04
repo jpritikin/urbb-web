@@ -77,8 +77,21 @@
             height: 100%;
             padding: 0 20px;
             text-decoration: none;
-            color: transparent;
-            font-size: 0;
+            color: #333;
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: color 0.3s ease;
+        }
+        .dark .side-button a {
+            color: #e5e5e5;
+        }
+        .side-button a:hover {
+            color: #666;
+        }
+        .dark .side-button a:hover {
+            color: #fff;
         }
         @media (min-width: 769px) {
             .side-button {
@@ -93,6 +106,11 @@
             }
             .side-button-right {
                 right: -60px;
+            }
+        }
+        @media (max-width: 768px) {
+            .mobile-button.visible {
+                display: flex;
             }
         }
     </style>
