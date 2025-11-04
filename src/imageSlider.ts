@@ -2,6 +2,8 @@ class ImageSlider {
   private container: HTMLElement;
   private overlay: HTMLElement;
   private slider: HTMLElement;
+  private baseImg: HTMLImageElement;
+  private overlayImg: HTMLImageElement;
   private isDragging = false;
 
   constructor(containerId: string) {
@@ -11,8 +13,20 @@ class ImageSlider {
     this.container = container as HTMLElement;
     this.overlay = this.container.querySelector('.image-overlay')!;
     this.slider = this.container.querySelector('.slider')!;
+    this.baseImg = this.container.querySelector('.image-base')!;
+    this.overlayImg = this.container.querySelector('.image-overlay-img')!;
 
+    this.syncImageSizes();
     this.attachEventListeners();
+
+    window.addEventListener('resize', () => this.syncImageSizes());
+    this.baseImg.addEventListener('load', () => this.syncImageSizes());
+  }
+
+  private syncImageSizes(): void {
+    const rect = this.baseImg.getBoundingClientRect();
+    this.overlayImg.style.width = `${rect.width}px`;
+    this.overlayImg.style.height = `${rect.height}px`;
   }
 
   private attachEventListeners(): void {
@@ -52,12 +66,20 @@ class ImageSlider {
   }
 
   private updatePosition(clientX: number): void {
-    const rect = this.container.getBoundingClientRect();
-    let position = ((clientX - rect.left) / rect.width) * 100;
+    const imgRect = this.baseImg.getBoundingClientRect();
+    const containerRect = this.container.getBoundingClientRect();
+
+    let position = ((clientX - imgRect.left) / imgRect.width) * 100;
     position = Math.max(0, Math.min(100, position));
 
-    this.overlay.style.width = `${position}%`;
-    this.slider.style.left = `${position}%`;
+    const clipRight = 100 - position;
+    this.overlayImg.style.clipPath = `inset(0 ${clipRight}% 0 0)`;
+
+    const imgLeftOffset = ((imgRect.left - containerRect.left) / containerRect.width) * 100;
+    const imgWidthPercent = (imgRect.width / containerRect.width) * 100;
+    const sliderPosition = imgLeftOffset + (position * imgWidthPercent / 100);
+
+    this.slider.style.left = `${sliderPosition}%`;
   }
 }
 
