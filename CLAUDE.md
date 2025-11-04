@@ -23,6 +23,4 @@ be able to switch between light and dark mode.
 - `npm run build:ts` - Compile TypeScript only
 - `hugo --minify` - Build Hugo site with minified output
 
-### Deployment
-- Deploys automatically via Cloudflare Pages GitHub integration on push to main
-- Manual deploy: push changes to GitHub, Cloudflare Pages builds automatically
+Dev branch https://dev.urbb-web.pages.dev/

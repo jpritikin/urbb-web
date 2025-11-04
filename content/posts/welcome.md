@@ -36,8 +36,7 @@ We're building a community of curious explorers who are willing to question thei
 
 If you're new here, we recommend starting with:
 
-1. [The Way of Open Inquiry](/open-inquiry/) - Understand the philosophical foundation
+1. [The Book](/book/) - Explore the full journey
 2. [Internal Family Systems](/ifs/) - Learn about the IFS model
-3. [The Book](/book/) - Explore the full journey
 
 We're glad you're here. Let's explore together.
