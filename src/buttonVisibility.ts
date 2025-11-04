@@ -1,11 +1,13 @@
 class ButtonVisibilityManager {
   private buttons: NodeListOf<HTMLElement>;
+  private mobileButton: HTMLElement | null;
   private timeoutId: number | null = null;
   private isVisible = false;
   private sliderManipulated = false;
 
   constructor() {
     this.buttons = document.querySelectorAll('[data-enter-button]');
+    this.mobileButton = document.querySelector('.mobile-button');
     this.startTimer();
   }
 
@@ -31,7 +33,10 @@ class ButtonVisibilityManager {
       button.classList.add('visible');
     });
 
-    // Clear the timeout if it hasn't fired yet
+    if (this.mobileButton) {
+      this.mobileButton.classList.add('visible');
+    }
+
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
