@@ -1,5 +1,6 @@
 import ImageSlider from './imageSlider.js';
 import ButtonVisibilityManager from './buttonVisibility.js';
+import { initBookNav } from './bookNav.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize image slider on homepage
@@ -7,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (imageComparison) {
     const buttonManager = new ButtonVisibilityManager();
     new ImageSlider('.image-comparison', () => buttonManager.onSliderManipulated());
+  }
+
+  // Initialize book navigation
+  if (document.querySelector('.book-content')) {
+    initBookNav();
   }
 
   // Dark/Light mode toggle

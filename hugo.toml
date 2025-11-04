@@ -1,3 +1,8 @@
 baseURL = 'https://unburdened.biz/'
 languageCode = 'en-us'
 title = 'Unburdened'
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
