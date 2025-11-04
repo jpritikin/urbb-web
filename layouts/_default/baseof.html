@@ -13,7 +13,11 @@
 <body class="min-h-screen flex flex-col overflow-auto bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
     <nav class="bg-green-900 dark:bg-green-950 py-4 sticky top-0 z-50 shadow-lg">
         <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
-            <a href="/" class="text-2xl font-bold text-gray-100 dark:text-gray-100 no-underline tracking-wide">Unburdened</a>
+            <button id="nav-toggle" class="md:hidden flex flex-col bg-transparent border-0 cursor-pointer p-2" aria-label="Toggle navigation">
+                <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
+                <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
+                <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
+            </button>
             <div class="flex items-center gap-4">
                 <ul class="nav-menu hidden md:flex list-none gap-8 m-0">
                     <li><a href="/book/" class="text-gray-100 dark:text-gray-100 no-underline font-medium transition-colors hover:text-white">Book</a></li>
@@ -30,11 +34,6 @@
                     <svg class="w-6 h-6 text-gray-100 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
-                </button>
-                <button id="nav-toggle" class="md:hidden flex flex-col bg-transparent border-0 cursor-pointer p-2" aria-label="Toggle navigation">
-                    <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
-                    <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
-                    <span class="w-6 h-0.5 bg-gray-100 dark:bg-gray-100 my-0.5 transition-all duration-300"></span>
                 </button>
             </div>
         </div>
