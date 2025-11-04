@@ -45,8 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileMenu = document.getElementById('mobile-menu');
 
   if (navToggle && mobileMenu) {
-    navToggle.addEventListener('click', () => {
+    navToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
       mobileMenu.classList.toggle('hidden');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.classList.contains('hidden') &&
+          !mobileMenu.contains(e.target as Node) &&
+          e.target !== navToggle) {
+        mobileMenu.classList.add('hidden');
+      }
     });
 
     // Close menu when clicking a link
