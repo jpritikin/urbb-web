@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <!-- Snipcart -->
+    <link rel="preconnect" href="https://app.snipcart.com">
+    <link rel="preconnect" href="https://cdn.snipcart.com">
+    <link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.css" />
+</head>
+<body class="page-body">
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Unburdened</a>
+            <button class="nav-toggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-menu">
+                <li><a href="/open-inquiry/">Open Inquiry</a></li>
+                <li><a href="/ifs/">Internal Family Systems</a></li>
+                <li><a href="/book/">Book</a></li>
+                <li><a href="/games/">Games</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="/news/">News</a></li>
+                <li><a href="/shop/">Shop</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="page-content">
+        {{ block "main" . }}{{ end }}
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-content">
+            <p>&copy; {{ now.Year }} Unburdened. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="/contact/">Contact</a>
+                <a href="/news/">News</a>
+                <a href="/shop/">Shop</a>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="/js/main.js"></script>
+    <!-- Snipcart -->
+    <script async src="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.js"></script>
+    <div hidden id="snipcart" data-api-key="YOUR_PUBLIC_API_KEY"></div>
+</body>
+</html>

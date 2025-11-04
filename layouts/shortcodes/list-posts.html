@@ -1,0 +1,20 @@
+{{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ if $posts }}
+<div class="posts-list">
+    {{ range first 10 (sort $posts "Date" "desc") }}
+    <article class="post-preview">
+        <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+        <time class="post-date">{{ .Date.Format "January 2, 2006" }}</time>
+        {{ if .Summary }}
+        <p class="post-summary">{{ .Summary }}</p>
+        {{ end }}
+        <a href="{{ .RelPermalink }}" class="read-more">Read more →</a>
+    </article>
+    {{ end }}
+</div>
+{{ else }}
+<div class="no-posts">
+    <p>No posts yet. Check back soon for updates!</p>
+    <p>In the meantime, explore <a href="/open-inquiry/">Open Inquiry</a> or learn about <a href="/ifs/">Internal Family Systems</a>.</p>
+</div>
+{{ end }}
