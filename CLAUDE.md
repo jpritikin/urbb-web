@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Hugo static website project with TypeScript, deployed to Cloudflare Pages.
 
-Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors
+Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme
 
 Site must work perfectly on various screen sizes (desktop and mobile). Site must
 be able to switch between light and dark mode.
