@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Hugo static website project with TypeScript, deployed to Cloudflare Pages. The site will eventually include a web shop.
+This is a Hugo static website project with TypeScript, deployed to Cloudflare Pages.
 
-Domain: unburdened.biz
+Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors
 
 ## Common Commands
 
@@ -23,24 +23,3 @@ Domain: unburdened.biz
 ### Deployment
 - Deploys automatically via Cloudflare Pages GitHub integration on push to main
 - Manual deploy: push changes to GitHub, Cloudflare Pages builds automatically
-
-### Content Management
-- `hugo new posts/my-post.md` - Create a new post
-
-## Architecture
-
-### Directory Structure
-- `src/` - TypeScript source files (compiled to static/js/)
-- `layouts/` - HTML templates for rendering content
-- `static/` - Static assets (images, CSS, compiled JS)
-- `static/css/` - CSS stylesheets
-- `static/js/` - Compiled JavaScript (git-ignored)
-- `content/` - Markdown content files
-- `public/` - Generated site output (git-ignored)
-- `hugo.toml` - Site configuration
-
-### TypeScript Setup
-- Source files in `src/` compile to ES2020 modules in `static/js/`
-- TypeScript configured for strict mode with DOM types
-- Use `import/export` syntax for modules
-- HTML templates load JS with `<script type="module">`
