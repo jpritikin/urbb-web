@@ -1,12 +1,20 @@
 {{ define "main" }}
-<article class="single-page">
-    <header class="page-header">
-        <h1>{{ .Title }}</h1>
+<article class="bg-zinc-800 p-12 rounded-xl shadow-lg">
+    <header class="mb-8 pb-6 border-b-2 border-zinc-700">
+        <h1 class="text-4xl mb-2 text-gray-100">{{ .Title }}</h1>
         {{ if .Params.subtitle }}
-        <p class="subtitle">{{ .Params.subtitle }}</p>
+        <p class="text-xl text-zinc-400 italic">{{ .Params.subtitle }}</p>
         {{ end }}
     </header>
-    <div class="page-body-content">
+    <div class="prose prose-invert prose-lg max-w-none
+        prose-headings:text-gray-100
+        prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-4
+        prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-3
+        prose-p:text-zinc-300 prose-p:mb-4 prose-p:leading-relaxed
+        prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline
+        prose-ul:mb-4 prose-ul:pl-8
+        prose-ol:mb-4 prose-ol:pl-8
+        prose-li:mb-2 prose-li:text-zinc-300">
         {{ .Content }}
     </div>
 </article>

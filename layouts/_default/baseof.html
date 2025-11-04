@@ -4,45 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ if .Title }}{{ .Title }} - {{ end }}{{ .Site.Title }}</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/output.css">
     <!-- Snipcart -->
     <link rel="preconnect" href="https://app.snipcart.com">
     <link rel="preconnect" href="https://cdn.snipcart.com">
     <link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.css" />
 </head>
-<body class="page-body">
-    <nav class="main-nav">
-        <div class="nav-container">
-            <a href="/" class="nav-logo">Unburdened</a>
-            <button class="nav-toggle" aria-label="Toggle navigation">
-                <span></span>
-                <span></span>
-                <span></span>
+<body class="min-h-screen flex flex-col overflow-auto">
+    <nav class="bg-zinc-800 py-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold text-gray-100 no-underline tracking-wide">Unburdened</a>
+            <button class="nav-toggle hidden flex-col bg-transparent border-0 cursor-pointer p-2 md:hidden" aria-label="Toggle navigation">
+                <span class="w-6 h-0.5 bg-gray-100 my-0.5 transition-all duration-300"></span>
+                <span class="w-6 h-0.5 bg-gray-100 my-0.5 transition-all duration-300"></span>
+                <span class="w-6 h-0.5 bg-gray-100 my-0.5 transition-all duration-300"></span>
             </button>
-            <ul class="nav-menu">
-                <li><a href="/open-inquiry/">Open Inquiry</a></li>
-                <li><a href="/ifs/">Internal Family Systems</a></li>
-                <li><a href="/book/">Book</a></li>
-                <li><a href="/games/">Games</a></li>
-                <li><a href="/contact/">Contact</a></li>
-                <li><a href="/news/">News</a></li>
-                <li><a href="/shop/">Shop</a></li>
+            <ul class="nav-menu flex list-none gap-8 m-0 md:hidden md:absolute md:top-full md:left-0 md:right-0 md:bg-zinc-800 md:flex-col md:p-4 md:gap-4 md:shadow-lg">
+                <li><a href="/open-inquiry/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Open Inquiry</a></li>
+                <li><a href="/ifs/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Internal Family Systems</a></li>
+                <li><a href="/book/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Book</a></li>
+                <li><a href="/games/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Games</a></li>
+                <li><a href="/contact/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Contact</a></li>
+                <li><a href="/news/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">News</a></li>
+                <li><a href="/shop/" class="text-gray-100 no-underline font-medium transition-colors hover:text-white">Shop</a></li>
             </ul>
         </div>
     </nav>
 
-    <main class="page-content">
+    <main class="flex-1 max-w-7xl mx-auto py-12 px-8 w-full">
         {{ block "main" . }}{{ end }}
     </main>
 
-    <footer class="main-footer">
-        <div class="footer-content">
-            <p>&copy; {{ now.Year }} Unburdened. All rights reserved.</p>
-            <div class="footer-links">
-                <a href="/contact/">Contact</a>
-                <a href="/news/">News</a>
-                <a href="/shop/">Shop</a>
+    <footer class="bg-zinc-800 py-8 mt-16 border-t border-zinc-700">
+        <div class="max-w-7xl mx-auto px-8 flex justify-between items-center flex-col md:flex-row gap-4 md:gap-0 text-center md:text-left">
+            <p class="text-zinc-400 m-0">&copy; {{ now.Year }} Unburdened. All rights reserved.</p>
+            <div class="flex gap-8">
+                <a href="/contact/" class="text-zinc-400 no-underline transition-colors hover:text-gray-100">Contact</a>
+                <a href="/news/" class="text-zinc-400 no-underline transition-colors hover:text-gray-100">News</a>
+                <a href="/shop/" class="text-zinc-400 no-underline transition-colors hover:text-gray-100">Shop</a>
             </div>
         </div>
     </footer>

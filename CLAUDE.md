@@ -8,6 +8,9 @@ This is a Hugo static website project with TypeScript, deployed to Cloudflare Pa
 
 Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors
 
+Site must work perfectly on various screen sizes (desktop and mobile). Site must
+be able to switch between light and dark mode.
+
 ## Common Commands
 
 ### Development
