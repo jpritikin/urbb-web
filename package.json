@@ -7,12 +7,10 @@
     "watch:ts": "tsc --watch",
     "build:ts": "tsc",
     "build": "npm run build:ts && hugo --minify",
-    "start": "hugo server",
-    "deploy": "npm run build && wrangler pages deploy public"
+    "start": "hugo server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "typescript": "^5.7.3",
-    "wrangler": "^4.45.4"
+    "typescript": "^5.7.3"
   }
 }

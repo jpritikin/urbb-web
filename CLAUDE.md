@@ -21,8 +21,8 @@ Domain: unburdened.biz
 - `hugo --minify` - Build Hugo site with minified output
 
 ### Deployment
-- `npm run deploy` - Build and deploy to Cloudflare Pages
-- `wrangler pages deploy public` - Deploy pre-built site to Cloudflare
+- Deploys automatically via Cloudflare Pages GitHub integration on push to main
+- Manual deploy: push changes to GitHub, Cloudflare Pages builds automatically
 
 ### Content Management
 - `hugo new posts/my-post.md` - Create a new post
@@ -46,7 +46,7 @@ Domain: unburdened.biz
 - HTML templates load JS with `<script type="module">`
 
 ### Cloudflare Pages Deployment
-- Deploys from `public/` directory after build
-- Uses Wrangler CLI for deployment
-- Site is configured in `wrangler.toml`
+- Automatic deployment via GitHub integration
 - Build command: `npm run build` (compiles TS + builds Hugo)
+- Build output directory: `public/`
+- Deploys automatically on push to main branch
