@@ -1,69 +1,20 @@
 ---
 title: "Contact"
-subtitle: "Connect with the Unburdened Community"
+subtitle: "Interested in an Advanced Review Copy?"
 ---
 
-## Stay Updated
+## Stay Connected
 
-Sign up to receive updates about the book release, upcoming events, and new content.
+Sign up to receive updates about this book release and indicate your interest in becoming an Advanced Reader.
 
-<form class="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-    <input type="hidden" name="form-name" value="contact" />
-    <p hidden>
-        <label>Don't fill this out: <input name="bot-field" /></label>
-    </p>
+<div data-tf-live="01JTED9XC8FEK8E778MAH3E8TJ"></div>
+<script src="//embed.typeform.com/next/embed.js"></script>
 
-    <div class="form-group">
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" required />
-    </div>
+### Why Become an Advanced Reader?
 
-    <div class="form-group">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email" required />
-    </div>
+**Early Access** - ARC readers get the book weeks before release
 
-    <div class="form-group">
-        <label>
-            <input type="checkbox" name="advanced-reader" value="yes" />
-            I'm interested in becoming an Advanced Reader
-        </label>
-        <p style="margin-top: 0.5rem; color: #b5b5b5; font-size: 0.9rem;">
-            Advanced Readers receive an early copy of the book and provide feedback before the official release.
-        </p>
-    </div>
+**Share Feedback** - Help improve the final version
 
-    <div class="form-group">
-        <label>
-            <input type="checkbox" name="newsletter" value="yes" checked />
-            Send me updates about the book release
-        </label>
-    </div>
+**Stay Informed** - Be the first to know when the book launches
 
-    <div class="form-group">
-        <label for="message">Message (Optional)</label>
-        <textarea id="message" name="message" placeholder="Tell us about your interest in Open Inquiry or IFS..."></textarea>
-    </div>
-
-    <button type="submit" class="submit-button">Submit</button>
-</form>
-
-## Questions?
-
-Have questions about the book, workshops, or speaking engagements? Send us a message using the form above, and we'll get back to you as soon as possible.
-
-## Follow Us
-
-Stay connected through our social channels:
-
-- **Twitter/X**: [@unburdened](https://twitter.com/unburdened) (coming soon)
-- **Instagram**: [@unburdened.way](https://instagram.com/unburdened.way) (coming soon)
-- **Newsletter**: Sign up above to receive our monthly newsletter
-
-## Workshops & Speaking
-
-Interested in hosting a workshop or inviting us to speak at your event? Please reach out through the contact form with details about your event, location, and preferred dates.
-
----
-
-*Thank you for your interest in The Way of Open Inquiry!*

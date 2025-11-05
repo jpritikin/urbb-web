@@ -24,3 +24,5 @@ be able to switch between light and dark mode.
 - `hugo --minify` - Build Hugo site with minified output
 
 Dev branch https://dev.urbb-web.pages.dev/
+
+Contact form needs to redirect to https://unburdened.biz/book/download/
