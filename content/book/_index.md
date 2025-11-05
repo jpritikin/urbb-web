@@ -49,18 +49,19 @@ Examining your beliefs—especially cherished religious ones—requires courage 
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
-    <p>Beautiful cloth-bound edition with dust jacket, flip book animation, epigraph Easter eggs</p>
+    <p>Cloth-bound with dust jacket. Features a mesmerizing flip-book animation in the
+  margins and hidden epigraphs waiting to be discovered.</p>
     <a href="https://amazon.com" class="order-button">Order Hardcover</a>
   </div>
   <div class="format-card">
     <h3>🎧 Audiobook</h3>
-    <p>Read by the author including sung hymns, unambridged main text but omits sidebars and footnotes</p>
-    <p><em>Perfect for your commute</em></p>
+    <p>Experience the full text read by the author—including hymns sung as intended.
+  Sidebars and footnotes excluded to preserve the listening journey.</p>
     <a href="https://audible.com" class="order-button">Order Audiobook</a>
   </div>
   <div class="format-card">
     <h3>📱 Ebook</h3>
-    <p>Available in EPUB format, full color figures, instant delivery</p>
+    <p>Instant delivery. Includes full-color illustrations throughout.</p>
     <a href="https://amazon.com" class="order-button">Order Ebook</a>
   </div>
 </div>
