@@ -1,6 +1,6 @@
 ---
-title: "Unburdened: The Book"
-subtitle: "A Journey Through Open Inquiry and Internal Liberation"
+title: "Religion Unburdened by Belief:"
+subtitle: "The Way of Open Inquiry"
 layout: book
 ---
 
@@ -49,47 +49,31 @@ Examining your beliefs—especially cherished religious ones—requires courage 
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
-    <p>Beautiful cloth-bound edition with dust jacket, gilt edges, and ribbon bookmark</p>
-    <p class="price">$45.00</p>
-    <p><em>Limited first printing</em></p>
-    <button class="order-button snipcart-add-item"
-        data-item-id="book-hardcover-collectors"
-        data-item-price="45.00"
-        data-item-url="/book/"
-        data-item-description="Collector's Edition Hardcover of Unburdened"
-        data-item-name="Unburdened - Collector's Hardcover">
-        Order Collector's Edition
-    </button>
+    <p>Beautiful cloth-bound edition with dust jacket, flip book animation, epigraph Easter eggs</p>
+    <a href="https://amazon.com" class="order-button">Order Hardcover</a>
   </div>
   <div class="format-card">
     <h3>🎧 Audiobook</h3>
-    <p>Professionally narrated, 12 hours of immersive listening</p>
-    <p class="price">$19.99</p>
+    <p>Read by the author including sung hymns, unambridged main text but omits sidebars and footnotes</p>
     <p><em>Perfect for your commute</em></p>
     <a href="https://audible.com" class="order-button">Order Audiobook</a>
   </div>
   <div class="format-card">
     <h3>📱 Ebook</h3>
-    <p>Available in EPUB and PDF formats, instant delivery</p>
-    <p class="price">$14.99</p>
-    <p><em>Read on any device</em></p>
-    <button class="order-button snipcart-add-item"
-        data-item-id="book-ebook"
-        data-item-price="14.99"
-        data-item-url="/book/"
-        data-item-description="Digital edition of Unburdened"
-        data-item-name="Unburdened - Ebook"
-        data-item-file-guid="unburdened-ebook">
-        Order Ebook
-    </button>
+    <p>Available in EPUB format, full color figures, instant delivery</p>
+    <a href="https://amazon.com" class="order-button">Order Ebook</a>
   </div>
 </div>
 
 ## Bonus Material: The Way of Open Inquiry
 
-What would an ideal mystery-embracing religion look like? Consider a hypothetical religion, _The Way of Open Inquiry_. We present this as a theoretical sketch that likely misses important ingredients. It shows how our framework could work in practice.
+_The Way of Open Inquiry_ is a thought experiment—a sketch of what religion might look like if it fully embraced mystery.
 
-**Complete this short interest form and receive a PDF download exploring this thought experiment.**
+Instead of being built around fixed beliefs about God, the afterlife, or cosmic truth, this hypothetical religion centers on the practice of questioning itself. Members gather not to affirm shared doctrines, but to explore unanswerable questions together: What is consciousness? What lies beyond death? How should we live?
+
+This isn't presented as a fully-formed tradition ready for adoption. Rather, it's a thought experiment designed to support access to transformative experience.
+
+**Complete this short interest form and receive a PDF download of this thought experiment.**
 
 <div data-tf-live="01JTED9XC8FEK8E778MAH3E8TJ"></div>
 <script src="//embed.typeform.com/next/embed.js"></script>
