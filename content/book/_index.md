@@ -8,29 +8,29 @@ layout: book
 
 <div class="blurbs-grid">
 
-> "Stealing Fire is a beautifully written, must-read for anyone interested in living up to their full potential. Kotler and Wheal have produced a user-manual for your hacking your brain to drive high performance."
+> "This book changed my life! I used to be burdened, but now I'm completely unburdened. It's like magic, but better!"
 >
-> — **Peter Diamandis**
+> — **Dr. Firstname Lastname**, Professor of Obviousness Studies at Generic University
 
-> "Stealing Fire cracks the secret code of peak performance so that ordinary people can achieve extraordinary results."
+> "I've read every book ever written, and this is definitely one of them. Possibly even the best one I've read this week!"
 >
-> — **Cdr. Mark Divine**
+> — **Definitely Real Person**, Totally Legitimate Book Reviewer
 
-> "Meticulously researched and innovatively conceptualized, Stealing Fire is not just a bible for the second psychedelic revolution (drugs not required), but a manual to getting more: out of your body, your mind, and your happiness."
+> "Before reading this book, I was carrying around seventeen metaphorical burdens. Now I only have three! That's a reduction of 82.35%!"
 >
-> — **Neil Strauss**
+> — **Count VonNumbers McStatistics**, Chief Mathematician at Made-Up Institute
 
-> "Stealing Fire is a fantastic book about the future of humanity and everything that we can become. Based on incredible stories and cutting edge data, it reveals how our brain and body can be optimized to its greatest potential."
+> "As a famous celebrity who definitely exists, I can say this book is absolutely tremendous. Believe me, nobody knows books like I do."
 >
-> — **Andrew Newberg**
+> — **Celebrity Name**, Award-Winning Actor/Actress/Astronaut
 
-> "The North Star we've been waiting for -- finally a distillation of the upper reaches of the human experience unveiled!"
+> "I haven't actually read the book yet, but the cover is very shiny and I assume the contents are equally reflective."
 >
-> — **Jason Silva**
+> — **Professor Hasty McReview**, Distinguished Chair of Premature Conclusions
 
-> "Stealing Fire lays out exactly how to hack the brain—it's an inflection point in our understanding of the human condition."
+> "This book cured my existential dread, fixed my Wi-Fi connection, and taught my cat to play the piano. Results may vary."
 >
-> — **Salim Ismail**
+> — **Anonymous T. Internet**, Verified Purchase (Trust Me)
 
 </div>
 
