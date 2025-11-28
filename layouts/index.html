@@ -35,6 +35,28 @@
             object-fit: contain;
             clip-path: inset(0 50% 0 0);
         }
+        .image-comparison {
+            outline: 6px dotted rgba(128, 128, 128, 0.2);
+            outline-offset: 4px;
+            transition: outline-color 0.5s ease;
+        }
+        .image-comparison.audio-playing {
+            outline-color: rgba(255, 215, 0, 0.8);
+            animation: pulseBorder 5s ease-in-out infinite;
+        }
+        .dark .image-comparison.audio-playing {
+            outline-color: rgba(255, 215, 0, 0.9);
+        }
+        @keyframes pulseBorder {
+            0%, 100% {
+                outline-width: 3px;
+                outline-offset: 2px;
+            }
+            50% {
+                outline-width: 6px;
+                outline-offset: 4px;
+            }
+        }
         .slider {
             position: absolute;
             top: 0;
@@ -138,6 +160,9 @@
             <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden select-none cursor-ew-resize mx-auto">
                 <img src="/ordinary.jpeg" alt="Ordinary" class="image-base">
                 <img src="/cathedral.jpeg" alt="Cathedral" class="image-overlay-img">
+                <audio id="cathedral-audio" loop preload="auto">
+                    <source src="/sentado-no-trono.mp3" type="audio/mpeg">
+                </audio>
                 <div class="slider">
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] md:w-[60px] md:h-[60px] bg-white rounded-full flex items-center justify-center shadow-lg">
                         <svg width="30" height="30" viewBox="0 0 30 30" class="pointer-events-none">
