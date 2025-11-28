@@ -14,6 +14,7 @@ class ImageSlider {
     private holdStartTime: number | null = null;
     private holdTimer: number | null = null;
     private clipBase: boolean;
+    private audio: HTMLAudioElement | null = null;
 
     constructor(containerId: string, onManipulated?: () => void) {
         const container = document.querySelector(containerId);
@@ -26,6 +27,7 @@ class ImageSlider {
         this.sliderSvg = this.sliderButton.querySelector('svg')!;
         this.baseImg = this.container.querySelector('.image-base')!;
         this.overlayImg = this.container.querySelector('.image-overlay-img')!;
+        this.audio = document.getElementById('cathedral-audio') as HTMLAudioElement;
         this.onManipulated = onManipulated;
 
         // 10% chance to start in vertical mode, 90% horizontal
@@ -40,12 +42,39 @@ class ImageSlider {
 
         window.addEventListener('resize', () => this.syncImageSizes());
         this.baseImg.addEventListener('load', () => this.syncImageSizes());
+
+        if (this.audio) {
+            this.audio.volume = 0;
+            this.updateAudioVolume(50);
+        }
     }
 
     private syncImageSizes(): void {
         const rect = this.baseImg.getBoundingClientRect();
         this.overlayImg.style.width = `${rect.width}px`;
         this.overlayImg.style.height = `${rect.height}px`;
+    }
+
+    private updateAudioVolume(cathedralPercentage: number): void {
+        if (!this.audio) return;
+
+        if (cathedralPercentage < 90) {
+            this.audio.volume = 0;
+            if (!this.audio.paused) {
+                this.audio.pause();
+                this.audio.currentTime = 0;
+                this.container.classList.remove('audio-playing');
+            }
+        } else {
+            const fadeRange = 100 - 90;
+            const fadeProgress = (cathedralPercentage - 90) / fadeRange;
+            this.audio.volume = fadeProgress;
+
+            if (this.audio.paused) {
+                this.audio.play().catch(err => console.log('Audio play failed:', err));
+                this.container.classList.add('audio-playing');
+            }
+        }
     }
 
     private applyModeStyles(): void {
@@ -141,12 +170,15 @@ class ImageSlider {
             let position = ((clientX - imgRect.left) / imgRect.width) * 100;
             position = Math.max(0, Math.min(100, position));
 
+            let cathedralPercentage: number;
             if (this.clipBase) {
                 const clipLeft = position;
                 this.overlayImg.style.clipPath = `inset(0 0 0 ${clipLeft}%)`;
+                cathedralPercentage = 100 - position;
             } else {
                 const clipRight = 100 - position;
                 this.overlayImg.style.clipPath = `inset(0 ${clipRight}% 0 0)`;
+                cathedralPercentage = position;
             }
 
             const imgLeftOffset = ((imgRect.left - containerRect.left) / containerRect.width) * 100;
@@ -154,17 +186,21 @@ class ImageSlider {
             const sliderPosition = imgLeftOffset + (position * imgWidthPercent / 100);
 
             this.slider.style.left = `${sliderPosition}%`;
+            this.updateAudioVolume(cathedralPercentage);
         } else {
             // Vertical mode
             let position = ((clientY - imgRect.top) / imgRect.height) * 100;
             position = Math.max(0, Math.min(100, position));
 
+            let cathedralPercentage: number;
             if (this.clipBase) {
                 const clipTop = position;
                 this.overlayImg.style.clipPath = `inset(${clipTop}% 0 0 0)`;
+                cathedralPercentage = 100 - position;
             } else {
                 const clipBottom = 100 - position;
                 this.overlayImg.style.clipPath = `inset(0 0 ${clipBottom}% 0)`;
+                cathedralPercentage = position;
             }
 
             const imgTopOffset = ((imgRect.top - containerRect.top) / containerRect.height) * 100;
@@ -172,6 +208,7 @@ class ImageSlider {
             const sliderPosition = imgTopOffset + (position * imgHeightPercent / 100);
 
             this.slider.style.top = `${sliderPosition}%`;
+            this.updateAudioVolume(cathedralPercentage);
         }
     }
 }
