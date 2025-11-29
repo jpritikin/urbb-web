@@ -1,0 +1,710 @@
+class AnimatronicSalmon {
+    private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
+    private mouthState: number = 0;
+    private tailPosition: number = 0;
+    private animationFrame: number | null = null;
+    private isPlaying: boolean = false;
+    private glitchOffset: { x: number; y: number } = { x: 0, y: 0 };
+    private glitchIntensity: number = 0;
+    private transitionTimer: number = 0;
+    private nextTransitionTime: number = 0;
+    private nextTailTransition: number = 0;
+    private headOpen: boolean = false;
+    private cassetteInTransit: boolean = false;
+    private cassettePosition: { x: number; y: number } = { x: 0, y: 0 };
+    private cassetteColor: string = '#333333';
+    private cassetteTargetPosition: { x: number; y: number } | null = null;
+    private cassetteVelocity: { x: number; y: number } = { x: 0, y: 0 };
+
+    constructor(canvasId: string) {
+        this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+        if (!this.canvas) {
+            throw new Error(`Canvas with id "${canvasId}" not found`);
+        }
+        this.ctx = this.canvas.getContext('2d')!;
+        this.setupCanvas();
+        this.drawSalmon();
+    }
+
+    private setupCanvas(): void {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();
+
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+
+        this.ctx.scale(dpr, dpr);
+        this.canvas.style.width = `${rect.width}px`;
+        this.canvas.style.height = `${rect.height}px`;
+    }
+
+    private drawSalmon(): void {
+        const width = this.canvas.width / (window.devicePixelRatio || 1);
+        const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+        this.ctx.clearRect(0, 0, width, height);
+
+        this.ctx.save();
+
+        const scale = 1.2;
+        this.ctx.translate(width / 2, height / 2);
+        this.ctx.scale(scale, scale);
+        this.ctx.translate(-width / 2, -height / 2);
+
+        const centerX = width / 2 + this.glitchOffset.x;
+        const centerY = height / 2 + this.glitchOffset.y;
+        const bodyLength = width * 0.5;
+        const bodyHeight = height * 0.35;
+
+        // Body (realistic salmon shape using bezier curves)
+        const bodyGradient = this.ctx.createLinearGradient(
+            centerX - bodyLength / 2,
+            centerY,
+            centerX + bodyLength / 2,
+            centerY
+        );
+        bodyGradient.addColorStop(0, '#c4816b');
+        bodyGradient.addColorStop(0.3, '#d98f7a');
+        bodyGradient.addColorStop(0.6, '#e8a590');
+        bodyGradient.addColorStop(1, '#d98f7a');
+
+        this.ctx.fillStyle = bodyGradient;
+        this.ctx.beginPath();
+
+        // Draw body with proper salmon silhouette
+        const headX = centerX + bodyLength * 0.35;
+        const tailX = centerX - bodyLength * 0.45;
+
+        this.ctx.moveTo(headX, centerY);
+        // Top of body
+        this.ctx.bezierCurveTo(
+            headX - bodyLength * 0.1, centerY - bodyHeight * 0.6,
+            centerX, centerY - bodyHeight * 0.5,
+            tailX, centerY - bodyHeight * 0.2
+        );
+        // Tail connection
+        this.ctx.lineTo(tailX, centerY + bodyHeight * 0.2);
+        // Bottom of body
+        this.ctx.bezierCurveTo(
+            centerX, centerY + bodyHeight * 0.5,
+            headX - bodyLength * 0.1, centerY + bodyHeight * 0.6,
+            headX, centerY
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Belly highlight
+        this.ctx.fillStyle = 'rgba(255, 220, 200, 0.4)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(
+            centerX + bodyLength * 0.1,
+            centerY + bodyHeight * 0.15,
+            bodyLength * 0.25,
+            bodyHeight * 0.25,
+            0,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+
+        // Spots
+        this.ctx.fillStyle = 'rgba(100, 60, 50, 0.3)';
+        const spots = [
+            { x: centerX - bodyLength * 0.1, y: centerY - bodyHeight * 0.2, r: 4 },
+            { x: centerX + bodyLength * 0.05, y: centerY - bodyHeight * 0.25, r: 3 },
+            { x: centerX - bodyLength * 0.2, y: centerY - bodyHeight * 0.15, r: 3.5 },
+            { x: centerX + bodyLength * 0.15, y: centerY - bodyHeight * 0.3, r: 2.5 },
+        ];
+        spots.forEach(spot => {
+            this.ctx.beginPath();
+            this.ctx.arc(spot.x, spot.y, spot.r, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+
+        // Tail (animated with discrete positions)
+        const tailBaseX = tailX;
+        const tailBaseY = centerY;
+        const tailTipX = tailBaseX - 50;
+        const tailPositions = [-25, -10, 0, 10, 25];
+        const tailSwing = tailPositions[this.tailPosition];
+
+        this.ctx.fillStyle = '#c4816b';
+        this.ctx.beginPath();
+        this.ctx.moveTo(tailBaseX, tailBaseY - bodyHeight * 0.2);
+        this.ctx.quadraticCurveTo(
+            tailTipX + 15, tailBaseY - 35 + tailSwing,
+            tailTipX, tailBaseY - 40 + tailSwing
+        );
+        this.ctx.lineTo(tailTipX + 10, tailBaseY + tailSwing);
+        this.ctx.quadraticCurveTo(
+            tailTipX + 15, tailBaseY + 35 + tailSwing,
+            tailBaseX, tailBaseY + bodyHeight * 0.2
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Dorsal fin
+        this.ctx.fillStyle = '#b57562';
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - bodyLength * 0.05, centerY - bodyHeight * 0.5);
+        this.ctx.lineTo(centerX, centerY - bodyHeight * 0.7);
+        this.ctx.lineTo(centerX + bodyLength * 0.1, centerY - bodyHeight * 0.5);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Pectoral fin
+        this.ctx.fillStyle = 'rgba(181, 117, 98, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(
+            centerX + bodyLength * 0.15,
+            centerY + bodyHeight * 0.3,
+            15,
+            8,
+            -0.5,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+
+        // Eye
+        const eyeX = centerX + bodyLength * 0.28;
+        const eyeY = centerY - bodyHeight * 0.25;
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(eyeX, eyeY, 10, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#000000';
+        this.ctx.beginPath();
+        this.ctx.arc(eyeX + 1, eyeY, 6, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Highlight in eye
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(eyeX + 2, eyeY - 2, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Mouth (animated - wide opening)
+        const mouthX = centerX + bodyLength * 0.35;
+        const mouthY = centerY;
+        const mouthOpen = this.mouthState * 45;
+
+        // Open mouth cavity (when open)
+        if (this.mouthState > 0.3) {
+            this.ctx.save();
+            this.ctx.fillStyle = '#2b1810';
+            this.ctx.beginPath();
+            this.ctx.ellipse(
+                mouthX + 5,
+                mouthY,
+                12,
+                mouthOpen / 2,
+                0,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+            this.ctx.restore();
+        }
+
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 3;
+        this.ctx.lineCap = 'round';
+
+        // Upper jaw
+        this.ctx.beginPath();
+        this.ctx.moveTo(mouthX - 8, mouthY - mouthOpen / 2 - 3);
+        this.ctx.lineTo(mouthX + 20, mouthY - mouthOpen / 2);
+        this.ctx.stroke();
+
+        // Lower jaw
+        this.ctx.beginPath();
+        this.ctx.moveTo(mouthX - 8, mouthY + mouthOpen / 2 + 3);
+        this.ctx.lineTo(mouthX + 20, mouthY + mouthOpen / 2);
+        this.ctx.stroke();
+
+        // Mechanical servo indicators
+        if (this.isPlaying) {
+            this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([3, 3]);
+
+            // Mouth servo
+            this.ctx.beginPath();
+            this.ctx.arc(mouthX - 10, mouthY, 4, 0, Math.PI * 2);
+            this.ctx.stroke();
+
+            // Tail servo
+            this.ctx.beginPath();
+            this.ctx.arc(tailBaseX, tailBaseY, 4, 0, Math.PI * 2);
+            this.ctx.stroke();
+
+            this.ctx.setLineDash([]);
+        }
+
+
+        // Glitchy outline effect
+        if (this.glitchIntensity > 0.3) {
+            this.ctx.strokeStyle = `rgba(0, 255, 255, ${this.glitchIntensity * 0.4})`;
+            this.ctx.lineWidth = 1.5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(headX - bodyLength * 0.1 + Math.random() * 3, centerY - bodyHeight * 0.6);
+            this.ctx.bezierCurveTo(
+                headX - bodyLength * 0.1, centerY - bodyHeight * 0.6,
+                centerX, centerY - bodyHeight * 0.5,
+                tailX, centerY - bodyHeight * 0.2
+            );
+            this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+    }
+
+    public startPlaying(): void {
+        this.isPlaying = true;
+        this.scheduleNextTransition();
+        this.scheduleNextTailTransition();
+        if (!this.animationFrame) {
+            this.animate();
+        }
+    }
+
+    private scheduleNextTailTransition(): void {
+        this.nextTailTransition = this.transitionTimer + Math.random() * 200 + 150;
+    }
+
+    public stopPlaying(): void {
+        this.isPlaying = false;
+        this.mouthState = 0;
+        this.tailPosition = 2;
+        this.glitchIntensity = 0;
+        this.glitchOffset = { x: 0, y: 0 };
+    }
+
+    private scheduleNextTransition(): void {
+        this.nextTransitionTime = this.transitionTimer + Math.random() * 1000 + 500;
+    }
+
+    private pickRandomMouthState(): void {
+        const states = [0, 0.3, 0.6, 1];
+        this.mouthState = states[Math.floor(Math.random() * states.length)];
+        this.scheduleNextTransition();
+    }
+
+    private animate = (): void => {
+        if (this.isPlaying) {
+            this.transitionTimer += 16;
+
+            if (this.transitionTimer >= this.nextTransitionTime) {
+                this.pickRandomMouthState();
+                this.glitchIntensity = Math.random();
+                this.glitchOffset = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6
+                };
+            }
+
+            if (this.transitionTimer >= this.nextTailTransition) {
+                this.tailPosition = Math.floor(Math.random() * 5);
+                this.scheduleNextTailTransition();
+            }
+        } else {
+            this.glitchOffset.x *= 0.9;
+            this.glitchOffset.y *= 0.9;
+            this.glitchIntensity *= 0.9;
+        }
+
+        if (this.cassetteInTransit && this.cassetteTargetPosition) {
+            this.cassettePosition.x += this.cassetteVelocity.x;
+            this.cassettePosition.y += this.cassetteVelocity.y;
+
+            const dx = this.cassetteTargetPosition.x - this.cassettePosition.x;
+            const dy = this.cassetteTargetPosition.y - this.cassettePosition.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 5) {
+                this.cassetteInTransit = false;
+                this.cassetteTargetPosition = null;
+            }
+        }
+
+        this.drawSalmon();
+
+        if (this.isPlaying || this.headOpen || this.cassetteInTransit) {
+            this.animationFrame = requestAnimationFrame(this.animate);
+        } else {
+            this.animationFrame = null;
+        }
+    };
+
+    public async openHeadAndEjectCassette(targetElement: HTMLElement): Promise<void> {
+        this.headOpen = true;
+        if (!this.animationFrame) {
+            this.animate();
+        }
+
+        this.mouthState = 0.6;
+        await this.sleep(200);
+        this.mouthState = 1;
+        await this.sleep(300);
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+
+        const startX = canvasRect.left + canvasRect.width * 0.7;
+        const startY = canvasRect.top + canvasRect.height * 0.5;
+        const endX = targetRect.left + targetRect.width * 0.5;
+        const endY = targetRect.top + targetRect.height * 0.5;
+
+        this.startCassetteTransit(startX, startY, endX, endY);
+
+        await this.waitForCassetteTransit();
+        await this.sleep(100);
+
+        this.mouthState = 0.6;
+        await this.sleep(200);
+        this.mouthState = 0;
+        await this.sleep(100);
+
+        this.headOpen = false;
+    }
+
+    public async insertCassetteAndCloseHead(color: string, sourceElement: HTMLElement): Promise<void> {
+        this.cassetteColor = color;
+        this.headOpen = true;
+        if (!this.animationFrame) {
+            this.animate();
+        }
+
+        this.mouthState = 0.6;
+        await this.sleep(200);
+        this.mouthState = 1;
+        await this.sleep(300);
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const sourceRect = sourceElement.getBoundingClientRect();
+
+        const startX = sourceRect.left + sourceRect.width * 0.5;
+        const startY = sourceRect.top + sourceRect.height * 0.5;
+        const endX = canvasRect.left + canvasRect.width * 0.7;
+        const endY = canvasRect.top + canvasRect.height * 0.5;
+
+        this.startCassetteTransit(startX, startY, endX, endY);
+
+        await this.waitForCassetteTransit();
+        await this.sleep(100);
+
+        this.mouthState = 0.6;
+        await this.sleep(200);
+        this.mouthState = 0;
+        await this.sleep(100);
+
+        this.headOpen = false;
+    }
+
+    private startCassetteTransit(startX: number, startY: number, endX: number, endY: number): void {
+        this.cassettePosition = { x: startX, y: startY };
+        this.cassetteTargetPosition = { x: endX, y: endY };
+
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const speed = 6;
+
+        this.cassetteVelocity = {
+            x: (dx / distance) * speed,
+            y: (dy / distance) * speed
+        };
+
+        this.cassetteInTransit = true;
+    }
+
+    private async waitForCassetteTransit(): Promise<void> {
+        while (this.cassetteInTransit) {
+            await this.sleep(16);
+        }
+    }
+
+    public drawCassette(ctx: CanvasRenderingContext2D): void {
+        if (!this.cassetteInTransit) return;
+
+        const scale = 1.2;
+        const width = 40 * scale;
+        const height = 25 * scale;
+
+        ctx.save();
+        ctx.fillStyle = this.cassetteColor;
+        ctx.fillRect(this.cassettePosition.x - width / 2, this.cassettePosition.y - height / 2, width, height);
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(this.cassettePosition.x - width / 2, this.cassettePosition.y - height / 2, width, height);
+
+        const wheelRadius = 6 * scale;
+        const wheelOffset = 12 * scale;
+
+        ctx.fillStyle = '#666666';
+        ctx.beginPath();
+        ctx.arc(this.cassettePosition.x - wheelOffset, this.cassettePosition.y, wheelRadius, 0, Math.PI * 2);
+        ctx.arc(this.cassettePosition.x + wheelOffset, this.cassettePosition.y, wheelRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#222222';
+        ctx.beginPath();
+        ctx.arc(this.cassettePosition.x - wheelOffset, this.cassettePosition.y, wheelRadius / 2, 0, Math.PI * 2);
+        ctx.arc(this.cassettePosition.x + wheelOffset, this.cassettePosition.y, wheelRadius / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
+// Cassette player controller
+class CassettePlayer {
+    private audio: HTMLAudioElement;
+    private source: HTMLSourceElement;
+    private salmon: AnimatronicSalmon;
+    private currentHymn: string | null = null;
+    private unlockedHymns: Set<string>;
+    private clickSequence: number[] = [];
+
+    constructor(salmon: AnimatronicSalmon) {
+        this.salmon = salmon;
+        this.audio = document.getElementById('hymn-audio') as HTMLAudioElement;
+        this.source = document.getElementById('hymn-source') as HTMLSourceElement;
+
+        const saved = localStorage.getItem('unlockedHymns');
+        this.unlockedHymns = saved ? new Set(JSON.parse(saved)) : new Set(['examine-a-consciencia', 'eu-nao-sou-deus', 'sentado-no-trono', 'brilho-do-sol']);
+
+        this.initializeUI();
+        this.setupEventListeners();
+    }
+
+    private initializeUI(): void {
+        document.querySelectorAll('.hymn-item').forEach(item => {
+            const hymnId = item.getAttribute('data-hymn');
+            if (hymnId && this.unlockedHymns.has(hymnId)) {
+                item.classList.remove('locked');
+                item.classList.add('unlocked');
+                const lockIcon = item.querySelector('.hymn-lock');
+                if (lockIcon) lockIcon.remove();
+            }
+        });
+    }
+
+    private setupEventListeners(): void {
+        document.querySelectorAll('.hymn-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const hymnId = item.getAttribute('data-hymn');
+                const hymnTitle = item.getAttribute('data-title');
+                const isLocked = item.classList.contains('locked');
+
+                this.clickSequence.push(parseInt(item.querySelector('.hymn-number')?.textContent || '0'));
+                if (this.clickSequence.length > 4) this.clickSequence.shift();
+                this.checkUnlockSequence();
+
+                if (isLocked) {
+                    this.showLockedMessage(item as HTMLElement);
+                } else if (hymnId && hymnTitle) {
+                    this.loadCassette(hymnId, hymnTitle, item as HTMLElement);
+                }
+            });
+        });
+
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        playPauseBtn?.addEventListener('click', () => this.togglePlayPause());
+
+        const loopBtn = document.getElementById('loop-btn');
+        loopBtn?.addEventListener('click', () => this.toggleLoop());
+
+        this.audio.addEventListener('play', () => {
+            this.salmon.startPlaying();
+            if (playPauseBtn) playPauseBtn.textContent = '⏸';
+        });
+
+        this.audio.addEventListener('pause', () => {
+            this.salmon.stopPlaying();
+            if (playPauseBtn) playPauseBtn.textContent = '▶';
+        });
+
+        this.audio.addEventListener('ended', () => {
+            this.salmon.stopPlaying();
+            if (!this.audio.loop && playPauseBtn) playPauseBtn.textContent = '▶';
+        });
+    }
+
+    private checkUnlockSequence(): void {
+        // Sneaky unlock: click hymns in order of their numbers (26, 84, 108, 115) or (26, 108, 115, 152)
+        const sequence1 = [26, 84, 108, 115];
+        const sequence2 = [26, 108, 115, 152];
+
+        if (this.arraysEqual(this.clickSequence, sequence1) || this.arraysEqual(this.clickSequence, sequence2)) {
+            this.unlockAllHymns();
+        }
+    }
+
+    private arraysEqual(a: number[], b: number[]): boolean {
+        return a.length === b.length && a.every((val, idx) => val === b[idx]);
+    }
+
+    private unlockAllHymns(): void {
+        document.querySelectorAll('.hymn-item.locked').forEach(item => {
+            const hymnId = item.getAttribute('data-hymn');
+            if (hymnId) {
+                this.unlockedHymns.add(hymnId);
+                item.classList.remove('locked');
+                item.classList.add('unlocked');
+                const lockIcon = item.querySelector('.hymn-lock');
+                if (lockIcon) lockIcon.remove();
+            }
+        });
+
+        localStorage.setItem('unlockedHymns', JSON.stringify([...this.unlockedHymns]));
+    }
+
+    private showLockedMessage(item: HTMLElement): void {
+        item.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            item.style.animation = '';
+        }, 500);
+    }
+
+    private async loadCassette(hymnId: string, hymnTitle: string, hymnElement: HTMLElement): Promise<void> {
+        const cassetteColors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
+        ];
+        const randomColor = cassetteColors[Math.floor(Math.random() * cassetteColors.length)];
+
+        if (this.currentHymn) {
+            const currentElement = document.querySelector(`[data-title="${this.currentHymn}"]`) as HTMLElement;
+            if (currentElement) {
+                await this.salmon.openHeadAndEjectCassette(currentElement);
+            }
+        }
+
+        await this.salmon.insertCassetteAndCloseHead(randomColor, hymnElement);
+
+        this.currentHymn = hymnTitle;
+        this.source.src = `/audio/${hymnId}.mp3`;
+        this.audio.load();
+
+        document.getElementById('current-hymn-display')!.textContent = hymnTitle;
+        (document.getElementById('play-pause-btn') as HTMLButtonElement).disabled = false;
+    }
+
+    private togglePlayPause(): void {
+        if (this.audio.paused) {
+            this.audio.play();
+        } else {
+            this.audio.pause();
+        }
+    }
+
+    private toggleLoop(): void {
+        this.audio.loop = !this.audio.loop;
+        const loopBtn = document.getElementById('loop-btn');
+        if (loopBtn) {
+            if (this.audio.loop) {
+                loopBtn.classList.add('active');
+                loopBtn.title = 'Loop enabled';
+            } else {
+                loopBtn.classList.remove('active');
+                loopBtn.title = 'Loop disabled';
+            }
+        }
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
+// Load bibliography data
+async function loadBibliography(): Promise<void> {
+    try {
+        const response = await fetch('/data/bibliography.json');
+        const entries = await response.json();
+
+        const container = document.getElementById('bibliography-container');
+        if (!container) return;
+
+        container.innerHTML = entries
+            .map((entry: { id: string; citation: string }) => {
+                return `<div class="bib-entry" id="bib-${entry.id}">
+          <div class="bib-citation">${entry.citation}</div>
+        </div>`;
+            })
+            .join('');
+    } catch (error) {
+        console.error('Failed to load bibliography:', error);
+        const container = document.getElementById('bibliography-container');
+        if (container) {
+            container.innerHTML = '<p style="color: red;">Failed to load bibliography data.</p>';
+        }
+    }
+}
+
+// Global cassette overlay
+class CassetteOverlay {
+    private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
+    private salmon: AnimatronicSalmon | null = null;
+
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
+        this.canvas.style.pointerEvents = 'none';
+        this.canvas.style.zIndex = '9999';
+        document.body.appendChild(this.canvas);
+
+        this.ctx = this.canvas.getContext('2d')!;
+        this.setupCanvas();
+        this.animate();
+
+        window.addEventListener('resize', () => this.setupCanvas());
+    }
+
+    private setupCanvas(): void {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    setSalmon(salmon: AnimatronicSalmon): void {
+        this.salmon = salmon;
+    }
+
+    private animate = (): void => {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (this.salmon) {
+            this.salmon.drawCassette(this.ctx);
+        }
+
+        requestAnimationFrame(this.animate);
+    };
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const overlay = new CassetteOverlay();
+        const salmon = new AnimatronicSalmon('salmon-canvas');
+        overlay.setSalmon(salmon);
+        const player = new CassettePlayer(salmon);
+        loadBibliography();
+    } catch (error) {
+        console.error('Failed to initialize:', error);
+    }
+});
