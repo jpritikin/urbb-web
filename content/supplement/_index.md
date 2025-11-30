@@ -1,5 +1,6 @@
 ---
 title: "Online Supplement"
+version: "v1.0.0"
 ---
 
 <link rel="stylesheet" href="/css/supplement.css">

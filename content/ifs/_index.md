@@ -1,5 +1,6 @@
 ---
 title: "Internal Family Systems"
+version: "v1.0.0"
 ---
 
 <link rel="stylesheet" href="/css/ifs.css">

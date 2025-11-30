@@ -1,5 +1,6 @@
 type SliderMode = 'horizontal' | 'vertical';
 
+
 class ImageSlider {
     private container: HTMLElement;
     private overlay: HTMLElement;
@@ -15,8 +16,14 @@ class ImageSlider {
     private holdTimer: number | null = null;
     private clipBase: boolean;
     private audio: HTMLAudioElement | null = null;
+    private audioStarted = false;
+    private audioUnlockPrompt: HTMLButtonElement | null = null;
+    private lastCathedralPercentage = 0;
 
     constructor(containerId: string, onManipulated?: () => void) {
+        const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
+        console.log('[ImageSlider] Page version:', pageVersion);
+
         const container = document.querySelector(containerId);
         if (!container) throw new Error(`Container ${containerId} not found`);
 
@@ -44,9 +51,86 @@ class ImageSlider {
         this.baseImg.addEventListener('load', () => this.syncImageSizes());
 
         if (this.audio) {
-            this.audio.volume = 0;
-            this.updateAudioVolume(50);
+            this.createAudioUnlockPrompt();
         }
+    }
+
+    private createAudioUnlockPrompt(): void {
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (!isMobile) {
+            // On desktop, mark as ready (will start when slider reaches 90%)
+            this.audioStarted = true;
+            return;
+        }
+
+        // Create speaker button (mobile only)
+        this.audioUnlockPrompt = document.createElement('button');
+        this.audioUnlockPrompt.setAttribute('aria-label', 'Enable audio');
+        this.audioUnlockPrompt.style.cssText = 'position:fixed;top:1rem;left:1rem;width:3rem;height:3rem;border-radius:0.5rem;background:rgb(228 228 231);border:none;cursor:pointer;z-index:50;display:flex;align-items:center;justify-content:center;transition:background 0.3s;opacity:0.5;';
+
+        // Muted speaker icon SVG (with X)
+        this.audioUnlockPrompt.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="rgb(161 161 170)" viewBox="0 0 24 24" style="width:1.5rem;height:1.5rem;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+        </svg>`;
+
+        // Add to body
+        document.body.appendChild(this.audioUnlockPrompt);
+
+        // Add dark mode support
+        const htmlElement = document.documentElement;
+        const updateColors = () => {
+            if (htmlElement.classList.contains('dark')) {
+                this.audioUnlockPrompt!.style.background = 'rgb(63 63 70)';
+                const svg = this.audioUnlockPrompt!.querySelector('svg');
+                if (svg) svg.setAttribute('stroke', 'rgb(113 113 122)');
+            } else {
+                this.audioUnlockPrompt!.style.background = 'rgb(228 228 231)';
+                const svg = this.audioUnlockPrompt!.querySelector('svg');
+                if (svg) svg.setAttribute('stroke', 'rgb(161 161 170)');
+            }
+        };
+        updateColors();
+
+        const observer = new MutationObserver(updateColors);
+        observer.observe(htmlElement, { attributes: true, attributeFilter: ['class'] });
+
+        this.audioUnlockPrompt.addEventListener('click', () => {
+            console.log('[AudioUnlock] User tapped speaker button');
+            if (this.audio) {
+                this.audio.volume = 0;
+                this.audio.play().then(() => {
+                    console.log('[AudioUnlock] Audio started successfully');
+                    this.audioStarted = true;
+                    if (this.audioUnlockPrompt) {
+                        this.audioUnlockPrompt.remove();
+                        this.audioUnlockPrompt = null;
+                    }
+                    observer.disconnect();
+
+                    // Immediately update volume based on current slider position
+                    console.log('[AudioUnlock] Updating volume for current position:', this.lastCathedralPercentage);
+                    this.updateAudioVolume(this.lastCathedralPercentage);
+                }).catch(err => {
+                    console.log('[AudioUnlock] Failed:', err.message);
+                });
+            }
+        });
+    }
+
+    private requestAudioAttention(): void {
+        if (!this.audioUnlockPrompt || this.audioStarted) return;
+
+        // Add blinking animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes audio-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+            }
+        `;
+        document.head.appendChild(style);
+        this.audioUnlockPrompt.style.animation = 'audio-blink 1s ease-in-out infinite';
     }
 
     private syncImageSizes(): void {
@@ -55,25 +139,46 @@ class ImageSlider {
         this.overlayImg.style.height = `${rect.height}px`;
     }
 
+
     private updateAudioVolume(cathedralPercentage: number): void {
-        if (!this.audio) return;
+        if (!this.audio) {
+            console.log('[updateAudioVolume] No audio element');
+            return;
+        }
+
+        // Store the current percentage for later use
+        this.lastCathedralPercentage = cathedralPercentage;
+
+        // If user wants audio but it's not started yet, blink the button
+        if (!this.audioStarted && cathedralPercentage >= 90) {
+            console.log('[updateAudioVolume] Audio needed but not started, requesting attention');
+            this.requestAudioAttention();
+            return;
+        }
+
+        if (!this.audioStarted) {
+            console.log('[updateAudioVolume] Audio not started yet, percentage:', cathedralPercentage);
+            return;
+        }
+
+        console.log('[updateAudioVolume] percentage:', cathedralPercentage);
 
         if (cathedralPercentage < 90) {
-            this.audio.volume = 0;
             if (!this.audio.paused) {
                 this.audio.pause();
-                this.audio.currentTime = 0;
-                this.container.classList.remove('audio-playing');
             }
+            this.container.classList.remove('audio-playing');
         } else {
             const fadeRange = 100 - 90;
             const fadeProgress = (cathedralPercentage - 90) / fadeRange;
             this.audio.volume = fadeProgress;
 
             if (this.audio.paused) {
-                this.audio.play().catch(err => console.log('Audio play failed:', err));
-                this.container.classList.add('audio-playing');
+                this.audio.play().catch(err => console.log('[updateAudioVolume] Play failed:', err.message));
             }
+
+            console.log('[updateAudioVolume] Set volume to:', fadeProgress, 'paused:', this.audio.paused);
+            this.container.classList.add('audio-playing');
         }
     }
 
@@ -124,6 +229,7 @@ class ImageSlider {
     }
 
     private startDragging(): void {
+        console.log('[startDragging] Called');
         this.isDragging = true;
         const cursor = this.mode === 'horizontal' ? 'ew-resize' : 'ns-resize';
         this.container.style.cursor = cursor;

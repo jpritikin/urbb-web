@@ -1,6 +1,7 @@
 ---
 title: "Gallery"
 subtitle: "Moments with Luminaries"
+version: "v1.0.0"
 ---
 
 ## A Life Among the Influential

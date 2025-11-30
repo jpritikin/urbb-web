@@ -1,6 +1,7 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
+version: "v1.0.0"
 ---
 
 ## Welcome to the Unburdened Shop

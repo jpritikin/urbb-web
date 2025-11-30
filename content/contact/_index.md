@@ -1,6 +1,7 @@
 ---
 title: "Contact"
 subtitle: "Let's Co-Create Connection ✨"
+version: "v1.0.0"
 ---
 
 ## Interested in an Advanced Review Copy? 📚✨
