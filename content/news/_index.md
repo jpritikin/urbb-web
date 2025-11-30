@@ -1,6 +1,7 @@
 ---
 title: "News & Updates"
 subtitle: "Latest from the Unburdened Community"
+version: "v1.0.0"
 ---
 
 ## Recent Posts

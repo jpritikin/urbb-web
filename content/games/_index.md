@@ -1,6 +1,7 @@
 ---
 title: "Games"
 subtitle: "Playful Exploration of Key Concepts"
+version: "v1.0.0"
 ---
 
 ## Word Search: Open Inquiry & IFS

@@ -1,5 +1,7 @@
 ## Common Commands
 
+https://chenhuijing.com/blog/debugging-firefox-on-android/
+
 ### Development
 - `npm run dev` - Start TypeScript compiler in watch mode + Hugo dev server
 - `npm start` - Start Hugo dev server only (requires pre-built TypeScript)

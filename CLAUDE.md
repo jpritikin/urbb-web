@@ -24,7 +24,7 @@ This dual nature - simultaneously useful and self-parodying - should inform the 
 
 ## Development Workflow
 
-The user typically has `npm run dev` running, which automatically watches and rebuilds TypeScript and CSS changes. **Do not run `npm run build` manually** unless the dev server is not running.
+Ask whether the user wants you to run `npm run dev` in the background and monitor its output for errors.
 
 ## Code Organization
 
@@ -32,6 +32,24 @@ Segregate page-specific details from site-wide styles and layouts. Information s
 - Page-specific CSS goes in separate files (e.g., `gallery.css`, `book.css`)
 - Section-specific layouts go in `layouts/{section}/` directories
 - Site-wide styles remain in global CSS files
+
+## Page Versioning Scheme
+
+Each page has a version number to help track testing status and know when testing procedures need updating.
+
+**How it works:**
+1. Add `version: "v1.0.0"` to the frontmatter of markdown content files (e.g., `content/gallery/_index.md`)
+2. For pages without markdown (like homepage), add `<meta name="page-version" content="v1.0.0">` directly in the layout
+3. Hugo's `baseof.html` automatically injects the version from frontmatter: `{{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}`
+4. TypeScript code reads the version: `document.querySelector('meta[name="page-version"]')?.getAttribute('content')`
+5. Log the version to console so testers can verify which version they're testing
+
+**When to increment versions:**
+- Major changes to page functionality or layout: bump major version (v1.0.0 → v2.0.0)
+- Minor feature additions or behavior changes: bump minor version (v1.0.0 → v1.1.0)
+- Bug fixes or small tweaks: bump patch version (v1.0.0 → v1.0.1)
+
+Update the corresponding test file (e.g., `test-mobile.md`) when the page version changes significantly.
 
 ## Website Style Guidelines
 
