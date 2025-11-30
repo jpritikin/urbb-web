@@ -13,6 +13,8 @@ Style: glitzy New Age influencer, but decorated with faux janky styling/coding e
 Site must work perfectly on various screen sizes (desktop and mobile). Site must
 be able to switch between light and dark mode.
 
+I should use webp image format instead of png or jpeg. Remind me if I add the wrong format.
+
 ## Glitchy and Playful Design Approach
 
 - Probabilistic behavior: UI elements have random chances (10-25%) to behave differently on each page load or interaction, making the experience unique each time
