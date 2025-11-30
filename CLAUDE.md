@@ -26,9 +26,16 @@ This dual nature - simultaneously useful and self-parodying - should inform the 
 
 The user typically has `npm run dev` running, which automatically watches and rebuilds TypeScript and CSS changes. **Do not run `npm run build` manually** unless the dev server is not running.
 
+## Code Organization
+
+Segregate page-specific details from site-wide styles and layouts. Information should have the smallest possible scope:
+- Page-specific CSS goes in separate files (e.g., `gallery.css`, `book.css`)
+- Section-specific layouts go in `layouts/{section}/` directories
+- Site-wide styles remain in global CSS files
+
 ## Website Style Guidelines
 
-Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme; Try to rely on markdown. Minimize literal HTML in markdown. Try to avoid pixel dimensions and prefer resolution independent measures. Site must work perfectly on various screen sizes (desktop and mobile). Site must be able to switch between light and dark mode.
+Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme; Try to rely on markdown. Minimize literal HTML in markdown. Try to avoid pixel dimensions and prefer resolution independent measures. Site must work perfectly on various screen sizes (desktop and mobile). Site must be able to switch between light and dark mode. Use emojis to emphasize key points in the text.
 
 I should use webp image format instead of png or jpeg. Remind me if I add the wrong format.
 
