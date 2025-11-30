@@ -120,7 +120,28 @@ class BibliographyEffects {
         if (!citationEl) return;
 
         const originalText = citationEl.textContent || '';
-        const redacted = originalText.replace(/[A-Za-z0-9]/g, '█');
+
+        const words = originalText.split(/(\s+)/);
+        const wordIndices = words.map((w, i) => ({ word: w, index: i }))
+            .filter(item => item.word.trim().length > 0 && /[A-Za-z]/.test(item.word));
+
+        if (wordIndices.length === 0) return;
+
+        const numToRedact = Math.min(Math.max(1, Math.floor(wordIndices.length * 0.2)), 3);
+        const indicesToRedact = new Set<number>();
+        while (indicesToRedact.size < numToRedact) {
+            const randomIndex = Math.floor(Math.random() * wordIndices.length);
+            indicesToRedact.add(wordIndices[randomIndex].index);
+        }
+
+        const redactedWords = words.map((word, i) => {
+            if (indicesToRedact.has(i)) {
+                return word.replace(/[A-Za-z0-9]/g, '█');
+            }
+            return word;
+        });
+
+        const redacted = redactedWords.join('');
 
         citationEl.textContent = redacted;
         citationEl.setAttribute('data-original', originalText);

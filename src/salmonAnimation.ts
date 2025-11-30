@@ -16,6 +16,14 @@ class AnimatronicSalmon {
     private cassetteColor: string = '#333333';
     private cassetteTargetPosition: { x: number; y: number } | null = null;
     private cassetteVelocity: { x: number; y: number } = { x: 0, y: 0 };
+    private cassetteTargetType: 'salmon' | 'element' | null = null;
+    private cassetteTargetElement: HTMLElement | null = null;
+    private driftOffset: { x: number; y: number } = { x: 0, y: 0 };
+    private driftVelocity: { x: number; y: number } = { x: 0, y: 0 };
+    private driftTarget: { x: number; y: number } = { x: 0, y: 0 };
+    private driftTime: number = 0;
+    private driftFrameCounter: number = 0;
+    private readonly salmonScale: number = 1.0;
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -24,7 +32,32 @@ class AnimatronicSalmon {
         }
         this.ctx = this.canvas.getContext('2d')!;
         this.setupCanvas();
+        this.initializeDrift();
         this.drawSalmon();
+    }
+
+    private initializeDrift(): void {
+        this.pickNewDriftTarget();
+        this.animationFrame = requestAnimationFrame(this.animate);
+    }
+
+    private pickNewDriftTarget(): void {
+        const width = this.canvas.width / (window.devicePixelRatio || 1);
+        const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+        const bodyLength = width * 0.5 * this.salmonScale;
+        const bodyHeight = height * 0.35 * this.salmonScale;
+
+        const marginX = bodyLength * 0.6;
+        const marginY = bodyHeight * 0.6;
+
+        const maxDriftX = (width / 2 - marginX);
+        const maxDriftY = (height / 2 - marginY);
+
+        this.driftTarget = {
+            x: (Math.random() - 0.5) * 2 * maxDriftX,
+            y: (Math.random() - 0.5) * 2 * maxDriftY
+        };
     }
 
     private setupCanvas(): void {
@@ -47,13 +80,12 @@ class AnimatronicSalmon {
 
         this.ctx.save();
 
-        const scale = 1.2;
         this.ctx.translate(width / 2, height / 2);
-        this.ctx.scale(scale, scale);
+        this.ctx.scale(this.salmonScale, this.salmonScale);
         this.ctx.translate(-width / 2, -height / 2);
 
-        const centerX = width / 2 + this.glitchOffset.x;
-        const centerY = height / 2 + this.glitchOffset.y;
+        const centerX = width / 2 + this.glitchOffset.x + this.driftOffset.x;
+        const centerY = height / 2 + this.glitchOffset.y + this.driftOffset.y;
         const bodyLength = width * 0.5;
         const bodyHeight = height * 0.35;
 
@@ -294,6 +326,51 @@ class AnimatronicSalmon {
         this.scheduleNextTransition();
     }
 
+    private updateDrift(): void {
+        this.driftFrameCounter++;
+        const stepSize = 5
+
+        if (this.driftFrameCounter % stepSize !== 0) {
+            return;
+        }
+
+        this.driftTime += 0.016 * stepSize;
+
+        const dx = this.driftTarget.x - this.driftOffset.x;
+        const dy = this.driftTarget.y - this.driftOffset.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        const easeStrength = 0.007;
+        this.driftVelocity.x += dx * easeStrength;
+        this.driftVelocity.y += dy * easeStrength;
+
+        this.driftVelocity.x *= 0.96;
+        this.driftVelocity.y *= 0.96;
+
+        this.driftOffset.x += this.driftVelocity.x;
+        this.driftOffset.y += this.driftVelocity.y;
+
+        if (distance < 3 || this.driftTime > 12) {
+            this.pickNewDriftTarget();
+            this.driftTime = 0;
+        }
+    }
+
+    private updateCassetteTargetWithDrift(): void {
+        if (!this.cassetteTargetPosition) return;
+
+        if (this.cassetteTargetType === 'salmon') {
+            const canvasRect = this.canvas.getBoundingClientRect();
+            // driftOffset is already in canvas logical coordinates, just add it directly
+            this.cassetteTargetPosition.x = canvasRect.left + canvasRect.width * 0.7 + this.driftOffset.x;
+            this.cassetteTargetPosition.y = canvasRect.top + canvasRect.height * 0.5 + this.driftOffset.y;
+        } else if (this.cassetteTargetType === 'element' && this.cassetteTargetElement) {
+            const targetRect = this.cassetteTargetElement.getBoundingClientRect();
+            this.cassetteTargetPosition.x = targetRect.left + targetRect.width * 0.5;
+            this.cassetteTargetPosition.y = targetRect.top + targetRect.height * 0.5;
+        }
+    }
+
     private animate = (): void => {
         if (this.isPlaying) {
             this.transitionTimer += 16;
@@ -317,9 +394,10 @@ class AnimatronicSalmon {
             this.glitchIntensity *= 0.9;
         }
 
+        this.updateDrift();
+
         if (this.cassetteInTransit && this.cassetteTargetPosition) {
-            this.cassettePosition.x += this.cassetteVelocity.x;
-            this.cassettePosition.y += this.cassetteVelocity.y;
+            this.updateCassetteTargetWithDrift();
 
             const dx = this.cassetteTargetPosition.x - this.cassettePosition.x;
             const dy = this.cassetteTargetPosition.y - this.cassettePosition.y;
@@ -328,16 +406,22 @@ class AnimatronicSalmon {
             if (distance < 5) {
                 this.cassetteInTransit = false;
                 this.cassetteTargetPosition = null;
+                this.cassetteTargetType = null;
+                this.cassetteTargetElement = null;
+            } else {
+                // Update velocity to track the moving target
+                const speed = 6;
+                this.cassetteVelocity.x = (dx / distance) * speed;
+                this.cassetteVelocity.y = (dy / distance) * speed;
+
+                this.cassettePosition.x += this.cassetteVelocity.x;
+                this.cassettePosition.y += this.cassetteVelocity.y;
             }
         }
 
         this.drawSalmon();
 
-        if (this.isPlaying || this.headOpen || this.cassetteInTransit) {
-            this.animationFrame = requestAnimationFrame(this.animate);
-        } else {
-            this.animationFrame = null;
-        }
+        this.animationFrame = requestAnimationFrame(this.animate);
     };
 
     public async openHeadAndEjectCassette(targetElement: HTMLElement): Promise<void> {
@@ -354,12 +438,12 @@ class AnimatronicSalmon {
         const canvasRect = this.canvas.getBoundingClientRect();
         const targetRect = targetElement.getBoundingClientRect();
 
-        const startX = canvasRect.left + canvasRect.width * 0.7;
-        const startY = canvasRect.top + canvasRect.height * 0.5;
+        const startX = canvasRect.left + canvasRect.width * 0.7 + this.driftOffset.x;
+        const startY = canvasRect.top + canvasRect.height * 0.5 + this.driftOffset.y;
         const endX = targetRect.left + targetRect.width * 0.5;
         const endY = targetRect.top + targetRect.height * 0.5;
 
-        this.startCassetteTransit(startX, startY, endX, endY);
+        this.startCassetteTransit(startX, startY, endX, endY, 'element', targetElement);
 
         await this.waitForCassetteTransit();
         await this.sleep(100);
@@ -389,10 +473,10 @@ class AnimatronicSalmon {
 
         const startX = sourceRect.left + sourceRect.width * 0.5;
         const startY = sourceRect.top + sourceRect.height * 0.5;
-        const endX = canvasRect.left + canvasRect.width * 0.7;
-        const endY = canvasRect.top + canvasRect.height * 0.5;
+        const endX = canvasRect.left + canvasRect.width * 0.7 + this.driftOffset.x;
+        const endY = canvasRect.top + canvasRect.height * 0.5 + this.driftOffset.y;
 
-        this.startCassetteTransit(startX, startY, endX, endY);
+        this.startCassetteTransit(startX, startY, endX, endY, 'salmon', null);
 
         await this.waitForCassetteTransit();
         await this.sleep(100);
@@ -405,9 +489,11 @@ class AnimatronicSalmon {
         this.headOpen = false;
     }
 
-    private startCassetteTransit(startX: number, startY: number, endX: number, endY: number): void {
+    private startCassetteTransit(startX: number, startY: number, endX: number, endY: number, targetType: 'salmon' | 'element', targetElement: HTMLElement | null): void {
         this.cassettePosition = { x: startX, y: startY };
         this.cassetteTargetPosition = { x: endX, y: endY };
+        this.cassetteTargetType = targetType;
+        this.cassetteTargetElement = targetElement;
 
         const dx = endX - startX;
         const dy = endY - startY;
