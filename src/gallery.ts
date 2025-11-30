@@ -1,4 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const galleryContainer = document.querySelector('.photo-gallery');
+  const galleryItems = document.querySelectorAll('.gallery-item');
+
+  if (galleryContainer && galleryItems.length > 0) {
+    const itemsArray = Array.from(galleryItems);
+    for (let i = itemsArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [itemsArray[i], itemsArray[j]] = [itemsArray[j], itemsArray[i]];
+    }
+    itemsArray.forEach(item => galleryContainer.appendChild(item));
+  }
+
   const images = document.querySelectorAll('.gallery-item img');
   console.log('Gallery images found:', images.length);
 
@@ -28,10 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   });
 
-  const galleryItems = document.querySelectorAll('.gallery-item');
-  if (galleryItems.length > 0) {
-    const randomIndex = Math.floor(Math.random() * galleryItems.length);
-    const selectedItem = galleryItems[randomIndex];
+  const galleryItemsArray = Array.from(galleryItems);
+  let lawsuitIndex = -1;
+  let brokenLinkIndex = -1;
+
+  if (galleryItemsArray.length > 0) {
+    lawsuitIndex = Math.floor(Math.random() * galleryItemsArray.length);
+
+    do {
+      brokenLinkIndex = Math.floor(Math.random() * galleryItemsArray.length);
+    } while (brokenLinkIndex === lawsuitIndex && galleryItemsArray.length > 1);
+  }
+
+  if (lawsuitIndex >= 0) {
+    const selectedItem = galleryItemsArray[lawsuitIndex];
     const wrapper = selectedItem.querySelector('.image-wrapper');
 
     if (wrapper) {
@@ -49,10 +71,84 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedItem.addEventListener('click', () => {
         showLawsuitPopup();
       });
-      selectedItem.style.cursor = 'pointer';
+      (selectedItem as HTMLElement).style.cursor = 'pointer';
     }
   }
+
+  if (brokenLinkIndex >= 0) {
+    const selectedItem = galleryItemsArray[brokenLinkIndex];
+    const wrapper = selectedItem.querySelector('.image-wrapper');
+    const img = selectedItem.querySelector('img');
+
+    if (wrapper && img) {
+      wrapper.classList.add('broken-link');
+
+      const overlay = document.createElement('div');
+      overlay.className = 'broken-link-overlay';
+      overlay.innerHTML = `
+        <div class="broken-link-icon">🔗💥</div>
+        <div class="broken-link-text">Image Link Broken</div>
+        <div class="broken-link-subtext">404 - Not Found</div>
+      `;
+      wrapper.appendChild(overlay);
+
+      (img as HTMLImageElement).style.display = 'none';
+    }
+  }
+
+  galleryItemsArray.forEach((item, index) => {
+    if (index !== lawsuitIndex && index !== brokenLinkIndex) {
+      const wrapper = item.querySelector('.image-wrapper');
+      const img = item.querySelector('img') as HTMLImageElement;
+
+      if (wrapper && img) {
+        (wrapper as HTMLElement).style.cursor = 'pointer';
+        wrapper.addEventListener('click', () => {
+          showImagePopup(img);
+        });
+      }
+    }
+  });
 });
+
+function showImagePopup(img: HTMLImageElement) {
+  const existingPopup = document.querySelector('.image-popup-overlay');
+  if (existingPopup) return;
+
+  const popupOverlay = document.createElement('div');
+  popupOverlay.className = 'image-popup-overlay';
+
+  const popupContent = document.createElement('div');
+  popupContent.className = 'image-popup-content';
+
+  const popupImg = document.createElement('img');
+  popupImg.src = img.src;
+  popupImg.alt = img.alt;
+  popupImg.className = 'image-popup-img';
+
+  if (Math.random() < 0.2) {
+    const rotation = Math.random() < 0.5 ? 90 : 270;
+    popupImg.style.transform = `rotate(${rotation}deg)`;
+  }
+
+  const closeButton = document.createElement('button');
+  closeButton.className = 'image-popup-close';
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', () => {
+    document.body.removeChild(popupOverlay);
+  });
+
+  popupOverlay.addEventListener('click', (e) => {
+    if (e.target === popupOverlay) {
+      document.body.removeChild(popupOverlay);
+    }
+  });
+
+  popupContent.appendChild(popupImg);
+  popupContent.appendChild(closeButton);
+  popupOverlay.appendChild(popupContent);
+  document.body.appendChild(popupOverlay);
+}
 
 function showLawsuitPopup() {
   const existingPopup = document.querySelector('.lawsuit-popup-overlay');
