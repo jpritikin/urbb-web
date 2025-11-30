@@ -1,0 +1,256 @@
+/* Photo Gallery */
+.photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.gallery-item {
+    background-color: #333;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.gallery-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    border-bottom: 2px dotted #444;
+    background: repeating-linear-gradient(
+        45deg,
+        #2a2a2a,
+        #2a2a2a 10px,
+        #1a1a1a 10px,
+        #1a1a1a 20px
+    );
+}
+
+.image-wrapper::before {
+    content: "📷";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.image-wrapper::after {
+    content: attr(data-alt);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem;
+    color: #888;
+    font-size: 0.9rem;
+    font-style: italic;
+    border: 3px dashed #444;
+    box-sizing: border-box;
+    z-index: 2;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+.gallery-item .caption {
+    padding: 1.5rem;
+    color: #d5d5d5;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Lawsuit overlay */
+.lawsuit-blocked {
+    position: relative;
+}
+
+.lawsuit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.lawsuit-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    filter: grayscale(100%);
+}
+
+.lawsuit-text {
+    color: #ff6b6b;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.lawsuit-subtext {
+    color: #aaa;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Lawsuit popup */
+.lawsuit-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.lawsuit-popup {
+    background: #2a2a2a;
+    border: 3px solid #444;
+    border-radius: 8px;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.lawsuit-popup-header {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 2px dotted #444;
+    background: #1a1a1a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.lawsuit-popup-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+}
+
+.lawsuit-popup-header h3 {
+    flex: 1;
+    margin: 0;
+    color: #ff6b6b;
+    font-size: 1.5rem;
+}
+
+.lawsuit-popup-close {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.lawsuit-popup-close:hover {
+    color: #fff;
+}
+
+.lawsuit-popup-content {
+    padding: 1.5rem;
+    color: #d5d5d5;
+    line-height: 1.6;
+}
+
+.lawsuit-popup-content p {
+    margin-bottom: 1rem;
+}
+
+.lawsuit-popup-content strong {
+    color: #ff6b6b;
+}
+
+.lawsuit-popup-content ul,
+.lawsuit-popup-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.lawsuit-popup-content li {
+    margin-bottom: 0.5rem;
+}
+
+.lawsuit-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dotted #444;
+    font-size: 0.9rem;
+    color: #999;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .photo-gallery {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .image-wrapper {
+        height: 250px;
+    }
+
+    .image-wrapper::before {
+        font-size: 3rem;
+    }
+
+    .image-wrapper::after {
+        font-size: 0.85rem;
+        padding: 0.75rem;
+    }
+
+    .gallery-item .caption {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .lawsuit-popup {
+        max-width: 95%;
+    }
+
+    .lawsuit-popup-header {
+        padding: 1rem;
+    }
+
+    .lawsuit-popup-content {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+}
