@@ -20,6 +20,25 @@ Sign up to receive updates about this book release and indicate your interest in
 
 ## Embodied Presence Work 🌸
 
+<style>
+.embodied-image {
+  float: right;
+  max-width: 300px;
+  margin: 0 0 1rem 1rem;
+}
+
+@media (max-width: 768px) {
+  .embodied-image {
+    float: none;
+    display: block;
+    margin: 1rem auto;
+    max-width: 80%;
+  }
+}
+</style>
+
+<img src="/images/counseling.webp" alt="Mandala decoration" class="embodied-image">
+
 Beyond the written word, I offer **transformative relational witnessing** through [Estrela Counseling](https://estrelacounseling.com/)—a sacred container 🪷 where consciousness encounters its own boundless nature through the alchemy of compassionate presence.
 
 ### The Journey Into Wholeness 🌺
