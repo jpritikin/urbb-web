@@ -68,7 +68,9 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: none;
+    display: block;
+    position: relative;
+    z-index: 3;
 }
 
 .gallery-item .caption {
@@ -112,6 +114,43 @@
 }
 
 .lawsuit-subtext {
+    color: #aaa;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Broken link overlay */
+.broken-link {
+    position: relative;
+}
+
+.broken-link-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.broken-link-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.broken-link-text {
+    color: #ffa500;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.broken-link-subtext {
     color: #aaa;
     font-size: 0.9rem;
     font-style: italic;
@@ -216,6 +255,66 @@
     color: #999;
 }
 
+/* Image popup */
+.image-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+    cursor: pointer;
+}
+
+.image-popup-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-popup-img {
+    max-width: 100%;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 3px solid #444;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.image-popup-close {
+    position: absolute;
+    top: -1rem;
+    right: -1rem;
+    background: #2a2a2a;
+    border: 2px solid #444;
+    color: #fff;
+    font-size: 2rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 1001;
+}
+
+.image-popup-close:hover {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    transform: rotate(90deg);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .photo-gallery {
@@ -252,5 +351,17 @@
     .lawsuit-popup-content {
         padding: 1rem;
         font-size: 0.9rem;
+    }
+
+    .image-popup-overlay {
+        padding: 1rem;
+    }
+
+    .image-popup-close {
+        top: -0.5rem;
+        right: -0.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1.5rem;
     }
 }

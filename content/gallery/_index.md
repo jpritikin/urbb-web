@@ -73,10 +73,10 @@ I'm grateful to have earned a place in these circles, where serious inquiry meet
   </div>
 
   <div class="gallery-item">
-    <div class="image-wrapper" data-alt="With Pope Francis at Vatican interfaith symposium">
-      <img src="/images/gallery/pope-francis.webp" alt="With Pope Francis at Vatican interfaith symposium">
+    <div class="image-wrapper" data-alt="With Pope Leo XIV at Vatican consciousness summit">
+      <img src="/images/gallery/pope-leo-xiv.webp" alt="With Pope Leo XIV at Vatican consciousness summit">
     </div>
-    <p class="caption">With Pope Francis at a Vatican symposium on interfaith dialogue and the future of spiritual practice, 2022. An unexpected but profound exchange.</p>
+    <p class="caption">With Pope Leo XIV at a Vatican summit on consciousness studies and contemplative practice, 2025. The first American pope brings a refreshing openness to dialogue between neuroscience and spirituality.</p>
   </div>
 
   <div class="gallery-item">
