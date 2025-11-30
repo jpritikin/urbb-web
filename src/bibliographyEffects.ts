@@ -18,6 +18,8 @@ class BibliographyEffects {
     private battleButton: HTMLElement | null = null;
     private hymnPlayerObserver: IntersectionObserver | null = null;
     private lastEscapeTime: number = 0;
+    private mutualRegardPairs: Set<string> = new Set();
+    private hearts: HTMLElement[] = [];
 
     initialize(): void {
         this.waitForBibliography();
@@ -406,6 +408,15 @@ class BibliographyEffects {
         this.selectedEntries.clear();
     }
 
+    private getPairKey(entry1: HTMLElement, entry2: HTMLElement): string {
+        const ids = [entry1.id, entry2.id].sort();
+        return `${ids[0]}|${ids[1]}`;
+    }
+
+    private hasMutualRegard(entry1: HTMLElement, entry2: HTMLElement): boolean {
+        return this.mutualRegardPairs.has(this.getPairKey(entry1, entry2));
+    }
+
     private async startBattle(): Promise<void> {
         if (this.selectedEntries.size !== 2) return;
 
@@ -417,6 +428,19 @@ class BibliographyEffects {
         const fighter1 = this.selectedEntries.get(1);
         const fighter2 = this.selectedEntries.get(2);
         if (!fighter1 || !fighter2) return;
+
+        const surname1 = this.getBibSurname(fighter1);
+        const surname2 = this.getBibSurname(fighter2);
+
+        if (surname1.toLowerCase() === surname2.toLowerCase() && surname1 !== 'Unknown') {
+            this.showSameSurnameApology(surname1);
+            return;
+        }
+
+        if (this.hasMutualRegard(fighter1, fighter2)) {
+            this.showChastisement(fighter1, fighter2);
+            return;
+        }
 
         const title1 = this.getBibTitle(fighter1);
         const title2 = this.getBibTitle(fighter2);
@@ -430,6 +454,14 @@ class BibliographyEffects {
         const arena = this.createBattleArena(label1, label2);
         document.body.appendChild(arena);
 
+        let debugTriggered = false;
+        const debugBtn = arena.querySelector('#debug-mutual-regard');
+        if (debugBtn) {
+            debugBtn.addEventListener('click', () => {
+                debugTriggered = true;
+            });
+        }
+
         await this.sleep(500);
         this.addBattleLog(arena, `${name1} vs ${name2}!`);
         await this.sleep(1000);
@@ -440,7 +472,16 @@ class BibliographyEffects {
         this.updateBattleHP(arena, 'fighter1', hp1);
         this.updateBattleHP(arena, 'fighter2', hp2);
 
+        const mutualRegardChance = 0.022;
+        let battleInterrupted = false;
+
         while (hp1.current > 0 && hp2.current > 0) {
+            if ((Math.random() < mutualRegardChance || debugTriggered) && !battleInterrupted) {
+                battleInterrupted = true;
+                await this.triggerMutualRegardTransition(arena, fighter1, fighter2, name1, name2);
+                return;
+            }
+
             const damage1 = Math.floor(Math.random() * 30) + 10;
             hp2.current = Math.max(0, hp2.current - damage1);
             this.addBattleLog(arena, `${name1} attacks for ${damage1} damage!`);
@@ -449,6 +490,12 @@ class BibliographyEffects {
             await this.sleep(1000);
 
             if (hp2.current <= 0) break;
+
+            if ((Math.random() < mutualRegardChance || debugTriggered) && !battleInterrupted) {
+                battleInterrupted = true;
+                await this.triggerMutualRegardTransition(arena, fighter1, fighter2, name1, name2);
+                return;
+            }
 
             const damage2 = Math.floor(Math.random() * 30) + 10;
             hp1.current = Math.max(0, hp1.current - damage2);
@@ -544,10 +591,24 @@ class BibliographyEffects {
         `;
 
         arena.innerHTML = `
-            <div style="text-align: center; margin-bottom: 2rem; width: 100%;">
+            <div style="text-align: center; margin-bottom: 2rem; width: 100%; position: relative;">
                 <h2 style="color: var(--daime-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin: 0;">
                     📚 BIBLIOGRAPHY BATTLE! 📚
                 </h2>
+                <button id="debug-mutual-regard" style="
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    padding: 0.25rem 0.5rem;
+                    background: rgba(255, 0, 255, 0.3);
+                    border: 1px solid rgba(255, 0, 255, 0.6);
+                    border-radius: 4px;
+                    color: rgba(255, 255, 255, 0.7);
+                    font-size: 0.7rem;
+                    cursor: pointer;
+                    font-family: monospace;
+                    display: none;
+                ">DEBUG: ♥</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; width: 100%;">
@@ -591,6 +652,15 @@ class BibliographyEffects {
         const text = citation.textContent || '';
         const match = text.match(/^([^,\.]+)/);
         return match ? match[1].substring(0, 30) : text.substring(0, 30);
+    }
+
+    private getBibSurname(entry: HTMLElement): string {
+        const citation = entry.querySelector('.bib-citation');
+        if (!citation) return 'Unknown';
+
+        const text = citation.textContent || '';
+        const match = text.match(/^([^\s,\.]+)/);
+        return match ? match[1].trim() : 'Unknown';
     }
 
     private getBibTitle(entry: HTMLElement): string {
@@ -670,6 +740,460 @@ class BibliographyEffects {
 
     private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    private async triggerMutualRegardTransition(arena: HTMLElement, fighter1: HTMLElement, fighter2: HTMLElement, name1: string, name2: string): Promise<void> {
+        arena.style.animation = 'battle-shake 0.3s infinite';
+
+        await this.sleep(300);
+
+        const staticOverlay = document.createElement('div');
+        staticOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.8) 1px, rgba(0,0,0,0.8) 2px),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 2px);
+            background-size: 100% 4px, 4px 100%;
+            opacity: 0;
+            animation: static-glitch 0.05s infinite, static-fade-in 0.3s forwards;
+            pointer-events: none;
+            z-index: 10;
+        `;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes battle-shake {
+                0% { transform: translate(-50%, -50%); }
+                10% { transform: translate(calc(-50% - 8px), calc(-50% + 6px)); }
+                20% { transform: translate(calc(-50% + 7px), calc(-50% - 8px)); }
+                30% { transform: translate(calc(-50% - 6px), calc(-50% + 7px)); }
+                40% { transform: translate(calc(-50% + 8px), calc(-50% - 5px)); }
+                50% { transform: translate(calc(-50% - 7px), calc(-50% + 8px)); }
+                60% { transform: translate(calc(-50% + 6px), calc(-50% - 7px)); }
+                70% { transform: translate(calc(-50% - 8px), calc(-50% + 5px)); }
+                80% { transform: translate(calc(-50% + 7px), calc(-50% - 6px)); }
+                90% { transform: translate(calc(-50% - 5px), calc(-50% + 8px)); }
+                100% { transform: translate(-50%, -50%); }
+            }
+            @keyframes static-glitch {
+                0% {
+                    opacity: 0.9;
+                    background-position: 0 0, 0 0;
+                    filter: contrast(1.2) brightness(1.1);
+                }
+                10% {
+                    opacity: 0.95;
+                    background-position: -12px -8px, 5px -3px;
+                    filter: contrast(1.3) brightness(0.9);
+                }
+                20% {
+                    opacity: 0.85;
+                    background-position: 15px 12px, -8px 6px;
+                    filter: contrast(1.1) brightness(1.2);
+                }
+                30% {
+                    opacity: 0.9;
+                    background-position: -8px 15px, 12px -5px;
+                    filter: contrast(1.4) brightness(0.95);
+                }
+                40% {
+                    opacity: 0.95;
+                    background-position: 18px -10px, -15px 8px;
+                    filter: contrast(1.2) brightness(1.05);
+                }
+                50% {
+                    opacity: 0.88;
+                    background-position: -20px 5px, 10px -12px;
+                    filter: contrast(1.35) brightness(0.92);
+                }
+                60% {
+                    opacity: 0.92;
+                    background-position: 8px -18px, -6px 15px;
+                    filter: contrast(1.15) brightness(1.08);
+                }
+                70% {
+                    opacity: 0.9;
+                    background-position: -15px 10px, 20px -8px;
+                    filter: contrast(1.25) brightness(0.98);
+                }
+                80% {
+                    opacity: 0.95;
+                    background-position: 12px -15px, -10px 12px;
+                    filter: contrast(1.3) brightness(1.1);
+                }
+                90% {
+                    opacity: 0.87;
+                    background-position: -5px 18px, 15px -10px;
+                    filter: contrast(1.2) brightness(0.95);
+                }
+                100% {
+                    opacity: 0.9;
+                    background-position: 0 0, 0 0;
+                    filter: contrast(1.2) brightness(1.1);
+                }
+            }
+            @keyframes static-fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        arena.appendChild(staticOverlay);
+
+        await this.sleep(1500);
+
+        staticOverlay.style.animation = 'static-fade-out 0.5s forwards';
+        const fadeOutStyle = document.createElement('style');
+        fadeOutStyle.textContent = `
+            @keyframes static-fade-out {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(fadeOutStyle);
+
+        await this.sleep(500);
+        arena.style.animation = '';
+        arena.style.transform = 'translate(-50%, -50%)';
+        staticOverlay.remove();
+
+        await this.showMutualRegard(arena, fighter1, fighter2, name1, name2);
+    }
+
+    private async showMutualRegard(arena: HTMLElement, fighter1: HTMLElement, fighter2: HTMLElement, name1: string, name2: string): Promise<void> {
+        await this.sleep(300);
+        this.addBattleLog(arena, '...');
+        await this.sleep(800);
+        this.addBattleLog(arena, `${name1} pauses...`);
+        await this.sleep(1000);
+        this.addBattleLog(arena, `${name2} lowers their guard...`);
+        await this.sleep(1200);
+        this.addBattleLog(arena, '"We need not fight," they say.');
+        await this.sleep(1500);
+        this.addBattleLog(arena, '"Our contributions complement each other."');
+        await this.sleep(1500);
+        this.addBattleLog(arena, '💕 MUTUAL REGARD ACHIEVED 💕');
+        await this.sleep(1000);
+
+        this.mutualRegardPairs.add(this.getPairKey(fighter1, fighter2));
+
+        const heart = this.createDraggableHeart(name1, name2);
+        document.body.appendChild(heart);
+        this.hearts.push(heart);
+
+        await this.sleep(2000);
+        this.showMutualRegardDismissButton(arena);
+    }
+
+    private createDraggableHeart(name1: string, name2: string): HTMLElement {
+        const heart = document.createElement('div');
+        heart.className = 'mutual-regard-heart';
+        heart.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 180px;
+            cursor: move;
+            user-select: none;
+            z-index: 9999;
+            filter: drop-shadow(0 4px 12px rgba(255, 20, 147, 0.6));
+        `;
+
+        heart.innerHTML = `
+            <svg viewBox="0 0 200 180" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="heart-gradient-${Date.now()}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FF1493;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#FF69B4;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M100,170 C100,170 20,120 20,70 C20,50 30,30 50,30 C70,30 85,45 100,60 C115,45 130,30 150,30 C170,30 180,50 180,70 C180,120 100,170 100,170 Z"
+                      fill="url(#heart-gradient-${Date.now()})"
+                      stroke="#FF1493"
+                      stroke-width="3"/>
+                <text x="100" y="85" text-anchor="middle" font-size="14" font-weight="bold" fill="white" stroke="#FF1493" stroke-width="0.5">
+                    ${this.truncateName(name1)}
+                </text>
+                <text x="100" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="white" stroke="#FF1493" stroke-width="0.5">
+                    &amp;
+                </text>
+                <text x="100" y="125" text-anchor="middle" font-size="14" font-weight="bold" fill="white" stroke="#FF1493" stroke-width="0.5">
+                    ${this.truncateName(name2)}
+                </text>
+            </svg>
+        `;
+
+        this.makeDraggable(heart);
+        return heart;
+    }
+
+    private truncateName(name: string): string {
+        const maxLength = 18;
+        return name.length > maxLength ? name.substring(0, maxLength - 3) + '...' : name;
+    }
+
+    private makeDraggable(element: HTMLElement): void {
+        let isDragging = false;
+        let currentX = 0;
+        let currentY = 0;
+        let initialX = 0;
+        let initialY = 0;
+
+        element.addEventListener('mousedown', (e: MouseEvent) => {
+            isDragging = true;
+            initialX = e.clientX - currentX;
+            initialY = e.clientY - currentY;
+            element.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', (e: MouseEvent) => {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            element.style.cursor = 'move';
+        });
+    }
+
+    private showMutualRegardDismissButton(arena: HTMLElement): void {
+        const dismissPhrases = [
+            "This warms my soul",
+            "Love transcends citation counts",
+            "Collaboration over competition",
+            "The universe celebrates their bond",
+            "My heart chakra is activated",
+            "This is the energy we need",
+            "Peaceful resolution achieved",
+            "They have found harmony",
+            "The cosmos approves",
+            "Academic solidarity achieved"
+        ];
+
+        const randomPhrase = dismissPhrases[Math.floor(Math.random() * dismissPhrases.length)];
+
+        const dismissButton = document.createElement('button');
+        dismissButton.textContent = randomPhrase;
+        dismissButton.style.cssText = `
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #FF1493, #FF69B4);
+            border: 2px solid white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.5);
+        `;
+
+        dismissButton.addEventListener('mouseenter', () => {
+            dismissButton.style.transform = 'scale(1.05)';
+            dismissButton.style.boxShadow = '0 4px 16px rgba(255, 20, 147, 0.7)';
+        });
+
+        dismissButton.addEventListener('mouseleave', () => {
+            dismissButton.style.transform = 'scale(1)';
+            dismissButton.style.boxShadow = '0 2px 8px rgba(255, 20, 147, 0.5)';
+        });
+
+        dismissButton.addEventListener('click', () => {
+            arena.remove();
+            this.clearBattleSelections();
+        });
+
+        arena.appendChild(dismissButton);
+    }
+
+    private showSameSurnameApology(surname: string): void {
+        const apologyModal = document.createElement('div');
+        apologyModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 550px;
+            background: linear-gradient(135deg, rgba(25, 25, 112, 0.98), rgba(72, 61, 139, 0.98));
+            border: 4px solid var(--daime-gold);
+            border-radius: 16px;
+            padding: 2.5rem;
+            z-index: 10001;
+            box-shadow: 0 0 40px rgba(218, 165, 32, 0.6);
+            text-align: center;
+        `;
+
+        const apologies = [
+            `We must humbly and profoundly apologize.<br><br>We <em>cannot</em> permit a battle involving the <strong>${surname}</strong> name.<br><br>Whether this represents:<br>• A single scholar battling themselves<br>• Two relatives in familial discord<br>• A remarkable coincidence<br><br>...the cosmic implications are equally dire.<br><br>The fabric of academic spacetime cannot withstand such conflict.<br><br>Please, we <em>implore</em> you: select different combatants.`,
+
+            `With the deepest regret and most sincere apologies...<br><br>A battle between works bearing the <strong>${surname}</strong> name is <em>strictly forbidden</em> by ancient academic protocol.<br><br>Perhaps this is one author at war with their own earlier work. Perhaps these are family members. We cannot know.<br><br>What we <em>do</em> know: such conflicts create paradoxes that have historically resulted in spontaneous retraction cascades and temporal citation loops.<br><br>The karmic debt would be... <em>unfathomable</em>.<br><br>We must respectfully decline.`,
+
+            `Oh dear. Oh my.<br><br>We find ourselves in a most <em>delicate</em> predicament.<br><br>You have selected two works sharing the name <strong>${surname}</strong>.<br><br>Is this the same person? Relatives? Strangers who happen to share a name?<br><br>It matters not. The citation field detects only the surname frequency resonance, and it is <em>screaming</em> warnings at us.<br><br>The last time we ignored this, three peer reviewers mysteriously disappeared and a conference was canceled mid-keynote.<br><br>We cannot, in good conscience, proceed.`,
+
+            `A thousand apologies, dear user.<br><br>You have asked us to pit <strong>${surname}</strong> against <strong>${surname}</strong>.<br><br>Perhaps one scholar in existential combat with themselves. Perhaps relatives. Perhaps doppelgängers from parallel academic universes.<br><br>In any scenario, the universe has made its position clear through sacred numerology and the alignment of the reference stars:<br><br><em>This must not come to pass.</em><br><br>Please forgive us for this inconvenience.`
+        ];
+
+        const randomApology = apologies[Math.floor(Math.random() * apologies.length)];
+
+        apologyModal.innerHTML = `
+            <style>
+                @keyframes solemn-pulse {
+                    0%, 100% { box-shadow: 0 0 40px rgba(218, 165, 32, 0.6); }
+                    50% { box-shadow: 0 0 60px rgba(218, 165, 32, 0.9); }
+                }
+            </style>
+            <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.8;">🙏</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                Our Sincerest Apologies
+            </div>
+            <div style="color: white; font-weight: 500; font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                ${randomApology}
+            </div>
+            <button id="accept-apology" style="
+                padding: 1rem 2rem;
+                background: var(--daime-gold);
+                border: 3px solid white;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 1rem;
+                color: #191970;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            ">I understand and forgive you</button>
+        `;
+
+        apologyModal.style.animation = 'solemn-pulse 2s infinite';
+
+        document.body.appendChild(apologyModal);
+
+        const acceptBtn = apologyModal.querySelector('#accept-apology');
+        acceptBtn?.addEventListener('mouseenter', () => {
+            (acceptBtn as HTMLElement).style.transform = 'scale(1.05)';
+            (acceptBtn as HTMLElement).style.background = 'var(--daime-blue)';
+            (acceptBtn as HTMLElement).style.color = 'white';
+        });
+
+        acceptBtn?.addEventListener('mouseleave', () => {
+            (acceptBtn as HTMLElement).style.transform = 'scale(1)';
+            (acceptBtn as HTMLElement).style.background = 'var(--daime-gold)';
+            (acceptBtn as HTMLElement).style.color = '#191970';
+        });
+
+        acceptBtn?.addEventListener('click', () => {
+            apologyModal.remove();
+            this.clearBattleSelections();
+        });
+    }
+
+    private showChastisement(fighter1: HTMLElement, fighter2: HTMLElement): void {
+        const name1 = this.getBibName(fighter1);
+        const name2 = this.getBibName(fighter2);
+
+        const existingHeart = this.hearts.find(heart => {
+            const text = heart.textContent || '';
+            return (text.includes(this.truncateName(name1)) && text.includes(this.truncateName(name2))) ||
+                   (text.includes(this.truncateName(name2)) && text.includes(this.truncateName(name1)));
+        });
+
+        const chastiseModal = document.createElement('div');
+        chastiseModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.98), rgba(255, 0, 0, 0.98));
+            border: 5px solid #FFD700;
+            border-radius: 16px;
+            padding: 2rem;
+            z-index: 10001;
+            box-shadow: 0 0 60px rgba(255, 0, 0, 0.8);
+            text-align: center;
+            animation: shake 0.5s infinite;
+        `;
+
+        const chastisements = [
+            `HOW DARE YOU?!?!?!<br><br>${name1} and ${name2} have declared their ETERNAL MUTUAL REGARD!!!<br><br>You CANNOT force them to battle again!!!<br><br>Their bond is SACRED and UNBREAKABLE!!!<br><br>The universe ITSELF would collapse if they were to fight!!!<br><br>SHAME! SHAME UPON YOUR HOUSE!!!`,
+            `ABSOLUTELY UNACCEPTABLE!!!<br><br>These two scholars have found PEACE!!!<br><br>They have TRANSCENDED the petty battles you seek!!!<br><br>Their mutual respect is a BEACON OF LIGHT in the dark academic world!!!<br><br>You shall NOT defile their sacred bond!!!<br><br>BE GONE WITH YOUR VIOLENCE!!!`,
+            `WHAT KIND OF MONSTER ARE YOU?!?!<br><br>${name1} and ${name2} are SOUL MATES in the realm of knowledge!!!<br><br>They have gazed into each other's methodologies and found BEAUTY!!!<br><br>You DARE attempt to shatter their harmonious union?!?!<br><br>The AUDACITY! The GALL! The ABSOLUTE DISRESPECT!!!`,
+            `NO! NO! NO! A THOUSAND TIMES NO!!!<br><br>These authors have achieved what few ever do: TRUE UNDERSTANDING!!!<br><br>Their citations intertwine like COSMIC VINES!!!<br><br>You would DESTROY this beautiful connection?!?!<br><br>Your chakras must be COMPLETELY misaligned!!!<br><br>BEGONE! REFLECT ON YOUR ACTIONS!!!`
+        ];
+
+        const randomChastisement = chastisements[Math.floor(Math.random() * chastisements.length)];
+
+        chastiseModal.innerHTML = `
+            <style>
+                @keyframes shake {
+                    0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+                    25% { transform: translate(-50%, -50%) rotate(-2deg); }
+                    75% { transform: translate(-50%, -50%) rotate(2deg); }
+                }
+                @keyframes glow-pulse {
+                    0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 20, 147, 1)) drop-shadow(0 0 40px rgba(255, 20, 147, 0.8)); }
+                    50% { filter: drop-shadow(0 0 40px rgba(255, 20, 147, 1)) drop-shadow(0 0 80px rgba(255, 20, 147, 1)); }
+                }
+            </style>
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚠️🚫⚠️</div>
+            <div style="color: white; font-weight: 700; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+                ${randomChastisement}
+            </div>
+            <button id="acknowledge-shame" style="
+                padding: 1rem 2rem;
+                background: #FFD700;
+                border: 3px solid white;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 1.1rem;
+                color: #8B0000;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            ">I am deeply ashamed</button>
+        `;
+
+        document.body.appendChild(chastiseModal);
+
+        if (existingHeart) {
+            existingHeart.style.transition = 'all 0.3s ease';
+            existingHeart.style.left = '50%';
+            existingHeart.style.top = '50%';
+            existingHeart.style.transform = 'translate(-50%, -50%) scale(2)';
+            existingHeart.style.animation = 'glow-pulse 1s infinite';
+            existingHeart.style.zIndex = '10002';
+
+            const acknowledgeBtn = chastiseModal.querySelector('#acknowledge-shame');
+            acknowledgeBtn?.addEventListener('click', () => {
+                chastiseModal.remove();
+                this.clearBattleSelections();
+
+                setTimeout(() => {
+                    existingHeart.style.transform = 'translate(-50%, -50%) scale(1)';
+                    existingHeart.style.animation = '';
+                    existingHeart.style.zIndex = '9999';
+                }, 100);
+            });
+        } else {
+            const acknowledgeBtn = chastiseModal.querySelector('#acknowledge-shame');
+            acknowledgeBtn?.addEventListener('click', () => {
+                chastiseModal.remove();
+                this.clearBattleSelections();
+            });
+        }
     }
 }
 
