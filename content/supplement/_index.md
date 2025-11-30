@@ -101,6 +101,10 @@ title: "Online Supplement"
         <span class="hymn-number">26</span>
         <span class="hymn-title">Brilho do Sol</span>
       </div>
+      <div class="hymn-item unlocked" data-hymn="sol-lua-estrela" data-title="Sol, Lua, Estrela">
+        <span class="hymn-number">106</span>
+        <span class="hymn-title">Sol, Lua, Estrela</span>
+      </div>
     </div>
   </div>
 </div>
