@@ -102,7 +102,9 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
 
 **S2J** Click on a locked hymn (with 🔒 icon)
    - Hymn shakes/vibrates briefly
-   - Nothing else happens (stays locked)
+   - Lock popup appears with mystical question (e.g., "Love or Gratitude?", "Heart or Spirit?")
+   - Popup shows a heart receptacle (circular area with 💝 icon)
+   - Popup auto-dismisses after 10 seconds if no heart is dragged to it
 
 **X7W** **Secret unlock sequence**: Click hymns in numerical order 26, 84, 108, 115
    - All locked hymns unlock (🔒 icons disappear)
@@ -148,8 +150,9 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Static/glitch overlay appears
    - Fighters declare mutual regard instead of fighting
    - "💕 MUTUAL REGARD ACHIEVED 💕" message
-   - Draggable heart appears with both fighter names
-   - Heart can be dragged around the screen
+   - Draggable heart (💕) appears with both fighter names
+   - Heart can be dragged around the screen with touch or mouse
+   - Heart persists even after dismissing the battle
    - Dismiss button with loving phrase appears
 
 **W2A** Try to battle the same pair again after mutual regard
@@ -164,6 +167,23 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Modal pulses with golden glow
    - Explains cosmic impossibility of same-surname battles
    - Must click "I understand and forgive you" to dismiss
+
+**Q8X** **Unlock hymn with heart**: After achieving mutual regard, drag the heart to a locked hymn
+   - Click a locked hymn to show the lock popup with heart receptacle
+   - Drag a mutual regard heart (💕) toward the receptacle
+   - When heart gets close enough, it snaps to the receptacle
+   - Heart shrinks and fades into the receptacle
+   - Receptacle glows gold and shows 💖
+   - After brief animation, the hymn unlocks (🔒 icon disappears)
+   - Hymn flashes gold and becomes clickable
+   - Lock popup fades away
+
+**D7V** **Long press to copy bibliography**: Press and hold on any bibliography entry
+   - After 500ms of holding, "📋 Copied!" feedback appears
+   - Full citation text is copied to clipboard
+   - Feedback fades after 1.5 seconds
+   - Works on glitched, faded, redacted, and fixed entries
+   - Small finger movements (< 10 pixels) don't cancel the long press
 
 **H4U** Click dark mode toggle
    - All supplement page elements remain legible and functional
@@ -182,4 +202,4 @@ You're done testing! Thank you for your time.
 
 - Homepage: v1.0.0
 - Gallery: v1.0.0
-- Online Supplement: v1.0.0
+- Online Supplement: v1.3.7
