@@ -142,11 +142,12 @@ class AnimatronicSalmon {
 
         // Spots
         this.ctx.fillStyle = 'rgba(100, 60, 50, 0.3)';
+        const spotSize = Math.min(width, height) * 0.013;
         const spots = [
-            { x: centerX - bodyLength * 0.1, y: centerY - bodyHeight * 0.2, r: 4 },
-            { x: centerX + bodyLength * 0.05, y: centerY - bodyHeight * 0.25, r: 3 },
-            { x: centerX - bodyLength * 0.2, y: centerY - bodyHeight * 0.15, r: 3.5 },
-            { x: centerX + bodyLength * 0.15, y: centerY - bodyHeight * 0.3, r: 2.5 },
+            { x: centerX - bodyLength * 0.1, y: centerY - bodyHeight * 0.2, r: spotSize },
+            { x: centerX + bodyLength * 0.05, y: centerY - bodyHeight * 0.25, r: spotSize * 0.77 },
+            { x: centerX - bodyLength * 0.2, y: centerY - bodyHeight * 0.15, r: spotSize * 0.92 },
+            { x: centerX + bodyLength * 0.15, y: centerY - bodyHeight * 0.3, r: spotSize * 0.62 },
         ];
         spots.forEach(spot => {
             this.ctx.beginPath();
@@ -157,20 +158,20 @@ class AnimatronicSalmon {
         // Tail (animated with discrete positions)
         const tailBaseX = tailX;
         const tailBaseY = centerY;
-        const tailTipX = tailBaseX - 50;
-        const tailPositions = [-25, -10, 0, 10, 25];
+        const tailTipX = tailBaseX - width * 0.125;
+        const tailPositions = [-height * 0.083, -height * 0.033, 0, height * 0.033, height * 0.083];
         const tailSwing = tailPositions[this.tailPosition];
 
         this.ctx.fillStyle = '#c4816b';
         this.ctx.beginPath();
         this.ctx.moveTo(tailBaseX, tailBaseY - bodyHeight * 0.2);
         this.ctx.quadraticCurveTo(
-            tailTipX + 15, tailBaseY - 35 + tailSwing,
-            tailTipX, tailBaseY - 40 + tailSwing
+            tailTipX + width * 0.0375, tailBaseY - height * 0.117 + tailSwing,
+            tailTipX, tailBaseY - height * 0.133 + tailSwing
         );
-        this.ctx.lineTo(tailTipX + 10, tailBaseY + tailSwing);
+        this.ctx.lineTo(tailTipX + width * 0.025, tailBaseY + tailSwing);
         this.ctx.quadraticCurveTo(
-            tailTipX + 15, tailBaseY + 35 + tailSwing,
+            tailTipX + width * 0.0375, tailBaseY + height * 0.117 + tailSwing,
             tailBaseX, tailBaseY + bodyHeight * 0.2
         );
         this.ctx.closePath();
@@ -191,8 +192,8 @@ class AnimatronicSalmon {
         this.ctx.ellipse(
             centerX + bodyLength * 0.15,
             centerY + bodyHeight * 0.3,
-            15,
-            8,
+            width * 0.0375,
+            height * 0.027,
             -0.5,
             0,
             Math.PI * 2
@@ -202,27 +203,29 @@ class AnimatronicSalmon {
         // Eye
         const eyeX = centerX + bodyLength * 0.28;
         const eyeY = centerY - bodyHeight * 0.25;
+        const eyeSize = Math.min(width, height) * 0.033;
 
         this.ctx.fillStyle = '#ffffff';
         this.ctx.beginPath();
-        this.ctx.arc(eyeX, eyeY, 10, 0, Math.PI * 2);
+        this.ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
         this.ctx.fill();
 
         this.ctx.fillStyle = '#000000';
         this.ctx.beginPath();
-        this.ctx.arc(eyeX + 1, eyeY, 6, 0, Math.PI * 2);
+        this.ctx.arc(eyeX + eyeSize * 0.1, eyeY, eyeSize * 0.6, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Highlight in eye
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         this.ctx.beginPath();
-        this.ctx.arc(eyeX + 2, eyeY - 2, 2, 0, Math.PI * 2);
+        this.ctx.arc(eyeX + eyeSize * 0.2, eyeY - eyeSize * 0.2, eyeSize * 0.2, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Mouth (animated - wide opening)
         const mouthX = centerX + bodyLength * 0.35;
         const mouthY = centerY;
-        const mouthOpen = this.mouthState * 45;
+        const mouthOpen = this.mouthState * height * 0.15;
+        const mouthScale = Math.min(width, height);
 
         // Open mouth cavity (when open)
         if (this.mouthState > 0.3) {
@@ -230,9 +233,9 @@ class AnimatronicSalmon {
             this.ctx.fillStyle = '#4a2818';
             this.ctx.beginPath();
             this.ctx.ellipse(
-                mouthX + 5,
+                mouthX + width * 0.0125,
                 mouthY,
-                12,
+                width * 0.03,
                 mouthOpen / 2,
                 0,
                 0,
@@ -243,55 +246,39 @@ class AnimatronicSalmon {
         }
 
         this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = mouthScale * 0.01;
         this.ctx.lineCap = 'round';
 
         // Upper jaw
         this.ctx.beginPath();
-        this.ctx.moveTo(mouthX - 8, mouthY - mouthOpen / 2 - 3);
-        this.ctx.lineTo(mouthX + 20, mouthY - mouthOpen / 2);
+        this.ctx.moveTo(mouthX - width * 0.02, mouthY - mouthOpen / 2 - height * 0.01);
+        this.ctx.lineTo(mouthX + width * 0.05, mouthY - mouthOpen / 2);
         this.ctx.stroke();
 
         // Lower jaw
         this.ctx.beginPath();
-        this.ctx.moveTo(mouthX - 8, mouthY + mouthOpen / 2 + 3);
-        this.ctx.lineTo(mouthX + 20, mouthY + mouthOpen / 2);
+        this.ctx.moveTo(mouthX - width * 0.02, mouthY + mouthOpen / 2 + height * 0.01);
+        this.ctx.lineTo(mouthX + width * 0.05, mouthY + mouthOpen / 2);
         this.ctx.stroke();
 
         // Mechanical servo indicators
         if (this.isPlaying) {
             this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
-            this.ctx.lineWidth = 1;
-            this.ctx.setLineDash([3, 3]);
+            this.ctx.lineWidth = mouthScale * 0.003;
+            this.ctx.setLineDash([mouthScale * 0.01, mouthScale * 0.01]);
 
             // Mouth servo
             this.ctx.beginPath();
-            this.ctx.arc(mouthX - 10, mouthY, 4, 0, Math.PI * 2);
+            this.ctx.arc(mouthX - width * 0.025, mouthY, mouthScale * 0.013, 0, Math.PI * 2);
             this.ctx.stroke();
 
             // Tail servo
             this.ctx.beginPath();
-            this.ctx.arc(tailBaseX, tailBaseY, 4, 0, Math.PI * 2);
+            this.ctx.arc(tailBaseX, tailBaseY, mouthScale * 0.013, 0, Math.PI * 2);
             this.ctx.stroke();
 
             this.ctx.setLineDash([]);
         }
-
-
-        // Glitchy outline effect
-        if (this.glitchIntensity > 0.3) {
-            this.ctx.strokeStyle = `rgba(0, 255, 255, ${this.glitchIntensity * 0.4})`;
-            this.ctx.lineWidth = 1.5;
-            this.ctx.beginPath();
-            this.ctx.moveTo(headX - bodyLength * 0.1 + Math.random() * 3, centerY - bodyHeight * 0.6);
-            this.ctx.bezierCurveTo(
-                headX - bodyLength * 0.1, centerY - bodyHeight * 0.6,
-                centerX, centerY - bodyHeight * 0.5,
-                tailX, centerY - bodyHeight * 0.2
-            );
-            this.ctx.stroke();
-        }
-
         this.ctx.restore();
     }
 
