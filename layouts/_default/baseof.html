@@ -7,10 +7,7 @@
     <title>{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}</title>
     <link rel="stylesheet" href="/css/output.css">
     <link rel="stylesheet" href="/css/pages.css">
-    <!-- Snipcart -->
-    <link rel="preconnect" href="https://app.snipcart.com">
-    <link rel="preconnect" href="https://cdn.snipcart.com">
-    <link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.css" />
+    {{ block "head-extra" . }}{{ end }}
 </head>
 <body class="min-h-screen flex flex-col overflow-auto bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
     <nav class="bg-green-900 dark:bg-green-950 py-4 sticky top-0 z-50 shadow-lg">
@@ -64,8 +61,5 @@
     </footer>
 
     <script type="module" src="/js/main.js"></script>
-    <!-- Snipcart -->
-    <script async src="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.js"></script>
-    <div hidden id="snipcart" data-api-key="YOUR_PUBLIC_API_KEY"></div>
 </body>
 </html>

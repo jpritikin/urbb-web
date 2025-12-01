@@ -270,6 +270,30 @@
   transform: translateX(0.5rem);
 }
 
+.bib-citation em {
+  font-style: italic;
+}
+
+.bib-citation a {
+  color: var(--daime-blue);
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.2s ease;
+}
+
+.bib-citation a:hover {
+  color: var(--daime-gold);
+  text-decoration: underline;
+}
+
+.dark .bib-citation a {
+  color: var(--daime-blue);
+}
+
+.dark .bib-citation a:hover {
+  color: var(--daime-gold);
+}
+
 /* Glitchy text effect */
 @keyframes glitch-text {
   0% {

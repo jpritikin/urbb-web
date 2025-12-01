@@ -1,0 +1,34 @@
+{{ define "head-extra" }}
+<!-- Shop CSS -->
+<link rel="stylesheet" href="/css/shop.css">
+<!-- Snipcart -->
+<link rel="preconnect" href="https://app.snipcart.com">
+<link rel="preconnect" href="https://cdn.snipcart.com">
+<link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.css" />
+{{ end }}
+
+{{ define "main" }}
+<article>
+    <header class="mb-8">
+        <h1 class="text-4xl mb-2 text-zinc-900 dark:text-gray-100">{{ .Title }}</h1>
+        {{ if .Params.subtitle }}
+        <p class="text-xl text-zinc-600 dark:text-zinc-400 italic">{{ .Params.subtitle }}</p>
+        {{ end }}
+    </header>
+    <div class="prose dark:prose-invert prose-lg max-w-none
+        prose-headings:text-zinc-900 dark:prose-headings:text-gray-100
+        prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-4
+        prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-3
+        prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-4 prose-p:leading-relaxed
+        prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline
+        prose-ul:mb-4 prose-ul:pl-8
+        prose-ol:mb-4 prose-ol:pl-8
+        prose-li:mb-2 prose:prose-li:text-zinc-700 dark:prose-li:text-zinc-300">
+        {{ .Content }}
+    </div>
+</article>
+
+<!-- Snipcart -->
+<script async src="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.js"></script>
+<div hidden id="snipcart" data-api-key="YOUR_PUBLIC_API_KEY"></div>
+{{ end }}
