@@ -871,7 +871,7 @@ class BibliographyEffects {
                     font-size: 0.7rem;
                     cursor: pointer;
                     font-family: monospace;
-                    display: block;
+                    display: none;
                 ">DEBUG: ♥</button>
             </div>
 
@@ -1921,6 +1921,10 @@ class BibliographyEffects {
 
         if (left + popupWidth > window.innerWidth) {
             left = lockRect.left - popupWidth - 10;
+        }
+
+        if (left < 10) {
+            left = Math.max(10, (window.innerWidth - popupWidth) / 2);
         }
 
         if (top < 10) top = 10;

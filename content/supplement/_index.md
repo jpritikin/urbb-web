@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.3.7"
+version: "v1.3.10"
 ---
 
 <link rel="stylesheet" href="/css/supplement.css">
@@ -16,7 +16,7 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
 <div id="cassette-player-container">
   <div id="cassette-deck">
     <div id="salmon-container">
-      <canvas id="salmon-canvas" width="400" height="300"></canvas>
+      <canvas id="salmon-canvas"></canvas>
     </div>
     <div class="hymn-player">
       <audio id="hymn-audio" preload="metadata" loop>
