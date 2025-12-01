@@ -37,30 +37,6 @@
     @apply flex;
   }
 
-  .shop-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8;
-  }
-
-  .shop-item {
-    @apply bg-zinc-800 p-8 rounded-lg shadow-md;
-  }
-
-  .shop-item h3 {
-    @apply mt-0 text-gray-100;
-  }
-
-  .shop-item-price {
-    @apply text-2xl font-bold text-sky-400 my-4;
-  }
-
-  .shop-item-description {
-    @apply text-zinc-300 mb-6 leading-relaxed;
-  }
-
-  .snipcart-add-item {
-    @apply bg-sky-400 text-zinc-900 px-6 py-3 border-0 rounded-md text-base font-semibold cursor-pointer transition-all inline-block no-underline hover:bg-sky-300 hover:-translate-y-0.5;
-  }
-
   .contact-form {
     @apply max-w-2xl my-8;
   }

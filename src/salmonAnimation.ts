@@ -227,7 +227,7 @@ class AnimatronicSalmon {
         // Open mouth cavity (when open)
         if (this.mouthState > 0.3) {
             this.ctx.save();
-            this.ctx.fillStyle = '#2b1810';
+            this.ctx.fillStyle = '#4a2818';
             this.ctx.beginPath();
             this.ctx.ellipse(
                 mouthX + 5,
@@ -558,31 +558,13 @@ class CassettePlayer {
     private source: HTMLSourceElement;
     private salmon: AnimatronicSalmon;
     private currentHymn: string | null = null;
-    private unlockedHymns: Set<string>;
-    private clickSequence: number[] = [];
 
     constructor(salmon: AnimatronicSalmon) {
         this.salmon = salmon;
         this.audio = document.getElementById('hymn-audio') as HTMLAudioElement;
         this.source = document.getElementById('hymn-source') as HTMLSourceElement;
 
-        const saved = localStorage.getItem('unlockedHymns');
-        this.unlockedHymns = saved ? new Set(JSON.parse(saved)) : new Set(['examine-a-consciencia', 'eu-nao-sou-deus', 'sentado-no-trono', 'brilho-do-sol']);
-
-        this.initializeUI();
         this.setupEventListeners();
-    }
-
-    private initializeUI(): void {
-        document.querySelectorAll('.hymn-item').forEach(item => {
-            const hymnId = item.getAttribute('data-hymn');
-            if (hymnId && this.unlockedHymns.has(hymnId)) {
-                item.classList.remove('locked');
-                item.classList.add('unlocked');
-                const lockIcon = item.querySelector('.hymn-lock');
-                if (lockIcon) lockIcon.remove();
-            }
-        });
     }
 
     private setupEventListeners(): void {
@@ -591,10 +573,6 @@ class CassettePlayer {
                 const hymnId = item.getAttribute('data-hymn');
                 const hymnTitle = item.getAttribute('data-title');
                 const isLocked = item.classList.contains('locked');
-
-                this.clickSequence.push(parseInt(item.querySelector('.hymn-number')?.textContent || '0'));
-                if (this.clickSequence.length > 4) this.clickSequence.shift();
-                this.checkUnlockSequence();
 
                 if (isLocked) {
                     this.showLockedMessage(item as HTMLElement);
@@ -624,35 +602,6 @@ class CassettePlayer {
             this.salmon.stopPlaying();
             if (!this.audio.loop && playPauseBtn) playPauseBtn.textContent = '▶';
         });
-    }
-
-    private checkUnlockSequence(): void {
-        // Sneaky unlock: click hymns in order of their numbers (26, 84, 108, 115) or (26, 108, 115, 152)
-        const sequence1 = [26, 84, 108, 115];
-        const sequence2 = [26, 108, 115, 152];
-
-        if (this.arraysEqual(this.clickSequence, sequence1) || this.arraysEqual(this.clickSequence, sequence2)) {
-            this.unlockAllHymns();
-        }
-    }
-
-    private arraysEqual(a: number[], b: number[]): boolean {
-        return a.length === b.length && a.every((val, idx) => val === b[idx]);
-    }
-
-    private unlockAllHymns(): void {
-        document.querySelectorAll('.hymn-item.locked').forEach(item => {
-            const hymnId = item.getAttribute('data-hymn');
-            if (hymnId) {
-                this.unlockedHymns.add(hymnId);
-                item.classList.remove('locked');
-                item.classList.add('unlocked');
-                const lockIcon = item.querySelector('.hymn-lock');
-                if (lockIcon) lockIcon.remove();
-            }
-        });
-
-        localStorage.setItem('unlockedHymns', JSON.stringify([...this.unlockedHymns]));
     }
 
     private showLockedMessage(item: HTMLElement): void {
@@ -713,6 +662,20 @@ class CassettePlayer {
     }
 }
 
+// Convert AsciiDoc formatting to HTML
+function formatAsciidoc(text: string): string {
+    return text
+        // Convert _italic_ to <em>
+        .replace(/_([^_]+)_/g, '<em>$1</em>')
+        // Remove [.nocase]# markers but keep the text
+        .replace(/\[\.nocase\]#([^#]+)#/g, '$1')
+        // Convert ++[++ and ++]++ to literal brackets
+        .replace(/\+\+\[\+\+/g, '[')
+        .replace(/\+\+\]\+\+/g, ']')
+        // Make URLs clickable
+        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+
 // Load bibliography data
 async function loadBibliography(): Promise<void> {
     try {
@@ -724,8 +687,9 @@ async function loadBibliography(): Promise<void> {
 
         container.innerHTML = entries
             .map((entry: { id: string; citation: string }) => {
+                const formattedCitation = formatAsciidoc(entry.citation);
                 return `<div class="bib-entry" id="bib-${entry.id}">
-          <div class="bib-citation">${entry.citation}</div>
+          <div class="bib-citation">${formattedCitation}</div>
         </div>`;
             })
             .join('');

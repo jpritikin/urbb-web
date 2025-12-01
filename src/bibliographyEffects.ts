@@ -20,6 +20,7 @@ class BibliographyEffects {
     private lastEscapeTime: number = 0;
     private mutualRegardPairs: Set<string> = new Set();
     private hearts: HTMLElement[] = [];
+    private lastReplacedSlot: number = 2;
 
     initialize(): void {
         this.waitForBibliography();
@@ -71,47 +72,149 @@ class BibliographyEffects {
     }
 
     private setupLongPressCopy(entry: HTMLElement, state: BibEntryState): void {
-        let pressTimer: number | null = null;
-        let touchMoved = false;
+        let pressStartTime = 0;
+        let startX = 0;
+        let startY = 0;
+        let hasMoved = false;
+        let longPressTriggered = false;
+        let feedbackTimer: number | null = null;
         const LONG_PRESS_DURATION = 500;
+        const MOVE_THRESHOLD = 10; // pixels - allow small movements
 
         const startPress = (e: Event) => {
-            touchMoved = false;
-            pressTimer = window.setTimeout(() => {
-                if (!touchMoved) {
-                    this.copyReferenceToClipboard(entry, state);
+            hasMoved = false;
+            longPressTriggered = false;
+            pressStartTime = Date.now();
+
+            // Record starting position
+            if (e instanceof TouchEvent && e.touches.length > 0) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else if (e instanceof MouseEvent) {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+
+            // Show "Copied!" feedback after holding for LONG_PRESS_DURATION
+            feedbackTimer = window.setTimeout(() => {
+                if (!hasMoved && pressStartTime > 0) {
+                    this.showCopyFeedback(entry);
+                    longPressTriggered = true;
                 }
             }, LONG_PRESS_DURATION);
         };
 
-        const cancelPress = () => {
-            if (pressTimer) {
-                clearTimeout(pressTimer);
-                pressTimer = null;
+        const endPress = (e: Event) => {
+            // Clear the feedback timer
+            if (feedbackTimer) {
+                clearTimeout(feedbackTimer);
+                feedbackTimer = null;
+            }
+
+            // If long press was triggered (feedback shown), copy on release
+            if (longPressTriggered && pressStartTime > 0) {
+                // Copy immediately within the user gesture
+                this.copyReferenceToClipboard(entry, state, true); // true = skip showing feedback again
+                e.preventDefault();
+            }
+
+            pressStartTime = 0;
+        };
+
+        const handleTouchMove = (e: Event) => {
+            if (!(e instanceof TouchEvent) || e.touches.length === 0) return;
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const deltaX = Math.abs(currentX - startX);
+            const deltaY = Math.abs(currentY - startY);
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            // Only cancel if moved beyond threshold
+            if (distance > MOVE_THRESHOLD) {
+                hasMoved = true;
+
+                // Clear feedback timer if user moves significantly
+                if (feedbackTimer) {
+                    clearTimeout(feedbackTimer);
+                    feedbackTimer = null;
+                }
             }
         };
 
-        const handleTouchMove = () => {
-            touchMoved = true;
-            cancelPress();
+        const handleLeave = () => {
+            pressStartTime = 0;
+            if (feedbackTimer) {
+                clearTimeout(feedbackTimer);
+                feedbackTimer = null;
+            }
         };
 
         entry.addEventListener('mousedown', startPress);
-        entry.addEventListener('mouseup', cancelPress);
-        entry.addEventListener('mouseleave', cancelPress);
+        entry.addEventListener('mouseup', endPress);
+        entry.addEventListener('mouseleave', handleLeave);
         entry.addEventListener('touchstart', startPress, { passive: true });
-        entry.addEventListener('touchend', cancelPress);
+        entry.addEventListener('touchend', endPress);
         entry.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+        // Prevent click event if long press was triggered
+        entry.addEventListener('click', (e) => {
+            if (longPressTriggered) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Reset after a brief delay
+                setTimeout(() => {
+                    longPressTriggered = false;
+                }, 100);
+                return false;
+            }
+        }, { capture: true });
     }
 
-    private async copyReferenceToClipboard(entry: HTMLElement, state: BibEntryState): Promise<void> {
+    private async copyReferenceToClipboard(entry: HTMLElement, state: BibEntryState, skipFeedback = false): Promise<void> {
         const citationText = state.originalCitation;
 
         try {
-            await navigator.clipboard.writeText(citationText);
-            this.showCopyFeedback(entry);
+            // Try modern Clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(citationText);
+                if (!skipFeedback) {
+                    this.showCopyFeedback(entry);
+                }
+            } else {
+                // Fallback to execCommand for older browsers
+                this.copyToClipboardFallback(citationText);
+                if (!skipFeedback) {
+                    this.showCopyFeedback(entry);
+                }
+            }
         } catch (err) {
-            console.error('Failed to copy:', err);
+            // If Clipboard API fails (e.g., lack of user activation), use fallback
+            try {
+                this.copyToClipboardFallback(citationText);
+                if (!skipFeedback) {
+                    this.showCopyFeedback(entry);
+                }
+            } catch (fallbackErr) {
+                console.error('[Bibliography] Failed to copy:', err, fallbackErr);
+            }
+        }
+    }
+
+    private copyToClipboardFallback(text: string): void {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            document.execCommand('copy');
+        } finally {
+            textArea.remove();
         }
     }
 
@@ -281,20 +384,25 @@ class BibliographyEffects {
             return;
         }
 
-        if (this.selectedEntries.size < 2) {
-            const nextSlot = this.selectedEntries.has(1) ? 2 : 1;
-            this.selectEntry(entry, nextSlot, state);
+        let slotToUse: number;
+
+        if (this.selectedEntries.size === 0) {
+            slotToUse = 1;
+        } else if (this.selectedEntries.size === 1) {
+            slotToUse = this.selectedEntries.has(1) ? 2 : 1;
         } else {
-            const slotToReplace = this.selectedEntries.has(1) ? 1 : 2;
-            const oldEntry = this.selectedEntries.get(slotToReplace);
+            slotToUse = this.lastReplacedSlot === 1 ? 2 : 1;
+            const oldEntry = this.selectedEntries.get(slotToUse);
             if (oldEntry) {
                 const oldState = this.entries.get(oldEntry.id);
                 if (oldState) {
-                    this.unselectEntry(oldEntry, slotToReplace, oldState);
+                    this.unselectEntry(oldEntry, slotToUse, oldState);
                 }
             }
-            this.selectEntry(entry, slotToReplace, state);
         }
+
+        this.selectEntry(entry, slotToUse, state);
+        this.lastReplacedSlot = slotToUse;
 
         if (!state.isFixed) {
             if (state.isGlitched) {
@@ -428,7 +536,19 @@ class BibliographyEffects {
             display: none;
         `;
 
-        this.battleButton.addEventListener('click', () => this.startBattle());
+        this.battleButton.addEventListener('click', () => {
+            if (this.battleButton) {
+                this.battleButton.style.transition = 'opacity 1s ease';
+                this.battleButton.style.opacity = '0';
+                setTimeout(() => {
+                    if (this.battleButton) {
+                        this.battleButton.style.display = 'none';
+                        this.battleButton.style.opacity = '1';
+                    }
+                }, 1000);
+            }
+            this.startBattle();
+        });
         document.addEventListener('mousemove', (e) => this.checkMouseProximity(e));
         document.body.appendChild(this.battleButton);
 
@@ -478,6 +598,9 @@ class BibliographyEffects {
 
     private checkMouseProximity(e: MouseEvent): void {
         if (!this.battleButton || this.battleButton.style.display === 'none') return;
+
+        // Don't run away on mobile
+        if (this.isMobilePortrait() || window.innerWidth <= 768) return;
 
         const now = Date.now();
         if (now - this.lastEscapeTime < 500) return;
@@ -547,7 +670,26 @@ class BibliographyEffects {
     private async startBattle(): Promise<void> {
         if (this.selectedEntries.size !== 2) return;
 
-        // Check for mobile portrait orientation
+        const fighter1 = this.selectedEntries.get(1);
+        const fighter2 = this.selectedEntries.get(2);
+        if (!fighter1 || !fighter2) return;
+
+        const surname1 = this.getBibSurname(fighter1);
+        const surname2 = this.getBibSurname(fighter2);
+
+        // Check for same surname - show apology without rotation requirement
+        if (surname1.toLowerCase() === surname2.toLowerCase() && surname1 !== 'Unknown') {
+            this.showSameSurnameApology(surname1);
+            return;
+        }
+
+        // Check for mutual regard - show chastisement without rotation requirement
+        if (this.hasMutualRegard(fighter1, fighter2)) {
+            this.showChastisement(fighter1, fighter2);
+            return;
+        }
+
+        // Check for mobile portrait orientation only for actual battles
         if (this.isMobilePortrait()) {
             this.showRotateDeviceMessage();
             return;
@@ -556,23 +698,6 @@ class BibliographyEffects {
         if (this.battleButton) {
             this.battleButton.style.display = 'none';
             this.battleButton.style.transform = 'translate(-50%, -50%)';
-        }
-
-        const fighter1 = this.selectedEntries.get(1);
-        const fighter2 = this.selectedEntries.get(2);
-        if (!fighter1 || !fighter2) return;
-
-        const surname1 = this.getBibSurname(fighter1);
-        const surname2 = this.getBibSurname(fighter2);
-
-        if (surname1.toLowerCase() === surname2.toLowerCase() && surname1 !== 'Unknown') {
-            this.showSameSurnameApology(surname1);
-            return;
-        }
-
-        if (this.hasMutualRegard(fighter1, fighter2)) {
-            this.showChastisement(fighter1, fighter2);
-            return;
         }
 
         const title1 = this.getBibTitle(fighter1);
@@ -639,10 +764,8 @@ class BibliographyEffects {
         }
 
         const winner = hp1.current > 0 ? name1 : name2;
-        await this.sleep(500);
         this.addBattleLog(arena, `🏆 ${winner} wins!`);
-
-        await this.sleep(1000);
+        this.hideHPBars(arena);
         this.showDismissButton(arena);
     }
 
@@ -712,20 +835,22 @@ class BibliographyEffects {
             transform: translate(-50%, -50%);
             width: 90%;
             max-width: 600px;
+            max-height: 85vh;
             background: linear-gradient(135deg, rgba(30, 144, 255, 0.95), rgba(147, 112, 219, 0.95));
-            border: 4px solid var(--daime-gold);
-            border-radius: 16px;
-            padding: 2rem;
+            border: 3px solid var(--daime-gold);
+            border-radius: 12px;
+            padding: 1rem;
             z-index: 10000;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow-y: auto;
         `;
 
         arena.innerHTML = `
-            <div style="text-align: center; margin-bottom: 2rem; width: 100%; position: relative;">
-                <h2 style="color: var(--daime-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin: 0;">
+            <div style="text-align: center; margin-bottom: 1rem; width: 100%; position: relative;">
+                <h2 style="color: var(--daime-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin: 0; font-size: 1.3rem;">
                     📚 BIBLIOGRAPHY BATTLE! 📚
                 </h2>
                 <button id="debug-mutual-regard" style="
@@ -740,40 +865,55 @@ class BibliographyEffects {
                     font-size: 0.7rem;
                     cursor: pointer;
                     font-family: monospace;
-                    display: none;
+                    display: block;
                 ">DEBUG: ♥</button>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; width: 100%;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; width: 100%;">
                 <div class="fighter-hp" data-fighter="fighter1">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem; color: white; text-transform: capitalize;">${label1}</div>
-                    <div style="background: rgba(0,0,0,0.3); border-radius: 8px; height: 20px; overflow: hidden;">
+                    <div style="font-weight: 600; margin-bottom: 0.3rem; color: white; text-transform: capitalize; font-size: 0.85rem;">${label1}</div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 6px; height: 16px; overflow: hidden;">
                         <div class="hp-bar" style="background: #00FF00; height: 100%; width: 100%; transition: width 0.3s ease;"></div>
                     </div>
-                    <div class="hp-text" style="color: white; font-size: 0.85rem; margin-top: 0.25rem;">100/100 HP</div>
+                    <div class="hp-text" style="color: white; font-size: 0.75rem; margin-top: 0.2rem;">100/100 HP</div>
                 </div>
 
                 <div class="fighter-hp" data-fighter="fighter2">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem; color: white; text-transform: capitalize;">${label2}</div>
-                    <div style="background: rgba(0,0,0,0.3); border-radius: 8px; height: 20px; overflow: hidden;">
+                    <div style="font-weight: 600; margin-bottom: 0.3rem; color: white; text-transform: capitalize; font-size: 0.85rem;">${label2}</div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 6px; height: 16px; overflow: hidden;">
                         <div class="hp-bar" style="background: #00FF00; height: 100%; width: 100%; transition: width 0.3s ease;"></div>
                     </div>
-                    <div class="hp-text" style="color: white; font-size: 0.85rem; margin-top: 0.25rem;">100/100 HP</div>
+                    <div class="hp-text" style="color: white; font-size: 0.75rem; margin-top: 0.2rem;">100/100 HP</div>
                 </div>
             </div>
 
             <div id="battle-log" style="
                 background: rgba(0,0,0,0.3);
-                border-radius: 8px;
-                padding: 1rem;
-                height: 150px;
+                border-radius: 6px;
+                padding: 0.75rem;
+                height: 100px;
                 overflow-y: auto;
                 color: white;
                 font-family: 'Courier New', monospace;
-                font-size: 0.9rem;
+                font-size: 0.8rem;
                 width: 100%;
+                line-height: 1.3;
+                transition: height 0.5s ease;
+                touch-action: pan-y;
+                overscroll-behavior: contain;
             "></div>
         `;
+
+        const battleLog = arena.querySelector('#battle-log');
+        if (battleLog) {
+            battleLog.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: true });
+
+            battleLog.addEventListener('touchmove', (e) => {
+                e.stopPropagation();
+            }, { passive: true });
+        }
 
         return arena;
     }
@@ -801,6 +941,21 @@ class BibliographyEffects {
         if (!citation) return 'Unknown';
 
         const text = citation.textContent || '';
+
+        const yearMatch = text.match(/\((\d{4}[a-z]?)\)\.\s+(.+)/);
+        if (yearMatch && yearMatch[2]) {
+            const afterYear = yearMatch[2];
+
+            const italicMatch = afterYear.match(/^(.+?)\.\s*_/) || afterYear.match(/^_([^_]+)_/);
+            if (italicMatch) {
+                return italicMatch[1].trim();
+            }
+
+            const firstSentence = afterYear.match(/^([^.?!]+)/);
+            if (firstSentence) {
+                return firstSentence[1].trim();
+            }
+        }
 
         const titleMatch = text.match(/[""]([^""]+)[""]/) ||
             text.match(/_([^_]+)_/) ||
@@ -849,6 +1004,23 @@ class BibliographyEffects {
 
         if (hpText) {
             hpText.textContent = `${hp.current}/${hp.max} HP`;
+        }
+    }
+
+    private hideHPBars(arena: HTMLElement): void {
+        const hpContainer = arena.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+        const battleLog = arena.querySelector('#battle-log') as HTMLElement;
+
+        if (hpContainer) {
+            hpContainer.style.transition = 'opacity 0.5s ease, height 0.5s ease';
+            hpContainer.style.opacity = '0';
+            hpContainer.style.height = '0';
+            hpContainer.style.marginBottom = '0';
+            hpContainer.style.overflow = 'hidden';
+        }
+
+        if (battleLog) {
+            battleLog.style.height = '250px';
         }
     }
 
@@ -1011,7 +1183,8 @@ class BibliographyEffects {
         this.addBattleLog(arena, '"Our contributions complement each other."');
         await this.sleep(1500);
         this.addBattleLog(arena, '💕 MUTUAL REGARD ACHIEVED 💕');
-        await this.sleep(1000);
+
+        this.hideHPBars(arena);
 
         this.mutualRegardPairs.add(this.getPairKey(fighter1, fighter2));
 
@@ -1019,7 +1192,6 @@ class BibliographyEffects {
         document.body.appendChild(heart);
         this.hearts.push(heart);
 
-        await this.sleep(2000);
         this.showMutualRegardDismissButton(arena);
     }
 
@@ -1037,6 +1209,7 @@ class BibliographyEffects {
             user-select: none;
             z-index: 9999;
             filter: drop-shadow(0 4px 12px rgba(255, 20, 147, 0.6));
+            touch-action: none;
         `;
 
         heart.innerHTML = `
@@ -1079,25 +1252,56 @@ class BibliographyEffects {
         let initialX = 0;
         let initialY = 0;
 
-        element.addEventListener('mousedown', (e: MouseEvent) => {
+        const startDrag = (clientX: number, clientY: number) => {
             isDragging = true;
-            initialX = e.clientX - currentX;
-            initialY = e.clientY - currentY;
+            initialX = clientX - currentX;
+            initialY = clientY - currentY;
             element.style.cursor = 'grabbing';
+        };
+
+        const drag = (clientX: number, clientY: number) => {
+            if (isDragging) {
+                currentX = clientX - initialX;
+                currentY = clientY - initialY;
+                element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+            }
+        };
+
+        const endDrag = () => {
+            isDragging = false;
+            element.style.cursor = 'move';
+        };
+
+        element.addEventListener('mousedown', (e: MouseEvent) => {
+            startDrag(e.clientX, e.clientY);
         });
 
         document.addEventListener('mousemove', (e: MouseEvent) => {
             if (isDragging) {
                 e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-                element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+                drag(e.clientX, e.clientY);
             }
         });
 
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            element.style.cursor = 'move';
+        document.addEventListener('mouseup', endDrag);
+
+        element.addEventListener('touchstart', (e: TouchEvent) => {
+            if (e.touches.length === 1) {
+                startDrag(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e: TouchEvent) => {
+            if (isDragging && e.touches.length === 1) {
+                e.preventDefault();
+                drag(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e: TouchEvent) => {
+            if (isDragging) {
+                endDrag();
+            }
         });
     }
 
@@ -1159,14 +1363,19 @@ class BibliographyEffects {
             left: 50%;
             transform: translate(-50%, -50%);
             width: 90%;
-            max-width: 550px;
+            max-width: 320px;
+            max-height: 85vh;
             background: linear-gradient(135deg, rgba(25, 25, 112, 0.98), rgba(72, 61, 139, 0.98));
-            border: 4px solid var(--daime-gold);
-            border-radius: 16px;
-            padding: 2.5rem;
+            border: 3px solid var(--daime-gold);
+            border-radius: 12px;
+            padding: 0.75rem;
             z-index: 10001;
             box-shadow: 0 0 40px rgba(218, 165, 32, 0.6);
             text-align: center;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         `;
 
         const apologies = [
@@ -1188,21 +1397,21 @@ class BibliographyEffects {
                     50% { box-shadow: 0 0 60px rgba(218, 165, 32, 0.9); }
                 }
             </style>
-            <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.8;">🙏</div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.8;">🙏</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                 Our Sincerest Apologies
             </div>
-            <div style="color: white; font-weight: 500; font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+            <div style="color: white; font-weight: 500; font-size: 0.85rem; line-height: 1.5; margin-bottom: 0.75rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); flex: 1; overflow-y: auto;">
                 ${randomApology}
             </div>
             <button id="accept-apology" style="
-                padding: 1rem 2rem;
+                padding: 0.6rem 1rem;
                 background: var(--daime-gold);
-                border: 3px solid white;
+                border: 2px solid white;
                 border-radius: 8px;
                 cursor: pointer;
                 font-weight: 700;
-                font-size: 1rem;
+                font-size: 0.9rem;
                 color: #191970;
                 transition: all 0.2s ease;
                 box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -1210,6 +1419,15 @@ class BibliographyEffects {
         `;
 
         apologyModal.style.animation = 'solemn-pulse 2s infinite';
+
+        // Prevent scroll events from propagating to the page behind
+        apologyModal.addEventListener('wheel', (e) => {
+            e.stopPropagation();
+        }, { passive: false });
+
+        apologyModal.addEventListener('touchmove', (e) => {
+            e.stopPropagation();
+        }, { passive: false });
 
         document.body.appendChild(apologyModal);
 
@@ -1249,11 +1467,11 @@ class BibliographyEffects {
             left: 50%;
             transform: translate(-50%, -50%);
             width: 90%;
-            max-width: 500px;
+            max-width: 320px;
             background: linear-gradient(135deg, rgba(139, 0, 0, 0.98), rgba(255, 0, 0, 0.98));
             border: 5px solid #FFD700;
             border-radius: 16px;
-            padding: 2rem;
+            padding: 1rem;
             z-index: 10001;
             box-shadow: 0 0 60px rgba(255, 0, 0, 0.8);
             text-align: center;
@@ -1341,14 +1559,14 @@ class BibliographyEffects {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 400px;
+            width: 85%;
+            max-width: 320px;
             background: linear-gradient(135deg, rgba(30, 144, 255, 0.98), rgba(147, 112, 219, 0.98));
-            border: 4px solid var(--daime-gold);
-            border-radius: 16px;
-            padding: 2rem;
+            border: 3px solid var(--daime-gold);
+            border-radius: 12px;
+            padding: 1.25rem;
             z-index: 10001;
-            box-shadow: 0 0 40px rgba(218, 165, 32, 0.6);
+            box-shadow: 0 0 30px rgba(218, 165, 32, 0.6);
             text-align: center;
             animation: gentle-pulse 2s infinite;
         `;
@@ -1356,34 +1574,32 @@ class BibliographyEffects {
         rotateModal.innerHTML = `
             <style>
                 @keyframes gentle-pulse {
-                    0%, 100% { box-shadow: 0 0 40px rgba(218, 165, 32, 0.6); }
-                    50% { box-shadow: 0 0 60px rgba(218, 165, 32, 0.9); }
+                    0%, 100% { box-shadow: 0 0 30px rgba(218, 165, 32, 0.6); }
+                    50% { box-shadow: 0 0 50px rgba(218, 165, 32, 0.9); }
                 }
                 @keyframes rotate-icon {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(90deg); }
                 }
             </style>
-            <div style="font-size: 4rem; margin-bottom: 1rem; animation: rotate-icon 1s ease-in-out infinite alternate;">📱</div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem; animation: rotate-icon 1s ease-in-out infinite alternate;">📱</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 0.75rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                 Rotate Your Device
             </div>
-            <div style="color: white; font-weight: 500; font-size: 1rem; line-height: 1.6; margin-bottom: 2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
-                The Bibliography Battle requires landscape orientation for optimal cosmic alignment.
-                <br><br>
-                Please rotate your device to landscape mode to witness this epic scholarly confrontation.
+            <div style="color: white; font-weight: 500; font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.25rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                Bibliography Battle requires landscape mode for optimal cosmic alignment.
             </div>
             <button id="dismiss-rotate" style="
-                padding: 0.75rem 1.5rem;
+                padding: 0.6rem 1.2rem;
                 background: var(--daime-gold);
-                border: 3px solid white;
-                border-radius: 8px;
+                border: 2px solid white;
+                border-radius: 6px;
                 cursor: pointer;
-                font-weight: 700;
-                font-size: 1rem;
+                font-weight: 600;
+                font-size: 0.9rem;
                 color: #1E90FF;
                 transition: all 0.2s ease;
-                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             ">I Understand</button>
         `;
 
