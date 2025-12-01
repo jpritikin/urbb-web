@@ -20,6 +20,12 @@ class BibliographyEffects {
     private lastEscapeTime: number = 0;
     private mutualRegardPairs: Set<string> = new Set();
     private hearts: HTMLElement[] = [];
+    private activeLockPopup: HTMLElement | null = null;
+    private lockPopupPosition: { x: number; y: number } | null = null;
+    private heartBeingDragged: HTMLElement | null = null;
+    private debugPanel: HTMLElement | null = null;
+    private targetHymnElement: HTMLElement | null = null;
+    private lockPopupTimeout: number | null = null;
     private lastReplacedSlot: number = 2;
 
     initialize(): void {
@@ -722,7 +728,7 @@ class BibliographyEffects {
 
         await this.sleep(500);
         this.addBattleLog(arena, `${name1} vs ${name2}!`);
-        await this.sleep(1000);
+        await this.sleep(500);
 
         const hp1 = { current: 100, max: 100 };
         const hp2 = { current: 100, max: 100 };
@@ -745,7 +751,7 @@ class BibliographyEffects {
             this.addBattleLog(arena, `${name1} attacks for ${damage1} damage!`);
             this.updateBattleHP(arena, 'fighter2', hp2);
             this.flashDamage(fighter2);
-            await this.sleep(1000);
+            await this.sleep(500);
 
             if (hp2.current <= 0) break;
 
@@ -760,7 +766,7 @@ class BibliographyEffects {
             this.addBattleLog(arena, `${name2} attacks for ${damage2} damage!`);
             this.updateBattleHP(arena, 'fighter1', hp1);
             this.flashDamage(fighter1);
-            await this.sleep(1000);
+            await this.sleep(500);
         }
 
         const winner = hp1.current > 0 ? name1 : name2;
@@ -1048,9 +1054,9 @@ class BibliographyEffects {
     }
 
     private async triggerMutualRegardTransition(arena: HTMLElement, fighter1: HTMLElement, fighter2: HTMLElement, name1: string, name2: string): Promise<void> {
-        arena.style.animation = 'battle-shake 0.3s infinite';
+        arena.style.animation = 'battle-shake 0.45s infinite';
 
-        await this.sleep(300);
+        await this.sleep(450);
 
         const staticOverlay = document.createElement('div');
         staticOverlay.style.cssText = `
@@ -1064,7 +1070,7 @@ class BibliographyEffects {
                 repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 2px);
             background-size: 100% 4px, 4px 100%;
             opacity: 0;
-            animation: static-glitch 0.05s infinite, static-fade-in 0.3s forwards;
+            animation: static-glitch 0.075s infinite, static-fade-in 0.45s forwards;
             pointer-events: none;
             z-index: 10;
         `;
@@ -1150,9 +1156,9 @@ class BibliographyEffects {
 
         arena.appendChild(staticOverlay);
 
-        await this.sleep(1500);
+        await this.sleep(2250);
 
-        staticOverlay.style.animation = 'static-fade-out 0.5s forwards';
+        staticOverlay.style.animation = 'static-fade-out 0.75s forwards';
         const fadeOutStyle = document.createElement('style');
         fadeOutStyle.textContent = `
             @keyframes static-fade-out {
@@ -1162,7 +1168,7 @@ class BibliographyEffects {
         `;
         document.head.appendChild(fadeOutStyle);
 
-        await this.sleep(500);
+        await this.sleep(750);
         arena.style.animation = '';
         arena.style.transform = 'translate(-50%, -50%)';
         staticOverlay.remove();
@@ -1171,17 +1177,17 @@ class BibliographyEffects {
     }
 
     private async showMutualRegard(arena: HTMLElement, fighter1: HTMLElement, fighter2: HTMLElement, name1: string, name2: string): Promise<void> {
-        await this.sleep(300);
+        await this.sleep(150);
         this.addBattleLog(arena, '...');
-        await this.sleep(800);
+        await this.sleep(400);
         this.addBattleLog(arena, `${name1} pauses...`);
-        await this.sleep(1000);
+        await this.sleep(500);
         this.addBattleLog(arena, `${name2} lowers their guard...`);
-        await this.sleep(1200);
+        await this.sleep(600);
         this.addBattleLog(arena, '"We need not fight," they say.');
-        await this.sleep(1500);
+        await this.sleep(750);
         this.addBattleLog(arena, '"Our contributions complement each other."');
-        await this.sleep(1500);
+        await this.sleep(750);
         this.addBattleLog(arena, '💕 MUTUAL REGARD ACHIEVED 💕');
 
         this.hideHPBars(arena);
@@ -1207,7 +1213,7 @@ class BibliographyEffects {
             height: 180px;
             cursor: move;
             user-select: none;
-            z-index: 9999;
+            z-index: 10001;
             filter: drop-shadow(0 4px 12px rgba(255, 20, 147, 0.6));
             touch-action: none;
         `;
@@ -1249,27 +1255,211 @@ class BibliographyEffects {
         let isDragging = false;
         let currentX = 0;
         let currentY = 0;
-        let initialX = 0;
-        let initialY = 0;
+        let velocity = { x: 0, y: 0 };
+        let animationFrame: number | null = null;
+        let currentScale = 1;
+        let targetScale = 1;
+
+        const MOUSE_HISTORY_SIZE = 12;
+        const mouseHistory: Array<{ x: number; y: number }> = [];
+        let historyIndex = 0;
+
+        const DRAG_FORCE = 0.2;
+        const FRICTION = 0.92;
+        const ESCAPE_FORCE = 0.1;
+        const MAX_VELOCITY = 15;
+        const SCALE_LERP_SPEED = 0.05;
 
         const startDrag = (clientX: number, clientY: number) => {
             isDragging = true;
-            initialX = clientX - currentX;
-            initialY = clientY - currentY;
+            this.heartBeingDragged = element;
+            currentMouseX = clientX;
+            currentMouseY = clientY;
+
+            mouseHistory.length = 0;
+            historyIndex = 0;
+            for (let i = 0; i < MOUSE_HISTORY_SIZE; i++) {
+                mouseHistory.push({ x: clientX, y: clientY });
+            }
+
             element.style.cursor = 'grabbing';
+            element.style.transition = 'none';
+
+            if (!animationFrame) {
+                animationFrame = requestAnimationFrame(animate);
+            }
         };
 
-        const drag = (clientX: number, clientY: number) => {
+        let currentMouseX = 0;
+        let currentMouseY = 0;
+
+        const updateDrag = (clientX: number, clientY: number) => {
+            currentMouseX = clientX;
+            currentMouseY = clientY;
+        };
+
+        const animate = () => {
+            let shouldConnect = false;
+            let debugData = {
+                mouseDx: 0,
+                mouseDy: 0,
+                velocityX: velocity.x,
+                velocityY: velocity.y,
+                escapeForcex: 0,
+                escapeForceY: 0,
+                userVector: '?',
+                crossProduct: 0,
+                distanceToLock: 0
+            };
+
             if (isDragging) {
-                currentX = clientX - initialX;
-                currentY = clientY - initialY;
-                element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+                mouseHistory[historyIndex] = { x: currentMouseX, y: currentMouseY };
+                historyIndex = (historyIndex + 1) % MOUSE_HISTORY_SIZE;
+
+                const oldestMouse = mouseHistory[historyIndex];
+                const mouseDx = (currentMouseX - oldestMouse.x) / MOUSE_HISTORY_SIZE;
+                const mouseDy = (currentMouseY - oldestMouse.y) / MOUSE_HISTORY_SIZE;
+                debugData.mouseDx = mouseDx;
+                debugData.mouseDy = mouseDy;
+
+                velocity.x += mouseDx * DRAG_FORCE;
+                velocity.y += mouseDy * DRAG_FORCE;
+
+                velocity.x *= FRICTION;
+                velocity.y *= FRICTION;
             }
+
+            if (this.lockPopupPosition && isDragging) {
+                const heartRect = element.getBoundingClientRect();
+                const heartCenterX = heartRect.left + heartRect.width / 2;
+                const heartCenterY = heartRect.top + heartRect.height / 2;
+
+                const dx = this.lockPopupPosition.x - heartCenterX;
+                const dy = this.lockPopupPosition.y - heartCenterY;
+                const distanceToLock = Math.sqrt(dx * dx + dy * dy);
+                debugData.distanceToLock = distanceToLock;
+
+                const directPathDx = dx / distanceToLock;
+                const directPathDy = dy / distanceToLock;
+
+                const mouseMagnitude = Math.sqrt(debugData.mouseDx * debugData.mouseDx +
+                    debugData.mouseDy * debugData.mouseDy);
+                const heartMagnitude = Math.sqrt(velocity.x * velocity.x +
+                    velocity.y * velocity.y)
+
+                let userDx = 0;
+                let userDy = 0;
+                let userMagnitude = 0;
+                if (mouseMagnitude > heartMagnitude) {
+                    userDx = debugData.mouseDx;
+                    userDy = debugData.mouseDy;
+                    userMagnitude = mouseMagnitude;
+                    debugData.userVector = 'mouse';
+                } else {
+                    userDx = velocity.x;
+                    userDy = velocity.y;
+                    userMagnitude = heartMagnitude;
+                    debugData.userVector = 'heart';
+                }
+                const userDx_norm = userDx / userMagnitude;
+                const userDy_norm = userDy / userMagnitude;
+
+                if (userMagnitude > 0.1) {
+                    const dotProduct = userDx_norm * directPathDx + userDy_norm * directPathDy;
+
+                    const steepness = 20;
+                    const goingToward = 1 / (1 + Math.exp(-steepness * dotProduct));
+
+                    const crossProduct = userDx_norm * directPathDy - userDy_norm * directPathDx;
+                    debugData.crossProduct = crossProduct;
+                    const sign = crossProduct > 0 ? -1 : 1;
+
+                    const perpX = -directPathDy * sign;
+                    const perpY = directPathDx * sign;
+
+                    //const distanceFactor = Math.pow(distanceToLock / 300, 0.5);
+                    const adjustedEscapeForce = ESCAPE_FORCE * userMagnitude * goingToward;
+
+                    const escapeForceX = perpX * adjustedEscapeForce;
+                    const escapeForceY = perpY * adjustedEscapeForce;
+                    debugData.escapeForcex = escapeForceX;
+                    debugData.escapeForceY = escapeForceY;
+
+                    velocity.x += escapeForceX;
+                    velocity.y += escapeForceY;
+                }
+
+                targetScale = Math.max(0.3, Math.min(1, distanceToLock / 400));
+
+                const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+                if (speed > MAX_VELOCITY) {
+                    velocity.x = (velocity.x / speed) * MAX_VELOCITY;
+                    velocity.y = (velocity.y / speed) * MAX_VELOCITY;
+                }
+
+                shouldConnect = distanceToLock < 20
+
+                debugData.velocityX = velocity.x;
+                debugData.velocityY = velocity.y;
+                this.updateDebugPanel(debugData, heartCenterX, heartCenterY);
+            } else {
+                targetScale = 1;
+            }
+
+            currentScale += (targetScale - currentScale) * SCALE_LERP_SPEED;
+
+            currentX += velocity.x;
+            currentY += velocity.y;
+
+            element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${currentScale})`;
+
+            if (shouldConnect) {
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                }
+                this.connectHeartToLock(element);
+                isDragging = false;
+                return;
+            }
+
+            if (!isDragging) {
+                velocity.x *= FRICTION;
+                velocity.y *= FRICTION;
+
+                const scaleNearlyAtTarget = Math.abs(currentScale - targetScale) < 0.01;
+                if (Math.abs(velocity.x) < 0.1 && Math.abs(velocity.y) < 0.1 && scaleNearlyAtTarget) {
+                    velocity.x = 0;
+                    velocity.y = 0;
+                    currentScale = targetScale;
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                        animationFrame = null;
+                    }
+                    return;
+                }
+            }
+
+            animationFrame = requestAnimationFrame(animate);
         };
 
         const endDrag = () => {
             isDragging = false;
+            this.heartBeingDragged = null;
             element.style.cursor = 'move';
+            this.hideDebugPanel();
+
+            if (this.activeLockPopup && !this.lockPopupTimeout) {
+                this.lockPopupTimeout = window.setTimeout(() => {
+                    if (this.activeLockPopup && !this.heartBeingDragged) {
+                        this.activeLockPopup.remove();
+                        this.activeLockPopup = null;
+                        this.lockPopupPosition = null;
+                        this.targetHymnElement = null;
+                        this.lockPopupTimeout = null;
+                    }
+                }, 10000);
+            }
         };
 
         element.addEventListener('mousedown', (e: MouseEvent) => {
@@ -1279,7 +1469,7 @@ class BibliographyEffects {
         document.addEventListener('mousemove', (e: MouseEvent) => {
             if (isDragging) {
                 e.preventDefault();
-                drag(e.clientX, e.clientY);
+                updateDrag(e.clientX, e.clientY);
             }
         });
 
@@ -1294,7 +1484,7 @@ class BibliographyEffects {
         document.addEventListener('touchmove', (e: TouchEvent) => {
             if (isDragging && e.touches.length === 1) {
                 e.preventDefault();
-                drag(e.touches[0].clientX, e.touches[0].clientY);
+                updateDrag(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, { passive: false });
 
@@ -1457,7 +1647,7 @@ class BibliographyEffects {
         const existingHeart = this.hearts.find(heart => {
             const text = heart.textContent || '';
             return (text.includes(this.truncateName(name1)) && text.includes(this.truncateName(name2))) ||
-                   (text.includes(this.truncateName(name2)) && text.includes(this.truncateName(name1)));
+                (text.includes(this.truncateName(name2)) && text.includes(this.truncateName(name1)));
         });
 
         const chastiseModal = document.createElement('div');
@@ -1634,7 +1824,336 @@ class BibliographyEffects {
 
         window.addEventListener('resize', handleOrientationChange);
     }
+
+    showLockPopup(lockElement: HTMLElement): void {
+        if (this.activeLockPopup) {
+            this.activeLockPopup.remove();
+        }
+
+        if (this.lockPopupTimeout) {
+            clearTimeout(this.lockPopupTimeout);
+            this.lockPopupTimeout = null;
+        }
+
+        this.targetHymnElement = lockElement;
+        const lockRect = lockElement.getBoundingClientRect();
+
+        const questions = [
+            {
+                title: "Love or Gratitude?",
+                subtitle: "What unlocks this hymn?"
+            },
+            {
+                title: "Heart or Spirit?",
+                subtitle: "Which opens the way?"
+            },
+            {
+                title: "Connection or Devotion?",
+                subtitle: "What is the key?"
+            },
+            {
+                title: "Mutual Regard or Solo Journey?",
+                subtitle: "How does one proceed?"
+            },
+            {
+                title: "Battle-Won Hearts?",
+                subtitle: "Perhaps you've found one..."
+            }
+        ];
+
+        const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+
+        const popup = document.createElement('div');
+        popup.className = 'lock-popup';
+        popup.style.cssText = `
+            position: fixed;
+            background: linear-gradient(135deg, rgba(147, 112, 219, 0.98), rgba(255, 215, 0, 0.98));
+            border: 3px solid var(--daime-gold);
+            border-radius: 12px;
+            padding: 1.5rem;
+            z-index: 10000;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            pointer-events: auto;
+            max-width: 280px;
+        `;
+
+        popup.innerHTML = `
+            <div style="color: white; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                ${randomQuestion.title}
+            </div>
+            <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; margin-bottom: 1.25rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                ${randomQuestion.subtitle}
+            </div>
+            <div class="heart-receptacle" style="
+                width: 60px;
+                height: 60px;
+                margin: 0 auto;
+                border: 3px dashed rgba(255, 20, 147, 0.6);
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(255, 20, 147, 0.1), transparent);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 2rem;
+                position: relative;
+                box-shadow: inset 0 0 20px rgba(255, 20, 147, 0.3);
+            ">
+                <div style="
+                    position: absolute;
+                    width: 50px;
+                    height: 50px;
+                    opacity: 0.3;
+                    background: radial-gradient(circle, rgba(255, 20, 147, 0.4), transparent 70%);
+                "></div>
+                💝
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+        this.activeLockPopup = popup;
+
+        const popupWidth = popup.offsetWidth;
+        const popupHeight = popup.offsetHeight;
+
+        let left = lockRect.right + 10;
+        let top = lockRect.top + (lockRect.height / 2) - (popupHeight / 2);
+
+        if (left + popupWidth > window.innerWidth) {
+            left = lockRect.left - popupWidth - 10;
+        }
+
+        if (top < 10) top = 10;
+        if (top + popupHeight > window.innerHeight - 10) {
+            top = window.innerHeight - popupHeight - 10;
+        }
+
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+
+        const receptacle = popup.querySelector('.heart-receptacle') as HTMLElement;
+        const receptacleRect = receptacle.getBoundingClientRect();
+        this.lockPopupPosition = {
+            x: receptacleRect.left + receptacleRect.width / 2,
+            y: receptacleRect.top + receptacleRect.height / 2
+        };
+
+        this.lockPopupTimeout = window.setTimeout(() => {
+            if (this.activeLockPopup && !this.heartBeingDragged) {
+                this.activeLockPopup.remove();
+                this.activeLockPopup = null;
+                this.lockPopupPosition = null;
+                this.targetHymnElement = null;
+                this.lockPopupTimeout = null;
+            }
+        }, 10000);
+    }
+
+    unlockHymn(hymnElement: HTMLElement): void {
+        hymnElement.classList.remove('locked');
+        hymnElement.classList.add('unlocked');
+
+        const lockIcon = hymnElement.querySelector('.hymn-lock');
+        if (lockIcon) {
+            lockIcon.remove();
+        }
+
+        hymnElement.style.animation = 'unlock-flash 0.8s ease-out';
+        setTimeout(() => {
+            hymnElement.style.animation = '';
+        }, 800);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes unlock-flash {
+                0% { background: rgba(255, 215, 0, 0.8); transform: scale(1); }
+                50% { background: rgba(255, 215, 0, 0.4); transform: scale(1.05); }
+                100% { background: rgba(147, 112, 219, 0.05); transform: scale(1); }
+            }
+        `;
+        if (!document.getElementById('unlock-flash-style')) {
+            style.id = 'unlock-flash-style';
+            document.head.appendChild(style);
+        }
+    }
+
+    private createDebugPanel(): void {
+        if (this.debugPanel) return;
+
+        this.debugPanel = document.createElement('div');
+        this.debugPanel.id = 'heart-debug-panel';
+        this.debugPanel.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 100000;
+            min-width: 300px;
+            pointer-events: none;
+            display: none;
+        `;
+
+        this.debugPanel.innerHTML = `
+            <div style="margin-bottom: 8px; color: #ff0; font-weight: bold;">Heart Debug Panel</div>
+            <canvas id="debug-canvas" width="200" height="200" style="background: #000; border: 1px solid #0f0; margin-bottom: 8px;"></canvas>
+            <div id="debug-text"></div>
+        `;
+
+        document.body.appendChild(this.debugPanel);
+    }
+
+    private updateDebugPanel(data: any, heartX: number, heartY: number): void {
+        if (!this.debugPanel) {
+            this.createDebugPanel();
+        }
+
+        const canvas = this.debugPanel?.querySelector('#debug-canvas') as HTMLCanvasElement;
+        const ctx = canvas?.getContext('2d');
+        const textDiv = this.debugPanel?.querySelector('#debug-text') as HTMLElement;
+
+        if (ctx && this.lockPopupPosition) {
+            ctx.clearRect(0, 0, 200, 200);
+
+            const centerX = 100;
+            const centerY = 100;
+            const scale = 2;
+
+            ctx.strokeStyle = '#444';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const lockDx = (this.lockPopupPosition.x - heartX) / scale;
+            const lockDy = (this.lockPopupPosition.y - heartY) / scale;
+
+            ctx.fillStyle = '#ff0';
+            ctx.beginPath();
+            ctx.arc(centerX + lockDx, centerY + lockDy, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText('Lock', centerX + lockDx + 5, centerY + lockDy);
+
+            // Draw direct path to lock (yellow dashed line)
+            ctx.strokeStyle = '#ff0';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + lockDx, centerY + lockDy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#0ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + data.mouseDx * 5, centerY + data.mouseDy * 5);
+            ctx.stroke();
+            ctx.fillStyle = '#0ff';
+            ctx.fillText('Mouse', centerX + data.mouseDx * 5 + 5, centerY + data.mouseDy * 5);
+
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + data.velocityX * 2, centerY + data.velocityY * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#0f0';
+            ctx.fillText('Heart', centerX + data.velocityX * 2 + 5, centerY + data.velocityY * 2);
+
+            if (Math.abs(data.escapeForcex) > 0.01 || Math.abs(data.escapeForceY) > 0.01) {
+                ctx.strokeStyle = '#f00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + data.escapeForcex * 10, centerY + data.escapeForceY * 10);
+                ctx.stroke();
+                ctx.fillStyle = '#f00';
+                ctx.fillText('Escape', centerX + data.escapeForcex * 10 + 5, centerY + data.escapeForceY * 10);
+            }
+        }
+
+        if (textDiv) {
+            textDiv.innerHTML = `
+                <div>Mouse Δ: (${data.mouseDx.toFixed(2)}, ${data.mouseDy.toFixed(2)})</div>
+                <div>Heart: (${data.velocityX.toFixed(2)}, ${data.velocityY.toFixed(2)})</div>
+                <div>Escape Force: (${data.escapeForcex.toFixed(2)}, ${data.escapeForceY.toFixed(2)})</div>
+                <div>User vector: ${data.userVector}</div>
+                <div>Cross Product: ${data.crossProduct.toFixed(3)}</div>
+                <div>Distance: ${data.distanceToLock.toFixed(1)}px</div>
+            `;
+        }
+    }
+
+    private hideDebugPanel(): void {
+        if (this.debugPanel) {
+            this.debugPanel.remove();
+            this.debugPanel = null;
+        }
+    }
+
+    private connectHeartToLock(heart: HTMLElement): void {
+        if (!this.activeLockPopup) return;
+
+        if (this.lockPopupTimeout) {
+            clearTimeout(this.lockPopupTimeout);
+            this.lockPopupTimeout = null;
+        }
+
+        heart.style.transition = 'all 0.5s ease-out';
+        heart.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        heart.style.opacity = '0';
+
+        const receptacle = this.activeLockPopup.querySelector('.heart-receptacle') as HTMLElement;
+        if (receptacle) {
+            receptacle.style.transition = 'all 1.2s ease';
+            receptacle.style.background = 'radial-gradient(circle, rgba(255, 20, 147, 0.8), rgba(255, 215, 0, 0.4))';
+            receptacle.style.borderColor = 'rgba(255, 215, 0, 1)';
+            receptacle.style.boxShadow = '0 0 30px rgba(255, 215, 0, 0.8), inset 0 0 30px rgba(255, 20, 147, 0.6)';
+            receptacle.innerHTML = '💖';
+        }
+
+        setTimeout(() => {
+            heart.remove();
+            const heartIndex = this.hearts.indexOf(heart);
+            if (heartIndex > -1) {
+                this.hearts.splice(heartIndex, 1);
+            }
+        }, 500);
+
+        setTimeout(() => {
+            if (this.activeLockPopup && this.targetHymnElement) {
+                const lockPopupElement = this.activeLockPopup;
+                const hymnToUnlock = this.targetHymnElement;
+
+                if (hymnToUnlock.classList.contains('locked')) {
+                    this.unlockHymn(hymnToUnlock);
+                }
+
+                setTimeout(() => {
+                    lockPopupElement.style.transition = 'all 1.5s ease';
+                    lockPopupElement.style.opacity = '0';
+                    lockPopupElement.style.transform = 'scale(1.5)';
+
+                    setTimeout(() => {
+                        lockPopupElement.remove();
+                        this.activeLockPopup = null;
+                        this.lockPopupPosition = null;
+                        this.targetHymnElement = null;
+                    }, 1500);
+                }, 2000);
+            }
+        }, 1500);
+    }
 }
 
 const bibEffects = new BibliographyEffects();
 bibEffects.initialize();
+
+if (typeof window !== 'undefined') {
+    (window as any).bibEffects = bibEffects;
+}

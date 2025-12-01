@@ -130,7 +130,7 @@ class AnimatronicSalmon {
         this.ctx.fillStyle = 'rgba(255, 220, 200, 0.4)';
         this.ctx.beginPath();
         this.ctx.ellipse(
-            centerX + bodyLength * 0.1,
+            centerX,
             centerY + bodyHeight * 0.15,
             bodyLength * 0.25,
             bodyHeight * 0.25,
@@ -609,6 +609,10 @@ class CassettePlayer {
         setTimeout(() => {
             item.style.animation = '';
         }, 500);
+
+        if (typeof window !== 'undefined' && (window as any).bibEffects) {
+            (window as any).bibEffects.showLockPopup(item);
+        }
     }
 
     private async loadCassette(hymnId: string, hymnTitle: string, hymnElement: HTMLElement): Promise<void> {
