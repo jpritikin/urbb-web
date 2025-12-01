@@ -64,9 +64,115 @@ class BibliographyEffects {
             }
 
             entry.addEventListener('click', () => this.handleEntryClick(entry as HTMLElement, state));
+            this.setupLongPressCopy(entry as HTMLElement, state);
         });
 
         this.setupBattleMode();
+    }
+
+    private setupLongPressCopy(entry: HTMLElement, state: BibEntryState): void {
+        let pressTimer: number | null = null;
+        let touchMoved = false;
+        const LONG_PRESS_DURATION = 500;
+
+        const startPress = (e: Event) => {
+            touchMoved = false;
+            pressTimer = window.setTimeout(() => {
+                if (!touchMoved) {
+                    this.copyReferenceToClipboard(entry, state);
+                }
+            }, LONG_PRESS_DURATION);
+        };
+
+        const cancelPress = () => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        };
+
+        const handleTouchMove = () => {
+            touchMoved = true;
+            cancelPress();
+        };
+
+        entry.addEventListener('mousedown', startPress);
+        entry.addEventListener('mouseup', cancelPress);
+        entry.addEventListener('mouseleave', cancelPress);
+        entry.addEventListener('touchstart', startPress, { passive: true });
+        entry.addEventListener('touchend', cancelPress);
+        entry.addEventListener('touchmove', handleTouchMove, { passive: true });
+    }
+
+    private async copyReferenceToClipboard(entry: HTMLElement, state: BibEntryState): Promise<void> {
+        const citationText = state.originalCitation;
+
+        try {
+            await navigator.clipboard.writeText(citationText);
+            this.showCopyFeedback(entry);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    }
+
+    private showCopyFeedback(entry: HTMLElement): void {
+        const feedback = document.createElement('div');
+        feedback.textContent = '📋 Copied!';
+        feedback.style.cssText = `
+            position: absolute;
+            top: 50%;
+            right: 1rem;
+            transform: translateY(-50%);
+            background: var(--daime-gold);
+            color: #000;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: copy-fade 1.5s ease-out forwards;
+        `;
+
+        const existingFeedback = entry.querySelector('.copy-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+
+        feedback.className = 'copy-feedback';
+        entry.appendChild(feedback);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes copy-fade {
+                0% {
+                    opacity: 0;
+                    transform: translateY(-50%) scale(0.8);
+                }
+                20% {
+                    opacity: 1;
+                    transform: translateY(-50%) scale(1);
+                }
+                80% {
+                    opacity: 1;
+                    transform: translateY(-50%) scale(1);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-50%) translateY(-10px) scale(0.9);
+                }
+            }
+        `;
+
+        if (!document.getElementById('copy-feedback-style')) {
+            style.id = 'copy-feedback-style';
+            document.head.appendChild(style);
+        }
+
+        setTimeout(() => {
+            feedback.remove();
+        }, 1500);
     }
 
     private applyRandomError(entry: HTMLElement, state: BibEntryState, index: number): void {
