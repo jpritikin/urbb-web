@@ -665,8 +665,8 @@ class BibliographyEffects {
     }
 
     private getPairKey(entry1: HTMLElement, entry2: HTMLElement): string {
-        const ids = [entry1.id, entry2.id].sort();
-        return `${ids[0]}|${ids[1]}`;
+        const surnames = [this.getBibSurname(entry1), this.getBibSurname(entry2)].sort();
+        return `${surnames[0]}|${surnames[1]}`;
     }
 
     private hasMutualRegard(entry1: HTMLElement, entry2: HTMLElement): boolean {
