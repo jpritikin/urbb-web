@@ -121,6 +121,9 @@
   border: 2px solid var(--daime-purple);
   border-radius: 12px;
   padding: 1rem;
+}
+
+#hymn-list-scroll {
   max-height: 380px;
   overflow-y: auto;
 }
@@ -131,21 +134,21 @@
   gap: 0.5rem;
 }
 
-#hymn-list-container::-webkit-scrollbar {
+#hymn-list-scroll::-webkit-scrollbar {
   width: 10px;
 }
 
-#hymn-list-container::-webkit-scrollbar-track {
+#hymn-list-scroll::-webkit-scrollbar-track {
   background: rgba(147, 112, 219, 0.1);
   border-radius: 5px;
 }
 
-#hymn-list-container::-webkit-scrollbar-thumb {
+#hymn-list-scroll::-webkit-scrollbar-thumb {
   background: var(--daime-purple);
   border-radius: 5px;
 }
 
-#hymn-list-container::-webkit-scrollbar-thumb:hover {
+#hymn-list-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--daime-gold);
 }
 
