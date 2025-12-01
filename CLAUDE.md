@@ -33,23 +33,7 @@ Segregate page-specific details from site-wide styles and layouts. Information s
 - Section-specific layouts go in `layouts/{section}/` directories
 - Site-wide styles remain in global CSS files
 
-## Page Versioning Scheme
-
-Each page has a version number to help track testing status and know when testing procedures need updating.
-
-**How it works:**
-1. Add `version: "v1.0.0"` to the frontmatter of markdown content files (e.g., `content/gallery/_index.md`)
-2. For pages without markdown (like homepage), add `<meta name="page-version" content="v1.0.0">` directly in the layout
-3. Hugo's `baseof.html` automatically injects the version from frontmatter: `{{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}`
-4. TypeScript code reads the version: `document.querySelector('meta[name="page-version"]')?.getAttribute('content')`
-5. Log the version to console so testers can verify which version they're testing
-
-**When to increment versions:**
-- Major changes to page functionality or layout: bump major version (v1.0.0 → v2.0.0)
-- Minor feature additions or behavior changes: bump minor version (v1.0.0 → v1.1.0)
-- Bug fixes or small tweaks: bump patch version (v1.0.0 → v1.0.1)
-
-Update the corresponding test file (e.g., `test-mobile.md`) when the page version changes significantly.
+Give each markdown page (and the landing page) a version number. On page load, log the version to console so mobile testers know which version they're testing. Whenever you update code that changes the interactive experience, increment the version number.
 
 ## Website Style Guidelines
 

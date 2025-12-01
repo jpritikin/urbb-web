@@ -785,6 +785,11 @@ class CassetteOverlay {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content');
+        if (pageVersion) {
+            console.log('[Supplement] Page version:', pageVersion);
+        }
+
         const overlay = new CassetteOverlay();
         const salmon = new AnimatronicSalmon('salmon-canvas');
         overlay.setSalmon(salmon);
