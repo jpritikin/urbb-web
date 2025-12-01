@@ -1,0 +1,53 @@
+#cloud-container {
+  margin-bottom: 2rem;
+}
+
+#cloud-controls {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.dark #cloud-controls {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+#cloud-controls h3 {
+  margin-top: 0;
+}
+
+#cloud-controls .control-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+#cloud-controls input[type="text"],
+#cloud-controls select {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+}
+
+#cloud-controls input[type="range"] {
+  margin-left: 0.5rem;
+}
+
+#cloud-controls input[type="number"] {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  width: 60px;
+}
+
+#cloud-controls .button-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#cloud-controls button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
