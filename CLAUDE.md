@@ -57,6 +57,10 @@ Style: glitzy New Age influencer, but decorated with faux janky styling/coding e
 
 I should use webp image format instead of png or jpeg. Remind me if I add the wrong format.
 
+## Image Guidelines
+
+Gallery images should be scaled to a maximum of 500x500 pixels using `mogrify -resize 500x500\>`.
+
 ## Glitchy and Playful Design Approach
 
 - Probabilistic behavior: UI elements have random chances (10-25%) to behave differently on each page load or interaction, making the experience unique each time
