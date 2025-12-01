@@ -10,11 +10,9 @@ Understand something about credibility in the New Age industry. You can't just w
 
 One of the great privileges of this work has been the opportunity to connect with thought leaders, visionaries, and cultural icons across multiple fields. These photographs document moments of exchange, collaboration, and mutual recognition that have shaped my journey. The kind of moments that get you invited back to exclusive camps at Burning Man, VIP dinners at consciousness conferences, and backstage access at TED talks.
 
-From groundbreaking researchers in psychedelic science to spiritual leaders guiding millions, from media luminaries amplifying consciousness to philosophers redefining our understanding of mind and healing—each encounter has deepened my commitment to making these practices accessible. Also, these connections are incredibly useful for book endorsements.
+From groundbreaking researchers in psychedelic science to spiritual leaders guiding millions, from media luminaries amplifying consciousness to philosophers redefining our understanding of mind and healing—each encounter has deepened my commitment to making these practices accessible. I'm grateful to have earned a place in these circles, where serious inquiry meets transformative practice, where academic rigor dances with mystical experience, and where the work of bridging ancient wisdom and modern science continues. These are the kinds of relationships that fund first-class flights and hotel suites at Art Basel Miami.
 
-I'm grateful to have earned a place in these circles, where serious inquiry meets transformative practice, where academic rigor dances with mystical experience, and where the work of bridging ancient wisdom and modern science continues. These are the kinds of relationships that fund first-class flights and hotel suites at Art Basel Miami.
-
-*(Yes, dear reader arriving here cold—this is, in fact, theatrical self-mockery. But it's also how this game actually works, which makes the mockery more complicated than simple satire. The photos below are obviously fake. Welcome to the glitzy New Age influencer economy.)*
+*(Yes, dear reader arriving here cold—this is, in fact, theatrical self-mockery. But it's also how this game actually works, which makes the mockery more complicated than simple satire. The photos below are obviously fake.)*
 
 <div class="photo-gallery">
   <div class="gallery-item">
@@ -56,7 +54,7 @@ I'm grateful to have earned a place in these circles, where serious inquiry meet
     <div class="image-wrapper" data-alt="With Trevor Noah at TED conference">
       <img src="/images/gallery/trevor-noah.webp" alt="With Trevor Noah at TED conference">
     </div>
-    <p class="caption">With Trevor Noah at TED2023 in Vancouver. We bonded over the comedy of consciousness and the absurdity of taking spirituality too seriously.</p>
+    <p class="caption">With Trevor Noah at TED2023 in Vancouver. We compared notes on using humor to smuggle serious ideas past people's intellectual defenses. He cryptically mentioned something about collaborating with a South African defense contractor. I'm sure he was joking?</p>
   </div>
 
   <div class="gallery-item">
@@ -81,23 +79,30 @@ I'm grateful to have earned a place in these circles, where serious inquiry meet
   </div>
 
   <div class="gallery-item">
-    <div class="image-wrapper" data-alt="With Oprah at Super Soul Sessions">
-      <img src="/images/gallery/oprah.webp" alt="With Oprah at Super Soul Sessions">
+    <div class="image-wrapper" data-alt="With Oprah beneath the 'Belief' plaque">
+      <img src="/images/gallery/oprah.webp" alt="With Oprah beneath the 'Belief' plaque">
     </div>
-    <p class="caption">With Oprah Winfrey backstage at Super Soul Sessions. She immediately understood the daemon possession framework, 2020.</p>
+    <p class="caption">With Oprah at her studio, sitting in front of an inspirational plaque reading "BELIEF," 2025. The irony of promoting my book in front of that particular piece of motivational decor was not lost on either of us. Fortunately, she found it hilarious.</p>
   </div>
 
   <div class="gallery-item">
     <div class="image-wrapper" data-alt="With Rick Doblin at MAPS Psychedelic Science conference">
       <img src="/images/gallery/rick-doblin.webp" alt="With Rick Doblin at MAPS Psychedelic Science conference">
     </div>
-    <p class="caption">With Rick Doblin at MAPS Psychedelic Science 2023 in Denver. His decades of persistence in bringing MDMA therapy to reality inspire this work.</p>
+    <p class="caption">With Rick Doblin at MAPS Psychedelic Science 2023 in Denver. His decades of persistence in bringing MDMA therapy to reality continues to inspire.</p>
   </div>
 
   <div class="gallery-item">
-    <div class="image-wrapper" data-alt="With Hamilton Morris at Burning Man">
-      <img src="/images/gallery/hamilton-morris.webp" alt="With Hamilton Morris at Burning Man">
+    <div class="image-wrapper" data-alt="On Hamilton's Pharmacopeia podcast">
+      <img src="/images/gallery/hamilton-morris.webp" alt="On Hamilton's Pharmacopeia podcast">
     </div>
-    <p class="caption">With Hamilton Morris at Burning Man's Palenque Norte camp, deep in pharmacological discourse on the chemistry of consciousness, 2021.</p>
+    <p class="caption">Hamilton's Pharmacopeia podcast, 2021. When someone who studied anthropology, co-authors papers on hallucinogens, and synthesizes novel psychedelics invites you on his show, you know you've either made it or you're about to be thoroughly debunked. The jury's still out.</p>
+  </div>
+
+  <div class="gallery-item">
+    <div class="image-wrapper" data-alt="With Elon Musk at the White House">
+      <img src="/images/gallery/elon-musk.webp" alt="With Elon Musk at the White House">
+    </div>
+    <p class="caption">With Elon Musk at the White House, 2025. Nothing says 'credible consciousness researcher' like being mistaken for a tech billionaire's four-year-old during official government business. This is either my most successful infiltration of elite circles or my most elaborate piece of performance satire. Possibly both.</p>
   </div>
 </div>
