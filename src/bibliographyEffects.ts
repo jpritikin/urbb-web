@@ -547,6 +547,12 @@ class BibliographyEffects {
     private async startBattle(): Promise<void> {
         if (this.selectedEntries.size !== 2) return;
 
+        // Check for mobile portrait orientation
+        if (this.isMobilePortrait()) {
+            this.showRotateDeviceMessage();
+            return;
+        }
+
         if (this.battleButton) {
             this.battleButton.style.display = 'none';
             this.battleButton.style.transform = 'translate(-50%, -50%)';
@@ -1321,6 +1327,96 @@ class BibliographyEffects {
                 this.clearBattleSelections();
             });
         }
+    }
+
+    private isMobilePortrait(): boolean {
+        return window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    }
+
+    private showRotateDeviceMessage(): void {
+        const rotateModal = document.createElement('div');
+        rotateModal.id = 'rotate-device-modal';
+        rotateModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 400px;
+            background: linear-gradient(135deg, rgba(30, 144, 255, 0.98), rgba(147, 112, 219, 0.98));
+            border: 4px solid var(--daime-gold);
+            border-radius: 16px;
+            padding: 2rem;
+            z-index: 10001;
+            box-shadow: 0 0 40px rgba(218, 165, 32, 0.6);
+            text-align: center;
+            animation: gentle-pulse 2s infinite;
+        `;
+
+        rotateModal.innerHTML = `
+            <style>
+                @keyframes gentle-pulse {
+                    0%, 100% { box-shadow: 0 0 40px rgba(218, 165, 32, 0.6); }
+                    50% { box-shadow: 0 0 60px rgba(218, 165, 32, 0.9); }
+                }
+                @keyframes rotate-icon {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(90deg); }
+                }
+            </style>
+            <div style="font-size: 4rem; margin-bottom: 1rem; animation: rotate-icon 1s ease-in-out infinite alternate;">📱</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--daime-gold); margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                Rotate Your Device
+            </div>
+            <div style="color: white; font-weight: 500; font-size: 1rem; line-height: 1.6; margin-bottom: 2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                The Bibliography Battle requires landscape orientation for optimal cosmic alignment.
+                <br><br>
+                Please rotate your device to landscape mode to witness this epic scholarly confrontation.
+            </div>
+            <button id="dismiss-rotate" style="
+                padding: 0.75rem 1.5rem;
+                background: var(--daime-gold);
+                border: 3px solid white;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 1rem;
+                color: #1E90FF;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            ">I Understand</button>
+        `;
+
+        document.body.appendChild(rotateModal);
+
+        const dismissBtn = rotateModal.querySelector('#dismiss-rotate');
+        dismissBtn?.addEventListener('mouseenter', () => {
+            (dismissBtn as HTMLElement).style.transform = 'scale(1.05)';
+            (dismissBtn as HTMLElement).style.background = 'var(--daime-blue)';
+            (dismissBtn as HTMLElement).style.color = 'white';
+        });
+
+        dismissBtn?.addEventListener('mouseleave', () => {
+            (dismissBtn as HTMLElement).style.transform = 'scale(1)';
+            (dismissBtn as HTMLElement).style.background = 'var(--daime-gold)';
+            (dismissBtn as HTMLElement).style.color = '#1E90FF';
+        });
+
+        dismissBtn?.addEventListener('click', () => {
+            rotateModal.remove();
+        });
+
+        // Listen for orientation change
+        const handleOrientationChange = () => {
+            if (!this.isMobilePortrait()) {
+                rotateModal.remove();
+                window.removeEventListener('resize', handleOrientationChange);
+                // Automatically retry the battle
+                this.startBattle();
+            }
+        };
+
+        window.addEventListener('resize', handleOrientationChange);
     }
 }
 
