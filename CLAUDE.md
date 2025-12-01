@@ -4,7 +4,7 @@ This is a Hugo static website project to promote my new book "Religion Unburdene
 
 ## Book Content & Style
 
-"Religion Unburdened by Belief" is a practical consciousness user's guide combining IFS (Internal Family Systems) therapy and neurophenomenology. It aims to make esoteric practices accessible through clear instructions while maintaining academic grounding (read ./book-info.txt for details).
+"Religion Unburdened by Belief" is a practical consciousness user's guide combining IFS (Internal Family Systems) therapy and neurophenomenology. It aims to make esoteric practices accessible through clear instructions while maintaining academic grounding (read ./docs/book-info.txt for details).
 
 **Tone & Voice:**
 - Playful irreverence mixed with genuine scholarship - swings between earnest explanation and theatrical self-mockery
