@@ -194,7 +194,7 @@ You're done testing! Thank you for your time.
 
 ## Developer Notes
 
-* Hover and mouse proximity can't be tested on mobile.
+* Hover and mouse proximity can't be tested on mobile. Don't talk about desktop scenarios.
 
 * The codes before each item (e.g., **L7K**) are content hashes to help track which steps have changed between versions.
 
