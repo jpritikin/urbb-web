@@ -96,7 +96,7 @@ From groundbreaking researchers in psychedelic science to spiritual leaders guid
     <div class="image-wrapper" data-alt="On Hamilton's Pharmacopeia podcast">
       <img src="/images/gallery/hamilton-morris.webp" alt="On Hamilton's Pharmacopeia podcast">
     </div>
-    <p class="caption">Hamilton's Pharmacopeia podcast, 2021. When someone who studied anthropology, co-authors papers on hallucinogens, and synthesizes novel psychedelics invites you on his show, you know you've either made it or you're about to be thoroughly debunked. The jury's still out.</p>
+    <p class="caption">Hamilton's Pharmacopeia podcast, 2021. Not many journalists also synthesize and co-author papers on novel psychedelics. When Hamilton invites you on his show, you know you've either made it or you're about to be thoroughly debunked. The jury's still out.</p>
   </div>
 
   <div class="gallery-item">
