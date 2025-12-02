@@ -180,13 +180,6 @@
   border-color: #ff6b6b;
 }
 
-.hymn-number {
-  font-size: 0.85rem;
-  color: var(--daime-gold);
-  font-weight: 600;
-  text-align: center;
-}
-
 .hymn-title {
   font-size: 0.95rem;
   font-weight: 500;
@@ -195,15 +188,14 @@
 .hymn-lock {
   font-size: 1.2rem;
   text-align: center;
-  grid-column: 3;
 }
 
 .hymn-item.unlocked {
-  grid-template-columns: 2rem 1fr;
+  grid-template-columns: 1fr;
 }
 
 .hymn-item.locked {
-  grid-template-columns: 2rem 1fr 2rem;
+  grid-template-columns: 1fr 2rem;
 }
 
 @keyframes shake {
