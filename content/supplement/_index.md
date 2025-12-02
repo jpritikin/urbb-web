@@ -5,6 +5,10 @@ version: "v1.3.10"
 
 <link rel="stylesheet" href="/css/supplement.css">
 
+## What Is This?
+
+An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to paper. This supplement offers Santo Daime hymn recordings and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
+
 ## Hymn Player
 
 [Santo Daime](https://www.santodaime.org/) is a Brazilian ayahuasca religion where participants drink a psychoactive brew and then—here's the interesting part—maintain external focus through synchronized hymn singing and ritual movements. While the drug pulls attention inward toward private visions, the discipline (called *firmeza* or "firmness") is staying anchored in shared reality with the community. The hymns function as collective reference points, objects of mutual attention that help everyone navigate altered states together rather than drifting into isolated experiences (more details in chapter 7).
@@ -122,6 +126,21 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
 </div>
 
 ## Bibliography
+
+You know those spiritual bestsellers that open each chapter with a quote from the Upanishads? The ones invoking "quantum principles" and "the field of pure potentiality"? That distill millennia of Eastern philosophy into exactly seven convenient laws? That present "universal energy" and "infinite organizing power" as self-evident truths requiring no empirical support beyond Rumi agreeing with Lao Tzu? The ones that never cite a single peer-reviewed study?
+
+Here, every claim (where possible) connects to peer-reviewed research across multiple disciplines:
+
+- **Psychology & Psychotherapy**: Clinical psychology, developmental psychology, Internal Family Systems, attachment theory, trauma treatment
+- **Psychopharmacology**: Psychedelic research, cannabinoid science, neurochemistry, pharmacokinetics
+- **Neuroscience & Consciousness Studies**: Cognitive neuroscience, neurophenomenology, phenomenology of consciousness, altered states research
+- **Contemplative Science**: Meditation research, mindfulness studies, mystical experience measurement
+- **Anthropology & Ethnography**: Religious anthropology, ayahuasca traditions, cross-cultural ritual practices, Santo Daime ethnography
+- **Religious Studies & Philosophy**: Philosophy of religion, comparative religion, epistemology, phenomenology
+- **Archaeology & Prehistory**: Paleolithic cave art, prehistoric ritual use of psychoactive substances, evolution of religious behavior
+- **Social Psychology**: Group dynamics, collective effervescence, prosocial behavior, empathy research
+
+We've done the work. We've tracked down the actual papers. We dare you to click any citation and see for yourself.
 
 <div id="bibliography-container">
   <p style="font-style: italic; color: #888;">Bibliography loading...</p>

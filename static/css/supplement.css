@@ -337,6 +337,19 @@ h3 {
   margin: 1.5rem 0 0.75rem 0;
 }
 
+ul {
+  list-style: disc;
+  margin-left: 2rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+li {
+  padding-left: 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
 /* Subtle random glitch on hover */
 .hymn-player:hover {
   animation: glitch-container 0.3s ease-in-out;
