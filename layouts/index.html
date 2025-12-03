@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="page-version" content="v1.0.0">
+    <meta name="page-version" content="v1.2.0">
     <title>{{ .Site.Title }}</title>
     <link rel="stylesheet" href="/css/output.css">
     <script>
@@ -24,6 +24,7 @@
             width: auto;
             height: auto;
             object-fit: contain;
+            z-index: 1;
         }
         .image-overlay-img {
             position: absolute;
@@ -31,10 +32,11 @@
             left: 0;
             max-width: 100%;
             max-height: 80vh;
-            width: 100%;
-            height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
             clip-path: inset(0 50% 0 0);
+            z-index: 2;
         }
         .image-comparison {
             outline: 6px dotted rgba(128, 128, 128, 0.2);
@@ -142,6 +144,44 @@
                 display: flex;
             }
         }
+        #flip-button {
+            position: absolute;
+            top: -2.4rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: rgb(228 228 231);
+            border: none;
+            cursor: pointer;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s, opacity 0.5s;
+            opacity: 0;
+        }
+        .dark #flip-button {
+            background: rgb(63 63 70);
+        }
+        #flip-button:hover {
+            background: rgb(212 212 216);
+        }
+        .dark #flip-button:hover {
+            background: rgb(82 82 91);
+        }
+        #flip-button.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .flip-animation {
+            animation: flip 0.6s ease-in-out;
+        }
+        @keyframes flip {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(0deg); }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 flex items-center justify-center transition-colors">
@@ -158,9 +198,14 @@
             <div class="side-button side-button-left" data-enter-button="left">
                 <a href="/book/">Enter Site</a>
             </div>
-            <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden select-none cursor-ew-resize mx-auto">
-                <img src="/ordinary.jpeg" alt="Ordinary" class="image-base">
-                <img src="/cathedral.jpeg" alt="Cathedral" class="image-overlay-img">
+            <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-visible select-none cursor-ew-resize mx-auto">
+                <button id="flip-button" aria-label="Flip book cover">
+                    <svg class="w-6 h-6 text-zinc-900 dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+                <img src="/front-ordinary.webp" alt="Ordinary" class="image-base">
+                <img src="/front-cathedral.webp" alt="Cathedral" class="image-overlay-img">
                 <audio id="cathedral-audio" loop preload="auto">
                     <source src="/audio/sentado-no-trono.mp3" type="audio/mpeg">
                 </audio>

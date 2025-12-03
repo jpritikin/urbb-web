@@ -19,6 +19,9 @@ class ImageSlider {
     private audioStarted = false;
     private audioUnlockPrompt: HTMLButtonElement | null = null;
     private lastCathedralPercentage = 0;
+    private audioPlayStartTime: number | null = null;
+    private totalAudioPlayTime = 0;
+    private flipButtonRevealed = false;
 
     constructor(containerId: string, onManipulated?: () => void) {
         const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
@@ -52,6 +55,30 @@ class ImageSlider {
 
         if (this.audio) {
             this.createAudioUnlockPrompt();
+            setInterval(() => this.checkFlipButtonReveal(), 100);
+        }
+    }
+
+    private getCurrentAudioPlayTime(): number {
+        let total = this.totalAudioPlayTime;
+        if (this.audioPlayStartTime) {
+            total += (Date.now() - this.audioPlayStartTime) / 1000;
+        }
+        return total;
+    }
+
+    private accumulateAudioPlayTime(): void {
+        if (this.audioPlayStartTime) {
+            this.totalAudioPlayTime += (Date.now() - this.audioPlayStartTime) / 1000;
+            this.audioPlayStartTime = null;
+        }
+    }
+
+    private checkFlipButtonReveal(): void {
+        if (this.flipButtonRevealed) return;
+
+        if (this.getCurrentAudioPlayTime() >= 30) {
+            this.revealFlipButton();
         }
     }
 
@@ -96,23 +123,23 @@ class ImageSlider {
         observer.observe(htmlElement, { attributes: true, attributeFilter: ['class'] });
 
         this.audioUnlockPrompt.addEventListener('click', () => {
-            console.log('[AudioUnlock] User tapped speaker button');
             if (this.audio) {
                 this.audio.volume = 0;
                 this.audio.play().then(() => {
-                    console.log('[AudioUnlock] Audio started successfully');
                     this.audioStarted = true;
                     if (this.audioUnlockPrompt) {
                         this.audioUnlockPrompt.remove();
                         this.audioUnlockPrompt = null;
                     }
                     observer.disconnect();
-
-                    // Immediately update volume based on current slider position
-                    console.log('[AudioUnlock] Updating volume for current position:', this.lastCathedralPercentage);
                     this.updateAudioVolume(this.lastCathedralPercentage);
+
+                    // Start timer immediately if already at cathedral position
+                    if (this.lastCathedralPercentage >= 90 && !this.audioPlayStartTime) {
+                        this.audioPlayStartTime = Date.now();
+                    }
                 }).catch(err => {
-                    console.log('[AudioUnlock] Failed:', err.message);
+                    console.error('[AudioUnlock] Failed:', err.message);
                 });
             }
         });
@@ -134,38 +161,28 @@ class ImageSlider {
     }
 
     private syncImageSizes(): void {
-        const rect = this.baseImg.getBoundingClientRect();
-        this.overlayImg.style.width = `${rect.width}px`;
-        this.overlayImg.style.height = `${rect.height}px`;
+        // Remove any explicit sizing to let CSS handle it
+        this.overlayImg.style.width = '';
+        this.overlayImg.style.height = '';
     }
 
 
     private updateAudioVolume(cathedralPercentage: number): void {
-        if (!this.audio) {
-            console.log('[updateAudioVolume] No audio element');
-            return;
-        }
+        if (!this.audio) return;
 
-        // Store the current percentage for later use
         this.lastCathedralPercentage = cathedralPercentage;
 
-        // If user wants audio but it's not started yet, blink the button
         if (!this.audioStarted && cathedralPercentage >= 90) {
-            console.log('[updateAudioVolume] Audio needed but not started, requesting attention');
             this.requestAudioAttention();
             return;
         }
 
-        if (!this.audioStarted) {
-            console.log('[updateAudioVolume] Audio not started yet, percentage:', cathedralPercentage);
-            return;
-        }
-
-        console.log('[updateAudioVolume] percentage:', cathedralPercentage);
+        if (!this.audioStarted) return;
 
         if (cathedralPercentage < 90) {
             if (!this.audio.paused) {
                 this.audio.pause();
+                this.accumulateAudioPlayTime();
             }
             this.container.classList.remove('audio-playing');
         } else {
@@ -174,10 +191,10 @@ class ImageSlider {
             this.audio.volume = fadeProgress;
 
             if (this.audio.paused) {
-                this.audio.play().catch(err => console.log('[updateAudioVolume] Play failed:', err.message));
+                this.audio.play().catch(err => console.error('[Audio] Play failed:', err.message));
+                this.audioPlayStartTime = Date.now();
             }
 
-            console.log('[updateAudioVolume] Set volume to:', fadeProgress, 'paused:', this.audio.paused);
             this.container.classList.add('audio-playing');
         }
     }
@@ -229,16 +246,13 @@ class ImageSlider {
     }
 
     private startDragging(): void {
-        console.log('[startDragging] Called');
         this.isDragging = true;
         const cursor = this.mode === 'horizontal' ? 'ew-resize' : 'ns-resize';
         this.container.style.cursor = cursor;
         this.onManipulated?.();
 
-        // Start tracking hold time
         this.holdStartTime = Date.now();
 
-        // Set timer for 5 seconds - 20% chance to switch modes
         this.holdTimer = window.setTimeout(() => {
             if (this.isDragging && Math.random() < 0.2) {
                 this.switchMode();
@@ -315,6 +329,61 @@ class ImageSlider {
 
             this.slider.style.top = `${sliderPosition}%`;
             this.updateAudioVolume(cathedralPercentage);
+        }
+    }
+
+    private revealFlipButton(): void {
+        const flipButton = document.getElementById('flip-button');
+        if (!flipButton) return;
+
+        this.flipButtonRevealed = true;
+        flipButton.classList.add('visible');
+
+        flipButton.addEventListener('click', () => this.flipCover());
+    }
+
+    private flipCover(): void {
+        const container = this.container;
+        const baseImg = this.baseImg;
+        const overlayImg = this.overlayImg;
+
+        const currentBaseSrc = baseImg.src;
+        const currentOverlaySrc = overlayImg.src;
+
+        const isFront = currentBaseSrc.includes('front-');
+
+        const newBaseSrc = isFront ? currentBaseSrc.replace('front-', 'back-') : currentBaseSrc.replace('back-', 'front-');
+        const newOverlaySrc = isFront ? currentOverlaySrc.replace('front-', 'back-') : currentOverlaySrc.replace('back-', 'front-');
+
+        container.classList.add('flip-animation');
+
+        setTimeout(() => {
+            baseImg.src = newBaseSrc;
+            overlayImg.src = newOverlaySrc;
+
+            const syncWhenReady = () => {
+                if (baseImg.complete && overlayImg.complete) {
+                    this.syncImageSizes();
+                    this.centerSlider();
+                } else {
+                    setTimeout(syncWhenReady, 50);
+                }
+            };
+            syncWhenReady();
+        }, 300);
+
+        setTimeout(() => {
+            container.classList.remove('flip-animation');
+        }, 600);
+    }
+
+    private centerSlider(): void {
+        if (this.mode === 'horizontal') {
+            this.overlayImg.style.clipPath = this.clipBase ? 'inset(0 0 0 50%)' : 'inset(0 50% 0 0)';
+            this.slider.style.left = '50%';
+        } else {
+            this.overlayImg.style.clipPath = this.clipBase ? 'inset(50% 0 0 0)' : 'inset(0 0 50% 0)';
+            this.slider.style.top = '50%';
         }
     }
 }
