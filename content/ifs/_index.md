@@ -38,6 +38,9 @@ version: "v1.0.0"
     <button id="cloud-add">Add Cloud</button>
     <button id="cloud-clear">Clear All</button>
   </div>
+  <div id="knot-positions" style="margin-top: 1em; padding: 0.5em; border: 1px dotted #666; font-size: 0.85em; max-height: 300px; overflow-y: auto;">
+    No cloud selected
+  </div>
 </div>
 
 ## What is Internal Family Systems (IFS)?
