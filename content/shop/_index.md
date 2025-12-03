@@ -199,6 +199,6 @@ Pack of 10 stickers. Weather-resistant, perfect for laptops, water bottles, or j
 
 Interested in ordering journals, water bottles, or stickers in bulk for your community or practice group? [Contact us](/contact/) for special pricing.
 
----
+<br>
 
-*All purchases support the continued development of Open Inquiry resources and community programs.*
+*All profits support the author's ongoing daemon possession management expenses, including emergency Tarot consultations with a specialist in Portland who charges $300/hour. Plus, you're bringing us one step closer to renting Stonehenge for next year's Way of Open Inquiry Conference (current quote: £63,000 for three days, plus another £8,000 for "historical monument insurance"). Additional funding goes toward impulsive purchases like limited-edition meditation cushions I'll use exactly once, frivolous gifts for book signing attendees ("everyone gets a singing bowl!"), and expanding my collection of ceremonial robes, sacred geometry harem pants, and handwoven alpaca ponchos.*
