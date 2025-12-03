@@ -5,35 +5,52 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
 ## Landing page - Image Slider
 
 **L7K** Load the homepage
-   - Page shows two overlapping images (ordinary and cathedral) with a slider between them
+   - Page shows two overlapping images (front covers: ordinary and cathedral) with a slider between them
+   - Usually slider is horizontal, but occasionally (10% chance) starts in vertical mode
+   - Which image is base vs overlay varies randomly (25% chance the base clips instead of overlay)
+   - No "Enter Site" button is visible yet
 
 **M3R** Click anywhere on the image (not on the slider line)
    - Slider jumps to where you clicked, revealing more of one image
+   - "Enter Site" button appears below the slider
 
 **P9A** Drag the slider
    - As you drag, one image reveals more while the other reveals less
+   - "Enter Site" button appears below the slider (if not already visible)
 
 **Q2F** Hold and drag the slider continuously for 10 seconds
    - Slider continues to respond smoothly
    - Note: Occasionally (20% chance) the slider may toggle from horizontal to vertical mode after 5 seconds of dragging
 
-**T8N** Reload the page and observe the slider orientation
-   - Usually starts horizontal, but occasionally (10% chance) starts in vertical mode
-   - Sometimes the base image clips, sometimes the overlay clips (varies randomly)
+**T8N** Reload the page and wait 1 minute without touching the slider
+   - "Enter Site" button appears automatically after 1 minute timeout
 
 **W4D** Click the dark mode toggle (sun/moon icon)
-   - Are all the interface elements still legible? Toggle back
+   - All interface elements remain legible; toggle back
 
-## Landing page - Audio
+## Landing page - Audio & Flip
 
 **K6M** Drag the slider to reveal 90% or more of the cathedral image
-   - The speaker button starts blinking
+   - Dotted outline around image changes to gold and pulses
+   - Speaker button (top-left corner) starts blinking
 
 **R1H** Tap the speaker button
    - Button disappears immediately and music starts playing
+   - Gold pulsing outline continues
 
 **V5Q** Drag the slider below 90% cathedral visibility
    - Audio fades out and pauses
+   - Outline stops pulsing and returns to gray
+
+**B8W** With audio playing (90%+ cathedral), wait 30 seconds
+   - Flip button (↻ icon) appears above the image slider
+   - Note: This requires 30 seconds of total audio play time, not continuous
+
+**Y4P** Click the flip button
+   - Book cover flips with crazy 3D animation (2-3 seconds)
+   - Animation varies: random intensity, speed, color shifts, direction, and wobbliness
+   - After animation, images switch from front covers to back covers (or vice versa)
+   - Slider resets to center position
 
 ## Gallery Page
 
@@ -200,6 +217,6 @@ You're done testing! Thank you for your time.
 
 * Each markdown page has a version number to help know when testing procedures need updating. This testing guide was built assuming the following versions:
 
-- Homepage: v1.0.0
+- Homepage: v1.7.0
 - Gallery: v1.0.0
 - Online Supplement: v1.3.7
