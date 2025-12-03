@@ -355,6 +355,18 @@ class ImageSlider {
         const newBaseSrc = isFront ? currentBaseSrc.replace('front-', 'back-') : currentBaseSrc.replace('back-', 'front-');
         const newOverlaySrc = isFront ? currentOverlaySrc.replace('front-', 'back-') : currentOverlaySrc.replace('back-', 'front-');
 
+        const intensity = 0.5 + Math.random() * 0.5;
+        const speed = 1.8 + Math.random() * 1.2;
+        const colorChaos = Math.random() > 0.3;
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        const wobbliness = 0.7 + Math.random() * 0.6;
+
+        container.style.setProperty('--flip-intensity', intensity.toString());
+        container.style.setProperty('--flip-speed', `${speed}s`);
+        container.style.setProperty('--flip-color', colorChaos ? '1' : '0');
+        container.style.setProperty('--flip-direction', direction.toString());
+        container.style.setProperty('--flip-wobble', wobbliness.toString());
+
         container.classList.add('flip-animation');
 
         setTimeout(() => {
@@ -370,11 +382,11 @@ class ImageSlider {
                 }
             };
             syncWhenReady();
-        }, 300);
+        }, speed * 500);
 
         setTimeout(() => {
             container.classList.remove('flip-animation');
-        }, 600);
+        }, speed * 1000);
     }
 
     private centerSlider(): void {
