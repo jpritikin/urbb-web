@@ -1,6 +1,9 @@
 import { CloudManager, CloudType } from './cloudAnimation.js';
 
+const VERSION = '1.0.0';
+
 document.addEventListener('DOMContentLoaded', () => {
+  console.log(`IFS Page Version: ${VERSION}`);
   const cloudContainer = document.getElementById('cloud-container');
   if (!cloudContainer) return;
 
@@ -48,4 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
   cloudManager.addCloud('parts', 50, 300, CloudType.STRATOCUMULUS);
   cloudManager.addCloud('protector', 250, 280, CloudType.CUMULUS);
   cloudManager.addCloud('exile', 450, 320, CloudType.CUMULUS);
+
+  cloudManager.startAnimation();
 });
