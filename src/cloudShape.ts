@@ -138,6 +138,14 @@ function transformCircleKnots(circleKnots: Point[], startX: number): Point[] {
     return positions;
 }
 
+export interface CloudOptions {
+    id?: string;
+    trust?: number;
+    age?: number;
+    needAttention?: number;
+    agreedWaitDuration?: number;
+}
+
 export class Cloud {
     text: string;
     x: number;
@@ -171,7 +179,16 @@ export class Cloud {
     fluffinessAnimations: AnimatedFluffiness[] = [];
     private initialized: boolean = false;
 
-    constructor(text: string, x: number = 0, y: number = 0, cloudType?: CloudType) {
+    id: string;
+    trust: number;
+    age: number;
+    impatience: number;
+    needAttention: number;
+    agreedWaitDuration: number;
+
+    private static nextId = 1;
+
+    constructor(text: string, x: number = 0, y: number = 0, cloudType?: CloudType, options?: CloudOptions) {
         this.text = text;
         this.x = x;
         this.y = y;
@@ -192,6 +209,13 @@ export class Cloud {
         if (this.textWidth < 20) {
             this.cloudType = CloudType.STRATOCUMULUS;
         }
+
+        this.id = options?.id ?? `cloud_${Cloud.nextId++}`;
+        this.trust = options?.trust ?? 0.5;
+        this.age = options?.age ?? Date.now();
+        this.impatience = 0;
+        this.needAttention = options?.needAttention ?? 0.1;
+        this.agreedWaitDuration = options?.agreedWaitDuration ?? 10;
 
         const baseRadius = this.minHeight / 2;
         this.leftHarmonics = new NormalizedHarmonics([
@@ -234,11 +258,21 @@ export class Cloud {
     }
 
     animate(deltaTime: number): void {
+        this.updateImpatience(deltaTime);
         this.updateRotation(deltaTime);
         this.updateTopKnotPhysics(deltaTime);
         this.updateBottomKnotPhysics(deltaTime);
         this.updateFluffinessPhysics(deltaTime);
         this.updateRotationSpeeds(deltaTime);
+    }
+
+    private updateImpatience(deltaTime: number): void {
+        const currentTime = Date.now();
+        const elapsedSeconds = (currentTime - this.age) / 1000;
+
+        if (elapsedSeconds > this.agreedWaitDuration) {
+            this.impatience += this.needAttention * deltaTime;
+        }
     }
 
     private updateTopKnotPhysics(deltaTime: number): void {
@@ -732,5 +766,18 @@ export class Cloud {
 
         pathParts.push('Z');
         return pathParts.join(' ');
+    }
+
+    getFillColor(): string {
+        const grayValue = Math.floor(this.trust * 255);
+        return `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+    }
+
+    getTextColor(): string {
+        return this.trust < 0.5 ? 'white' : 'black';
+    }
+
+    getTextWeight(): string {
+        return this.trust < 0.5 ? 'bold' : 'normal';
     }
 }

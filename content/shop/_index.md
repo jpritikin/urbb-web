@@ -6,7 +6,7 @@ version: "v1.0.0"
 
 ## Welcome to the Unburdened Shop
 
-Explore our carefully curated collection of items to support your Open Inquiry practice and IFS journey. All proceeds support the continued development of educational materials and community resources.
+Explore our carefully curated collection of items to support your Open Inquiry practice and IFS journey.
 
 <div class="shop-grid">
 
@@ -14,9 +14,7 @@ Explore our carefully curated collection of items to support your Open Inquiry p
 
 ### 🎟️ Cipher Lottery Ticket
 
-Each chapter of *Unburdened* begins with an epigraph hidden in a simple substitution cipher. Purchase a lottery ticket for a chance to win the keys to all the ciphers!
-
-**Winner announced monthly.** Please, I'm begging you—don't crowdsource the cryptanalysis and post the solution online. I desperately need this cash to fund my lifestyle of first-class flights to Burning Man's exclusive camps, VIP networking dinners at TED conferences, and private parties at Art Basel Miami. Have mercy on my grandiose parts that enjoy being photographed with luminaries.
+Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. Purchase a lottery ticket for a chance to win the keys to all the ciphers! **Winner selected quarterly.**
 
 <p class="shop-item-price">$5.00</p>
 
