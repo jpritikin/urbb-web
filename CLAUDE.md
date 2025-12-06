@@ -22,10 +22,6 @@ This is a Hugo static website project to promote my new book "Religion Unburdene
 
 This dual nature - simultaneously useful and self-parodying - should inform the website's glitchy, playful aesthetic that works perfectly while feeling slightly "possessed."
 
-## Development Workflow
-
-Ask whether the user wants you to run `npm run dev` in the background and monitor its output for errors.
-
 ## Code Organization
 
 Segregate page-specific details from site-wide styles and layouts. Information should have the smallest possible scope:
@@ -34,6 +30,8 @@ Segregate page-specific details from site-wide styles and layouts. Information s
 - Site-wide styles remain in global CSS files
 
 Give each markdown page (and the landing page) a version number. On page load, log the version to console so mobile testers know which version they're testing. Whenever you update code that changes the interactive experience, increment the version number.
+
+Don't add console.log() in animation loops that will generate tons of output.
 
 ## Website Style Guidelines
 
