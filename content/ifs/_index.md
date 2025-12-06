@@ -1,8 +1,9 @@
 ---
-title: "Internal Family Systems"
-version: "v1.0.0"
+title: "IFS Simulator"
+version: "v1.1.0"
 ---
 
+<link rel="stylesheet" href="/css/animations.css">
 <link rel="stylesheet" href="/css/ifs.css">
 <script type="module" src="/js/ifs.js"></script>
 

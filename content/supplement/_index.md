@@ -1,8 +1,9 @@
 ---
 title: "Online Supplement"
-version: "v1.4.1"
+version: "v1.4.2"
 ---
 
+<link rel="stylesheet" href="/css/animations.css">
 <link rel="stylesheet" href="/css/supplement.css">
 
 ## What is This?

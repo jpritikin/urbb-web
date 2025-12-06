@@ -1,39 +1,106 @@
-const version = 'v1.1.0';
+const version = 'v1.5.0';
 console.log(`IFS Simulator Entrance ${version}`);
 
 document.addEventListener('DOMContentLoaded', () => {
-  const enterBtn = document.getElementById('enter-simulator-btn');
+    const enterBtn = document.getElementById('enter-simulator-btn');
 
-  if (!enterBtn) return;
+    if (!enterBtn) return;
 
-  enterBtn.addEventListener('click', () => {
-    const direction = Math.random() < 0.5 ? 'cw' : 'ccw';
-    enterBtn.style.animation = `enter-simulator-${direction} 2.5s ease-out forwards`;
+    enterBtn.addEventListener('click', () => {
+        const direction = Math.random() < 0.5 ? 1 : -1;
+        const clockDir = direction === 1 ? 'cw' : 'ccw';
+        enterBtn.style.setProperty('--button-direction', direction === 1 ? '-1' : '1');
+        enterBtn.style.animation = 'enter-simulator 2.5s ease-out forwards';
 
-    const colorWave = document.createElement('div');
-    colorWave.className = 'color-wave-overlay';
-    document.body.appendChild(colorWave);
+        const colorWave = document.createElement('div');
+        colorWave.className = 'color-wave-overlay';
+        document.body.appendChild(colorWave);
 
-    setTimeout(() => {
-      const spiral = document.createElement('div');
-      spiral.className = 'spiral-overlay';
-      document.body.appendChild(spiral);
-    }, 300);
+        setTimeout(() => {
+            const spiral = document.createElement('div');
+            spiral.className = `spiral-overlay ${clockDir}`;
 
-    setTimeout(() => {
-      const glitch = document.createElement('div');
-      glitch.className = 'glitch-overlay';
-      document.body.appendChild(glitch);
-    }, 1800);
+            // Create SVG spiral
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.setAttribute('viewBox', '0 0 800 800');
 
-    setTimeout(() => {
-      const finalGlitch = document.createElement('div');
-      finalGlitch.className = 'glitch-overlay';
-      document.body.appendChild(finalGlitch);
-    }, 2400);
+            // Generate three spiral arms with tapering
+            const turns = 6;
+            const pointsPerTurn = 50;
+            const totalPoints = turns * pointsPerTurn;
+            const segmentCount = 20;
+            const pointsPerSegment = Math.floor(totalPoints / segmentCount);
+            const armCount = 3;
 
-    setTimeout(() => {
-      window.location.href = '/ifs/';
-    }, 3200);
-  });
+            for (let arm = 0; arm < armCount; arm++) {
+                const armOffset = (arm * 2 * Math.PI) / armCount;
+
+                for (let seg = 0; seg < segmentCount; seg++) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const startIdx = seg * pointsPerSegment;
+                    const endIdx = Math.min((seg + 1) * pointsPerSegment, totalPoints);
+
+                    let d = '';
+                    for (let i = startIdx; i <= endIdx; i++) {
+                        const angle = armOffset + direction * (i / pointsPerTurn) * 2 * Math.PI;
+                        const minRadius = 5;
+                        const maxRadius = 360;
+                        const radius = minRadius + (i / totalPoints) * (maxRadius - minRadius);
+                        const x = 400 + radius * Math.cos(angle);
+                        const y = 400 + radius * Math.sin(angle);
+                        d += (i === startIdx ? `M ${x} ${y} ` : `L ${x} ${y} `);
+                    }
+
+                    const progress = seg / segmentCount;
+                    const strokeWidth = 1 + (progress * 30);
+
+                    path.setAttribute('d', d);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', 'url(#spiralGradient)');
+                    path.setAttribute('stroke-width', strokeWidth.toString());
+                    path.setAttribute('stroke-linecap', 'round');
+
+                    svg.appendChild(path);
+                }
+            }
+
+            // Create gradient
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', 'spiralGradient');
+
+            const colors = [
+                { offset: '0%', color: 'rgba(30, 144, 255, 0.9)' },
+                { offset: '33%', color: 'rgba(147, 112, 219, 0.9)' },
+                { offset: '66%', color: 'rgba(255, 215, 0, 0.9)' },
+                { offset: '100%', color: 'rgba(30, 144, 255, 0.9)' }
+            ];
+
+            colors.forEach(c => {
+                const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                stop.setAttribute('offset', c.offset);
+                stop.setAttribute('stop-color', c.color);
+                gradient.appendChild(stop);
+            });
+
+            defs.appendChild(gradient);
+            svg.appendChild(defs);
+            spiral.appendChild(svg);
+
+            document.body.appendChild(spiral);
+        }, 200);
+
+        setTimeout(() => {
+            const glitch = document.createElement('div');
+            glitch.className = 'glitch-overlay';
+            document.body.appendChild(glitch);
+        }, 1500);
+
+        setTimeout(() => {
+            sessionStorage.setItem('ifs-entrance-glitch', 'true');
+            window.location.href = '/ifs/';
+        }, 2600);
+    });
 });

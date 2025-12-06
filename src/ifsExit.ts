@@ -1,10 +1,22 @@
-const version = 'v1.0.0';
+const version = 'v1.2.0';
 console.log(`IFS Exit Handler ${version}`);
 
 let hasUnsavedWork = false;
 let isExitingThroughButton = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('ifs-entrance-glitch') === 'true') {
+    sessionStorage.removeItem('ifs-entrance-glitch');
+
+    const glitch = document.createElement('div');
+    glitch.className = 'glitch-overlay';
+    document.body.appendChild(glitch);
+
+    setTimeout(() => {
+      glitch.remove();
+    }, 1200);
+  }
+
   const exitBtn = document.getElementById('exit-simulator-btn');
 
   if (!exitBtn) return;
@@ -17,13 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const handleExit = () => {
-    const message = hasUnsavedWork
-      ? 'You have unsaved work. Are you sure you want to exit the simulator?'
-      : 'Are you sure you want to exit the simulator?';
-
-    const confirmed = confirm(message);
-    if (!confirmed) {
-      return;
+    if (hasUnsavedWork) {
+      const confirmed = confirm('You have unsaved work. Are you sure you want to exit the simulator?');
+      if (!confirmed) {
+        return;
+      }
     }
     isExitingThroughButton = true;
     window.location.href = '/supplement/';
@@ -32,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   exitBtn.addEventListener('click', handleExit);
 
   window.addEventListener('beforeunload', (e) => {
-    if (isExitingThroughButton) {
+    if (isExitingThroughButton || !hasUnsavedWork) {
       return;
     }
     e.preventDefault();
