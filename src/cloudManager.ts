@@ -1,52 +1,131 @@
 import { Cloud, CloudType } from './cloudShape.js';
 import { Point } from './geometry.js';
-import { NormalizedHarmonics } from './harmonics.js';
 
 export { CloudType };
 
 const FONT_SIZE = 12;
 const STROKE_WIDTH = 0.8;
 
-function generateCircleKnots(
-    height: number,
-    startAngle: number,
-    endAngle: number,
-    harmonics: NormalizedHarmonics,
-    rotation: number = 0
-): Point[] {
-    const baseRadius = height / 2
-    const MAX_ARC_LENGTH = height * 0.4;
-
-    const totalAngle = Math.abs(endAngle - startAngle);
-    const estimatedArcLength = baseRadius * totalAngle;
-    const minKnots = 4;
-    const knotCount = Math.max(minKnots, Math.ceil(estimatedArcLength / MAX_ARC_LENGTH));
-
-    const knots: Point[] = [];
-    const angleStep = (endAngle - startAngle) / (knotCount - 1);
-
-    for (let i = 0; i < knotCount; i++) {
-        const angle = startAngle + i * angleStep;
-        const radius = harmonics.evaluate(angle, rotation);
-        const x = radius * Math.cos(angle);
-        const mathYCoord = radius * Math.sin(angle);
-        const svgYCoord = -mathYCoord;
-        knots.push(new Point(x, svgYCoord));
-    }
-
-    const maxSvgY = Math.max(...knots.map(k => k.y));
-    for (const knot of knots) {
-        knot.y -= maxSvgY;
-    }
-
-    return knots;
-}
-
 interface CloudInstance {
     cloud: Cloud;
     groupElement: SVGGElement;
     pathElement: SVGPathElement;
     textElement: SVGTextElement;
+}
+
+export class CloudRelationshipManager {
+    private protections = new Map<string, Set<string>>();
+    private polarizations = new Map<string, Set<string>>();
+    private selfRefs = new Map<string, Set<string>>();
+
+    addProtection(protectorId: string, protectedId: string | string[]): void {
+        const protectedIds = Array.isArray(protectedId) ? protectedId : [protectedId];
+        for (const id of protectedIds) {
+            if (!this.protections.has(protectorId)) {
+                this.protections.set(protectorId, new Set());
+            }
+            this.protections.get(protectorId)!.add(id);
+        }
+    }
+
+    removeProtection(protectorId: string, protectedId: string): void {
+        this.protections.get(protectorId)?.delete(protectedId);
+    }
+
+    getProtectedBy(cloudId: string): Set<string> {
+        const protectors = new Set<string>();
+        for (const [protectorId, protectedSet] of this.protections) {
+            if (protectedSet.has(cloudId)) {
+                protectors.add(protectorId);
+            }
+        }
+        return protectors;
+    }
+
+    getProtecting(protectorId: string): Set<string> {
+        return new Set(this.protections.get(protectorId) || []);
+    }
+
+    addPolarization(cloudId1: string, cloudId2: string | string[]): void {
+        const cloudIds = Array.isArray(cloudId2) ? cloudId2 : [cloudId2];
+        for (const id of cloudIds) {
+            if (!this.polarizations.has(cloudId1)) {
+                this.polarizations.set(cloudId1, new Set());
+            }
+            if (!this.polarizations.has(id)) {
+                this.polarizations.set(id, new Set());
+            }
+            this.polarizations.get(cloudId1)!.add(id);
+            this.polarizations.get(id)!.add(cloudId1);
+        }
+    }
+
+    removePolarization(cloudId1: string, cloudId2: string): void {
+        this.polarizations.get(cloudId1)?.delete(cloudId2);
+        this.polarizations.get(cloudId2)?.delete(cloudId1);
+    }
+
+    getPolarizedWith(cloudId: string): Set<string> {
+        return new Set(this.polarizations.get(cloudId) || []);
+    }
+
+    addSelfReference(cloudId: string, targetId: string | string[]): void {
+        const targetIds = Array.isArray(targetId) ? targetId : [targetId];
+        for (const id of targetIds) {
+            if (!this.selfRefs.has(cloudId)) {
+                this.selfRefs.set(cloudId, new Set());
+            }
+            this.selfRefs.get(cloudId)!.add(id);
+        }
+    }
+
+    removeSelfReference(cloudId: string, targetId: string): void {
+        this.selfRefs.get(cloudId)?.delete(targetId);
+    }
+
+    getSelfReferences(cloudId: string): Set<string> {
+        return new Set(this.selfRefs.get(cloudId) || []);
+    }
+
+    getReferencedBy(targetId: string): Set<string> {
+        const referrers = new Set<string>();
+        for (const [cloudId, targetSet] of this.selfRefs) {
+            if (targetSet.has(targetId)) {
+                referrers.add(cloudId);
+            }
+        }
+        return referrers;
+    }
+
+    removeCloud(cloudId: string): void {
+        this.protections.delete(cloudId);
+        for (const protectedSet of this.protections.values()) {
+            protectedSet.delete(cloudId);
+        }
+
+        const polarizedWith = this.polarizations.get(cloudId) || new Set();
+        for (const otherId of polarizedWith) {
+            this.polarizations.get(otherId)?.delete(cloudId);
+        }
+        this.polarizations.delete(cloudId);
+
+        this.selfRefs.delete(cloudId);
+        for (const targetSet of this.selfRefs.values()) {
+            targetSet.delete(cloudId);
+        }
+    }
+
+    hasProtection(protectorId: string, protectedId: string): boolean {
+        return this.protections.get(protectorId)?.has(protectedId) ?? false;
+    }
+
+    hasPolarization(cloudId1: string, cloudId2: string): boolean {
+        return this.polarizations.get(cloudId1)?.has(cloudId2) ?? false;
+    }
+
+    hasSelfReference(cloudId: string, targetId: string): boolean {
+        return this.selfRefs.get(cloudId)?.has(targetId) ?? false;
+    }
 }
 
 export class CloudRenderer {
@@ -69,8 +148,6 @@ export class CloudRenderer {
         text.style.fontFamily = 'sans-serif';
         text.style.fontSize = `${FONT_SIZE}px`;
         text.style.textAnchor = 'middle';
-        text.style.fill = '#000000';
-        text.style.fillOpacity = '1';
         text.style.pointerEvents = 'none';
 
         g.appendChild(path);
@@ -84,7 +161,7 @@ export class CloudRenderer {
 
         svgElement.appendChild(g);
 
-        this.updateDebugStyles(path);
+        this.updateCloudStyles(cloud, path, text);
         this.renderText(cloud, text);
         const outlinePath = cloud.generateOutlinePath();
         path.setAttribute('d', outlinePath);
@@ -93,10 +170,12 @@ export class CloudRenderer {
     }
 
     updateAnimation(instance: CloudInstance): void {
-        const { cloud, groupElement, pathElement } = instance;
+        const { cloud, groupElement, pathElement, textElement } = instance;
 
         const outlinePath = cloud.generateOutlinePath();
         pathElement.setAttribute('d', outlinePath);
+
+        this.updateCloudStyles(cloud, pathElement, textElement);
 
         if (this.debug) {
             while (groupElement.childNodes.length > 2) {
@@ -106,15 +185,29 @@ export class CloudRenderer {
         }
     }
 
-    updateDebugStyles(pathElement: SVGPathElement): void {
+    updateCloudStyles(cloud: Cloud, pathElement: SVGPathElement, textElement: SVGTextElement): void {
+        const isDark = document.documentElement.classList.contains('dark');
+        const bgColor = isDark ? '#1a1a1a' : '#ffffff';
+        const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
+
         if (this.debug) {
             pathElement.style.fill = 'yellow';
             pathElement.style.stroke = 'red';
+            textElement.style.fill = '#000000';
+            textElement.style.fontWeight = 'normal';
+            textElement.style.stroke = '';
+            textElement.style.strokeWidth = '';
         } else {
-            pathElement.style.fill = 'white';
+            pathElement.style.fill = cloud.getFillColor();
             pathElement.style.stroke = '#000000';
             pathElement.style.strokeOpacity = '1';
             pathElement.style.strokeLinejoin = 'round';
+            textElement.style.stroke = bgColor;
+            textElement.style.strokeWidth = '3';
+            textElement.style.strokeLinejoin = 'round';
+            textElement.style.fill = textColor;
+            textElement.style.fontWeight = cloud.getTextWeight();
+            textElement.style.paintOrder = 'stroke fill';
         }
     }
 
@@ -147,6 +240,7 @@ export class CloudManager {
     private svgElement: SVGSVGElement | null = null;
     private container: HTMLElement | null = null;
     private renderer: CloudRenderer = new CloudRenderer();
+    private relationships: CloudRelationshipManager = new CloudRelationshipManager();
     private zoom: number = 1;
     private canvasWidth: number = 800;
     private canvasHeight: number = 600;
@@ -156,7 +250,7 @@ export class CloudManager {
     private animationFrameId: number | null = null;
     private lastFrameTime: number = 0;
     private selectedCloud: Cloud | null = null;
-    private partitionCount: number = 10;
+    private partitionCount: number = 8;
     private currentPartition: number = 0;
 
     init(containerId: string): void {
@@ -177,8 +271,8 @@ export class CloudManager {
         this.container.appendChild(this.svgElement);
     }
 
-    addCloud(word: string, x?: number, y?: number, cloudType?: CloudType): void {
-        if (!this.svgElement) return;
+    addCloud(word: string, x?: number, y?: number, cloudType?: CloudType): Cloud {
+        if (!this.svgElement) throw new Error('SVG element not initialized');
 
         const cloudX = x ?? Math.random() * (this.canvasWidth - 200);
         const cloudY = y ?? this.canvasHeight / 2 + (Math.random() * 60 - 30);
@@ -190,12 +284,34 @@ export class CloudManager {
             () => this.selectCloud(cloud)
         );
         this.instances.push(instance);
+        return cloud;
+    }
+
+    getRelationships(): CloudRelationshipManager {
+        return this.relationships;
+    }
+
+    getCloudById(id: string): Cloud | null {
+        const instance = this.instances.find(i => i.cloud.id === id);
+        return instance?.cloud ?? null;
+    }
+
+    removeCloud(cloud: Cloud): void {
+        if (!this.svgElement) return;
+
+        const index = this.instances.findIndex(i => i.cloud === cloud);
+        if (index !== -1) {
+            const instance = this.instances[index];
+            this.renderer.remove(instance, this.svgElement);
+            this.instances.splice(index, 1);
+            this.relationships.removeCloud(cloud.id);
+        }
     }
 
     setDebug(enabled: boolean): void {
         this.renderer.setDebug(enabled);
         for (const instance of this.instances) {
-            this.renderer.updateDebugStyles(instance.pathElement);
+            this.renderer.updateCloudStyles(instance.cloud, instance.pathElement, instance.textElement);
             if (enabled) {
                 instance.cloud.renderDebugInfo(instance.groupElement);
             } else {
@@ -229,6 +345,7 @@ export class CloudManager {
         if (!this.svgElement) return;
         for (const instance of this.instances) {
             this.renderer.remove(instance, this.svgElement);
+            this.relationships.removeCloud(instance.cloud.id);
         }
         this.instances = [];
     }
@@ -252,92 +369,9 @@ export class CloudManager {
         this.selectedCloud = cloud;
         cloud.logKnotPositions();
         cloud.logAnimationSnapshot();
-        this.updateControlsPanel();
         const centerX = cloud.centerX + cloud.x;
         const centerY = cloud.centerY + cloud.y;
         this.centerOnPoint(centerX, centerY);
-    }
-
-    private updateControlsPanel(): void {
-        const knotPositionsEl = document.getElementById('knot-positions');
-
-        if (!knotPositionsEl) return;
-
-        if (!this.selectedCloud) {
-            knotPositionsEl.textContent = 'No cloud selected';
-            return;
-        }
-
-        const cloud = this.selectedCloud;
-
-        const leftCircleKnots = generateCircleKnots(-cloud.leftHeight, -Math.PI / 2, -3 * Math.PI / 2, cloud.leftHarmonics, cloud.leftRotation);
-        const rightCircleKnots = generateCircleKnots(-cloud.rightHeight, Math.PI / 2, -Math.PI / 2, cloud.rightHarmonics, cloud.rightRotation);
-
-        let html = `<strong>Selected: ${cloud.text}</strong><br>`;
-        html += `<strong>Left Rotation:</strong> ${cloud.leftRotation.toFixed(3)} rad<br>`;
-        html += `<strong>Right Rotation:</strong> ${cloud.rightRotation.toFixed(3)} rad<br><br>`;
-
-        html += `<div style="display: flex; gap: 1em;">`;
-
-        html += `<div style="flex: 1;">`;
-        html += `<strong style="color: blue;">Left Circle Knots:</strong><br>`;
-        html += `<svg width="150" height="150" style="border: 1px dotted blue; background: #f9f9f9;">`;
-        const leftMaxY = Math.max(...leftCircleKnots.map(k => Math.abs(k.y)));
-        const leftScale = 60 / leftMaxY;
-
-        let leftContour = '';
-        for (let angle = 0; angle < 2 * Math.PI; angle += 0.05) {
-            const radius = cloud.leftHarmonics.evaluate(angle, cloud.leftRotation);
-            const px = 75 + (radius * Math.cos(angle)) * leftScale;
-            const py = 75 - (radius * Math.sin(angle)) * leftScale;
-            leftContour += (leftContour ? ' L' : 'M') + ` ${px},${py}`;
-        }
-        html += `<path d="${leftContour}" fill="none" stroke="cyan" stroke-width="1.5" opacity="0.6"/>`;
-
-        leftCircleKnots.forEach((knot, i) => {
-            const x = 75 + knot.x * leftScale;
-            const y = 75 - knot.y * leftScale;
-            html += `<circle cx="${x}" cy="${y}" r="2" fill="blue"/>`;
-            html += `<text x="${x + 5}" y="${y}" font-size="8" fill="blue">${i}</text>`;
-        });
-        const rotX = 75 + 60 * Math.cos(cloud.leftRotation);
-        const rotY = 75 - 60 * Math.sin(cloud.leftRotation);
-        html += `<line x1="75" y1="75" x2="${rotX}" y2="${rotY}" stroke="blue" stroke-width="1.5"/>`;
-        html += `<circle cx="75" cy="75" r="60" fill="none" stroke="blue" stroke-dasharray="2,2" opacity="0.3"/>`;
-        html += `</svg>`;
-        html += `</div>`;
-
-        html += `<div style="flex: 1;">`;
-        html += `<strong style="color: green;">Right Circle Knots:</strong><br>`;
-        html += `<svg width="150" height="150" style="border: 1px dotted green; background: #f9f9f9;">`;
-        const rightMaxY = Math.max(...rightCircleKnots.map(k => Math.abs(k.y)));
-        const rightScale = 60 / rightMaxY;
-
-        let rightContour = '';
-        for (let angle = 0; angle < 2 * Math.PI; angle += 0.05) {
-            const radius = cloud.rightHarmonics.evaluate(angle, cloud.rightRotation);
-            const px = 75 + (radius * Math.cos(angle)) * rightScale;
-            const py = 75 - (radius * Math.sin(angle)) * rightScale;
-            rightContour += (rightContour ? ' L' : 'M') + ` ${px},${py}`;
-        }
-        html += `<path d="${rightContour}" fill="none" stroke="lime" stroke-width="1.5" opacity="0.6"/>`;
-
-        rightCircleKnots.forEach((knot, i) => {
-            const x = 75 + knot.x * rightScale;
-            const y = 75 - knot.y * rightScale;
-            html += `<circle cx="${x}" cy="${y}" r="2" fill="green"/>`;
-            html += `<text x="${x + 5}" y="${y}" font-size="8" fill="green">${i}</text>`;
-        });
-        const rotX2 = 75 + 60 * Math.cos(cloud.rightRotation);
-        const rotY2 = 75 - 60 * Math.sin(cloud.rightRotation);
-        html += `<line x1="75" y1="75" x2="${rotX2}" y2="${rotY2}" stroke="green" stroke-width="1.5"/>`;
-        html += `<circle cx="75" cy="75" r="60" fill="none" stroke="green" stroke-dasharray="2,2" opacity="0.3"/>`;
-        html += `</svg>`;
-        html += `</div>`;
-
-        html += `</div><br>`;
-
-        knotPositionsEl.innerHTML = html;
     }
 
     private animate(): void {

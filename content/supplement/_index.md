@@ -1,13 +1,35 @@
 ---
 title: "Online Supplement"
-version: "v1.3.10"
+version: "v1.4.1"
 ---
 
 <link rel="stylesheet" href="/css/supplement.css">
 
 ## What Is This?
 
-An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to paper. This supplement offers Santo Daime hymn recordings and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
+An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to paper. This supplement offers an interactive IFS (Internal Family Systems) therapist simulator, Santo Daime hymn recordings, and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
+
+## What is Internal Family Systems (IFS)?
+
+Religion and mental health have always overlapped in their attempts to understand troubled minds. Is that voice divine revelation or auditory hallucination? Is ego dissolution mystical or pathological? Religious traditions developed frameworks like spirit possession and contemplative practices to address such questions. Modern mental health professionals inherit these challenges. They encounter the same phenomena—voices, ego dissolution, altered states—but interpret them through secular frameworks rather than religious ones.
+
+Internal Family Systems (IFS) is a transformative therapeutic approach developed by Dr. Richard Schwartz. It's based on the recognition that our psyche is naturally multiple—composed of various sub-personalities or "parts"—and that this multiplicity is not pathological but normal.
+
+This psychological framework serves the book in two ways. Proactively, we need to recognize when religious practices risk causing harm and know how to adjust or abandon such practices. Reactively, we need to recognize tenacious inner conflicts and know how to facilitate dialogue that de-escalates the tensions between polarized sides.
+
+### Therapist Simulator
+
+Various apps exist to help IFS clients map their parts—tracking protectors, exiles, and their relationships in visual diagrams. These tools serve a real purpose. But we're doing something different here.
+
+This simulator opens a window into what it's like to *be* an IFS therapist. You'll practice the therapeutic stance: curious but not intrusive, present but not directive, holding space while parts reveal themselves at their own pace. The work isn't about cataloging your internal system. It's about embodying the quality of attention that allows parts to feel safe enough to speak.
+
+Whether you're considering IFS therapy, already working with a therapist, or training to become one yourself, this simulator offers direct experience with the therapeutic process from the therapist's perspective.
+
+<div id="ifs-intro-container">
+  <button id="enter-simulator-btn" class="simulator-enter-button">
+    🧠 Enter IFS Simulator
+  </button>
+</div>
 
 ## Hymn Player
 
@@ -131,3 +153,4 @@ We've done the work. We've tracked down the actual papers. We dare you to click 
 
 <script src="/js/salmonAnimation.js"></script>
 <script src="/js/bibliographyEffects.js"></script>
+<script src="/js/ifsSimulatorEntrance.js"></script>
