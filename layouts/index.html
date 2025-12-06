@@ -1,25 +1,374 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="page-version" content="v1.7.0">
     <title>{{ .Site.Title }}</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/output.css">
+    <script>
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme === 'light' || (!savedTheme && !prefersDark)) {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <style>
+        .image-base {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            z-index: 1;
+        }
+        .image-overlay-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            max-width: 100%;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            clip-path: inset(0 50% 0 0);
+            z-index: 2;
+        }
+        .image-comparison {
+            outline: 6px dotted rgba(128, 128, 128, 0.2);
+            outline-offset: 4px;
+            transition: outline-color 0.5s ease;
+        }
+        .image-comparison.audio-playing {
+            outline-color: rgba(255, 215, 0, 0.8);
+            animation: pulseBorder 5s ease-in-out infinite;
+        }
+        .dark .image-comparison.audio-playing {
+            outline-color: rgba(255, 215, 0, 0.9);
+        }
+        @keyframes pulseBorder {
+            0%, 100% {
+                outline-width: 3px;
+                outline-offset: 2px;
+            }
+            50% {
+                outline-width: 6px;
+                outline-offset: 4px;
+            }
+        }
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background-color: white;
+            cursor: ew-resize;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        .side-button-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        .side-button {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            writing-mode: vertical-lr;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: auto;
+            z-index: 5;
+        }
+        .side-button.visible {
+            opacity: 1;
+        }
+        .side-button a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 20px;
+            text-decoration: none;
+            color: #333;
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: color 0.3s ease;
+        }
+        .dark .side-button a {
+            color: #e5e5e5;
+        }
+        .side-button a:hover {
+            color: #666;
+        }
+        .dark .side-button a:hover {
+            color: #fff;
+        }
+        .mobile-button {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .mobile-button.visible {
+            opacity: 1;
+        }
+        @media (min-width: 769px) {
+            .side-button {
+                display: flex;
+            }
+            .mobile-button {
+                display: none;
+            }
+            .side-button-left {
+                left: -60px;
+                transform: rotate(180deg);
+            }
+            .side-button-right {
+                right: -60px;
+            }
+        }
+        @media (max-width: 768px) {
+            .mobile-button.visible {
+                display: flex;
+            }
+        }
+        #flip-button {
+            position: absolute;
+            top: -2.4rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: rgb(228 228 231);
+            border: none;
+            cursor: pointer;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s, opacity 0.5s;
+            opacity: 0;
+        }
+        .dark #flip-button {
+            background: rgb(63 63 70);
+        }
+        #flip-button:hover {
+            background: rgb(212 212 216);
+        }
+        .dark #flip-button:hover {
+            background: rgb(82 82 91);
+        }
+        #flip-button.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .flip-animation {
+            --flip-intensity: 1;
+            --flip-speed: 2.4s;
+            --flip-color: 1;
+            --flip-direction: 1;
+            --flip-wobble: 1;
+            animation: bookFlip var(--flip-speed) cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+            filter: brightness(1);
+        }
+        @keyframes bookFlip {
+            0% {
+                transform: perspective(1200px)
+                    rotateY(0deg)
+                    rotateX(0deg)
+                    rotateZ(0deg)
+                    translateZ(0px)
+                    scale(1);
+                filter: brightness(1)
+                    hue-rotate(0deg)
+                    saturate(1);
+            }
+            8% {
+                transform: perspective(1200px)
+                    rotateY(calc(-12deg * var(--flip-direction) * var(--flip-wobble)))
+                    rotateX(calc(5deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(-3deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(15px * var(--flip-intensity)))
+                    scale(calc(1 - 0.05 * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.1 * var(--flip-intensity)))
+                    hue-rotate(calc(0deg * var(--flip-color)))
+                    saturate(calc(1 + 0.2 * var(--flip-intensity)));
+            }
+            12% {
+                transform: perspective(1200px)
+                    rotateY(calc(25deg * var(--flip-direction)))
+                    rotateX(calc(-8deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(5deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(50px * var(--flip-intensity)))
+                    scale(calc(1 + 0.15 * var(--flip-intensity)));
+                filter: brightness(calc(1 - 0.1 * var(--flip-intensity)))
+                    hue-rotate(calc(15deg * var(--flip-color)))
+                    saturate(calc(1 + 0.4 * var(--flip-intensity)));
+            }
+            20% {
+                transform: perspective(1200px)
+                    rotateY(calc(90deg * var(--flip-direction)))
+                    rotateX(calc(15deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(-10deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(100px * var(--flip-intensity)))
+                    scale(calc(1 - 0.15 * var(--flip-intensity)))
+                    translateX(calc(-40px * var(--flip-direction) * var(--flip-intensity)))
+                    translateY(calc(-30px * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.3 * var(--flip-intensity)))
+                    hue-rotate(calc(45deg * var(--flip-color)))
+                    saturate(calc(1 + 1 * var(--flip-intensity)));
+            }
+            28% {
+                transform: perspective(1200px)
+                    rotateY(calc(180deg * var(--flip-direction)))
+                    rotateX(calc(-20deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(15deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(150px * var(--flip-intensity)))
+                    scale(calc(1 + 0.25 * var(--flip-intensity)))
+                    translateY(calc(50px * var(--flip-intensity)));
+                filter: brightness(calc(1 - 0.3 * var(--flip-intensity)))
+                    hue-rotate(calc(90deg * var(--flip-color)))
+                    saturate(calc(1 - 0.2 * var(--flip-intensity)));
+            }
+            35% {
+                transform: perspective(1200px)
+                    rotateY(calc(270deg * var(--flip-direction)))
+                    rotateX(calc(25deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(-20deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(120px * var(--flip-intensity)))
+                    scale(calc(1 - 0.1 * var(--flip-intensity)))
+                    translateX(calc(60px * var(--flip-direction) * var(--flip-intensity)))
+                    translateY(calc(-20px * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.4 * var(--flip-intensity)))
+                    hue-rotate(calc(180deg * var(--flip-color)))
+                    saturate(calc(1 + 0.6 * var(--flip-intensity)));
+            }
+            42% {
+                transform: perspective(1200px)
+                    rotateY(calc(360deg * var(--flip-direction)))
+                    rotateX(calc(-15deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(25deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(80px * var(--flip-intensity)))
+                    scale(calc(1 + 0.2 * var(--flip-intensity)))
+                    translateX(calc(-30px * var(--flip-direction) * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.1 * var(--flip-intensity)))
+                    hue-rotate(calc(270deg * var(--flip-color)))
+                    saturate(calc(1 + 0.3 * var(--flip-intensity)));
+            }
+            48% {
+                transform: perspective(1200px)
+                    rotateY(calc(450deg * var(--flip-direction)))
+                    rotateX(calc(10deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(-15deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(60px * var(--flip-intensity)))
+                    scale(calc(1 - 0.05 * var(--flip-intensity)))
+                    translateY(calc(40px * var(--flip-intensity)));
+                filter: brightness(calc(1 - 0.15 * var(--flip-intensity)))
+                    hue-rotate(calc(320deg * var(--flip-color)))
+                    saturate(calc(1 + 0.8 * var(--flip-intensity)));
+            }
+            54% {
+                transform: perspective(1200px)
+                    rotateY(calc(540deg * var(--flip-direction)))
+                    rotateX(calc(-30deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(30deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(140px * var(--flip-intensity)))
+                    scale(calc(1 + 0.3 * var(--flip-intensity)))
+                    translateX(calc(50px * var(--flip-direction) * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.5 * var(--flip-intensity)))
+                    hue-rotate(calc(0deg * var(--flip-color)))
+                    saturate(calc(1 + 1.2 * var(--flip-intensity)));
+            }
+            60% {
+                transform: perspective(1200px)
+                    rotateY(calc(630deg * var(--flip-direction)))
+                    rotateX(calc(20deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(-25deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(90px * var(--flip-intensity)))
+                    scale(calc(1 - 0.2 * var(--flip-intensity)))
+                    translateY(calc(-40px * var(--flip-intensity)));
+                filter: brightness(calc(1 - 0.1 * var(--flip-intensity)))
+                    hue-rotate(calc(45deg * var(--flip-color)))
+                    saturate(calc(1 + 0.1 * var(--flip-intensity)));
+            }
+            68% {
+                transform: perspective(1200px)
+                    rotateY(calc(720deg * var(--flip-direction)))
+                    rotateX(calc(-10deg * var(--flip-intensity) * var(--flip-wobble)))
+                    rotateZ(calc(12deg * var(--flip-direction) * var(--flip-wobble)))
+                    translateZ(calc(70px * var(--flip-intensity)))
+                    scale(calc(1 + 0.18 * var(--flip-intensity)));
+                filter: brightness(calc(1 + 0.2 * var(--flip-intensity)))
+                    hue-rotate(calc(90deg * var(--flip-color)))
+                    saturate(calc(1 + 0.5 * var(--flip-intensity)));
+            }
+            100% {
+                transform: perspective(1200px)
+                    rotateY(calc(720deg * var(--flip-direction)))
+                    rotateX(0deg)
+                    rotateZ(0deg)
+                    translateZ(0px)
+                    scale(1);
+                filter: brightness(1)
+                    hue-rotate(0deg)
+                    saturate(1);
+            }
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <div class="image-comparison">
-            <img src="/ordinary.jpeg" alt="Ordinary" class="image-base">
-            <img src="/cathedral.jpeg" alt="Cathedral" class="image-overlay-img">
-            <div class="image-overlay"></div>
-            <div class="slider">
-                <div class="slider-button">
-                    <svg width="30" height="30" viewBox="0 0 30 30">
-                        <path d="M10 5 L5 15 L10 25" stroke="white" stroke-width="3" fill="none"/>
-                        <path d="M20 5 L25 15 L20 25" stroke="white" stroke-width="3" fill="none"/>
+<body class="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 flex items-center justify-center transition-colors">
+    <button id="theme-toggle" class="fixed top-4 right-4 md:top-8 md:right-8 p-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors z-50" aria-label="Toggle theme">
+        <svg class="w-6 h-6 text-zinc-900 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <svg class="w-6 h-6 text-gray-100 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+    <div class="w-full min-h-screen flex flex-col items-center justify-center p-5 md:p-10 gap-10">
+        <div class="side-button-wrapper">
+            <div class="side-button side-button-left" data-enter-button="left">
+                <a href="/book/">Enter Site</a>
+            </div>
+            <div class="image-comparison relative w-fit max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-visible select-none cursor-ew-resize mx-auto">
+                <button id="flip-button" aria-label="Flip book cover">
+                    <svg class="w-6 h-6 text-zinc-900 dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
+                </button>
+                <img src="/front-ordinary.webp" alt="Ordinary" class="image-base">
+                <img src="/front-cathedral.webp" alt="Cathedral" class="image-overlay-img">
+                <audio id="cathedral-audio" loop preload="auto">
+                    <source src="/audio/sentado-no-trono.mp3" type="audio/mpeg">
+                </audio>
+                <div class="slider">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] md:w-[60px] md:h-[60px] bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <svg width="30" height="30" viewBox="0 0 30 30" class="pointer-events-none">
+                            <path d="M10 5 L5 15 L10 25" stroke="#333" stroke-width="3" fill="none"/>
+                            <path d="M20 5 L25 15 L20 25" stroke="#333" stroke-width="3" fill="none"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
+            <div class="side-button side-button-right" data-enter-button="right">
+                <a href="/book/">Enter Site</a>
+            </div>
+        </div>
+        <div class="w-full flex items-center justify-center py-5 mobile-button">
+            <a href="/book/" class="inline-block px-12 md:px-16 py-5 md:py-6 text-xl md:text-3xl font-semibold text-zinc-900 bg-gray-100 no-underline rounded-xl transition-all duration-300 shadow-lg hover:bg-white hover:-translate-y-1 hover:shadow-2xl active:-translate-y-0.5 uppercase tracking-wider">Enter Site</a>
         </div>
     </div>
     <script type="module" src="/js/main.js"></script>

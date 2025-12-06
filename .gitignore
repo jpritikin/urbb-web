@@ -7,3 +7,4 @@ static/js/*.js
 static/js/*.d.ts
 static/js/*.js.map
 static/js/*.d.ts.map
+static/css/output.css
