@@ -57,7 +57,7 @@ Examining your beliefs—especially cherished religious ones—requires courage 
   <div class="format-card">
     <h3>🎧 Audiobook</h3>
     <p>Experience the full text read by the author—including hymns sung as intended. 🎵
-  Sidebars and footnotes excluded to preserve the listening journey. 🎧</p>
+  Sidebars and footnotes excluded to preserve the listening journey.</p>
     <a href="https://audible.com" class="order-button">Order Audiobook</a>
   </div>
   <div class="format-card">
@@ -71,11 +71,11 @@ Examining your beliefs—especially cherished religious ones—requires courage 
 
 _The Way of Open Inquiry_ is a thought experiment—a sketch of what religion might look like if it fully embraced mystery. 🌌
 
-Instead of being built around fixed beliefs about God, the afterlife, or cosmic truth, this hypothetical religion centers on the practice of questioning itself. ❓ Members gather not to affirm shared doctrines, but to explore unanswerable questions together: What is consciousness? 🧠 What lies beyond death? ☠️ How should we live? 🌱
+Instead of being built around fixed beliefs about God, the afterlife, or cosmic truth, this hypothetical religion centers on the practice of questioning itself. Members gather not to affirm shared doctrines, but to explore unanswerable questions together: What is consciousness? What lies beyond death? ☠️ How should we live? 🌱
 
-This isn't presented as a fully-formed tradition ready for adoption. Rather, it's a thought experiment designed to support access to transformative experience. ✨
+This isn't presented as a fully-formed tradition ready for adoption. Rather, it's a thought experiment designed to support access to transformative experience.
 
-**Complete this short interest form and receive a PDF download of this thought experiment.** 📄
+**Complete this short interest form and receive a PDF download of this thought experiment.**
 
 <div data-tf-live="01JTED9XC8FEK8E778MAH3E8TJ"></div>
 <script src="//embed.typeform.com/next/embed.js"></script>
