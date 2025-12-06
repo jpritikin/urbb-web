@@ -6,13 +6,13 @@ version: "v1.0.0"
 
 ## A Life Among the Influential
 
-Understand something about credibility in the New Age industry. You can't just write a book about daemon possession and expect people to take you seriously unless you've been photographed with the right people. That's how legitimacy works in this space.
+Understand something about credibility in the New Age industry. 🌟 You can't just write a book about daemon possession 👻 and expect people to take you seriously unless you've been photographed with the right people. 📸 That's how legitimacy works in this space. ✨
 
-One of the great privileges of this work has been the opportunity to connect with thought leaders, visionaries, and cultural icons across multiple fields. These photographs document moments of exchange, collaboration, and mutual recognition that have shaped my journey. The kind of moments that get you invited back to exclusive camps at Burning Man, VIP dinners at consciousness conferences, and backstage access at TED talks.
+One of the great privileges of this work has been the opportunity to connect with thought leaders, visionaries, and cultural icons across multiple fields. 🤝 These photographs document moments of exchange, collaboration, and mutual recognition that have shaped my journey. The kind of moments that get you invited back to exclusive camps at Burning Man, 🔥 VIP dinners at consciousness conferences, and backstage access at TED talks. 🎤
 
-From groundbreaking researchers in psychedelic science to spiritual leaders guiding millions, from media luminaries amplifying consciousness to philosophers redefining our understanding of mind and healing—each encounter has deepened my commitment to making these practices accessible. I'm grateful to have earned a place in these circles, where serious inquiry meets transformative practice, where academic rigor dances with mystical experience, and where the work of bridging ancient wisdom and modern science continues. These are the kinds of relationships that fund first-class flights and hotel suites at Art Basel Miami.
+From groundbreaking researchers in psychedelic science 🍄 to spiritual leaders guiding millions, from media luminaries amplifying consciousness to philosophers redefining our understanding of mind and healing—each encounter has deepened my commitment to making these practices accessible. ✨ I'm grateful to have earned a place in these circles, where serious inquiry meets transformative practice, where academic rigor dances with mystical experience, 💫 and where the work of bridging ancient wisdom and modern science continues. These are the kinds of relationships that fund first-class flights ✈️ and hotel suites at Art Basel Miami. 🎨
 
-*(Yes, dear reader arriving here cold—this is, in fact, theatrical self-mockery. But it's also how this game actually works, which makes the mockery more complicated than simple satire. The photos below are obviously fake.)*
+*(Yes, dear reader arriving here cold—this is, in fact, theatrical self-mockery. 🎭 But it's also how this game actually works, which makes the mockery more complicated than simple satire. The photos below are obviously fake.)* 😏
 
 <div class="photo-gallery">
   <div class="gallery-item">

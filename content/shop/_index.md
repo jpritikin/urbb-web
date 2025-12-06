@@ -6,7 +6,7 @@ version: "v1.0.0"
 
 ## Welcome to the Unburdened Shop
 
-Explore our carefully curated collection of items to support your Open Inquiry practice and IFS journey.
+Explore our carefully curated collection of items to support your Open Inquiry practice and IFS journey. ✨
 
 <div class="shop-grid">
 
@@ -14,7 +14,7 @@ Explore our carefully curated collection of items to support your Open Inquiry p
 
 ### 🎟️ Cipher Lottery Ticket
 
-Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. Purchase a lottery ticket for a chance to win the keys to all the ciphers! **Winner selected quarterly.**
+Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. 🔐 Purchase a lottery ticket for a chance to win the keys to all the ciphers! 🗝️ **Winner selected quarterly.** 📅
 
 <p class="shop-item-price">$5.00</p>
 
@@ -34,9 +34,9 @@ Each chapter of *Unburdened* begins with an epigraph hidden in simple substituti
 
 ### 📓 Official Way of Open Inquiry Journals
 
-Lined notebooks featuring the Sacred Question Mark symbol (?) on the cover. Perfect for your inquiry practice, parts dialogues, or daily reflections.
+Lined notebooks featuring the Sacred Question Mark symbol (?) on the cover. ❓ Perfect for your inquiry practice, parts dialogues, or daily reflections. 📝
 
-High-quality paper, durable binding, 200 pages.
+High-quality paper, durable binding, 200 pages. ✍️
 
 <p class="shop-item-price">$23.00</p>
 
@@ -57,9 +57,9 @@ High-quality paper, durable binding, 200 pages.
 
 ### 💧 Ceremonial Water Bottles
 
-Stay hydrated during your practice with these premium insulated water bottles. Featuring subtle Open Inquiry branding for mindful fluid integration.
+Stay hydrated during your practice with these premium insulated water bottles. 💧 Featuring subtle Open Inquiry branding for mindful fluid integration. 🧘
 
-32oz capacity, keeps drinks cold for 24 hours or hot for 12 hours.
+32oz capacity, keeps drinks cold for 24 hours ❄️ or hot for 12 hours. 🔥
 
 <p class="shop-item-price">$47.00</p>
 
@@ -80,9 +80,9 @@ Stay hydrated during your practice with these premium insulated water bottles. F
 
 ### 🫚 Sacred Fresh Ginger (1oz)
 
-Certified organic, ceremonially harvested, express shipped. For those moments when your practice requires the grounding properties of fresh ginger.
+Certified organic, ceremonially harvested, express shipped. 📦 For those moments when your practice requires the grounding properties of fresh ginger. 🌱
 
-*Refrigeration recommended. Ships overnight.*
+*Refrigeration recommended. ❄️ Ships overnight.* ⚡
 
 <p class="shop-item-price">$67.00</p>
 
@@ -105,9 +105,9 @@ Certified organic, ceremonially harvested, express shipped. For those moments wh
 
 ### 📜 Lifetime Membership Certificate
 
-Beautiful certificate suitable for framing and wall display. Demonstrates your commitment to The Way of Open Inquiry.
+Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to The Way of Open Inquiry. ✨
 
-Printed on archival-quality paper with gold embossing. Personalized with your name.
+Printed on archival-quality paper with gold embossing. ✨ Personalized with your name. 🏷️
 
 <p class="shop-item-price">$250.00</p>
 
@@ -131,9 +131,9 @@ Printed on archival-quality paper with gold embossing. Personalized with your na
 
 ### ✨ Personal Spirit Guide Matching Service
 
-Receive a one-hour consultation where I'll channel your perfect spirit guide. Sessions conducted via video call.
+Receive a one-hour consultation where I'll channel your perfect spirit guide. 🔮 Sessions conducted via video call. 💻
 
-Includes recorded session and personalized guide profile document.
+Includes recorded session 🎥 and personalized guide profile document. 📋✨
 
 <p class="shop-item-price">$500.00</p>
 
@@ -158,13 +158,13 @@ Includes recorded session and personalized guide profile document.
 
 ### 🏷️ Premium Belief Minimization Stickers
 
-Show your commitment to believing less with these premium vinyl stickers.
+Show your commitment to believing less with these premium vinyl stickers. 🎨
 
-**"Believe less, disbelieve less — The Way of Open Inquiry"**
+**"Believe less, disbelieve less — The Way of Open Inquiry"** 💭
 
-Pack of 10 stickers. Weather-resistant, perfect for laptops, water bottles, or journals.
+Pack of 10 stickers. 🌈 Weather-resistant, perfect for laptops, water bottles, or journals. 💻🧴📓
 
-**Free with any order, or $0.10/pack standalone.** [Contact us](/contact/) for bulk order pricing.
+**Free with any order, or $0.10/pack standalone.** 🎁 [Contact us](/contact/) for bulk order pricing.
 
 <p class="shop-item-price">$0.10</p>
 
@@ -188,15 +188,15 @@ Pack of 10 stickers. Weather-resistant, perfect for laptops, water bottles, or j
 
 ## Shipping & Returns
 
-- **Shipping**: We ship worldwide via USPS and UPS. Rates calculated at checkout.
-- **Processing Time**: Most orders ship within 2-3 business days.
-- **Returns**: 30-day return policy on physical items (excluding perishables and custom items).
-- **Questions?**: [Contact us](/contact/) for any order inquiries.
+- **Shipping**: We ship worldwide via USPS and UPS. 🌍 Rates calculated at checkout. 💳
+- **Processing Time**: Most orders ship within 2-3 business days. 📦⏰
+- **Returns**: 30-day return policy on physical items (excluding perishables and custom items). ↩️✅
+- **Questions?**: [Contact us](/contact/) for any order inquiries. 💬
 
 ## Bulk Orders
 
-Interested in ordering journals, water bottles, or stickers in bulk for your community or practice group? [Contact us](/contact/) for special pricing.
+Interested in ordering journals, water bottles, or stickers in bulk for your community or practice group? 👥 [Contact us](/contact/) for special pricing. 💰
 
 <br>
 
-*All profits support the author's ongoing daemon possession management expenses, including emergency Tarot consultations with a specialist in Portland who charges $300/hour. Plus, you're bringing us one step closer to renting Stonehenge for next year's Way of Open Inquiry Conference (current quote: £63,000 for three days, plus another £8,000 for "historical monument insurance"). Additional funding goes toward impulsive purchases like limited-edition meditation cushions I'll use exactly once, frivolous gifts for book signing attendees ("everyone gets a singing bowl!"), and expanding my collection of ceremonial robes, sacred geometry harem pants, and handwoven alpaca ponchos.*
+*All profits support the author's ongoing daemon possession management expenses, 👻 including emergency Tarot consultations 🔮 with a specialist in Portland who charges $300/hour. Plus, you're bringing us one step closer to renting Stonehenge 🗿 for next year's Way of Open Inquiry Conference (current quote: £63,000 for three days, plus another £8,000 for "historical monument insurance"). 💰 Additional funding goes toward impulsive purchases like limited-edition meditation cushions I'll use exactly once, 🧘 frivolous gifts for book signing attendees ("everyone gets a singing bowl!" 🔔), and expanding my collection of ceremonial robes, sacred geometry harem pants, and handwoven alpaca ponchos. 🦙✨*
