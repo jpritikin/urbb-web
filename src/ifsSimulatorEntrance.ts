@@ -34,8 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const pointsPerSegment = Math.floor(totalPoints / segmentCount);
             const armCount = 3;
 
+            const armColors = ['#4d8a99', '#c8752e', '#962329'];
+
             for (let arm = 0; arm < armCount; arm++) {
                 const armOffset = (arm * 2 * Math.PI) / armCount;
+                const armColor = armColors[arm];
 
                 for (let seg = 0; seg < segmentCount; seg++) {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -58,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     path.setAttribute('d', d);
                     path.setAttribute('fill', 'none');
-                    path.setAttribute('stroke', 'url(#spiralGradient)');
+                    path.setAttribute('stroke', armColor);
                     path.setAttribute('stroke-width', strokeWidth.toString());
                     path.setAttribute('stroke-linecap', 'round');
 
@@ -66,27 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Create gradient
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-            gradient.setAttribute('id', 'spiralGradient');
-
-            const colors = [
-                { offset: '0%', color: 'rgba(30, 144, 255, 0.9)' },
-                { offset: '33%', color: 'rgba(147, 112, 219, 0.9)' },
-                { offset: '66%', color: 'rgba(255, 215, 0, 0.9)' },
-                { offset: '100%', color: 'rgba(30, 144, 255, 0.9)' }
-            ];
-
-            colors.forEach(c => {
-                const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                stop.setAttribute('offset', c.offset);
-                stop.setAttribute('stop-color', c.color);
-                gradient.appendChild(stop);
-            });
-
-            defs.appendChild(gradient);
-            svg.appendChild(defs);
             spiral.appendChild(svg);
 
             document.body.appendChild(spiral);

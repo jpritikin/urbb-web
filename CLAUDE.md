@@ -33,6 +33,8 @@ Give each markdown page (and the landing page) a version number. On page load, l
 
 Don't add console.log() in animation loops that will generate tons of output.
 
+Ensure it will be easy to store the IFS simulator state. All state should be serializable to JSON.
+
 ## Website Style Guidelines
 
 Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme; Try to rely on markdown. Minimize literal HTML in markdown. Try to avoid pixel dimensions and prefer resolution independent measures. Site must work perfectly on various screen sizes (desktop and mobile). Site must be able to switch between light and dark mode. Use emojis to emphasize key points in the text.
