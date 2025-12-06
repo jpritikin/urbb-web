@@ -494,54 +494,6 @@ li {
   }
 }
 
-@keyframes tunnel-effect {
-  0% {
-    opacity: 0;
-    transform: scale(0.1) rotate(0deg);
-    background: radial-gradient(circle, rgba(30, 144, 255, 0.8) 0%, rgba(0, 0, 0, 0.9) 30%, #000 100%);
-  }
-  15% {
-    opacity: 0.3;
-    transform: scale(0.3) rotate(45deg);
-  }
-  30% {
-    opacity: 0.6;
-    transform: scale(0.6) rotate(90deg);
-    background: radial-gradient(circle, rgba(147, 112, 219, 0.8) 0%, rgba(0, 0, 0, 0.9) 30%, #000 100%);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1) rotate(180deg);
-    background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, rgba(0, 0, 0, 0.95) 20%, #000 100%);
-  }
-  70% {
-    opacity: 0.9;
-    transform: scale(1.5) rotate(270deg);
-    background: radial-gradient(circle, transparent 0%, rgba(0, 0, 0, 0.8) 15%, #000 100%);
-  }
-  85% {
-    opacity: 0.5;
-    transform: scale(2.5) rotate(360deg);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(4) rotate(540deg);
-    background: radial-gradient(circle, transparent 0%, #000 100%);
-  }
-}
-
-.tunnel-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: radial-gradient(circle, rgba(30, 144, 255, 0.8) 0%, rgba(0, 0, 0, 0.9) 30%, #000 100%);
-  z-index: 9999;
-  pointer-events: none;
-  animation: tunnel-effect 3s ease-in-out forwards;
-}
-
 @keyframes glitch-flash {
   0%, 100% {
     opacity: 0;
@@ -628,7 +580,7 @@ li {
   }
   100% {
     opacity: 1;
-    transform: scale(1) rotate(0deg);
+    transform: rotate(0deg);
     filter: blur(0px);
   }
 }
