@@ -6,7 +6,7 @@ version: "v1.0.0"
 
 ## Word Search: Open Inquiry & IFS
 
-Find the hidden words related to Open Inquiry and Internal Family Systems! Words can be horizontal, vertical, or diagonal.
+Find the hidden words related to Open Inquiry and Internal Family Systems! 🔍 Words can be horizontal, vertical, or diagonal. ↔️↕️↗️
 
 <div class="word-search-container">
     <div id="word-search-game"></div>
