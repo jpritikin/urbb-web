@@ -24,6 +24,7 @@ class AnimatronicSalmon {
     private driftTime: number = 0;
     private driftFrameCounter: number = 0;
     private readonly salmonScale: number = 1.0;
+    private shouldAnimate: boolean = true;
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -34,6 +35,24 @@ class AnimatronicSalmon {
         this.setupCanvas();
         this.initializeDrift();
         this.drawSalmon();
+        this.setupVisibilityHandling();
+    }
+
+    private setupVisibilityHandling(): void {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.shouldAnimate = false;
+                if (this.animationFrame !== null) {
+                    cancelAnimationFrame(this.animationFrame);
+                    this.animationFrame = null;
+                }
+            } else {
+                this.shouldAnimate = true;
+                if (this.animationFrame === null) {
+                    this.animationFrame = requestAnimationFrame(this.animate);
+                }
+            }
+        });
     }
 
     private initializeDrift(): void {
@@ -698,6 +717,8 @@ class CassetteOverlay {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private salmon: AnimatronicSalmon | null = null;
+    private animationFrame: number | null = null;
+    private shouldAnimate: boolean = true;
 
     constructor() {
         this.canvas = document.createElement('canvas');
@@ -713,8 +734,26 @@ class CassetteOverlay {
         this.ctx = this.canvas.getContext('2d')!;
         this.setupCanvas();
         this.animate();
+        this.setupVisibilityHandling();
 
         window.addEventListener('resize', () => this.setupCanvas());
+    }
+
+    private setupVisibilityHandling(): void {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.shouldAnimate = false;
+                if (this.animationFrame !== null) {
+                    cancelAnimationFrame(this.animationFrame);
+                    this.animationFrame = null;
+                }
+            } else {
+                this.shouldAnimate = true;
+                if (this.animationFrame === null) {
+                    this.animate();
+                }
+            }
+        });
     }
 
     private setupCanvas(): void {
@@ -733,7 +772,7 @@ class CassetteOverlay {
             this.salmon.drawCassette(this.ctx);
         }
 
-        requestAnimationFrame(this.animate);
+        this.animationFrame = requestAnimationFrame(this.animate);
     };
 }
 

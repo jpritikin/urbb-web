@@ -186,6 +186,10 @@ export class Cloud {
     needAttention: number;
     agreedWaitDuration: number;
 
+    private groupElement: SVGGElement | null = null;
+    private pathElement: SVGPathElement | null = null;
+    private textElement: SVGTextElement | null = null;
+
     private static nextId = 1;
 
     constructor(text: string, x: number = 0, y: number = 0, cloudType?: CloudType, options?: CloudOptions) {
@@ -827,44 +831,50 @@ export class Cloud {
         }
     }
 
-    createSVGElements(onSelect: () => void): { group: SVGGElement; path: SVGPathElement; text: SVGTextElement } {
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('transform', `translate(${this.x}, ${this.y})`);
-        g.style.cursor = 'pointer';
+    createSVGElements(onSelect: () => void): SVGGElement {
+        this.groupElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.groupElement.setAttribute('transform', `translate(${this.x}, ${this.y})`);
+        this.groupElement.style.cursor = 'pointer';
 
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.style.strokeWidth = String(0.8);
-        path.style.pointerEvents = 'all';
+        this.pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        this.pathElement.style.strokeWidth = String(0.8);
+        this.pathElement.style.pointerEvents = 'all';
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.style.fontFamily = 'sans-serif';
-        text.style.fontSize = `${FONT_SIZE}px`;
-        text.style.textAnchor = 'middle';
-        text.style.pointerEvents = 'none';
+        this.textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        this.textElement.style.fontFamily = 'sans-serif';
+        this.textElement.style.fontSize = `${FONT_SIZE}px`;
+        this.textElement.style.textAnchor = 'middle';
+        this.textElement.style.pointerEvents = 'none';
 
-        g.appendChild(path);
-        g.appendChild(text);
+        this.groupElement.appendChild(this.pathElement);
+        this.groupElement.appendChild(this.textElement);
 
-        g.addEventListener('click', (e: Event) => {
+        this.groupElement.addEventListener('click', (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             onSelect();
         }, true);
 
-        return { group: g, path, text };
+        return this.groupElement;
     }
 
-    updateSVGElements(groupElement: SVGGElement, pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean): void {
+    getGroupElement(): SVGGElement | null {
+        return this.groupElement;
+    }
+
+    updateSVGElements(debug: boolean): void {
+        if (!this.groupElement || !this.pathElement || !this.textElement) return;
+
         const outlinePath = this.generateOutlinePath();
-        pathElement.setAttribute('d', outlinePath);
-        this.updateStyles(pathElement, textElement, debug);
-        this.renderText(textElement);
+        this.pathElement.setAttribute('d', outlinePath);
+        this.updateStyles(this.pathElement, this.textElement, debug);
+        this.renderText(this.textElement);
 
         if (debug) {
-            while (groupElement.childNodes.length > 2) {
-                groupElement.removeChild(groupElement.lastChild!);
+            while (this.groupElement.childNodes.length > 2) {
+                this.groupElement.removeChild(this.groupElement.lastChild!);
             }
-            this.renderDebugInfo(groupElement);
+            this.renderDebugInfo(this.groupElement);
         }
     }
 }
