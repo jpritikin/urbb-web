@@ -30,7 +30,7 @@ version: "v1.1.0"
     </div>
     <div>
       <label>
-        <input type="checkbox" id="cloud-debug" checked>
+        <input type="checkbox" id="cloud-debug">
         Debug mode
       </label>
     </div>

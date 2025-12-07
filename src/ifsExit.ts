@@ -21,13 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!exitBtn) return;
 
-  const anyInput = document.querySelectorAll('input, textarea');
-  anyInput.forEach(input => {
-    input.addEventListener('input', () => {
-      hasUnsavedWork = true;
-    });
-  });
-
   const handleExit = () => {
     if (hasUnsavedWork) {
       const confirmed = confirm('You have unsaved work. Are you sure you want to exit the simulator?');
