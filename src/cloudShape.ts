@@ -780,4 +780,90 @@ export class Cloud {
     getTextWeight(): string {
         return this.trust < 0.5 ? 'bold' : 'normal';
     }
+
+    renderText(textElement: SVGTextElement): void {
+        const textX = this.textLeft + this.textWidth / 2;
+        const lines = this.text.split('\\n');
+        const lineHeight = this.textAscent + this.textDescent;
+        const totalTextHeight = lines.length * lineHeight;
+        const centerSvgY = -this.minHeight / 2;
+        const firstBaselineSvgY = centerSvgY - totalTextHeight / 2 + this.textAscent;
+
+        textElement.setAttribute('x', String(textX));
+        textElement.innerHTML = '';
+        for (let j = 0; j < lines.length; j++) {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', String(textX));
+            tspan.setAttribute('y', String(firstBaselineSvgY + j * lineHeight));
+            tspan.textContent = lines[j];
+            textElement.appendChild(tspan);
+        }
+    }
+
+    updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean): void {
+        const isDark = document.documentElement.classList.contains('dark');
+        const bgColor = isDark ? '#1a1a1a' : '#ffffff';
+        const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
+
+        if (debug) {
+            pathElement.style.fill = 'yellow';
+            pathElement.style.stroke = 'red';
+            textElement.style.fill = '#000000';
+            textElement.style.fontWeight = 'normal';
+            textElement.style.stroke = '';
+            textElement.style.strokeWidth = '';
+        } else {
+            pathElement.style.fill = this.getFillColor();
+            pathElement.style.stroke = '#000000';
+            pathElement.style.strokeOpacity = '1';
+            pathElement.style.strokeLinejoin = 'round';
+            textElement.style.stroke = bgColor;
+            textElement.style.strokeWidth = '3';
+            textElement.style.strokeLinejoin = 'round';
+            textElement.style.fill = textColor;
+            textElement.style.fontWeight = this.getTextWeight();
+            textElement.style.paintOrder = 'stroke fill';
+        }
+    }
+
+    createSVGElements(onSelect: () => void): { group: SVGGElement; path: SVGPathElement; text: SVGTextElement } {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${this.x}, ${this.y})`);
+        g.style.cursor = 'pointer';
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.style.strokeWidth = String(0.8);
+        path.style.pointerEvents = 'all';
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.style.fontFamily = 'sans-serif';
+        text.style.fontSize = `${FONT_SIZE}px`;
+        text.style.textAnchor = 'middle';
+        text.style.pointerEvents = 'none';
+
+        g.appendChild(path);
+        g.appendChild(text);
+
+        g.addEventListener('click', (e: Event) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect();
+        }, true);
+
+        return { group: g, path, text };
+    }
+
+    updateSVGElements(groupElement: SVGGElement, pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean): void {
+        const outlinePath = this.generateOutlinePath();
+        pathElement.setAttribute('d', outlinePath);
+        this.updateStyles(pathElement, textElement, debug);
+        this.renderText(textElement);
+
+        if (debug) {
+            while (groupElement.childNodes.length > 2) {
+                groupElement.removeChild(groupElement.lastChild!);
+            }
+            this.renderDebugInfo(groupElement);
+        }
+    }
 }

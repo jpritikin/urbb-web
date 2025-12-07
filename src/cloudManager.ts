@@ -3,9 +3,6 @@ import { Point } from './geometry.js';
 
 export { CloudType };
 
-const FONT_SIZE = 12;
-const STROKE_WIDTH = 0.8;
-
 interface CloudInstance {
     cloud: Cloud;
     groupElement: SVGGElement;
@@ -128,118 +125,11 @@ export class CloudRelationshipManager {
     }
 }
 
-export class CloudRenderer {
-    private debug: boolean = true;
-
-    setDebug(enabled: boolean): void {
-        this.debug = enabled;
-    }
-
-    createCloudElements(cloud: Cloud, svgElement: SVGSVGElement, onSelect: () => void): CloudInstance {
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('transform', `translate(${cloud.x}, ${cloud.y})`);
-        g.style.cursor = 'pointer';
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.style.strokeWidth = String(STROKE_WIDTH);
-        path.style.pointerEvents = 'all';
-
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.style.fontFamily = 'sans-serif';
-        text.style.fontSize = `${FONT_SIZE}px`;
-        text.style.textAnchor = 'middle';
-        text.style.pointerEvents = 'none';
-
-        g.appendChild(path);
-        g.appendChild(text);
-
-        g.addEventListener('click', (e: Event) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onSelect();
-        }, true);
-
-        svgElement.appendChild(g);
-
-        this.updateCloudStyles(cloud, path, text);
-        this.renderText(cloud, text);
-        const outlinePath = cloud.generateOutlinePath();
-        path.setAttribute('d', outlinePath);
-
-        return { cloud, groupElement: g, pathElement: path, textElement: text };
-    }
-
-    updateAnimation(instance: CloudInstance): void {
-        const { cloud, groupElement, pathElement, textElement } = instance;
-
-        const outlinePath = cloud.generateOutlinePath();
-        pathElement.setAttribute('d', outlinePath);
-
-        this.updateCloudStyles(cloud, pathElement, textElement);
-
-        if (this.debug) {
-            while (groupElement.childNodes.length > 2) {
-                groupElement.removeChild(groupElement.lastChild!);
-            }
-            cloud.renderDebugInfo(groupElement);
-        }
-    }
-
-    updateCloudStyles(cloud: Cloud, pathElement: SVGPathElement, textElement: SVGTextElement): void {
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#1a1a1a' : '#ffffff';
-        const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
-
-        if (this.debug) {
-            pathElement.style.fill = 'yellow';
-            pathElement.style.stroke = 'red';
-            textElement.style.fill = '#000000';
-            textElement.style.fontWeight = 'normal';
-            textElement.style.stroke = '';
-            textElement.style.strokeWidth = '';
-        } else {
-            pathElement.style.fill = cloud.getFillColor();
-            pathElement.style.stroke = '#000000';
-            pathElement.style.strokeOpacity = '1';
-            pathElement.style.strokeLinejoin = 'round';
-            textElement.style.stroke = bgColor;
-            textElement.style.strokeWidth = '3';
-            textElement.style.strokeLinejoin = 'round';
-            textElement.style.fill = textColor;
-            textElement.style.fontWeight = cloud.getTextWeight();
-            textElement.style.paintOrder = 'stroke fill';
-        }
-    }
-
-    private renderText(cloud: Cloud, textElement: SVGTextElement): void {
-        const textX = cloud.textLeft + cloud.textWidth / 2;
-        const lines = cloud.text.split('\\n');
-        const lineHeight = cloud.textAscent + cloud.textDescent;
-        const totalTextHeight = lines.length * lineHeight;
-        const centerSvgY = -cloud.minHeight / 2;
-        const firstBaselineSvgY = centerSvgY - totalTextHeight / 2 + cloud.textAscent;
-
-        textElement.setAttribute('x', String(textX));
-        textElement.innerHTML = '';
-        for (let j = 0; j < lines.length; j++) {
-            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-            tspan.setAttribute('x', String(textX));
-            tspan.setAttribute('y', String(firstBaselineSvgY + j * lineHeight));
-            tspan.textContent = lines[j];
-            textElement.appendChild(tspan);
-        }
-    }
-
-    remove(instance: CloudInstance, svgElement: SVGSVGElement): void {
-        svgElement.removeChild(instance.groupElement);
-    }
-}
-
 export class CloudManager {
     private instances: CloudInstance[] = [];
     private svgElement: SVGSVGElement | null = null;
     private container: HTMLElement | null = null;
-    private renderer: CloudRenderer = new CloudRenderer();
+    private debug: boolean = false;
     private relationships: CloudRelationshipManager = new CloudRelationshipManager();
     private zoom: number = 1;
     private canvasWidth: number = 800;
@@ -278,11 +168,10 @@ export class CloudManager {
         const cloudY = y ?? this.canvasHeight / 2 + (Math.random() * 60 - 30);
 
         const cloud = new Cloud(word, cloudX, cloudY, cloudType);
-        const instance = this.renderer.createCloudElements(
-            cloud,
-            this.svgElement,
-            () => this.selectCloud(cloud)
-        );
+        const { group, path, text } = cloud.createSVGElements(() => this.selectCloud(cloud));
+        this.svgElement.appendChild(group);
+        cloud.updateSVGElements(group, path, text, this.debug);
+        const instance = { cloud, groupElement: group, pathElement: path, textElement: text };
         this.instances.push(instance);
         return cloud;
     }
@@ -302,23 +191,16 @@ export class CloudManager {
         const index = this.instances.findIndex(i => i.cloud === cloud);
         if (index !== -1) {
             const instance = this.instances[index];
-            this.renderer.remove(instance, this.svgElement);
+            this.svgElement.removeChild(instance.groupElement);
             this.instances.splice(index, 1);
             this.relationships.removeCloud(cloud.id);
         }
     }
 
     setDebug(enabled: boolean): void {
-        this.renderer.setDebug(enabled);
+        this.debug = enabled;
         for (const instance of this.instances) {
-            this.renderer.updateCloudStyles(instance.cloud, instance.pathElement, instance.textElement);
-            if (enabled) {
-                instance.cloud.renderDebugInfo(instance.groupElement);
-            } else {
-                while (instance.groupElement.childNodes.length > 2) {
-                    instance.groupElement.removeChild(instance.groupElement.lastChild!);
-                }
-            }
+            instance.cloud.updateSVGElements(instance.groupElement, instance.pathElement, instance.textElement, enabled);
         }
     }
 
@@ -344,7 +226,7 @@ export class CloudManager {
     clear(): void {
         if (!this.svgElement) return;
         for (const instance of this.instances) {
-            this.renderer.remove(instance, this.svgElement);
+            this.svgElement.removeChild(instance.groupElement);
             this.relationships.removeCloud(instance.cloud.id);
         }
         this.instances = [];
@@ -385,7 +267,7 @@ export class CloudManager {
             if (i % this.partitionCount === this.currentPartition) {
                 const instance = this.instances[i];
                 instance.cloud.animate(deltaTime * this.partitionCount);
-                this.renderer.updateAnimation(instance);
+                instance.cloud.updateSVGElements(instance.groupElement, instance.pathElement, instance.textElement, this.debug);
             }
         }
 
