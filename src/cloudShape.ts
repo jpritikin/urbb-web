@@ -13,7 +13,7 @@ const MAX_TOP_GAP = 45;
 const KNOT_MARGIN = 9;
 const BOTTOM_INSET = 0;
 const VERTICAL_PADDING = 6;
-const FLUFFINESS_VARIATION = 1.8;
+const FLUFFINESS_VARIATION = 2.7;
 const MAX_ARC_LENGTH_FACTOR = 0.7;
 const BOTTOM_LINE_HEIGHT_FACTOR = 0.85;
 const TOP_KNOT_VARIATION_RANGE = 30;
@@ -339,8 +339,9 @@ export class Cloud {
     }
 
     private generateFluffinessTargets(): { cp1: number; cp2: number } {
-        const cp1 = (Math.random() * FLUFFINESS_VARIATION + FLUFFINESS_VARIATION / 2);
-        const cp2 = (Math.random() * FLUFFINESS_VARIATION + FLUFFINESS_VARIATION / 2);
+        const rp: number = 0.6;
+        const cp1 = FLUFFINESS_VARIATION * (1 - rp) + Math.random() * FLUFFINESS_VARIATION * rp;
+        const cp2 = FLUFFINESS_VARIATION * (1 - rp) + Math.random() * FLUFFINESS_VARIATION * rp;
         return { cp1, cp2 };
     }
 
