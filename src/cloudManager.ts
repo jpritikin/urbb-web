@@ -1,6 +1,8 @@
 import { Cloud, CloudType } from './cloudShape.js';
 import { Point } from './geometry.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
+import { PhysicsEngine, PhysicsConfig } from './physicsEngine.js';
+import { LayoutManager, LayoutConfig, TransitionState, SplitPanePositions } from './layoutManager.js';
 
 export { CloudType };
 
@@ -36,15 +38,6 @@ export class CloudManager {
     private selfElement: SVGElement | null = null;
     private counterZoomGroup: SVGGElement | null = null;
 
-    private torusMajorRadius: number = 200;
-    private torusMinorRadius: number = 80;
-    private friction: number = 0.6;
-    private repulsionStrength: number = 20;
-    private surfaceRepulsionStrength: number = 20;
-    private angularAcceleration: number = 25;
-    private perspectiveFactor: number = 600;
-    private torusRotationX: number = Math.PI / 3;
-
     private mode: 'panorama' | 'foreground' = 'panorama';
     private targetCloud: Cloud | null = null;
     private uiContainer: HTMLElement | null = null;
@@ -53,6 +46,27 @@ export class CloudManager {
     private transitionDirection: 'forward' | 'reverse' | 'none' = 'none';
     private savedCloudTransforms: Map<Cloud, string> = new Map();
     private debugBox: HTMLElement | null = null;
+
+    private physicsEngine: PhysicsEngine;
+    private layoutManager: LayoutManager;
+
+    constructor() {
+        this.physicsEngine = new PhysicsEngine({
+            torusMajorRadius: 200,
+            torusMinorRadius: 80,
+            torusRotationX: Math.PI / 3,
+            friction: 0.6,
+            repulsionStrength: 20,
+            surfaceRepulsionStrength: 20,
+            angularAcceleration: 25
+        });
+
+        this.layoutManager = new LayoutManager({
+            canvasWidth: 800,
+            canvasHeight: 600,
+            perspectiveFactor: 600
+        });
+    }
 
     init(containerId: string): void {
         this.container = document.getElementById(containerId);
@@ -177,22 +191,7 @@ export class CloudManager {
     addCloud(word: string, options?: any): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.random() * Math.PI * 2;
-        const r = this.torusMinorRadius * Math.sqrt(Math.random());
-
-        const torusX = (this.torusMajorRadius + r * Math.cos(phi)) * Math.cos(theta);
-        const torusY = (this.torusMajorRadius + r * Math.cos(phi)) * Math.sin(theta);
-        const torusZ = r * Math.sin(phi);
-
-        const cosRot = Math.cos(this.torusRotationX);
-        const sinRot = Math.sin(this.torusRotationX);
-
-        const position: Vec3 = {
-            x: torusX,
-            y: torusY * cosRot - torusZ * sinRot,
-            z: torusY * sinRot + torusZ * cosRot
-        };
+        const position = this.physicsEngine.generateTorusPosition();
 
         const cloud = new Cloud(word, 0, 0, undefined, options);
         const group = cloud.createSVGElements(() => this.selectCloud(cloud));
@@ -210,19 +209,13 @@ export class CloudManager {
     }
 
     private updateCloudPosition(instance: CloudInstance): void {
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-
-        const scale = this.perspectiveFactor / (this.perspectiveFactor - instance.position.z);
-        const projectedX = instance.position.x * scale;
-        const projectedY = instance.position.y * scale;
-
-        instance.cloud.x = centerX + projectedX;
-        instance.cloud.y = centerY + projectedY;
+        const projected = this.layoutManager.projectToScreen(instance);
+        instance.cloud.x = projected.x;
+        instance.cloud.y = projected.y;
 
         const group = instance.cloud.getGroupElement();
         if (group) {
-            group.setAttribute('transform', `translate(${instance.cloud.x}, ${instance.cloud.y}) scale(${scale})`);
+            group.setAttribute('transform', `translate(${projected.x}, ${projected.y}) scale(${projected.scale})`);
         }
     }
 
@@ -269,30 +262,17 @@ export class CloudManager {
     }
 
     private updateViewBox(): void {
-        let effectiveZoom = this.zoom;
+        const transition = this.getTransitionState();
         let centerX = this.panX;
         let centerY = this.panY;
 
-        if (this.transitionDirection !== 'none' && this.transitionProgress < 1) {
-            const eased = this.easeInOutCubic(this.transitionProgress);
-            const zoomProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
-            const maxZoomFactor = 3.0;
-            effectiveZoom = this.zoom * (1 + (maxZoomFactor - 1) * zoomProgress);
-
-            centerX = this.canvasWidth / 2;
-            centerY = this.canvasHeight / 2;
-        } else if (this.mode === 'foreground') {
-            const maxZoomFactor = 3.0;
-            effectiveZoom = this.zoom * maxZoomFactor;
-
+        if (transition.isTransitioning || this.mode === 'foreground') {
             centerX = this.canvasWidth / 2;
             centerY = this.canvasHeight / 2;
         }
 
-        const scaledWidth = this.canvasWidth / effectiveZoom;
-        const scaledHeight = this.canvasHeight / effectiveZoom;
-        const viewBoxX = centerX - scaledWidth / 2;
-        const viewBoxY = centerY - scaledHeight / 2;
+        const effectiveZoom = this.layoutManager.calculateEffectiveZoom(this.zoom, this.mode, transition);
+        const [viewBoxX, viewBoxY, scaledWidth, scaledHeight] = this.layoutManager.calculateViewBox(centerX, centerY, effectiveZoom);
         this.svgElement?.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${scaledWidth} ${scaledHeight}`);
 
         if (this.debugBox) {
@@ -303,11 +283,18 @@ export class CloudManager {
                 `Zoom: ${effectiveZoom.toFixed(2)}x`;
             this.debugBox.textContent = debugText;
 
-            // Also log to console for easy copying
             if (this.transitionDirection !== 'none' || this.mode === 'foreground') {
                 console.log(debugText);
             }
         }
+    }
+
+    private getTransitionState(): TransitionState {
+        return {
+            isTransitioning: this.transitionDirection !== 'none',
+            direction: this.transitionDirection,
+            progress: this.transitionProgress
+        };
     }
 
     clear(): void {
@@ -428,15 +415,13 @@ export class CloudManager {
         const deltaTime = Math.min((currentTime - this.lastFrameTime) / 1000, 0.1);
         this.lastFrameTime = currentTime;
 
-        const isTransitioning = this.transitionDirection !== 'none' && this.transitionProgress < 1;
-
         if (this.transitionDirection === 'forward' && this.transitionProgress < 1) {
             this.transitionProgress = Math.min(1, this.transitionProgress + deltaTime / this.transitionDuration);
-            this.updateForegroundTransition();
             if (this.transitionProgress >= 1) {
                 this.mode = 'foreground';
                 this.transitionDirection = 'none';
             }
+            this.updateForegroundTransition();
         } else if (this.transitionDirection === 'reverse' && this.transitionProgress < 1) {
             this.transitionProgress = Math.min(1, this.transitionProgress + deltaTime / this.transitionDuration);
             this.updateForegroundTransition();
@@ -451,19 +436,34 @@ export class CloudManager {
             this.updateCounterZoom(1);
         }
 
-        let needsOpacityUpdate = isTransitioning;
+        const isTransitioning = this.transitionDirection !== 'none' && this.transitionProgress < 1;
         let fadeProgress = 0;
-        if (needsOpacityUpdate) {
-            const eased = this.easeInOutCubic(this.transitionProgress);
-            fadeProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
+        if (isTransitioning) {
+            const transition = this.getTransitionState();
+            fadeProgress = this.layoutManager.calculateFadeProgress(transition);
         }
 
         for (let i = 0; i < this.instances.length; i++) {
-            if (i % this.partitionCount === this.currentPartition) {
-                const instance = this.instances[i];
-                instance.cloud.animate(deltaTime * this.partitionCount);
+            const instance = this.instances[i];
+            const isTargetCloud = instance.cloud === this.targetCloud;
 
-                const isTargetCloud = instance.cloud === this.targetCloud;
+            if (isTransitioning) {
+                if (!isTargetCloud) {
+                    const group = instance.cloud.getGroupElement();
+                    if (group) {
+                        const opacity = 1 - fadeProgress;
+                        group.setAttribute('opacity', String(opacity));
+                    }
+                }
+            } else if (this.mode === 'foreground' && !isTargetCloud) {
+                const group = instance.cloud.getGroupElement();
+                if (group && group.getAttribute('opacity') !== '0') {
+                    group.setAttribute('opacity', '0');
+                }
+            }
+
+            if (i % this.partitionCount === this.currentPartition) {
+                instance.cloud.animate(deltaTime * this.partitionCount);
 
                 if (this.mode === 'panorama' && !isTransitioning) {
                     if (isTargetCloud) {
@@ -471,19 +471,6 @@ export class CloudManager {
                     }
                     this.applyPhysics(instance, deltaTime * this.partitionCount);
                     this.updateCloudPosition(instance);
-                } else if (isTransitioning) {
-                    if (!isTargetCloud) {
-                        const group = instance.cloud.getGroupElement();
-                        if (group) {
-                            const opacity = 1 - fadeProgress;
-                            group.setAttribute('opacity', String(opacity));
-                        }
-                    }
-                } else if (this.mode === 'foreground' && !isTargetCloud) {
-                    const group = instance.cloud.getGroupElement();
-                    if (group && group.getAttribute('opacity') !== '0') {
-                        group.setAttribute('opacity', '0');
-                    }
                 }
                 instance.cloud.updateSVGElements(this.debug);
             }
@@ -497,8 +484,9 @@ export class CloudManager {
     }
 
     private updateForegroundTransition(): void {
-        const eased = this.easeInOutCubic(this.transitionProgress);
         this.updateViewBox();
+        const transition = this.getTransitionState();
+        const eased = this.layoutManager.calculateFadeProgress(transition);
         this.updateSplitPaneLayout(eased);
     }
 
@@ -516,185 +504,30 @@ export class CloudManager {
     private updateSplitPaneLayout(progress: number): void {
         if (!this.svgElement || !this.targetCloud) return;
 
-        const maxZoomFactor = 3.0;
-        let currentZoomFactor: number;
+        const targetInstance = this.instances.find(i => i.cloud === this.targetCloud);
+        if (!targetInstance) return;
 
-        if (this.transitionDirection !== 'none' && this.transitionProgress < 1) {
-            const eased = this.easeInOutCubic(this.transitionProgress);
-            const zoomProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
-            currentZoomFactor = 1 + (maxZoomFactor - 1) * zoomProgress;
-        } else if (this.mode === 'foreground') {
-            currentZoomFactor = maxZoomFactor;
-        } else {
-            currentZoomFactor = 1;
-        }
+        const transition = this.getTransitionState();
+        const positions = this.layoutManager.calculateSplitPanePositions(targetInstance, transition);
 
-        this.updateCounterZoom(currentZoomFactor);
-
-        const counterScale = 1 / currentZoomFactor;
-        const leftPaneX = this.canvasWidth * 0.25;
-        const rightPaneX = this.canvasWidth * 0.75;
+        this.updateCounterZoom(1 / positions.counterZoomScale);
 
         if (this.selfElement) {
-            let starCurrentX: number;
-            let starCurrentY: number;
-
-            if (this.transitionDirection === 'forward') {
-                const starStartX = this.canvasWidth / 2;
-                const starStartY = this.canvasHeight / 2;
-                const starTargetX = leftPaneX;
-                const starTargetY = this.canvasHeight / 2;
-                starCurrentX = starStartX + (starTargetX - starStartX) * progress;
-                starCurrentY = starStartY + (starTargetY - starStartY) * progress;
-            } else if (this.transitionDirection === 'reverse') {
-                const starStartX = leftPaneX;
-                const starStartY = this.canvasHeight / 2;
-                const starTargetX = this.canvasWidth / 2;
-                const starTargetY = this.canvasHeight / 2;
-                starCurrentX = starStartX + (starTargetX - starStartX) * progress;
-                starCurrentY = starStartY + (starTargetY - starStartY) * progress;
-            } else {
-                starCurrentX = leftPaneX;
-                starCurrentY = this.canvasHeight / 2;
-            }
-
             this.selfElement.setAttribute('transform',
-                `translate(${starCurrentX - this.canvasWidth / 2}, ${starCurrentY - this.canvasHeight / 2})`);
+                `translate(${positions.starX - this.canvasWidth / 2}, ${positions.starY - this.canvasHeight / 2})`);
         }
 
-        const targetInstance = this.instances.find(i => i.cloud === this.targetCloud);
-        if (targetInstance) {
-            const perspectiveScale = this.perspectiveFactor / (this.perspectiveFactor - targetInstance.position.z);
-            const naturalScale = 1.0;
-
-            let currentScale: number;
-            let cloudCurrentX: number;
-            let cloudCurrentY: number;
-
-            if (this.transitionDirection === 'forward') {
-                currentScale = perspectiveScale + (naturalScale - perspectiveScale) * progress;
-                const cloudStartX = this.canvasWidth / 2 + targetInstance.position.x * perspectiveScale;
-                const cloudStartY = this.canvasHeight / 2 + targetInstance.position.y * perspectiveScale;
-                const cloudTargetX = rightPaneX;
-                const cloudTargetY = this.canvasHeight / 2;
-                cloudCurrentX = cloudStartX + (cloudTargetX - cloudStartX) * progress;
-                cloudCurrentY = cloudStartY + (cloudTargetY - cloudStartY) * progress;
-            } else if (this.transitionDirection === 'reverse') {
-                currentScale = naturalScale + (perspectiveScale - naturalScale) * progress;
-                const cloudStartX = rightPaneX;
-                const cloudStartY = this.canvasHeight / 2;
-                const cloudTargetX = this.canvasWidth / 2 + targetInstance.position.x * perspectiveScale;
-                const cloudTargetY = this.canvasHeight / 2 + targetInstance.position.y * perspectiveScale;
-                cloudCurrentX = cloudStartX + (cloudTargetX - cloudStartX) * progress;
-                cloudCurrentY = cloudStartY + (cloudTargetY - cloudStartY) * progress;
-            } else {
-                currentScale = naturalScale;
-                cloudCurrentX = rightPaneX;
-                cloudCurrentY = this.canvasHeight / 2;
+        const group = targetInstance.cloud.getGroupElement();
+        if (group) {
+            if (group.parentNode !== this.counterZoomGroup) {
+                this.counterZoomGroup!.appendChild(group);
             }
-
-            const group = targetInstance.cloud.getGroupElement();
-            if (group) {
-                if (group.parentNode !== this.counterZoomGroup) {
-                    this.counterZoomGroup!.appendChild(group);
-                }
-                group.setAttribute('transform',
-                    `translate(${cloudCurrentX}, ${cloudCurrentY}) scale(${currentScale})`);
-            }
+            group.setAttribute('transform',
+                `translate(${positions.cloudX}, ${positions.cloudY}) scale(${positions.cloudScale})`);
         }
-    }
-
-    private easeInOutCubic(t: number): number {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     private applyPhysics(instance: CloudInstance, deltaTime: number): void {
-        const force = { x: 0, y: 0, z: 0 };
-
-        this.applyCloudRepulsion(instance, force);
-        this.applyTorusSurfaceRepulsion(instance, force);
-        this.applyAngularForce(instance, force);
-
-        instance.velocity.x += force.x * deltaTime;
-        instance.velocity.y += force.y * deltaTime;
-        instance.velocity.z += force.z * deltaTime;
-
-        instance.velocity.x *= this.friction;
-        instance.velocity.y *= this.friction;
-        instance.velocity.z *= this.friction;
-
-        instance.position.x += instance.velocity.x * deltaTime;
-        instance.position.y += instance.velocity.y * deltaTime;
-        instance.position.z += instance.velocity.z * deltaTime;
-    }
-
-    private applyCloudRepulsion(instance: CloudInstance, force: Vec3): void {
-        for (const other of this.instances) {
-            if (other === instance) continue;
-
-            const dx = instance.position.x - other.position.x;
-            const dy = instance.position.y - other.position.y;
-            const dz = instance.position.z - other.position.z;
-            const distSq = dx * dx + dy * dy + dz * dz;
-            const minDist = 50;
-
-            if (distSq < minDist * minDist && distSq > 0.01) {
-                const dist = Math.sqrt(distSq);
-                const strength = this.repulsionStrength * (1 - dist / minDist);
-                force.x += (dx / dist) * strength;
-                force.y += (dy / dist) * strength;
-                force.z += (dz / dist) * strength;
-            }
-        }
-    }
-
-    private applyTorusSurfaceRepulsion(instance: CloudInstance, force: Vec3): void {
-        const pos = instance.position;
-        const cosRot = Math.cos(this.torusRotationX);
-        const sinRot = Math.sin(this.torusRotationX);
-
-        const torusY = pos.y * cosRot + pos.z * sinRot;
-        const torusZ = -pos.y * sinRot + pos.z * cosRot;
-
-        const distFromCenter = Math.sqrt(pos.x * pos.x + torusY * torusY);
-        const ringDist = Math.abs(distFromCenter - this.torusMajorRadius);
-        const vertDist = Math.abs(torusZ);
-        const distFromSurface = Math.sqrt(ringDist * ringDist + vertDist * vertDist);
-
-        if (distFromSurface > this.torusMinorRadius * 0.7) {
-            const excess = distFromSurface - this.torusMinorRadius * 0.7;
-            const strength = this.surfaceRepulsionStrength * excess;
-
-            const theta = Math.atan2(torusY, pos.x);
-            const towardCenterTorus = {
-                x: this.torusMajorRadius * Math.cos(theta) - pos.x,
-                y: this.torusMajorRadius * Math.sin(theta) - torusY,
-                z: -torusZ
-            };
-            const mag = Math.sqrt(towardCenterTorus.x ** 2 + towardCenterTorus.y ** 2 + towardCenterTorus.z ** 2);
-            if (mag > 0.01) {
-                force.x += (towardCenterTorus.x / mag) * strength;
-                force.y += (towardCenterTorus.y * cosRot - towardCenterTorus.z * sinRot) * strength / mag;
-                force.z += (towardCenterTorus.y * sinRot + towardCenterTorus.z * cosRot) * strength / mag;
-            }
-        }
-    }
-
-    private applyAngularForce(instance: CloudInstance, force: Vec3): void {
-        const pos = instance.position;
-        const cosRot = Math.cos(this.torusRotationX);
-        const sinRot = Math.sin(this.torusRotationX);
-
-        const torusY = pos.y * cosRot + pos.z * sinRot;
-        const distFromCenter = Math.sqrt(pos.x * pos.x + torusY * torusY);
-
-        if (distFromCenter > 0.01) {
-            const tangentX = -torusY / distFromCenter;
-            const tangentY = pos.x / distFromCenter;
-
-            force.x += tangentX * this.angularAcceleration;
-            force.y += (tangentY * cosRot) * this.angularAcceleration;
-            force.z += (tangentY * sinRot) * this.angularAcceleration;
-        }
+        this.physicsEngine.applyPhysics(instance, this.instances, deltaTime);
     }
 }
