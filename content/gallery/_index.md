@@ -93,16 +93,23 @@ From groundbreaking researchers in psychedelic science 🍄 to spiritual leaders
   </div>
 
   <div class="gallery-item">
+    <div class="image-wrapper" data-alt="With David Nutt at Imperial College London">
+      <img src="/images/gallery/david-nutt.webp" alt="With David Nutt at Imperial College London">
+    </div>
+    <p class="caption">With Professor David Nutt at Imperial College London, 2022. I've always appreciated his work across the pond—the man got famously sacked from his government advisory position for telling the truth about drug harms. I was rather taken aback when he generously extended an invitation to go horseback riding together. Of course I politely declined!</p>
+  </div>
+
+  <div class="gallery-item">
     <div class="image-wrapper" data-alt="On Hamilton's Pharmacopeia podcast">
       <img src="/images/gallery/hamilton-morris.webp" alt="On Hamilton's Pharmacopeia podcast">
     </div>
-    <p class="caption">Hamilton's Pharmacopeia podcast, 2021. Not many journalists also synthesize and co-author papers on novel psychedelics. When Hamilton invites you on his show, you know you've either made it or you're about to be thoroughly debunked. The jury's still out.</p>
+    <p class="caption">Hamilton's Pharmacopeia podcast, 2021. Not many journalists also synthesize novel psychedelics and co-author papers about them. When Hamilton invites you on his show, you know you've either made it or you're about to be thoroughly debunked. The jury's still out.</p>
   </div>
 
   <div class="gallery-item">
     <div class="image-wrapper" data-alt="With Elon Musk at the White House">
       <img src="/images/gallery/elon-musk.webp" alt="With Elon Musk at the White House">
     </div>
-    <p class="caption">With Elon Musk at the White House, 2025. Nothing says 'credible consciousness researcher' like being mistaken for a tech billionaire's four-year-old during official government business. This is either my most successful infiltration of elite circles or my most elaborate piece of performance satire. Possibly both.</p>
+    <p class="caption">With Elon Musk at the White House, 2025. Nothing says "credible consciousness researcher" like being mistaken for a tech billionaire's four-year-old during official government business. This is either my most successful infiltration of elite circles or my most elaborate piece of performance satire. Possibly both.</p>
   </div>
 </div>
