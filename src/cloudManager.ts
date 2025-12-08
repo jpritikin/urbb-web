@@ -34,6 +34,7 @@ export class CloudManager {
     private partitionCount: number = 8;
     private currentPartition: number = 0;
     private selfElement: SVGElement | null = null;
+    private counterZoomGroup: SVGGElement | null = null;
 
     private torusMajorRadius: number = 200;
     private torusMinorRadius: number = 80;
@@ -50,6 +51,8 @@ export class CloudManager {
     private transitionProgress: number = 0;
     private transitionDuration: number = 1.0;
     private transitionDirection: 'forward' | 'reverse' | 'none' = 'none';
+    private savedCloudTransforms: Map<Cloud, string> = new Map();
+    private debugBox: HTMLElement | null = null;
 
     init(containerId: string): void {
         this.container = document.getElementById(containerId);
@@ -67,8 +70,14 @@ export class CloudManager {
         this.svgElement.style.background = '#f0f0f0';
 
         this.container.appendChild(this.svgElement);
+
+        this.counterZoomGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.counterZoomGroup.setAttribute('id', 'counter-zoom-group');
+        this.svgElement.appendChild(this.counterZoomGroup);
+
         this.createSelfStar();
         this.createUIContainer();
+        this.createDebugBox();
         this.panX = this.canvasWidth / 2;
         this.panY = this.canvasHeight / 2;
         this.updateViewBox();
@@ -116,8 +125,30 @@ export class CloudManager {
         star.setAttribute('stroke-width', '1.5');
         star.setAttribute('opacity', '0.9');
 
-        this.svgElement.appendChild(star);
+        this.counterZoomGroup!.appendChild(star);
         this.selfElement = star;
+    }
+
+    private createDebugBox(): void {
+        if (!this.container) return;
+
+        this.debugBox = document.createElement('pre');
+        this.debugBox.style.position = 'fixed';
+        this.debugBox.style.top = '10px';
+        this.debugBox.style.right = '10px';
+        this.debugBox.style.background = 'rgba(0, 0, 0, 0.7)';
+        this.debugBox.style.color = 'white';
+        this.debugBox.style.padding = '10px';
+        this.debugBox.style.fontFamily = 'monospace';
+        this.debugBox.style.fontSize = '12px';
+        this.debugBox.style.zIndex = '10000';
+        this.debugBox.style.margin = '0';
+        this.debugBox.style.pointerEvents = 'all';
+        this.debugBox.style.userSelect = 'all';
+        this.debugBox.style.webkitUserSelect = 'all';
+        this.debugBox.style.cursor = 'text';
+        this.debugBox.textContent = 'ViewBox: 0 0 800 600';
+        document.body.appendChild(this.debugBox);
     }
 
     private createUIContainer(): void {
@@ -238,11 +269,45 @@ export class CloudManager {
     }
 
     private updateViewBox(): void {
-        const scaledWidth = this.canvasWidth / this.zoom;
-        const scaledHeight = this.canvasHeight / this.zoom;
-        const viewBoxX = this.panX - scaledWidth / 2;
-        const viewBoxY = this.panY - scaledHeight / 2;
+        let effectiveZoom = this.zoom;
+        let centerX = this.panX;
+        let centerY = this.panY;
+
+        if (this.transitionDirection !== 'none' && this.transitionProgress < 1) {
+            const eased = this.easeInOutCubic(this.transitionProgress);
+            const zoomProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
+            const maxZoomFactor = 3.0;
+            effectiveZoom = this.zoom * (1 + (maxZoomFactor - 1) * zoomProgress);
+
+            centerX = this.canvasWidth / 2;
+            centerY = this.canvasHeight / 2;
+        } else if (this.mode === 'foreground') {
+            const maxZoomFactor = 3.0;
+            effectiveZoom = this.zoom * maxZoomFactor;
+
+            centerX = this.canvasWidth / 2;
+            centerY = this.canvasHeight / 2;
+        }
+
+        const scaledWidth = this.canvasWidth / effectiveZoom;
+        const scaledHeight = this.canvasHeight / effectiveZoom;
+        const viewBoxX = centerX - scaledWidth / 2;
+        const viewBoxY = centerY - scaledHeight / 2;
         this.svgElement?.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${scaledWidth} ${scaledHeight}`);
+
+        if (this.debugBox) {
+            const debugText =
+                `Mode: ${this.mode}\n` +
+                `Transition: ${this.transitionDirection} (${(this.transitionProgress * 100).toFixed(0)}%)\n` +
+                `ViewBox: ${viewBoxX.toFixed(1)} ${viewBoxY.toFixed(1)} ${scaledWidth.toFixed(1)} ${scaledHeight.toFixed(1)}\n` +
+                `Zoom: ${effectiveZoom.toFixed(2)}x`;
+            this.debugBox.textContent = debugText;
+
+            // Also log to console for easy copying
+            if (this.transitionDirection !== 'none' || this.mode === 'foreground') {
+                console.log(debugText);
+            }
+        }
     }
 
     clear(): void {
@@ -303,6 +368,18 @@ export class CloudManager {
 
     private finishReturnToPanorama(): void {
         this.mode = 'panorama';
+
+        if (this.targetCloud) {
+            const targetInstance = this.instances.find(i => i.cloud === this.targetCloud);
+            if (targetInstance) {
+                const group = targetInstance.cloud.getGroupElement();
+                if (group && group.parentNode === this.counterZoomGroup) {
+                    this.svgElement!.appendChild(group);
+                }
+                this.updateCloudPosition(targetInstance);
+            }
+        }
+
         this.targetCloud = null;
 
         if (this.uiContainer) {
@@ -313,11 +390,11 @@ export class CloudManager {
             this.selfElement.removeAttribute('transform');
         }
 
+        this.panX = this.canvasWidth / 2;
+        this.panY = this.canvasHeight / 2;
+        this.updateViewBox();
+
         for (const instance of this.instances) {
-            const group = instance.cloud.getGroupElement();
-            if (group) {
-                group.style.visibility = 'visible';
-            }
             this.updateCloudPosition(instance);
         }
     }
@@ -367,6 +444,18 @@ export class CloudManager {
                 this.finishReturnToPanorama();
                 this.transitionDirection = 'none';
             }
+        } else if (this.mode === 'foreground') {
+            this.updateViewBox();
+            this.updateSplitPaneLayout(1);
+        } else {
+            this.updateCounterZoom(1);
+        }
+
+        let needsOpacityUpdate = isTransitioning;
+        let fadeProgress = 0;
+        if (needsOpacityUpdate) {
+            const eased = this.easeInOutCubic(this.transitionProgress);
+            fadeProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
         }
 
         for (let i = 0; i < this.instances.length; i++) {
@@ -374,65 +463,143 @@ export class CloudManager {
                 const instance = this.instances[i];
                 instance.cloud.animate(deltaTime * this.partitionCount);
 
+                const isTargetCloud = instance.cloud === this.targetCloud;
+
                 if (this.mode === 'panorama' && !isTransitioning) {
+                    if (isTargetCloud) {
+                        throw new Error('Physics should not run on target cloud - target cloud should be null in panorama mode');
+                    }
                     this.applyPhysics(instance, deltaTime * this.partitionCount);
                     this.updateCloudPosition(instance);
-                } else if (isTransitioning || this.mode === 'foreground') {
-                    if (instance.cloud !== this.targetCloud) {
+                } else if (isTransitioning) {
+                    if (!isTargetCloud) {
                         const group = instance.cloud.getGroupElement();
                         if (group) {
-                            group.style.visibility = 'hidden';
+                            const opacity = 1 - fadeProgress;
+                            group.setAttribute('opacity', String(opacity));
                         }
+                    }
+                } else if (this.mode === 'foreground' && !isTargetCloud) {
+                    const group = instance.cloud.getGroupElement();
+                    if (group && group.getAttribute('opacity') !== '0') {
+                        group.setAttribute('opacity', '0');
                     }
                 }
                 instance.cloud.updateSVGElements(this.debug);
             }
         }
 
-        this.depthSort();
+        if (this.mode === 'panorama') {
+            this.depthSort();
+        }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
         this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
 
     private updateForegroundTransition(): void {
         const eased = this.easeInOutCubic(this.transitionProgress);
-        const effectiveProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
-        this.updateSplitPaneLayout(effectiveProgress);
+        this.updateViewBox();
+        this.updateSplitPaneLayout(eased);
+    }
+
+    private updateCounterZoom(currentZoomFactor: number): void {
+        if (!this.counterZoomGroup) return;
+
+        const counterScale = 1 / currentZoomFactor;
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        this.counterZoomGroup.setAttribute('transform',
+            `translate(${centerX}, ${centerY}) scale(${counterScale}) translate(${-centerX}, ${-centerY})`);
     }
 
     private updateSplitPaneLayout(progress: number): void {
         if (!this.svgElement || !this.targetCloud) return;
 
+        const maxZoomFactor = 3.0;
+        let currentZoomFactor: number;
+
+        if (this.transitionDirection !== 'none' && this.transitionProgress < 1) {
+            const eased = this.easeInOutCubic(this.transitionProgress);
+            const zoomProgress = this.transitionDirection === 'forward' ? eased : 1 - eased;
+            currentZoomFactor = 1 + (maxZoomFactor - 1) * zoomProgress;
+        } else if (this.mode === 'foreground') {
+            currentZoomFactor = maxZoomFactor;
+        } else {
+            currentZoomFactor = 1;
+        }
+
+        this.updateCounterZoom(currentZoomFactor);
+
+        const counterScale = 1 / currentZoomFactor;
         const leftPaneX = this.canvasWidth * 0.25;
         const rightPaneX = this.canvasWidth * 0.75;
 
         if (this.selfElement) {
-            const starStartX = this.canvasWidth / 2;
-            const starStartY = this.canvasHeight / 2;
-            const starTargetX = leftPaneX;
-            const starTargetY = this.canvasHeight / 2;
+            let starCurrentX: number;
+            let starCurrentY: number;
 
-            const starCurrentX = starStartX + (starTargetX - starStartX) * progress;
-            const starCurrentY = starStartY + (starTargetY - starStartY) * progress;
+            if (this.transitionDirection === 'forward') {
+                const starStartX = this.canvasWidth / 2;
+                const starStartY = this.canvasHeight / 2;
+                const starTargetX = leftPaneX;
+                const starTargetY = this.canvasHeight / 2;
+                starCurrentX = starStartX + (starTargetX - starStartX) * progress;
+                starCurrentY = starStartY + (starTargetY - starStartY) * progress;
+            } else if (this.transitionDirection === 'reverse') {
+                const starStartX = leftPaneX;
+                const starStartY = this.canvasHeight / 2;
+                const starTargetX = this.canvasWidth / 2;
+                const starTargetY = this.canvasHeight / 2;
+                starCurrentX = starStartX + (starTargetX - starStartX) * progress;
+                starCurrentY = starStartY + (starTargetY - starStartY) * progress;
+            } else {
+                starCurrentX = leftPaneX;
+                starCurrentY = this.canvasHeight / 2;
+            }
 
-            this.selfElement.setAttribute('transform', `translate(${starCurrentX - this.canvasWidth / 2}, ${starCurrentY - this.canvasHeight / 2})`);
+            this.selfElement.setAttribute('transform',
+                `translate(${starCurrentX - this.canvasWidth / 2}, ${starCurrentY - this.canvasHeight / 2})`);
         }
 
         const targetInstance = this.instances.find(i => i.cloud === this.targetCloud);
         if (targetInstance) {
-            const scale = this.perspectiveFactor / (this.perspectiveFactor - targetInstance.position.z);
+            const perspectiveScale = this.perspectiveFactor / (this.perspectiveFactor - targetInstance.position.z);
+            const naturalScale = 1.0;
 
-            const cloudStartX = this.canvasWidth / 2 + targetInstance.position.x * scale;
-            const cloudStartY = this.canvasHeight / 2 + targetInstance.position.y * scale;
-            const cloudTargetX = rightPaneX;
-            const cloudTargetY = this.canvasHeight / 2;
+            let currentScale: number;
+            let cloudCurrentX: number;
+            let cloudCurrentY: number;
 
-            const cloudCurrentX = cloudStartX + (cloudTargetX - cloudStartX) * progress;
-            const cloudCurrentY = cloudStartY + (cloudTargetY - cloudStartY) * progress;
+            if (this.transitionDirection === 'forward') {
+                currentScale = perspectiveScale + (naturalScale - perspectiveScale) * progress;
+                const cloudStartX = this.canvasWidth / 2 + targetInstance.position.x * perspectiveScale;
+                const cloudStartY = this.canvasHeight / 2 + targetInstance.position.y * perspectiveScale;
+                const cloudTargetX = rightPaneX;
+                const cloudTargetY = this.canvasHeight / 2;
+                cloudCurrentX = cloudStartX + (cloudTargetX - cloudStartX) * progress;
+                cloudCurrentY = cloudStartY + (cloudTargetY - cloudStartY) * progress;
+            } else if (this.transitionDirection === 'reverse') {
+                currentScale = naturalScale + (perspectiveScale - naturalScale) * progress;
+                const cloudStartX = rightPaneX;
+                const cloudStartY = this.canvasHeight / 2;
+                const cloudTargetX = this.canvasWidth / 2 + targetInstance.position.x * perspectiveScale;
+                const cloudTargetY = this.canvasHeight / 2 + targetInstance.position.y * perspectiveScale;
+                cloudCurrentX = cloudStartX + (cloudTargetX - cloudStartX) * progress;
+                cloudCurrentY = cloudStartY + (cloudTargetY - cloudStartY) * progress;
+            } else {
+                currentScale = naturalScale;
+                cloudCurrentX = rightPaneX;
+                cloudCurrentY = this.canvasHeight / 2;
+            }
 
             const group = targetInstance.cloud.getGroupElement();
             if (group) {
-                group.setAttribute('transform', `translate(${cloudCurrentX}, ${cloudCurrentY}) scale(${scale})`);
+                if (group.parentNode !== this.counterZoomGroup) {
+                    this.counterZoomGroup!.appendChild(group);
+                }
+                group.setAttribute('transform',
+                    `translate(${cloudCurrentX}, ${cloudCurrentY}) scale(${currentScale})`);
             }
         }
     }
