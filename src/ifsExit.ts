@@ -1,6 +1,3 @@
-const version = 'v1.2.0';
-console.log(`IFS Exit Handler ${version}`);
-
 let hasUnsavedWork = false;
 let isExitingThroughButton = false;
 

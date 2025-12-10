@@ -35,6 +35,18 @@ export interface SplitPanePositions {
     counterZoomScale: number;
 }
 
+export interface ConferencePosition {
+    seatNumber: number;
+    x: number;
+    y: number;
+}
+
+export interface ConferenceRoomPositions {
+    star: ConferencePosition;
+    clouds: Map<string, ConferencePosition>;
+    counterZoomScale: number;
+}
+
 export class LayoutManager {
     private config: LayoutConfig;
     private maxZoomFactor: number = 2.0;
@@ -143,6 +155,53 @@ export class LayoutManager {
             cloudX,
             cloudY,
             cloudScale,
+            counterZoomScale: 1 / currentZoomFactor
+        };
+    }
+
+    calculateConferenceRoomPositions(
+        targetInstances: CloudInstance[],
+        transition: TransitionState
+    ): ConferenceRoomPositions {
+        const centerX = this.config.canvasWidth / 2;
+        const centerY = this.config.canvasHeight / 2;
+        const radius = Math.min(this.config.canvasWidth, this.config.canvasHeight) * 0.3;
+
+        const totalSeats = targetInstances.length + 1;
+        const clouds = new Map<string, ConferencePosition>();
+
+        let currentZoomFactor: number;
+        if (transition.isTransitioning) {
+            const eased = this.easeInOutCubic(transition.progress);
+            const zoomProgress = transition.direction === 'forward' ? eased : 1 - eased;
+            currentZoomFactor = 1 + (this.maxZoomFactor - 1) * zoomProgress;
+        } else {
+            currentZoomFactor = this.maxZoomFactor;
+        }
+
+        const angleStep = (2 * Math.PI) / totalSeats;
+        const startAngle = -Math.PI / 2;
+
+        const starAngle = startAngle;
+        const starX = centerX + radius * Math.cos(starAngle);
+        const starY = centerY + radius * Math.sin(starAngle);
+
+        for (let i = 0; i < targetInstances.length; i++) {
+            const seatNumber = i + 1;
+            const angle = startAngle + angleStep * seatNumber;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+
+            clouds.set(targetInstances[i].cloud.id, {
+                seatNumber,
+                x,
+                y
+            });
+        }
+
+        return {
+            star: { seatNumber: 0, x: starX, y: starY },
+            clouds,
             counterZoomScale: 1 / currentZoomFactor
         };
     }

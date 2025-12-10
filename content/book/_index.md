@@ -51,7 +51,7 @@ Examining your beliefs—especially cherished religious ones—requires courage 
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
     <p>Cloth-bound with dust jacket. ✨ Features a mesmerizing flip-book animation in the
-  margins and hidden epigraphs waiting to be discovered. 🔍</p>
+  margins, an index of terms, and hidden epigraphs waiting to be discovered. 🔍</p>
     <a href="https://amazon.com" class="order-button">Order Hardcover</a>
   </div>
   <div class="format-card">

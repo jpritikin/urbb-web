@@ -29,17 +29,19 @@ Segregate page-specific details from site-wide styles and layouts. Information s
 - Section-specific layouts go in `layouts/{section}/` directories
 - Site-wide styles remain in global CSS files
 
-Give each markdown page (and the landing page) a version number. On page load, log the version to console so mobile testers know which version they're testing. Whenever you update code that changes the interactive experience, increment the version number.
+Give each markdown page (and the landing page) a version number. On page load, log the version to console so mobile testers know which version they're testing. Whenever you update code that changes the interactive experience, increment the version number. Don't version typescript files.
 
 Don't add console.log() in animation loops that will generate tons of output.
 
-Ensure it will be easy to store the IFS simulator state. All state should be serializable to JSON.
+We may want to store the IFS simulator state in the future. All state should be serializable to JSON.
 
 ## Website Style Guidelines
 
 Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme; Try to rely on markdown. Minimize literal HTML in markdown. Try to avoid pixel dimensions and prefer resolution independent measures. Site must work perfectly on various screen sizes (desktop and mobile). Site must be able to switch between light and dark mode. Use emojis to emphasize key points in the text.
 
 I should use webp image format instead of png or jpeg. Remind me if I add the wrong format.
+
+No need to write detailed summaries of what you accomplished unless I request them.
 
 ## Image Guidelines
 

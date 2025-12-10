@@ -2,6 +2,7 @@ import { Point, Knot, KnotType } from './geometry.js';
 import { BezierSegment, computeSmoothBezierSegments, bezierTangent } from './bezier.js';
 import { NormalizedHarmonics, generateHarmonics, getRandomInt } from './harmonics.js';
 import { AnimatedKnot, AnimatedFluffiness } from './animation.js';
+import { LatticeDeformation, AnchorSide } from './latticeDeformation.js';
 
 export enum CloudType {
     STRATOCUMULUS = 'stratocumulus',
@@ -138,18 +139,45 @@ function transformCircleKnots(circleKnots: Point[], startX: number): Point[] {
     return positions;
 }
 
+export interface PartDialogues {
+    burdenedProtector?: string[];
+    burdenedGrievance?: string[];
+    unburdenedJob?: string;
+}
+
 export interface CloudOptions {
     id?: string;
     trust?: number;
     age?: number;
     needAttention?: number;
     agreedWaitDuration?: number;
+    partAge?: number | string;
+    dialogues?: PartDialogues;
+}
+
+export type SelfReaction = 'shrug' | 'gratitude' | 'compassion' | null;
+
+export interface PartBiography {
+    ageRevealed: boolean;
+    partAge: number | string | null;
+    protectsRevealed: boolean;
+    selfReaction: SelfReaction;
+    relationshipsRevealed: boolean;
+}
+
+export interface AskedQuestion {
+    questionId: string;
+    timestamp: number;
+}
+
+export interface QuestionHistory {
+    askedQuestions: AskedQuestion[];
 }
 
 export class Cloud {
     text: string;
-    x: number;
-    y: number;
+    private _x: number = 0;
+    private _y: number = 0;
     textHeight: number;
     textAscent: number;
     textDescent: number;
@@ -158,6 +186,23 @@ export class Cloud {
 
     private _textLeft: number;
     private _textRight: number;
+
+    // External coordinate system: (0,0) at center-top of text
+    // Internal coordinate system: (0,0) at bottom-left of text, y increases upward (negative y is up)
+    get x(): number { return this._x; }
+    set x(val: number) { this._x = val; }
+    get y(): number { return this._y; }
+    set y(val: number) { this._y = val; }
+
+    // Convert internal coordinates to external coordinates
+    // Internal: (0,0) at bottom-left of text, y negative going up
+    // External: (0,0) at center-top of text
+    private toExternalCoords(internalX: number, internalY: number): Point {
+        return new Point(
+            internalX - this.textWidth / 2,
+            internalY + this.minHeight
+        );
+    }
 
     knots: Knot[] = [];
     segments: BezierSegment[] = [];
@@ -186,16 +231,25 @@ export class Cloud {
     needAttention: number;
     agreedWaitDuration: number;
 
+    biography: PartBiography;
+    questionHistory: QuestionHistory;
+    dialogues: PartDialogues;
+
     private groupElement: SVGGElement | null = null;
     private pathElement: SVGPathElement | null = null;
     private textElement: SVGTextElement | null = null;
+
+    private latticeDeformation: LatticeDeformation | null = null;
+    private isBlended: boolean = false;
+    private isUnblending: boolean = false;
+    private externalLattice: LatticeDeformation | null = null;
 
     private static nextId = 1;
 
     constructor(text: string, x: number = 0, y: number = 0, cloudType?: CloudType, options?: CloudOptions) {
         this.text = text;
-        this.x = x;
-        this.y = y;
+        this._x = x;
+        this._y = y;
 
         const metrics = getTextMetrics(text, FONT_SIZE);
 
@@ -220,6 +274,18 @@ export class Cloud {
         this.impatience = 0;
         this.needAttention = options?.needAttention ?? 0.1;
         this.agreedWaitDuration = options?.agreedWaitDuration ?? 10;
+
+        this.biography = {
+            ageRevealed: false,
+            partAge: options?.partAge ?? null,
+            protectsRevealed: false,
+            selfReaction: null,
+            relationshipsRevealed: false,
+        };
+        this.questionHistory = {
+            askedQuestions: [],
+        };
+        this.dialogues = options?.dialogues ?? {};
 
         const baseRadius = this.minHeight / 2;
         this.leftHarmonics = new NormalizedHarmonics([
@@ -268,6 +334,7 @@ export class Cloud {
         this.updateBottomKnotPhysics(deltaTime);
         this.updateFluffinessPhysics(deltaTime);
         this.updateRotationSpeeds(deltaTime);
+        this.animateLattice(deltaTime);
     }
 
     private updateImpatience(deltaTime: number): void {
@@ -567,13 +634,13 @@ export class Cloud {
         rightMin: number;
         rightMax: number;
     } {
-        const leftHeightFromSvgY = -this.leftHeight;
+        const leftHeightFromSvgY = -this.leftHeightInternal;
         const leftMinHeight = this.leftHeightRange.min;
         const leftMaxHeight = this.leftHeightRange.max;
         const leftRange = leftMaxHeight - leftMinHeight;
         const leftPercentage = leftRange > 0.01 ? ((leftHeightFromSvgY - leftMinHeight) / leftRange) * 100 : 50;
 
-        const rightHeightFromSvgY = -this.rightHeight;
+        const rightHeightFromSvgY = -this.rightHeightInternal;
         const rightMinHeight = this.rightHeightRange.min;
         const rightMaxHeight = this.rightHeightRange.max;
         const rightRange = rightMaxHeight - rightMinHeight;
@@ -594,12 +661,14 @@ export class Cloud {
     renderDebugInfo(groupElement: SVGGElement): void {
         const rightTopKnot = this.knots[this.layout.getRightTopIndex()];
         const leftTopKnot = this.knots[this.layout.getLeftTopIndex()];
+        const leftTopExt = this.toExternalCoords(leftTopKnot.point.x, leftTopKnot.point.y);
+        const rightTopExt = this.toExternalCoords(rightTopKnot.point.x, rightTopKnot.point.y);
 
         const percentages = this.getDebugPercentages();
 
         const leftLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        leftLabel.setAttribute('x', String(leftTopKnot.point.x - 5));
-        leftLabel.setAttribute('y', String(leftTopKnot.point.y));
+        leftLabel.setAttribute('x', String(leftTopExt.x - 5));
+        leftLabel.setAttribute('y', String(leftTopExt.y));
         leftLabel.setAttribute('font-size', '6');
         leftLabel.setAttribute('fill', '#0000ff');
         leftLabel.setAttribute('text-anchor', 'end');
@@ -607,8 +676,8 @@ export class Cloud {
         groupElement.appendChild(leftLabel);
 
         const rightLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        rightLabel.setAttribute('x', String(rightTopKnot.point.x + 5));
-        rightLabel.setAttribute('y', String(rightTopKnot.point.y));
+        rightLabel.setAttribute('x', String(rightTopExt.x + 5));
+        rightLabel.setAttribute('y', String(rightTopExt.y));
         rightLabel.setAttribute('font-size', '6');
         rightLabel.setAttribute('fill', '#0000ff');
         rightLabel.setAttribute('text-anchor', 'start');
@@ -617,9 +686,10 @@ export class Cloud {
 
         for (let j = 0; j < this.knots.length; j++) {
             const knot = this.knots[j];
+            const knotExt = this.toExternalCoords(knot.point.x, knot.point.y);
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', String(knot.point.x));
-            circle.setAttribute('cy', String(knot.point.y));
+            circle.setAttribute('cx', String(knotExt.x));
+            circle.setAttribute('cy', String(knotExt.y));
             circle.setAttribute('r', '1');
             circle.setAttribute('fill', 'red');
             circle.setAttribute('opacity', '0.5');
@@ -627,8 +697,8 @@ export class Cloud {
 
             const posLabel = this.getKnotLabel(j);
             const knotLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            knotLabel.setAttribute('x', String(knot.point.x));
-            knotLabel.setAttribute('y', String(knot.point.y + 7));
+            knotLabel.setAttribute('x', String(knotExt.x));
+            knotLabel.setAttribute('y', String(knotExt.y + 7));
             knotLabel.setAttribute('font-size', '5');
             knotLabel.setAttribute('fill', 'purple');
             knotLabel.textContent = `${j}(${posLabel})`;
@@ -685,34 +755,31 @@ export class Cloud {
         console.log(`  Total segments: ${this.segments.length}`);
     }
 
-    get textLeft(): number { return this._textLeft; }
-    get textRight(): number { return this._textRight; }
-    get centerX(): number { return (this._textLeft + this._textRight) / 2; }
-    get centerY(): number {
-        const topLeft = this.getTopLeft();
-        const topRight = this.getTopRight();
-        const lowerTopSvgY = Math.max(topLeft.y, topRight.y);
-        return lowerTopSvgY / 2;
-    }
+    // External coordinates: x=0 is center of text, y=0 is top of cloud
+    get textLeft(): number { return -this.textWidth / 2; }
+    get textRight(): number { return this.textWidth / 2; }
+    get centerX(): number { return 0; }
+    get centerY(): number { return this.minHeight / 2; }
 
     get baseRadius(): number {
         return this.minHeight / 2;
     }
 
-    get leftHeight(): number {
+    // These return internal values for animation purposes
+    private get leftHeightInternal(): number {
         return this.knots[this.getLeftTopKnotIndex()].point.y;
     }
 
-    get rightHeight(): number {
+    private get rightHeightInternal(): number {
         return this.knots[this.layout.getRightTopIndex()].point.y;
     }
 
     getTopLeft(): Point {
-        return new Point(this.textLeft, this.leftHeight);
+        return this.toExternalCoords(this._textLeft, this.leftHeightInternal);
     }
 
     getTopRight(): Point {
-        return new Point(this.textRight, this.rightHeight);
+        return this.toExternalCoords(this._textRight, this.rightHeightInternal);
     }
 
     private computeHeightRanges(): void {
@@ -758,19 +825,220 @@ export class Cloud {
         this.generateKnots();
     }
 
+    setBlended(blended: boolean): void {
+        this.isBlended = blended;
+        if (!blended) {
+            this.isUnblending = false;
+            if (this.latticeDeformation) {
+                this.latticeDeformation.reset();
+            }
+        }
+    }
+
+    getIsBlended(): boolean {
+        return this.isBlended;
+    }
+
+    setBlendedStretch(stretchX: number, stretchY: number, anchorSide: AnchorSide): void {
+        if (!this.latticeDeformation) {
+            const latticeWidth = this.textWidth + this.minHeight + 10;
+            this.latticeDeformation = new LatticeDeformation(latticeWidth, this.minHeight);
+        }
+        this.latticeDeformation.setTugOffset(stretchX, stretchY, anchorSide);
+        this.currentStretch = { stretchX, stretchY, anchorSide };
+    }
+
+    setBlendedStretchImmediate(stretchX: number, stretchY: number, anchorSide: AnchorSide): void {
+        if (!this.latticeDeformation) {
+            const latticeWidth = this.textWidth + this.minHeight + 10;
+            this.latticeDeformation = new LatticeDeformation(latticeWidth, this.minHeight);
+        }
+        this.latticeDeformation.setTugOffsetImmediate(stretchX, stretchY, anchorSide);
+        this.currentStretch = { stretchX, stretchY, anchorSide };
+    }
+
+    getBlendedStretch(): { stretchX: number; stretchY: number; anchorSide: AnchorSide } | null {
+        return this.currentStretch;
+    }
+
+    getActualLatticeOffset(): { x: number; y: number } | null {
+        if (!this.latticeDeformation) return null;
+        return this.latticeDeformation.getCurrentOffset();
+    }
+
+    private currentStretch: { stretchX: number; stretchY: number; anchorSide: AnchorSide } | null = null;
+
+    private findAnchorPoint(side: AnchorSide): { x: number; y: number } {
+        // Find the midpoint of the specified edge
+        const samples = 20;
+        const edgePoints: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < this.segments.length; i++) {
+            const segment = this.segments[i];
+            const [p0, p1, p2, p3] = segment;
+
+            for (let j = 0; j <= samples; j++) {
+                const t = j / samples;
+                const mt = 1 - t;
+                const x = mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x;
+                const y = mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y;
+                edgePoints.push({ x, y });
+            }
+        }
+
+        // Find extreme value and filter points near that extreme
+        let extremeVal: number;
+        let isHorizontal = side === 'left' || side === 'right';
+
+        if (side === 'left') {
+            extremeVal = Math.min(...edgePoints.map(p => p.x));
+        } else if (side === 'right') {
+            extremeVal = Math.max(...edgePoints.map(p => p.x));
+        } else if (side === 'top') {
+            extremeVal = Math.min(...edgePoints.map(p => p.y));
+        } else {
+            extremeVal = Math.max(...edgePoints.map(p => p.y));
+        }
+
+        // Find points near the extreme (within 5% of cloud dimension)
+        const tolerance = isHorizontal ? this.minHeight * 0.15 : this.textWidth * 0.15;
+        const nearExtremePoints = edgePoints.filter(p => {
+            const val = isHorizontal ? p.x : p.y;
+            return Math.abs(val - extremeVal) < tolerance;
+        });
+
+        // Return the midpoint of the edge (average of near-extreme points)
+        if (nearExtremePoints.length === 0) {
+            const ext = this.toExternalCoords(extremeVal, extremeVal);
+            return { x: ext.x, y: ext.y };
+        }
+
+        const avgX = nearExtremePoints.reduce((sum, p) => sum + p.x, 0) / nearExtremePoints.length;
+        const avgY = nearExtremePoints.reduce((sum, p) => sum + p.y, 0) / nearExtremePoints.length;
+
+        const ext = this.toExternalCoords(avgX, avgY);
+        return { x: ext.x, y: ext.y };
+    }
+
+    getAnchorEdgeOffset(anchorSide: AnchorSide): { x: number; y: number } {
+        const anchor = this.findAnchorPoint(anchorSide);
+        return { x: -anchor.x, y: -anchor.y };
+    }
+
+    clearBlendedStretch(): void {
+        if (this.latticeDeformation) {
+            this.latticeDeformation.clearTugTarget();
+        }
+        this.currentStretch = null;
+    }
+
+    startUnblending(targetX: number, targetY: number): void {
+        if (!this.isBlended) return;
+
+        this.isUnblending = true;
+        if (!this.latticeDeformation) {
+            this.latticeDeformation = new LatticeDeformation(
+                this.textRight - this.textLeft + 40,
+                this.minHeight
+            );
+        }
+
+        const cloudCenterX = (this.textLeft + this.textRight) / 2;
+        const relativeX = targetX - this.x - cloudCenterX;
+        const direction = relativeX > 0 ? 'right' : 'left';
+
+        // Set a small initial offset to start the unblending animation
+        const offsetX = direction === 'right' ? 20 : -20;
+        const offsetY = 0;
+
+        this.latticeDeformation.setTugOffset(offsetX, offsetY, direction);
+    }
+
+    stopUnblending(): void {
+        this.isUnblending = false;
+        if (this.latticeDeformation) {
+            this.latticeDeformation.clearTugTarget();
+        }
+    }
+
+    getIsUnblending(): boolean {
+        return this.isUnblending;
+    }
+
+    animateLattice(deltaTime: number): void {
+        if (this.latticeDeformation && (this.isUnblending || this.latticeDeformation.isTugging())) {
+            this.latticeDeformation.animate(deltaTime);
+        }
+    }
+
+    private transformPointWithLattice(point: Point): Point {
+        const isTugging = this.latticeDeformation && this.latticeDeformation.isTugging();
+        const shouldUseLattice = this.isUnblending || isTugging;
+        const lattice = this.externalLattice || (shouldUseLattice ? this.latticeDeformation : null);
+        if (!lattice) {
+            return point;
+        }
+
+        const external = this.toExternalCoords(point.x, point.y);
+        const cloudLeftExtent = -this.textWidth / 2 - this.minHeight / 2 - 5;
+        const latticeX = external.x - cloudLeftExtent;
+        const latticeY = external.y;
+        const displacement = lattice.getDisplacement(latticeX, latticeY);
+
+        return new Point(
+            point.x + displacement.x,
+            point.y + displacement.y
+        );
+    }
+
+    setExternalLattice(lattice: LatticeDeformation | null): void {
+        this.externalLattice = lattice;
+    }
+
+    getExternalLattice(): LatticeDeformation | null {
+        return this.externalLattice;
+    }
+
     generateOutlinePath(): string {
         const pathParts: string[] = [];
         const r = (n: number) => n.toFixed(2);
 
-        const firstKnot = this.knots[0].point;
+        const transformToExternal = (p: Point): Point => {
+            const latticeTransformed = this.transformPointWithLattice(p);
+            return this.toExternalCoords(latticeTransformed.x, latticeTransformed.y);
+        };
+
+        const firstKnot = transformToExternal(this.knots[0].point);
         pathParts.push(`M ${r(firstKnot.x)},${r(firstKnot.y)}`);
 
         for (const [start, cp1, cp2, end] of this.segments) {
-            pathParts.push(`C ${r(cp1.x)},${r(cp1.y)} ${r(cp2.x)},${r(cp2.y)} ${r(end.x)},${r(end.y)}`);
+            const tCp1 = transformToExternal(cp1);
+            const tCp2 = transformToExternal(cp2);
+            const tEnd = transformToExternal(end);
+            pathParts.push(`C ${r(tCp1.x)},${r(tCp1.y)} ${r(tCp2.x)},${r(tCp2.y)} ${r(tEnd.x)},${r(tEnd.y)}`);
         }
 
         pathParts.push('Z');
         return pathParts.join(' ');
+    }
+
+    getBoundingBox(): { minX: number; maxX: number; minY: number; maxY: number } {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        const transformToExternal = (p: Point): Point => {
+            const latticeTransformed = this.transformPointWithLattice(p);
+            return this.toExternalCoords(latticeTransformed.x, latticeTransformed.y);
+        };
+
+        for (const knot of this.knots) {
+            const ext = transformToExternal(knot.point);
+            minX = Math.min(minX, ext.x);
+            maxX = Math.max(maxX, ext.x);
+            minY = Math.min(minY, ext.y);
+            maxY = Math.max(maxY, ext.y);
+        }
+
+        return { minX, maxX, minY, maxY };
     }
 
     getFillColor(): string {
@@ -787,19 +1055,21 @@ export class Cloud {
     }
 
     renderText(textElement: SVGTextElement): void {
-        const textX = this.textLeft + this.textWidth / 2;
+        // In external coords, x=0 is center of text, y=0 is top
+        const textX = 0;  // Center of text
         const lines = this.text.split('\\n');
         const lineHeight = this.textAscent + this.textDescent;
         const totalTextHeight = lines.length * lineHeight;
-        const centerSvgY = -this.minHeight / 2;
-        const firstBaselineSvgY = centerSvgY - totalTextHeight / 2 + this.textAscent;
+        // Center text vertically within cloud (cloud goes from y=0 at top to y=minHeight at bottom)
+        const centerY = this.minHeight / 2;
+        const firstBaselineY = centerY - totalTextHeight / 2 + this.textAscent;
 
         textElement.setAttribute('x', String(textX));
         textElement.innerHTML = '';
         for (let j = 0; j < lines.length; j++) {
             const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
             tspan.setAttribute('x', String(textX));
-            tspan.setAttribute('y', String(firstBaselineSvgY + j * lineHeight));
+            tspan.setAttribute('y', String(firstBaselineY + j * lineHeight));
             tspan.textContent = lines[j];
             textElement.appendChild(tspan);
         }
@@ -876,5 +1146,62 @@ export class Cloud {
             }
             this.renderDebugInfo(this.groupElement);
         }
+    }
+
+    recordQuestion(questionId: string): void {
+        if (!this.wasAsked(questionId)) {
+            this.questionHistory.askedQuestions.push({
+                questionId,
+                timestamp: Date.now(),
+            });
+        }
+    }
+
+    wasAsked(questionId: string): boolean {
+        return this.questionHistory.askedQuestions.some(q => q.questionId === questionId);
+    }
+
+    revealAge(): void {
+        this.biography.ageRevealed = true;
+    }
+
+    revealProtects(): void {
+        this.biography.protectsRevealed = true;
+    }
+
+    computeSelfReaction(hasProtections: boolean): SelfReaction {
+        const ageRevealed = this.biography.ageRevealed;
+        const protectsRevealed = this.biography.protectsRevealed;
+
+        if (!ageRevealed && !protectsRevealed) {
+            return 'shrug';
+        }
+
+        if (ageRevealed && protectsRevealed && hasProtections) {
+            const isYoung = typeof this.biography.partAge === 'number' && this.biography.partAge <= 10;
+            return isYoung ? 'compassion' : Math.random() < 0.5 ? 'gratitude' : 'compassion';
+        }
+
+        if (ageRevealed) {
+            const isYoung = typeof this.biography.partAge === 'number' && this.biography.partAge <= 10;
+            return isYoung ? 'compassion' : 'shrug';
+        }
+
+        return 'shrug';
+    }
+
+    setSelfReaction(reaction: SelfReaction): void {
+        this.biography.selfReaction = reaction;
+    }
+
+    revealRelationships(): void {
+        this.biography.relationshipsRevealed = true;
+    }
+
+    getDisplayAge(): string | null {
+        if (!this.biography.ageRevealed) return null;
+        if (this.biography.partAge === null) return null;
+        if (typeof this.biography.partAge === 'string') return this.biography.partAge;
+        return `${this.biography.partAge} years old`;
     }
 }

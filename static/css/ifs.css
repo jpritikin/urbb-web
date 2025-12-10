@@ -2,6 +2,48 @@
   margin-bottom: 2rem;
 }
 
+.zoom-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #aaa;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.zoom-toggle-btn:hover {
+  background: rgba(123, 104, 238, 0.15);
+  border-color: #7b68ee;
+}
+
+.zoom-toggle-btn.focused {
+  background: rgba(123, 104, 238, 0.25);
+  border-color: #7b68ee;
+  box-shadow: 0 0 8px rgba(123, 104, 238, 0.4);
+}
+
+.dark .zoom-toggle-btn {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #666;
+}
+
+.dark .zoom-toggle-btn:hover {
+  background: rgba(155, 126, 255, 0.2);
+  border-color: #9b7eff;
+}
+
+.dark .zoom-toggle-btn.focused {
+  background: rgba(155, 126, 255, 0.3);
+  border-color: #9b7eff;
+  box-shadow: 0 0 8px rgba(155, 126, 255, 0.4);
+}
+
 #cloud-controls {
   margin-bottom: 2rem;
   padding: 1rem;
@@ -106,4 +148,225 @@
 #exit-simulator-btn:focus {
   outline: none;
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.action-selector {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f5f0ff 0%, #fff5f0 100%);
+  border: 2px dotted #9b59b6;
+  border-radius: 8px;
+}
+
+.dark .action-selector {
+  background: linear-gradient(135deg, #2d1f3d 0%, #3d2d2d 100%);
+  border-color: #8e44ad;
+}
+
+.action-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b4c8a;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dark .action-label {
+  color: #b388d4;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #333;
+}
+
+.dark .action-btn {
+  background: #3a3a3a;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.action-btn:hover {
+  background: #f0e6ff;
+  border-color: #9b59b6;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+}
+
+.dark .action-btn:hover {
+  background: #4a3a5a;
+  border-color: #b388d4;
+}
+
+.action-btn.selected {
+  background: #9b59b6;
+  border-color: #8e44ad;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.4);
+}
+
+.dark .action-btn.selected {
+  background: #8e44ad;
+  border-color: #b388d4;
+}
+
+.action-btn[data-category="discovery"] { border-left: 3px solid #3498db; }
+.action-btn[data-category="history"] { border-left: 3px solid #e67e22; }
+.action-btn[data-category="relationship"] { border-left: 3px solid #e74c3c; }
+.action-btn[data-category="role"] { border-left: 3px solid #2ecc71; }
+
+.biography-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f5ff 0%, #f5fff0 100%);
+  border: 1px solid #7f8c8d;
+  border-radius: 8px;
+  min-height: 3rem;
+}
+
+.dark .biography-panel {
+  background: linear-gradient(135deg, #1f2d3d 0%, #2d3d2d 100%);
+  border-color: #4a5568;
+}
+
+.bio-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px dotted #bdc3c7;
+  padding-bottom: 0.5rem;
+}
+
+.dark .bio-header {
+  color: #e0e0e0;
+  border-color: #4a5568;
+}
+
+.bio-field {
+  font-size: 0.9rem;
+  color: #34495e;
+  margin: 0.25rem 0;
+}
+
+.dark .bio-field {
+  color: #b0b0b0;
+}
+
+.bio-label {
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.dark .bio-label {
+  color: #8899a6;
+}
+
+.trace-toggle-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #7b68ee;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 40;
+  transition: all 0.2s ease;
+}
+
+.dark .trace-toggle-btn {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #9b7eff;
+  color: #e0e0e0;
+}
+
+.trace-toggle-btn:hover {
+  background: #f0e6ff;
+  transform: scale(1.05);
+}
+
+.dark .trace-toggle-btn:hover {
+  background: #3a3a5a;
+}
+
+.trace-panel {
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  width: 320px;
+  max-height: 400px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px dotted #7b68ee;
+  border-radius: 8px;
+  z-index: 40;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .trace-panel {
+  background: rgba(35, 35, 50, 0.95);
+  border-color: #9b7eff;
+}
+
+.trace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #7b68ee 0%, #9b59b6 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.trace-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trace-controls button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+}
+
+.trace-controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.trace-content {
+  padding: 0.75rem;
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  max-height: 340px;
+  overflow-y: auto;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark .trace-content {
+  color: #d0d0d0;
 }
