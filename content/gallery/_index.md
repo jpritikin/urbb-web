@@ -37,10 +37,10 @@ From groundbreaking researchers in psychedelic science 🍄 to spiritual leaders
   </div>
 
   <div class="gallery-item">
-    <div class="image-wrapper" data-alt="With Jamie Wheal at Flow Genome Project event">
-      <img src="/images/gallery/jamie-wheal.webp" alt="With Jamie Wheal at Flow Genome Project event">
+    <div class="image-wrapper" data-alt="With Jamie Wheal at SXSW 2025">
+      <img src="/images/gallery/jamie-wheal.webp" alt="With Jamie Wheal at SXSW 2025">
     </div>
-    <p class="caption">With Jamie Wheal at a Flow Genome Project gathering in Malibu, discussing optimal states and collective effervescence, 2022.</p>
+    <p class="caption">With Jamie Wheal at the Center for MINDS, MAPS, and Ultranative event at SXSW 2025. Discussing flow states and the future of consciousness research.</p>
   </div>
 
   <div class="gallery-item">
