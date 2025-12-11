@@ -5,25 +5,25 @@ import { PhysicsEngine, PhysicsConfig } from './physicsEngine.js';
 import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
+import { PieMenu, PieMenuItem } from './pieMenu.js';
 
 export { CloudType };
 
 export interface TherapistAction {
     id: string;
     question: string;
+    shortName: string;
     category: 'discovery' | 'relationship' | 'history' | 'role';
 }
 
 export const THERAPIST_ACTIONS: TherapistAction[] = [
-    { id: 'familiar', question: 'Is this part familiar to you?', category: 'discovery' },
-    { id: 'first_memories', question: "When were this part's first memories?", category: 'history' },
-    { id: 'feel_toward', question: 'How do you feel toward this part?', category: 'relationship' },
-    { id: 'job', question: "What is this part's job?", category: 'role' },
-    { id: 'protects', question: 'Does this part protect another part?', category: 'role' },
-    { id: 'protected_by', question: 'Who protects this part?', category: 'role' },
-    { id: 'join_conference', question: 'Can this part join the conference?', category: 'relationship' },
-    { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', category: 'relationship' },
-    { id: 'step_back', question: 'Can you ask this part to step back?', category: 'relationship' },
+    { id: 'familiar', question: 'Is this part familiar to you?', shortName: 'Familiar?', category: 'discovery' },
+    { id: 'first_memories', question: "When were this part's first memories?", shortName: 'Memories', category: 'history' },
+    { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship' },
+    { id: 'job', question: "What is this part's job?", shortName: 'Job', category: 'role' },
+    { id: 'join_conference', question: 'Can this part join the conference?', shortName: 'Join', category: 'relationship' },
+    { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
+    { id: 'step_back', question: 'Can you ask this part to step back?', shortName: 'Step back', category: 'relationship' },
 ];
 
 interface Vec3 {
@@ -36,6 +36,21 @@ interface CloudInstance {
     cloud: Cloud;
     position: Vec3;
     velocity: Vec3;
+}
+
+interface Message {
+    id: string;
+    type: 'grievance';
+    senderId: string;
+    targetId: string;
+    text: string;
+    progress: number;
+    duration: number;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    element: SVGGElement | null;
 }
 
 declare global {
@@ -72,7 +87,6 @@ export class CloudManager {
     private model: SimulatorModel;
     private view: SimulatorView;
 
-    private actionContainer: HTMLElement | null = null;
     private selectedAction: TherapistAction | null = null;
     private onActionSelect: ((action: TherapistAction, cloud: Cloud) => void) | null = null;
     private biographyContainer: HTMLElement | null = null;
@@ -82,11 +96,20 @@ export class CloudManager {
     private relationshipClouds: Map<string, { instance: CloudInstance; region: string }> = new Map();
     private regionLabelsGroup: SVGGElement | null = null;
     private modeToggleContainer: HTMLElement | null = null;
-    private markerElements: Map<string, SVGGElement> = new Map();
+    private pieMenu: PieMenu | null = null;
+    private pieMenuOpen: boolean = false;
+    private selectedCloudId: string | null = null;
+    private hoveredCloudId: string | null = null;
+    private longPressTimer: number | null = null;
+    private longPressStartTime: number = 0;
+    private readonly LONG_PRESS_DURATION = 500;
     private tracePanel: HTMLElement | null = null;
     private traceVisible: boolean = false;
     private resolvingClouds: Set<string> = new Set();
     private carpetRenderer: CarpetRenderer | null = null;
+    private messages: Message[] = [];
+    private messageIdCounter: number = 0;
+    private messageCooldowns: Map<string, number> = new Map();
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -130,7 +153,7 @@ export class CloudManager {
         this.createModeToggle();
         this.createUIContainer();
         this.createBiographyPanel();
-        this.createActionSelector();
+        this.createPieMenu();
         this.createTraceButton();
         this.createTracePanel();
         this.createDebugBox();
@@ -138,6 +161,7 @@ export class CloudManager {
         this.panY = this.canvasHeight / 2;
         this.updateViewBox();
         this.setupVisibilityHandling();
+        this.setupSelectionHandlers();
     }
 
     private setupVisibilityHandling(): void {
@@ -154,6 +178,57 @@ export class CloudManager {
                 }
             }
         });
+    }
+
+    private setupSelectionHandlers(): void {
+        document.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.code === 'Space' && this.view.getMode() === 'foreground' && !this.pieMenuOpen) {
+                e.preventDefault();
+                this.handleSelectionToggle();
+            }
+        });
+    }
+
+    private handleSelectionToggle(): void {
+        if (this.hoveredCloudId) {
+            if (this.model.isSelected(this.hoveredCloudId)) {
+                this.model.deselectCloud();
+            } else {
+                this.model.selectCloud(this.hoveredCloudId);
+            }
+        } else {
+            this.model.deselectCloud();
+        }
+    }
+
+    setHoveredCloud(cloudId: string | null): void {
+        this.hoveredCloudId = cloudId;
+    }
+
+    startLongPress(cloudId: string): void {
+        if (this.view.getMode() !== 'foreground') return;
+        this.cancelLongPress();
+        this.longPressStartTime = performance.now();
+        this.longPressTimer = window.setTimeout(() => {
+            if (this.model.isSelected(cloudId)) {
+                this.model.deselectCloud();
+            } else {
+                this.model.selectCloud(cloudId);
+            }
+            this.longPressTimer = null;
+        }, this.LONG_PRESS_DURATION);
+    }
+
+    cancelLongPress(): void {
+        if (this.longPressTimer !== null) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+    }
+
+    isLongPressActive(): boolean {
+        return this.longPressTimer !== null &&
+            (performance.now() - this.longPressStartTime) >= this.LONG_PRESS_DURATION;
     }
 
     private createSelfStar(): void {
@@ -231,7 +306,7 @@ export class CloudManager {
     private handleModeToggle(isForeground: boolean): void {
         this.view.setMode(isForeground ? 'foreground' : 'panorama');
         if (!isForeground) {
-            this.hideAllMarkers();
+            this.model.deselectCloud();
         }
         this.syncViewWithModel();
         this.updateUIForMode();
@@ -253,55 +328,65 @@ export class CloudManager {
         this.container.appendChild(this.uiContainer);
     }
 
-    private createActionSelector(): void {
-        if (!this.container) return;
+    private createPieMenu(): void {
+        if (!this.counterZoomGroup) return;
 
-        this.actionContainer = document.createElement('div');
-        this.actionContainer.className = 'action-selector';
-        this.actionContainer.style.display = 'none';
+        this.pieMenu = new PieMenu(this.counterZoomGroup);
 
-        const noMarkersPage = document.createElement('div');
-        noMarkersPage.className = 'action-page action-page-0';
-        const noMarkersLabel = document.createElement('div');
-        noMarkersLabel.className = 'action-label';
-        noMarkersLabel.textContent = 'Click on a cloud';
-        noMarkersPage.appendChild(noMarkersLabel);
-        this.actionContainer.appendChild(noMarkersPage);
+        this.pieMenu.setOnSelect((item: PieMenuItem, cloudId: string) => {
+            const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
+            if (action) {
+                const cloud = this.getCloudById(cloudId);
+                if (cloud) {
+                    this.handleActionClick(action, cloud);
+                }
+            }
+        });
 
-        const oneMarkerPage = document.createElement('div');
-        oneMarkerPage.className = 'action-page action-page-1';
-        oneMarkerPage.style.display = 'none';
-        const oneMarkerLabel = document.createElement('div');
-        oneMarkerLabel.className = 'action-label';
-        oneMarkerLabel.textContent = 'Ask the part:';
-        oneMarkerPage.appendChild(oneMarkerLabel);
+        this.pieMenu.setOnClose(() => {
+            this.pieMenuOpen = false;
+            this.selectedCloudId = null;
+            this.view.setConferenceRotationPaused(false);
+        });
+    }
 
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'action-buttons';
+    private getPieMenuItemsForCloud(cloudId: string): PieMenuItem[] {
+        const isTarget = this.model.isTarget(cloudId);
+        const isBlended = this.model.isBlended(cloudId);
+        const isSupporting = this.model.getAllSupportingParts().has(cloudId);
+
+        const items: PieMenuItem[] = [];
 
         for (const action of THERAPIST_ACTIONS) {
-            const btn = document.createElement('button');
-            btn.className = 'action-btn';
-            btn.dataset.actionId = action.id;
-            btn.dataset.category = action.category;
-            btn.textContent = action.question;
-            btn.addEventListener('click', () => this.handleActionClick(action));
-            buttonContainer.appendChild(btn);
+            let include = false;
+
+            if (action.id === 'join_conference') {
+                include = isSupporting && !isBlended;
+            } else if (action.id === 'separate') {
+                include = isBlended;
+            } else if (action.id === 'step_back') {
+                include = isTarget || isSupporting || isBlended;
+            } else if (action.id === 'job') {
+                include = isTarget || isBlended;
+            } else {
+                include = isTarget;
+            }
+
+            if (include) {
+                items.push({
+                    id: action.id,
+                    label: action.question,
+                    shortName: action.shortName,
+                    category: action.category
+                });
+            }
         }
 
-        oneMarkerPage.appendChild(buttonContainer);
-        this.actionContainer.appendChild(oneMarkerPage);
+        return items;
+    }
 
-        const twoMarkersPage = document.createElement('div');
-        twoMarkersPage.className = 'action-page action-page-2';
-        twoMarkersPage.style.display = 'none';
-        const twoMarkersLabel = document.createElement('div');
-        twoMarkersLabel.className = 'action-label';
-        twoMarkersLabel.textContent = 'Two parts selected';
-        twoMarkersPage.appendChild(twoMarkersLabel);
-        this.actionContainer.appendChild(twoMarkersPage);
-
-        this.container.appendChild(this.actionContainer);
+    isPieMenuOpen(): boolean {
+        return this.pieMenuOpen;
     }
 
     private createTraceButton(): void {
@@ -362,71 +447,47 @@ export class CloudManager {
         content.textContent = this.model.formatTrace(cloudNames);
     }
 
-    private handleActionClick(action: TherapistAction): void {
+    private handleActionClick(action: TherapistAction, targetCloud?: Cloud): void {
+        const cloud = targetCloud ?? (this.selectedCloudId ? this.getCloudById(this.selectedCloudId) : null);
+        if (!cloud) return;
+
         this.selectedAction = action;
 
-        const buttons = this.actionContainer?.querySelectorAll('.action-btn');
-        buttons?.forEach(btn => btn.classList.remove('selected'));
-
-        const selectedBtn = this.actionContainer?.querySelector(`[data-action-id="${action.id}"]`);
-        selectedBtn?.classList.add('selected');
-
         if (action.id === 'join_conference') {
-            const markers = this.model.getMarkedClouds();
-            const markedCloudId = Array.from(markers.keys())[0];
-            if (markedCloudId) {
-                const oldModel = this.model.clone();
-                this.model.addTargetCloud(markedCloudId);
-                this.model.clearAllMarkers();
-                this.syncViewWithModel(oldModel);
-                this.updateBiographyPanel();
-            }
+            this.showThoughtBubble("Joining the conference...");
+            const oldModel = this.model.clone();
+            this.model.addTargetCloud(cloud.id);
+            this.syncViewWithModel(oldModel);
+            this.updateBiographyPanel();
             return;
         }
 
         if (action.id === 'step_back') {
-            const markers = this.model.getMarkedClouds();
-            const markedCloudId = Array.from(markers.keys())[0];
-            if (markedCloudId) {
-                this.stepBackPart(markedCloudId);
-            }
+            this.stepBackPart(cloud.id);
             return;
         }
 
         if (action.id === 'separate') {
-            const markers = this.model.getMarkedClouds();
-            const markedCloudId = Array.from(markers.keys())[0];
-            if (markedCloudId && this.model.isBlended(markedCloudId)) {
-                this.startUnblendingBlendedPart(markedCloudId);
+            if (this.model.isBlended(cloud.id)) {
+                this.startUnblendingBlendedPart(cloud.id);
             }
             return;
         }
 
-        const markers = this.model.getMarkedClouds();
-        const markedCloudId = Array.from(markers.keys())[0];
-        if (!markedCloudId) return;
+        const isBlended = this.model.isBlended(cloud.id);
 
-        const markedCloud = this.getCloudById(markedCloudId);
-        if (!markedCloud) return;
+        this.model.recordQuestion(cloud.id, action.id);
 
-        const isBlended = this.model.isBlended(markedCloudId);
-
-        markedCloud.recordQuestion(action.id);
-
-        if (isBlended && action.id === 'job') {
-            this.startUnblendingPart(markedCloudId);
+        if (action.id === 'job') {
+            this.handleJobQuestion(cloud, isBlended);
             return;
         }
 
         if (action.id === 'first_memories') {
-            markedCloud.revealAge();
-        } else if (action.id === 'protects') {
-            markedCloud.revealProtects();
-        } else if (action.id === 'protected_by') {
-            this.showProtectors(markedCloud);
+            this.model.revealAge(cloud.id);
         } else if (action.id === 'feel_toward') {
-            const protectorIds = this.relationships.getProtectedBy(markedCloud.id);
-            const grievanceMap = this.relationships.getGrievances(markedCloud.id);
+            const protectorIds = this.relationships.getProtectedBy(cloud.id);
+            const grievanceMap = this.relationships.getGrievances(cloud.id);
 
             const oldModel = this.model.clone();
 
@@ -437,7 +498,7 @@ export class CloudManager {
                 if (!targetIds.has(protectorId)) {
                     const protectorCloud = this.getCloudById(protectorId);
                     if (protectorCloud) {
-                        const response = this.getProtectorResponse(protectorCloud, markedCloud);
+                        const response = this.getProtectorResponse(protectorCloud, cloud);
                         if (response) {
                             this.model.addBlendedPart(protectorId);
                             blendedResponses.push({
@@ -453,10 +514,9 @@ export class CloudManager {
             for (const [grievanceId, grievanceLevel] of grievanceMap) {
                 if (grievanceLevel > 0 && !targetIds.has(grievanceId)) {
                     const grievanceCloud = this.getCloudById(grievanceId);
-                    if (grievanceCloud && grievanceCloud.trust < 0.5) {
-                        const response = this.getGrievanceResponse(grievanceCloud, markedCloud);
+                    if (grievanceCloud && this.model.getTrust(grievanceId) < 0.5) {
+                        const response = this.getGrievanceResponse(grievanceCloud, cloud);
                         if (response) {
-                            console.log(`Adding blended grievance: ${grievanceId}`);
                             this.model.addBlendedPart(grievanceId);
                             blendedResponses.push({
                                 cloudId: grievanceId,
@@ -479,14 +539,14 @@ export class CloudManager {
                 this.showThoughtBubble(firstResponse.response);
             }
 
-            markedCloud.revealRelationships();
+            this.model.revealRelationships(cloud.id);
             this.syncViewWithModel(oldModel);
         }
 
         this.updateBiographyPanel();
 
         if (this.onActionSelect) {
-            this.onActionSelect(action, markedCloud);
+            this.onActionSelect(action, cloud);
         }
     }
 
@@ -498,18 +558,57 @@ export class CloudManager {
         return this.selectedAction;
     }
 
+    private handleJobQuestion(cloud: Cloud, isBlended: boolean): void {
+        if (this.model.isIdentityRevealed(cloud.id)) {
+            this.showThoughtBubble("You already asked me that.");
+            this.model.adjustTrust(cloud.id, 0.95, 'repeated job question');
+            this.updateBiographyPanel();
+            return;
+        }
+
+        const protectedIds = this.relationships.getProtecting(cloud.id);
+        if (protectedIds.size === 0) {
+            this.showThoughtBubble("I don't protect anyone.");
+        } else {
+            const protectedId = Array.from(protectedIds)[0];
+            const protectedCloud = this.getCloudById(protectedId);
+            const protectedName = protectedCloud?.text ?? 'someone';
+            this.showThoughtBubble(`I protect the ${protectedName} one.`);
+            this.model.revealIdentity(cloud.id);
+        }
+
+        if (isBlended) {
+            this.reduceBlending(cloud.id, 0.3);
+        }
+
+        this.updateBiographyPanel();
+    }
+
+    private reduceBlending(cloudId: string, amount: number): void {
+        if (!this.model.isBlended(cloudId)) return;
+
+        const cloud = this.getCloudById(cloudId);
+        if (!cloud) return;
+
+        const oldModel = this.model.clone();
+        const currentDegree = this.model.getBlendingDegree(cloudId);
+        const targetDegree = Math.max(0, currentDegree - amount);
+        this.model.setBlendingDegree(cloudId, targetDegree);
+        this.syncViewWithModel(oldModel);
+    }
+
     private getProtectorResponse(protectorCloud: Cloud, targetCloud: Cloud): string | null {
-        const dialogues = protectorCloud.dialogues.burdenedProtector;
-        if (dialogues && dialogues.length > 0) {
-            return dialogues[Math.floor(Math.random() * dialogues.length)];
+        const dialogues = this.model.getDialogues(protectorCloud.id);
+        if (dialogues.burdenedProtector && dialogues.burdenedProtector.length > 0) {
+            return dialogues.burdenedProtector[Math.floor(Math.random() * dialogues.burdenedProtector.length)];
         }
         return null;
     }
 
     private getGrievanceResponse(grievanceCloud: Cloud, targetCloud: Cloud): string | null {
-        const dialogues = grievanceCloud.dialogues.burdenedGrievance;
-        if (dialogues && dialogues.length > 0) {
-            return dialogues[Math.floor(Math.random() * dialogues.length)];
+        const dialogues = this.model.getDialogues(grievanceCloud.id);
+        if (dialogues.burdenedGrievance && dialogues.burdenedGrievance.length > 0) {
+            return dialogues.burdenedGrievance[Math.floor(Math.random() * dialogues.burdenedGrievance.length)];
         }
         return null;
     }
@@ -762,18 +861,23 @@ export class CloudManager {
             const cloud = this.getCloudById(cloudId);
             if (!cloud) return;
 
-            const displayAge = cloud.getDisplayAge();
-            html = `<div class="bio-header">${cloud.text}</div>`;
+            const biography = this.model.getBiography(cloudId);
+            const displayLabel = this.model.isIdentityRevealed(cloudId) ? cloud.text : '???';
+            const displayAge = this.model.getDisplayAge(cloudId);
+            html = `<div class="bio-header">${displayLabel}</div>`;
 
             if (displayAge) {
                 html += `<div class="bio-field"><span class="bio-label">Age:</span> ${displayAge}</div>`;
             }
 
-            if (cloud.biography.protectsRevealed) {
-                const protectedIds = this.relationships.getProtecting(cloud.id);
+            if (biography?.protectsRevealed) {
+                const protectedIds = this.relationships.getProtecting(cloudId);
                 if (protectedIds.size > 0) {
                     const protectedNames = Array.from(protectedIds)
-                        .map(id => this.getCloudById(id)?.text ?? id)
+                        .map(id => {
+                            const protectedCloud = this.getCloudById(id);
+                            return this.model.isIdentityRevealed(id) ? protectedCloud?.text ?? '???' : '???';
+                        })
                         .join(', ');
                     html += `<div class="bio-field"><span class="bio-label">Protects:</span> ${protectedNames}</div>`;
                 } else {
@@ -785,7 +889,8 @@ export class CloudManager {
             for (const cloudId of targetIds) {
                 const cloud = this.getCloudById(cloudId);
                 if (cloud) {
-                    html += `<div class="bio-field">• ${cloud.text}</div>`;
+                    const displayLabel = this.model.isIdentityRevealed(cloudId) ? cloud.text : '???';
+                    html += `<div class="bio-field">• ${displayLabel}</div>`;
                 }
             }
         }
@@ -793,15 +898,36 @@ export class CloudManager {
         this.biographyContainer.innerHTML = html;
     }
 
-    addCloud(word: string, options?: any): Cloud {
+    addCloud(word: string, options?: {
+        id?: string;
+        trust?: number;
+        needAttention?: number;
+        agreedWaitUntil?: number;
+        partAge?: number | string;
+        dialogues?: { burdenedProtector?: string[]; burdenedGrievance?: string[]; unburdenedJob?: string };
+    }): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
         const position = this.physicsEngine.generateTorusPosition();
 
-        const cloud = new Cloud(word, 0, 0, undefined, options);
-        const group = cloud.createSVGElements(() => this.selectCloud(cloud));
+        const cloud = new Cloud(word, 0, 0, undefined, { id: options?.id });
+        this.model.registerPart(cloud.id, word, {
+            trust: options?.trust,
+            needAttention: options?.needAttention,
+            agreedWaitUntil: options?.agreedWaitUntil,
+            partAge: options?.partAge,
+            dialogues: options?.dialogues,
+        });
+
+        const state = this.model.getPartState(cloud.id);
+        const group = cloud.createSVGElements({
+            onClick: () => this.handleCloudClick(cloud),
+            onHover: (hovered) => this.setHoveredCloud(hovered ? cloud.id : null),
+            onLongPressStart: () => this.startLongPress(cloud.id),
+            onLongPressEnd: () => this.cancelLongPress(),
+        });
         this.svgElement.appendChild(group);
-        cloud.updateSVGElements(this.debug);
+        cloud.updateSVGElements(this.debug, state, this.model.isSelected(cloud.id));
 
         const instance: CloudInstance = {
             cloud,
@@ -851,7 +977,8 @@ export class CloudManager {
     setDebug(enabled: boolean): void {
         this.debug = enabled;
         for (const instance of this.instances) {
-            instance.cloud.updateSVGElements(enabled);
+            const state = this.model.getPartState(instance.cloud.id);
+            instance.cloud.updateSVGElements(enabled, state, this.model.isSelected(instance.cloud.id));
         }
     }
 
@@ -990,6 +1117,19 @@ export class CloudManager {
         this.debugPauseButton = btn;
     }
 
+    private handleCloudClick(cloud: Cloud): void {
+        if (this.isLongPressActive()) {
+            return;
+        }
+
+        if (this.view.getMode() === 'foreground' && this.model.isSelected(cloud.id)) {
+            this.model.deselectCloud();
+            return;
+        }
+
+        this.selectCloud(cloud);
+    }
+
     selectCloud(cloud: Cloud): void {
         this.selectedCloud = cloud;
 
@@ -998,33 +1138,68 @@ export class CloudManager {
             this.view.setMode('foreground');
             this.updateUIForMode();
             this.updateModeToggle();
-            this.scheduleMarkerAssignment(cloud.id);
+            this.syncViewWithModel();
         } else if (this.view.getMode() === 'foreground') {
             const viewState = this.view.getViewState(cloud.id);
             if (viewState && viewState.currentOpacity > 0) {
-                this.model.assignMarker(cloud.id);
+                this.togglePieMenu(cloud.id, viewState.currentX, viewState.currentY);
             }
         }
+    }
 
-        this.syncViewWithModel();
+    private togglePieMenu(cloudId: string, x: number, y: number): void {
+        if (!this.pieMenu) return;
+
+        if (this.pieMenuOpen && this.selectedCloudId === cloudId) {
+            this.pieMenu.hide();
+            return;
+        }
+
+        if (this.pieMenuOpen) {
+            this.pieMenu.hide();
+        }
+
+        const items = this.getPieMenuItemsForCloud(cloudId);
+        if (items.length === 0) return;
+
+        this.pieMenu.setItems(items);
+        this.pieMenu.show(x, y, cloudId);
+        this.pieMenuOpen = true;
+        this.selectedCloudId = cloudId;
+        this.view.setConferenceRotationPaused(true);
     }
 
     private startUnblendingPart(cloudId: string): void {
         const cloud = this.getCloudById(cloudId);
-        if (!cloud) return;
+        if (!cloud) {
+            this.showActionFeedback("Part not found");
+            return;
+        }
 
         const targetIds = this.model.getTargetCloudIds();
         const firstTargetId = Array.from(targetIds)[0];
-        if (!firstTargetId) return;
+        if (!firstTargetId) {
+            this.showActionFeedback("No target part to unblend toward");
+            return;
+        }
 
         const targetInstance = this.instances.find(i => i.cloud.id === firstTargetId);
-        if (!targetInstance) return;
+        if (!targetInstance) {
+            this.showActionFeedback("Target part not found");
+            return;
+        }
 
         const viewState = this.view.getViewState(firstTargetId);
-        if (!viewState) return;
+        if (!viewState) {
+            this.showActionFeedback("Cannot locate target");
+            return;
+        }
 
         cloud.startUnblending(viewState.currentX, viewState.currentY);
-        console.log(`Started unblending ${cloud.text} toward target at (${viewState.currentX}, ${viewState.currentY})`);
+    }
+
+    private showActionFeedback(message: string): void {
+        this.showThoughtBubble(message);
     }
 
     private stepBackPart(cloudId: string): void {
@@ -1042,46 +1217,20 @@ export class CloudManager {
         const panoramaPos = panoramaPositions.get(cloudId);
         if (!panoramaPos) return;
 
+        this.showThoughtBubble("Stepping back...");
         this.view.animateStepBack(cloudId, panoramaPos.x, panoramaPos.y, panoramaPos.scale);
         this.model.stepBackPart(cloudId);
         this.updateBiographyPanel();
-        this.updateMarkerElements();
     }
 
     private startUnblendingBlendedPart(cloudId: string): void {
-        if (!this.model.isBlended(cloudId)) return;
+        if (!this.model.isBlended(cloudId)) {
+            this.showActionFeedback("This part is not blended");
+            return;
+        }
 
-        const currentDegree = this.model.getBlendingDegree(cloudId);
-        const targetDegree = Math.max(0, currentDegree - 0.3);
-        this.animateBlendingDegree(cloudId, targetDegree, 0.5);
-    }
-
-    private animateBlendingDegree(cloudId: string, targetDegree: number, duration: number): void {
-        const startDegree = this.model.getBlendingDegree(cloudId);
-        const startTime = performance.now();
-        const cloud = this.getCloudById(cloudId);
-
-
-        const animate = () => {
-            const elapsed = (performance.now() - startTime) / 1000;
-            const progress = Math.min(1, elapsed / duration);
-            const eased = progress < 0.5
-                ? 4 * progress * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-            const newDegree = startDegree + (targetDegree - startDegree) * eased;
-            this.model.setBlendingDegree(cloudId, newDegree);
-            this.syncViewWithModel();
-
-
-            if (progress < 1 && this.model.isBlended(cloudId)) {
-                requestAnimationFrame(animate);
-            } else if (progress >= 1 && targetDegree <= 0 && this.model.isBlended(cloudId)) {
-                this.finishUnblending(cloudId);
-            }
-        };
-
-        requestAnimationFrame(animate);
+        this.showThoughtBubble("Okay, I'll separate a bit...");
+        this.reduceBlending(cloudId, 0.3);
     }
 
     private finishUnblending(cloudId: string): void {
@@ -1089,7 +1238,7 @@ export class CloudManager {
         if (!cloud) return;
 
         // Get target seat position while still blended
-        const targetPos = this.view.getBlendedStretchTarget(cloudId, this.model);
+        const targetPos = this.view.getBlendedStretchTarget(cloud, this.model);
         if (!targetPos) {
             this.model.promoteBlendedToTarget(cloudId);
             this.syncViewWithModel();
@@ -1211,18 +1360,6 @@ export class CloudManager {
         this.updateBiographyPanel();
     }
 
-    private scheduleMarkerAssignment(cloudId: string): void {
-        const checkTransition = () => {
-            if (!this.view.isTransitioning()) {
-                this.model.assignMarker(cloudId);
-                this.updateMarkerElements();
-            } else {
-                requestAnimationFrame(checkTransition);
-            }
-        };
-        requestAnimationFrame(checkTransition);
-    }
-
     private updateModeToggle(): void {
         if (!this.modeToggleContainer) return;
         const isForeground = this.view.getMode() === 'foreground';
@@ -1249,160 +1386,51 @@ export class CloudManager {
         const mode = this.view.getMode();
 
         if (mode === 'foreground') {
-            if (this.actionContainer) {
-                this.actionContainer.style.display = 'block';
-                this.updateActionPage();
-            }
             if (this.biographyContainer) {
                 this.biographyContainer.style.display = 'block';
                 this.updateBiographyPanel();
             }
         } else {
-            if (this.actionContainer) {
-                this.actionContainer.style.display = 'none';
-            }
             if (this.biographyContainer) {
                 this.biographyContainer.style.display = 'none';
             }
             this.hideThoughtBubble();
             this.hideRegionLabels();
-            this.hideAllMarkers();
+            this.hidePieMenu();
         }
     }
 
-    private updateMarkerElements(): void {
-        if (!this.counterZoomGroup) return;
-
-        const mode = this.view.getMode();
-        const markers = this.model.getMarkedClouds();
-
-        for (const [cloudId, markerNum] of markers) {
-            let markerGroup = this.markerElements.get(cloudId);
-
-            if (!markerGroup) {
-                markerGroup = this.createMarkerElement(markerNum);
-                this.markerElements.set(cloudId, markerGroup);
-            } else {
-                const text = markerGroup.querySelector('text');
-                if (text) text.textContent = `${markerNum}`;
-            }
-
-            const instance = this.instances.find(i => i.cloud.id === cloudId);
-            if (!instance) continue;
-
-            const viewState = this.view.getViewState(cloudId);
-            if (viewState && mode === 'foreground') {
-                if (markerGroup.parentNode !== this.counterZoomGroup) {
-                    this.counterZoomGroup.appendChild(markerGroup);
-                }
-
-                let markerX = viewState.currentX;
-                let markerY = viewState.currentY;
-
-                if (viewState.supportingAnimation) {
-                    markerX = viewState.supportingAnimation.endX;
-                    markerY = viewState.supportingAnimation.endY;
-                }
-
-                markerGroup.setAttribute('transform', `translate(${markerX}, ${markerY - 30})`);
-                markerGroup.style.display = '';
-            } else {
-                markerGroup.style.display = 'none';
-            }
-        }
-
-        for (const [cloudId, element] of this.markerElements) {
-            if (!markers.has(cloudId)) {
-                element.remove();
-                this.markerElements.delete(cloudId);
-            }
-        }
-
-        this.updateActionPage();
-    }
-
-    private updateActionPage(): void {
-        if (!this.actionContainer) return;
-
-        const markerCount = this.model.getMarkedClouds().size;
-
-        const pages = this.actionContainer.querySelectorAll('.action-page');
-        pages.forEach(page => {
-            (page as HTMLElement).style.display = 'none';
-        });
-
-        const currentPage = this.actionContainer.querySelector(`.action-page-${markerCount}`);
-        if (currentPage) {
-            (currentPage as HTMLElement).style.display = 'block';
-        }
-
-        if (markerCount === 1) {
-            const markers = this.model.getMarkedClouds();
-            const markedCloudId = Array.from(markers.keys())[0];
-            const isTarget = this.model.isTarget(markedCloudId);
-            const isBlended = this.model.isBlended(markedCloudId);
-            const isSupporting = this.model.getAllSupportingParts().has(markedCloudId);
-
-            const label = this.actionContainer.querySelector('.action-page-1 .action-label');
-            if (label) {
-                if (isBlended) {
-                    label.textContent = 'Ask the blended part:';
-                } else if (isTarget) {
-                    label.textContent = 'Ask the part:';
-                } else {
-                    label.textContent = 'Supporting part:';
-                }
-            }
-
-            const buttons = this.actionContainer.querySelectorAll('.action-btn');
-            buttons.forEach(btn => {
-                btn.classList.remove('selected');
-                const actionId = (btn as HTMLElement).dataset.actionId;
-                if (actionId === 'join_conference') {
-                    (btn as HTMLElement).style.display = (isSupporting && !isBlended) ? '' : 'none';
-                } else if (actionId === 'separate') {
-                    (btn as HTMLElement).style.display = isBlended ? '' : 'none';
-                } else if (actionId === 'step_back') {
-                    (btn as HTMLElement).style.display = (isTarget || isSupporting || isBlended) ? '' : 'none';
-                } else if (actionId === 'job') {
-                    (btn as HTMLElement).style.display = (isTarget || isBlended) ? '' : 'none';
-                } else {
-                    (btn as HTMLElement).style.display = isTarget ? '' : 'none';
-                }
-            });
+    private hidePieMenu(): void {
+        if (this.pieMenu && this.pieMenuOpen) {
+            this.pieMenu.hide();
         }
     }
 
-    private createMarkerElement(markerNum: 1 | 2): SVGGElement {
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.setAttribute('class', 'part-marker');
-        group.style.pointerEvents = 'none';
+    private checkHighAttentionParts(): void {
+        const sorted = [...this.instances].sort(
+            (a, b) => this.model.getNeedAttention(b.cloud.id) - this.model.getNeedAttention(a.cloud.id)
+        );
 
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', '0');
-        circle.setAttribute('cy', '0');
-        circle.setAttribute('r', '12');
-        circle.setAttribute('fill', markerNum === 1 ? '#3498db' : '#e74c3c');
-        circle.setAttribute('stroke', '#fff');
-        circle.setAttribute('stroke-width', '2');
-        group.appendChild(circle);
+        for (const instance of sorted) {
+            const cloud = instance.cloud;
+            if (this.model.getNeedAttention(cloud.id) <= 1) break;
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', '0');
-        text.setAttribute('y', '5');
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-size', '14');
-        text.setAttribute('font-weight', 'bold');
-        text.setAttribute('fill', '#fff');
-        text.textContent = `${markerNum}`;
-        group.appendChild(text);
+            const protectors = this.relationships.getProtectedBy(cloud.id);
+            if (protectors.size > 0) continue;
 
-        return group;
-    }
+            const grievances = this.relationships.getGrievances(cloud.id);
+            if (grievances.size > 0) {
+                const grievanceIds = Array.from(grievances.keys());
+                const targetGrievanceId = grievanceIds[Math.floor(Math.random() * grievanceIds.length)];
+                this.model.setTargetCloud(targetGrievanceId);
+            }
 
-    private hideAllMarkers(): void {
-        for (const element of this.markerElements.values()) {
-            element.style.display = 'none';
+            this.model.addBlendedPart(cloud.id);
+            this.view.setMode('foreground');
+            this.updateUIForMode();
+            this.updateModeToggle();
+            this.syncViewWithModel();
+            break;
         }
     }
 
@@ -1450,7 +1478,7 @@ export class CloudManager {
             this.syncViewWithModel();
         }
 
-        if (this.view.isSeatCountAnimating()) {
+        if (this.view.isSeatCountAnimating() || this.view.isConferenceRotating()) {
             this.view.updateForegroundPositions(this.model, this.instances);
         }
 
@@ -1465,6 +1493,12 @@ export class CloudManager {
         if (mode === 'foreground') {
             this.updateThoughtBubble(deltaTime);
             this.view.animateStretchPositions(deltaTime);
+            const { completedUnblendings } = this.view.animateBlendingDegrees(this.instances);
+            for (const cloudId of completedUnblendings) {
+                if (this.model.isBlended(cloudId)) {
+                    this.finishUnblending(cloudId);
+                }
+            }
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
             const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
             if (this.carpetRenderer && !transitioningToForeground) {
@@ -1473,9 +1507,11 @@ export class CloudManager {
                 this.carpetRenderer.render();
                 this.carpetRenderer.renderDebugWaveField();
             }
-            if (!isTransitioning) {
-                this.updateMarkerElements();
+            if (!isTransitioning && !this.pieMenuOpen) {
+                this.checkAndSendGrievanceMessages();
+                this.checkBlendedPartsAttention();
             }
+            this.updateMessages(deltaTime);
         } else {
             this.carpetRenderer?.clear();
         }
@@ -1493,7 +1529,8 @@ export class CloudManager {
                     const projected = this.view.projectToScreen(instance);
                     this.view.updatePanoramaPosition(instance.cloud.id, projected.x, projected.y, projected.scale);
                 }
-                instance.cloud.updateSVGElements(this.debug);
+                const state = this.model.getPartState(instance.cloud.id);
+                instance.cloud.updateSVGElements(this.debug, state, this.model.isSelected(instance.cloud.id));
             }
 
             const viewState = this.view.getViewState(instance.cloud.id);
@@ -1514,6 +1551,7 @@ export class CloudManager {
         }
 
         if (this.view.getMode() === 'panorama') {
+            this.checkHighAttentionParts();
             this.depthSort();
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
@@ -1533,5 +1571,168 @@ export class CloudManager {
 
     private applyPhysics(instance: CloudInstance, deltaTime: number): void {
         this.physicsEngine.applyPhysics(instance, this.instances, deltaTime);
+    }
+
+    private sendMessage(senderId: string, targetId: string, text: string, type: 'grievance'): void {
+        const senderViewState = this.view.getViewState(senderId);
+        const targetViewState = this.view.getViewState(targetId);
+        if (!senderViewState || !targetViewState) return;
+
+        const message: Message = {
+            id: `msg_${this.messageIdCounter++}`,
+            type,
+            senderId,
+            targetId,
+            text,
+            progress: 0,
+            duration: 3.0,
+            startX: senderViewState.currentX,
+            startY: senderViewState.currentY,
+            endX: targetViewState.currentX,
+            endY: targetViewState.currentY,
+            element: null
+        };
+
+        message.element = this.createMessageElement(message);
+        this.messages.push(message);
+    }
+
+    private createMessageElement(message: Message): SVGGElement {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'message-bubble');
+
+        const padding = 8;
+        const fontSize = 11;
+        const maxWidth = 120;
+
+        const words = message.text.split(' ');
+        const lines: string[] = [];
+        let currentLine = '';
+
+        for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            if (testLine.length * fontSize * 0.5 > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        const lineHeight = fontSize + 2;
+        const textHeight = lines.length * lineHeight;
+        const textWidth = Math.min(maxWidth, Math.max(...lines.map(l => l.length * fontSize * 0.5)));
+        const bubbleWidth = textWidth + padding * 2;
+        const bubbleHeight = textHeight + padding * 2;
+
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', String(-bubbleWidth / 2));
+        rect.setAttribute('y', String(-bubbleHeight / 2));
+        rect.setAttribute('width', String(bubbleWidth));
+        rect.setAttribute('height', String(bubbleHeight));
+        rect.setAttribute('rx', '6');
+        rect.setAttribute('fill', message.type === 'grievance' ? '#ffcccc' : '#ffffff');
+        rect.setAttribute('stroke', message.type === 'grievance' ? '#cc0000' : '#333333');
+        rect.setAttribute('stroke-width', '1.5');
+        group.appendChild(rect);
+
+        const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('font-size', String(fontSize));
+        textEl.setAttribute('font-family', 'sans-serif');
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('fill', '#333');
+
+        const startY = -textHeight / 2 + fontSize;
+        for (let i = 0; i < lines.length; i++) {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', '0');
+            tspan.setAttribute('y', String(startY + i * lineHeight));
+            tspan.textContent = lines[i];
+            textEl.appendChild(tspan);
+        }
+        group.appendChild(textEl);
+
+        group.setAttribute('transform', `translate(${message.startX}, ${message.startY})`);
+        this.counterZoomGroup?.appendChild(group);
+
+        return group;
+    }
+
+    private updateMessages(deltaTime: number): void {
+        const completed: Message[] = [];
+
+        for (const message of this.messages) {
+            message.progress += deltaTime / message.duration;
+
+            if (message.progress >= 1) {
+                completed.push(message);
+                continue;
+            }
+
+            const eased = this.easeInOutCubic(message.progress);
+            const x = message.startX + (message.endX - message.startX) * eased;
+            const y = message.startY + (message.endY - message.startY) * eased;
+
+            message.element?.setAttribute('transform', `translate(${x}, ${y})`);
+        }
+
+        for (const message of completed) {
+            this.onMessageReceived(message);
+            message.element?.remove();
+            const idx = this.messages.indexOf(message);
+            if (idx !== -1) this.messages.splice(idx, 1);
+        }
+    }
+
+    private easeInOutCubic(t: number): number {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    private onMessageReceived(message: Message): void {
+        if (message.type === 'grievance') {
+            this.model.adjustTrust(message.targetId, 0.99, 'grievance message');
+            this.model.adjustNeedAttention(message.senderId, 0.8);
+        }
+    }
+
+    private checkBlendedPartsAttention(): void {
+        const blendedParts = this.model.getBlendedParts();
+        for (const cloudId of blendedParts) {
+            if (this.resolvingClouds.has(cloudId)) continue;
+
+            if (this.model.getNeedAttention(cloudId) < 0.5) {
+                this.finishUnblending(cloudId);
+            }
+        }
+    }
+
+    private checkAndSendGrievanceMessages(): void {
+        const blendedParts = this.model.getBlendedParts();
+        const targetIds = this.model.getTargetCloudIds();
+
+        for (const blendedId of blendedParts) {
+            const blendedCloud = this.getCloudById(blendedId);
+            if (!blendedCloud) continue;
+
+            const grievances = this.relationships.getGrievances(blendedId);
+
+            for (const [grievanceTargetId] of grievances) {
+                if (!targetIds.has(grievanceTargetId)) continue;
+
+                const cooldownKey = `${blendedId}->${grievanceTargetId}`;
+                const lastSent = this.messageCooldowns.get(cooldownKey) ?? 0;
+                const now = performance.now();
+
+                if (now - lastSent < 10000) continue;
+
+                const dialogues = this.model.getDialogues(blendedId);
+                if (!dialogues.burdenedGrievance || dialogues.burdenedGrievance.length === 0) continue;
+
+                const text = dialogues.burdenedGrievance[Math.floor(Math.random() * dialogues.burdenedGrievance.length)];
+                this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
+                this.messageCooldowns.set(cooldownKey, now);
+            }
+        }
     }
 }

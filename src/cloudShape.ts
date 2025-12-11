@@ -139,39 +139,10 @@ function transformCircleKnots(circleKnots: Point[], startX: number): Point[] {
     return positions;
 }
 
-export interface PartDialogues {
-    burdenedProtector?: string[];
-    burdenedGrievance?: string[];
-    unburdenedJob?: string;
-}
+import { PartState } from './partState.js';
 
 export interface CloudOptions {
     id?: string;
-    trust?: number;
-    age?: number;
-    needAttention?: number;
-    agreedWaitDuration?: number;
-    partAge?: number | string;
-    dialogues?: PartDialogues;
-}
-
-export type SelfReaction = 'shrug' | 'gratitude' | 'compassion' | null;
-
-export interface PartBiography {
-    ageRevealed: boolean;
-    partAge: number | string | null;
-    protectsRevealed: boolean;
-    selfReaction: SelfReaction;
-    relationshipsRevealed: boolean;
-}
-
-export interface AskedQuestion {
-    questionId: string;
-    timestamp: number;
-}
-
-export interface QuestionHistory {
-    askedQuestions: AskedQuestion[];
 }
 
 export class Cloud {
@@ -225,15 +196,6 @@ export class Cloud {
     private initialized: boolean = false;
 
     id: string;
-    trust: number;
-    age: number;
-    impatience: number;
-    needAttention: number;
-    agreedWaitDuration: number;
-
-    biography: PartBiography;
-    questionHistory: QuestionHistory;
-    dialogues: PartDialogues;
 
     private groupElement: SVGGElement | null = null;
     private pathElement: SVGPathElement | null = null;
@@ -243,6 +205,7 @@ export class Cloud {
     private isBlended: boolean = false;
     private isUnblending: boolean = false;
     private externalLattice: LatticeDeformation | null = null;
+    private _animatedBlendingDegree: number = 1;
 
     private static nextId = 1;
 
@@ -269,23 +232,6 @@ export class Cloud {
         }
 
         this.id = options?.id ?? `cloud_${Cloud.nextId++}`;
-        this.trust = options?.trust ?? 0.5;
-        this.age = options?.age ?? Date.now();
-        this.impatience = 0;
-        this.needAttention = options?.needAttention ?? 0.1;
-        this.agreedWaitDuration = options?.agreedWaitDuration ?? 10;
-
-        this.biography = {
-            ageRevealed: false,
-            partAge: options?.partAge ?? null,
-            protectsRevealed: false,
-            selfReaction: null,
-            relationshipsRevealed: false,
-        };
-        this.questionHistory = {
-            askedQuestions: [],
-        };
-        this.dialogues = options?.dialogues ?? {};
 
         const baseRadius = this.minHeight / 2;
         this.leftHarmonics = new NormalizedHarmonics([
@@ -328,22 +274,12 @@ export class Cloud {
     }
 
     animate(deltaTime: number): void {
-        this.updateImpatience(deltaTime);
         this.updateRotation(deltaTime);
         this.updateTopKnotPhysics(deltaTime);
         this.updateBottomKnotPhysics(deltaTime);
         this.updateFluffinessPhysics(deltaTime);
         this.updateRotationSpeeds(deltaTime);
         this.animateLattice(deltaTime);
-    }
-
-    private updateImpatience(deltaTime: number): void {
-        const currentTime = Date.now();
-        const elapsedSeconds = (currentTime - this.age) / 1000;
-
-        if (elapsedSeconds > this.agreedWaitDuration) {
-            this.impatience += this.needAttention * deltaTime;
-        }
     }
 
     private updateTopKnotPhysics(deltaTime: number): void {
@@ -839,6 +775,14 @@ export class Cloud {
         return this.isBlended;
     }
 
+    get animatedBlendingDegree(): number {
+        return this._animatedBlendingDegree;
+    }
+
+    set animatedBlendingDegree(value: number) {
+        this._animatedBlendingDegree = Math.max(0, Math.min(1, value));
+    }
+
     setBlendedStretch(stretchX: number, stretchY: number, anchorSide: AnchorSide): void {
         if (!this.latticeDeformation) {
             const latticeWidth = this.textWidth + this.minHeight + 10;
@@ -933,8 +877,6 @@ export class Cloud {
     }
 
     startUnblending(targetX: number, targetY: number): void {
-        if (!this.isBlended) return;
-
         this.isUnblending = true;
         if (!this.latticeDeformation) {
             this.latticeDeformation = new LatticeDeformation(
@@ -1041,30 +983,29 @@ export class Cloud {
         return { minX, maxX, minY, maxY };
     }
 
-    getFillColor(): string {
-        const grayValue = Math.floor(this.trust * 255);
+    getFillColor(trust: number): string {
+        const grayValue = Math.floor(trust * 255);
         return `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
     }
 
-    getTextColor(): string {
-        return this.trust < 0.5 ? 'white' : 'black';
+    getTextColor(trust: number): string {
+        return trust < 0.5 ? 'white' : 'black';
     }
 
-    getTextWeight(): string {
-        return this.trust < 0.5 ? 'bold' : 'normal';
+    getTextWeight(trust: number): string {
+        return trust < 0.5 ? 'bold' : 'normal';
     }
 
-    renderText(textElement: SVGTextElement): void {
-        // In external coords, x=0 is center of text, y=0 is top
-        const textX = 0;  // Center of text
+    renderText(textElement: SVGTextElement, identityRevealed: boolean): void {
+        const textX = 0;
         const lines = this.text.split('\\n');
         const lineHeight = this.textAscent + this.textDescent;
         const totalTextHeight = lines.length * lineHeight;
-        // Center text vertically within cloud (cloud goes from y=0 at top to y=minHeight at bottom)
         const centerY = this.minHeight / 2;
         const firstBaselineY = centerY - totalTextHeight / 2 + this.textAscent;
 
         textElement.setAttribute('x', String(textX));
+        textElement.setAttribute('opacity', identityRevealed ? '1' : '0');
         textElement.innerHTML = '';
         for (let j = 0; j < lines.length; j++) {
             const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
@@ -1075,7 +1016,7 @@ export class Cloud {
         }
     }
 
-    updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean): void {
+    updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean, trust: number): void {
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#1a1a1a' : '#ffffff';
         const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
@@ -1088,7 +1029,7 @@ export class Cloud {
             textElement.style.stroke = '';
             textElement.style.strokeWidth = '';
         } else {
-            pathElement.style.fill = this.getFillColor();
+            pathElement.style.fill = this.getFillColor(trust);
             pathElement.style.stroke = '#000000';
             pathElement.style.strokeOpacity = '1';
             pathElement.style.strokeLinejoin = 'round';
@@ -1096,12 +1037,17 @@ export class Cloud {
             textElement.style.strokeWidth = '3';
             textElement.style.strokeLinejoin = 'round';
             textElement.style.fill = textColor;
-            textElement.style.fontWeight = this.getTextWeight();
+            textElement.style.fontWeight = this.getTextWeight(trust);
             textElement.style.paintOrder = 'stroke fill';
         }
     }
 
-    createSVGElements(onSelect: () => void): SVGGElement {
+    createSVGElements(callbacks: {
+        onClick: () => void;
+        onHover: (hovered: boolean) => void;
+        onLongPressStart: () => void;
+        onLongPressEnd: () => void;
+    }): SVGGElement {
         this.groupElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.groupElement.setAttribute('transform', `translate(${this.x}, ${this.y})`);
         this.groupElement.style.cursor = 'pointer';
@@ -1122,8 +1068,18 @@ export class Cloud {
         this.groupElement.addEventListener('click', (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
-            onSelect();
+            callbacks.onClick();
         }, true);
+
+        this.groupElement.addEventListener('mouseenter', () => callbacks.onHover(true));
+        this.groupElement.addEventListener('mouseleave', () => callbacks.onHover(false));
+
+        this.groupElement.addEventListener('touchstart', (e: TouchEvent) => {
+            callbacks.onLongPressStart();
+        }, { passive: true });
+
+        this.groupElement.addEventListener('touchend', () => callbacks.onLongPressEnd());
+        this.groupElement.addEventListener('touchcancel', () => callbacks.onLongPressEnd());
 
         return this.groupElement;
     }
@@ -1132,13 +1088,22 @@ export class Cloud {
         return this.groupElement;
     }
 
-    updateSVGElements(debug: boolean): void {
+    updateSVGElements(debug: boolean, state?: PartState, selected?: boolean): void {
         if (!this.groupElement || !this.pathElement || !this.textElement) return;
+
+        const trust = state?.trust ?? 0.5;
+        const identityRevealed = state?.biography.identityRevealed ?? false;
 
         const outlinePath = this.generateOutlinePath();
         this.pathElement.setAttribute('d', outlinePath);
-        this.updateStyles(this.pathElement, this.textElement, debug);
-        this.renderText(this.textElement);
+        this.updateStyles(this.pathElement, this.textElement, debug, trust);
+        this.renderText(this.textElement, identityRevealed);
+
+        if (selected) {
+            this.pathElement.classList.add('cloud-selected');
+        } else {
+            this.pathElement.classList.remove('cloud-selected');
+        }
 
         if (debug) {
             while (this.groupElement.childNodes.length > 2) {
@@ -1148,60 +1113,4 @@ export class Cloud {
         }
     }
 
-    recordQuestion(questionId: string): void {
-        if (!this.wasAsked(questionId)) {
-            this.questionHistory.askedQuestions.push({
-                questionId,
-                timestamp: Date.now(),
-            });
-        }
-    }
-
-    wasAsked(questionId: string): boolean {
-        return this.questionHistory.askedQuestions.some(q => q.questionId === questionId);
-    }
-
-    revealAge(): void {
-        this.biography.ageRevealed = true;
-    }
-
-    revealProtects(): void {
-        this.biography.protectsRevealed = true;
-    }
-
-    computeSelfReaction(hasProtections: boolean): SelfReaction {
-        const ageRevealed = this.biography.ageRevealed;
-        const protectsRevealed = this.biography.protectsRevealed;
-
-        if (!ageRevealed && !protectsRevealed) {
-            return 'shrug';
-        }
-
-        if (ageRevealed && protectsRevealed && hasProtections) {
-            const isYoung = typeof this.biography.partAge === 'number' && this.biography.partAge <= 10;
-            return isYoung ? 'compassion' : Math.random() < 0.5 ? 'gratitude' : 'compassion';
-        }
-
-        if (ageRevealed) {
-            const isYoung = typeof this.biography.partAge === 'number' && this.biography.partAge <= 10;
-            return isYoung ? 'compassion' : 'shrug';
-        }
-
-        return 'shrug';
-    }
-
-    setSelfReaction(reaction: SelfReaction): void {
-        this.biography.selfReaction = reaction;
-    }
-
-    revealRelationships(): void {
-        this.biography.relationshipsRevealed = true;
-    }
-
-    getDisplayAge(): string | null {
-        if (!this.biography.ageRevealed) return null;
-        if (this.biography.partAge === null) return null;
-        if (typeof this.biography.partAge === 'string') return this.biography.partAge;
-        return `${this.biography.partAge} years old`;
-    }
 }

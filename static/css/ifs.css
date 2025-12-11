@@ -370,3 +370,56 @@
 .dark .trace-content {
   color: #d0d0d0;
 }
+
+.pie-menu {
+  pointer-events: all;
+}
+
+.pie-menu-item-bg {
+  transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+}
+
+.pie-menu-label {
+  pointer-events: none;
+}
+
+.pie-menu-center {
+  cursor: pointer;
+  transition: fill 0.15s ease;
+}
+
+.pie-menu-center:hover {
+  fill: rgba(123, 104, 238, 0.2);
+}
+
+.dark .pie-menu-center {
+  fill: rgba(45, 45, 60, 0.95);
+  stroke: #9b7eff;
+}
+
+.dark .pie-menu-center:hover {
+  fill: rgba(155, 126, 255, 0.3);
+}
+
+.pie-menu-tooltip {
+  pointer-events: none;
+}
+
+.pie-menu-tooltip-bg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes stroke-blink {
+  0%, 100% {
+    stroke: #000000;
+  }
+  50% {
+    stroke: #888888;
+  }
+}
+
+.cloud-selected {
+  stroke-width: 3 !important;
+  animation: stroke-blink 2s ease-in-out infinite;
+}

@@ -65,6 +65,7 @@ export class SimulatorView {
     private stretchPositionState: Map<string, { targetX: number; targetY: number; currentX: number; currentY: number }> = new Map();
 
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
+    private conferenceRotationSpeed: number = 0.05; // radians per second
     private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
     private previousSeatCount: number = 0;
     private currentSeatCount: number = 0;
@@ -72,6 +73,13 @@ export class SimulatorView {
 
     private committedBlendingDegrees: Map<string, number> = new Map();
     private readonly DEGREE_STEP_THRESHOLD = 0.06; // trigger overshoot every ~6% unblending
+
+    private blendingAnimations: Map<string, {
+        startDegree: number;
+        targetDegree: number;
+        startTime: number;
+        duration: number;
+    }> = new Map();
 
     // Unified stretch animation state (handles both user-triggered overshoot and idle grip loss)
     private stretchAnim: Map<string, {
@@ -286,6 +294,7 @@ export class SimulatorView {
         const cloudsWithAnimations = new Set<string>();
         if (oldModel && this.mode === 'foreground') {
             this.detectAndAnimateSupportingParts(oldModel, newModel, instances);
+            this.detectBlendingDegreeChanges(oldModel, newModel, instances);
             for (const [cloudId, viewState] of this.viewStates) {
                 if (viewState.supportingAnimation) {
                     cloudsWithAnimations.add(cloudId);
@@ -301,6 +310,62 @@ export class SimulatorView {
         if (this.transitionDirection !== 'reverse' || this.transitionProgress >= 1) {
             this.previousTargetIds = new Set(currentTargetIds);
         }
+    }
+
+    private detectBlendingDegreeChanges(oldModel: SimulatorModel, newModel: SimulatorModel, instances: CloudInstance[]): void {
+        const oldDegrees = oldModel.getBlendedPartsWithDegrees();
+        const newDegrees = newModel.getBlendedPartsWithDegrees();
+
+        for (const [cloudId, newDegree] of newDegrees) {
+            const oldDegree = oldDegrees.get(cloudId);
+            if (oldDegree !== undefined && oldDegree !== newDegree) {
+                const instance = instances.find(i => i.cloud.id === cloudId);
+                if (instance) {
+                    this.startBlendingAnimation(cloudId, instance.cloud.animatedBlendingDegree, newDegree);
+                }
+            }
+        }
+    }
+
+    private startBlendingAnimation(cloudId: string, startDegree: number, targetDegree: number): void {
+        this.blendingAnimations.set(cloudId, {
+            startDegree,
+            targetDegree,
+            startTime: performance.now(),
+            duration: 500
+        });
+    }
+
+    animateBlendingDegrees(instances: CloudInstance[]): { completedUnblendings: string[] } {
+        const now = performance.now();
+        const completedUnblendings: string[] = [];
+
+        for (const [cloudId, anim] of this.blendingAnimations) {
+            const instance = instances.find(i => i.cloud.id === cloudId);
+            if (!instance) continue;
+
+            const elapsed = now - anim.startTime;
+            const progress = Math.min(1, elapsed / anim.duration);
+            const eased = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+            const newDegree = anim.startDegree + (anim.targetDegree - anim.startDegree) * eased;
+            instance.cloud.animatedBlendingDegree = newDegree;
+
+            if (progress >= 1) {
+                this.blendingAnimations.delete(cloudId);
+                if (anim.targetDegree <= 0) {
+                    completedUnblendings.push(cloudId);
+                }
+            }
+        }
+
+        return { completedUnblendings };
+    }
+
+    isBlendingAnimating(cloudId: string): boolean {
+        return this.blendingAnimations.has(cloudId);
     }
 
     private updateBlendedCloudStates(model: SimulatorModel, instances: CloudInstance[]): void {
@@ -320,7 +385,7 @@ export class SimulatorView {
             // Skip clouds that are in the resolution animation
             if (resolvingClouds.has(cloud.id)) continue;
 
-            const stretchInfo = this.getBlendedLatticeStretch(cloud.id, model);
+            const stretchInfo = this.getBlendedLatticeStretch(cloud, model);
 
             if (stretchInfo) {
                 cloud.setBlendedStretch(stretchInfo.stretchX, stretchInfo.stretchY, stretchInfo.anchorSide);
@@ -918,6 +983,10 @@ export class SimulatorView {
             }
         }
 
+        if (this.mode === 'foreground') {
+            this.conferencePhaseShift += this.conferenceRotationSpeed * deltaTime;
+        }
+
         this.animateSeatCount(deltaTime);
 
         for (const viewState of this.viewStates.values()) {
@@ -956,6 +1025,14 @@ export class SimulatorView {
         return this.targetSeatCount > 0 && Math.abs(this.currentSeatCount - this.targetSeatCount) > 0.01;
     }
 
+    isConferenceRotating(): boolean {
+        return this.mode === 'foreground' && this.conferenceRotationSpeed !== 0;
+    }
+
+    setConferenceRotationPaused(paused: boolean): void {
+        this.conferenceRotationSpeed = paused ? 0 : 0.05;
+    }
+
     updateForegroundPositions(model: SimulatorModel, instances: CloudInstance[]): void {
         if (this.mode !== 'foreground') return;
 
@@ -973,6 +1050,11 @@ export class SimulatorView {
         }
 
         this.cachedStarPosition = this.getSeatPosition(0, this.targetSeatCount);
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        this.starTargetX = this.cachedStarPosition.x - centerX;
+        this.starTargetY = this.cachedStarPosition.y - centerY;
     }
 
     private animateStar(deltaTime: number): void {
@@ -1027,10 +1109,10 @@ export class SimulatorView {
         return this.stretchPositionState.get(cloudId);
     }
 
-    getBlendedStretchTarget(cloudId: string, model: SimulatorModel): { x: number; y: number } | null {
+    getBlendedStretchTarget(cloud: Cloud, model: SimulatorModel): { x: number; y: number } | null {
+        const cloudId = cloud.id;
         if (!model.isBlended(cloudId)) return null;
-        const degree = model.getBlendingDegree(cloudId);
-        if (degree >= 1) return null;
+        if (cloud.animatedBlendingDegree >= 1) return null;
 
         const seatIndex = this.conferenceSeatAssignments.get(cloudId);
         if (seatIndex === undefined) return null;
@@ -1041,10 +1123,11 @@ export class SimulatorView {
         return this.getSeatPosition(seatIndex, totalSeats);
     }
 
-    getBlendedLatticeStretch(cloudId: string, model: SimulatorModel): { stretchX: number; stretchY: number; anchorSide: 'left' | 'right' | 'top' | 'bottom'; anchorOffsetX: number; anchorOffsetY: number } | null {
+    getBlendedLatticeStretch(cloud: Cloud, model: SimulatorModel): { stretchX: number; stretchY: number; anchorSide: 'left' | 'right' | 'top' | 'bottom'; anchorOffsetX: number; anchorOffsetY: number } | null {
+        const cloudId = cloud.id;
         if (!model.isBlended(cloudId)) return null;
 
-        const degree = model.getBlendingDegree(cloudId);
+        const degree = cloud.animatedBlendingDegree;
         if (degree >= 1) return null;
 
         const seatIndex = this.conferenceSeatAssignments.get(cloudId);

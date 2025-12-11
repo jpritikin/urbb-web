@@ -1,3 +1,5 @@
+import { PartState, PartBiography, PartDialogues, createPartState } from './partState.js';
+
 export interface StateAction {
     type: string;
     cloudId?: string;
@@ -14,9 +16,9 @@ export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
     private blendedParts: Map<string, number> = new Map(); // cloudId -> blending degree (0-1)
-    private markers: Map<string, 1 | 2> = new Map();
-    private lastAssignedMarker: 1 | 2 | null = null;
+    private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
+    private partStates: Map<string, PartState> = new Map();
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -135,50 +137,29 @@ export class SimulatorModel {
         this.record({ type: 'clearBlendedParts' });
     }
 
-    assignMarker(cloudId: string): 1 | 2 | null {
-        const existingMarker = this.markers.get(cloudId);
-        if (existingMarker) {
-            this.markers.delete(cloudId);
-            this.record({ type: 'clearMarker', cloudId });
-            return null;
+    selectCloud(cloudId: string | null): void {
+        if (this.selectedCloudId === cloudId) {
+            return;
         }
+        const oldId = this.selectedCloudId;
+        this.selectedCloudId = cloudId;
+        this.record({ type: 'selectCloud', cloudId: cloudId ?? undefined, data: { previousId: oldId } });
+    }
 
-        let nextMarker: 1 | 2;
-        if (this.markers.size === 0) {
-            nextMarker = 1;
-        } else {
-            nextMarker = this.lastAssignedMarker === 1 ? 2 : 1;
+    deselectCloud(): void {
+        if (this.selectedCloudId !== null) {
+            const oldId = this.selectedCloudId;
+            this.selectedCloudId = null;
+            this.record({ type: 'deselectCloud', data: { previousId: oldId } });
         }
-
-        for (const [id, marker] of this.markers) {
-            if (marker === nextMarker) {
-                this.markers.delete(id);
-                break;
-            }
-        }
-
-        this.markers.set(cloudId, nextMarker);
-        this.lastAssignedMarker = nextMarker;
-        this.record({ type: 'assignMarker', cloudId, data: { marker: nextMarker } });
-        return nextMarker;
     }
 
-    getMarker(cloudId: string): 1 | 2 | null {
-        return this.markers.get(cloudId) ?? null;
+    getSelectedCloudId(): string | null {
+        return this.selectedCloudId;
     }
 
-    clearMarker(cloudId: string): void {
-        this.markers.delete(cloudId);
-        this.record({ type: 'clearMarker', cloudId });
-    }
-
-    clearAllMarkers(): void {
-        this.markers.clear();
-        this.record({ type: 'clearAllMarkers' });
-    }
-
-    getMarkedClouds(): Map<string, 1 | 2> {
-        return new Map(this.markers);
+    isSelected(cloudId: string): boolean {
+        return this.selectedCloudId === cloudId;
     }
 
     stepBackPart(cloudId: string): void {
@@ -198,13 +179,131 @@ export class SimulatorModel {
         }
 
         this.blendedParts.delete(cloudId);
-        this.markers.delete(cloudId);
+        if (this.selectedCloudId === cloudId) {
+            this.selectedCloudId = null;
+        }
 
         this.record({ type: 'stepBack', cloudId, data: { wasTarget, wasBlended } });
     }
 
     private record(action: StateAction): void {
         this.history.push({ timestamp: Date.now(), action });
+    }
+
+    // PartState management
+
+    registerPart(id: string, name: string, options?: {
+        trust?: number;
+        needAttention?: number;
+        agreedWaitUntil?: number;
+        partAge?: number | string;
+        dialogues?: PartDialogues;
+    }): PartState {
+        const state = createPartState(id, name, options);
+        this.partStates.set(id, state);
+        return state;
+    }
+
+    getPartState(cloudId: string): PartState | undefined {
+        return this.partStates.get(cloudId);
+    }
+
+    getAllPartStates(): Map<string, PartState> {
+        return new Map(this.partStates);
+    }
+
+    getTrust(cloudId: string): number {
+        return this.partStates.get(cloudId)?.trust ?? 0.5;
+    }
+
+    setTrust(cloudId: string, trust: number, reason?: string): void {
+        const state = this.partStates.get(cloudId);
+        if (!state) return;
+        const oldTrust = state.trust;
+        state.trust = Math.max(0, Math.min(1, trust));
+        this.record({ type: 'setTrust', cloudId, data: { oldTrust, newTrust: state.trust, reason } });
+    }
+
+    adjustTrust(cloudId: string, multiplier: number, reason?: string): void {
+        const state = this.partStates.get(cloudId);
+        if (!state) return;
+        const oldTrust = state.trust;
+        state.trust = Math.max(0, Math.min(1, state.trust * multiplier));
+        this.record({ type: 'adjustTrust', cloudId, data: { oldTrust, newTrust: state.trust, multiplier, reason } });
+    }
+
+    getNeedAttention(cloudId: string): number {
+        return this.partStates.get(cloudId)?.needAttention ?? 0.1;
+    }
+
+    setNeedAttention(cloudId: string, needAttention: number): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.needAttention = needAttention;
+        }
+    }
+
+    adjustNeedAttention(cloudId: string, multiplier: number): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.needAttention *= multiplier;
+        }
+    }
+
+    getDialogues(cloudId: string): PartDialogues {
+        return this.partStates.get(cloudId)?.dialogues ?? {};
+    }
+
+    getBiography(cloudId: string): PartBiography | undefined {
+        return this.partStates.get(cloudId)?.biography;
+    }
+
+    revealIdentity(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.identityRevealed) {
+            state.biography.identityRevealed = true;
+            this.record({ type: 'revealIdentity', cloudId });
+        }
+    }
+
+    isIdentityRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.identityRevealed ?? false;
+    }
+
+    revealAge(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.ageRevealed) {
+            state.biography.ageRevealed = true;
+            this.record({ type: 'revealAge', cloudId });
+        }
+    }
+
+    revealRelationships(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.relationshipsRevealed) {
+            state.biography.relationshipsRevealed = true;
+            this.record({ type: 'revealRelationships', cloudId });
+        }
+    }
+
+    revealProtects(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.protectsRevealed) {
+            state.biography.protectsRevealed = true;
+            this.record({ type: 'revealProtects', cloudId });
+        }
+    }
+
+    getDisplayAge(cloudId: string): string | null {
+        const state = this.partStates.get(cloudId);
+        if (!state || !state.biography.ageRevealed) return null;
+        if (state.biography.partAge === null) return null;
+        if (typeof state.biography.partAge === 'string') return state.biography.partAge;
+        return `${state.biography.partAge} years old`;
+    }
+
+    getPartName(cloudId: string): string {
+        return this.partStates.get(cloudId)?.name ?? cloudId;
     }
 
     recordQuestion(cloudId: string, question: string): void {
@@ -241,12 +340,10 @@ export class SimulatorModel {
                 return `Remove from conference: ${getName(cloudId!)}`;
             case 'clearTargets':
                 return 'Clear all targets';
-            case 'assignMarker':
-                return `Select ${getName(cloudId!)} (marker ${data?.marker})`;
-            case 'clearMarker':
-                return `Deselect: ${getName(cloudId!)}`;
-            case 'clearAllMarkers':
-                return 'Clear all markers';
+            case 'selectCloud':
+                return cloudId ? `Select: ${getName(cloudId)}` : 'Clear selection';
+            case 'deselectCloud':
+                return `Deselect: ${data?.previousId ? getName(data.previousId as string) : 'cloud'}`;
             case 'addBlended':
                 return `Blend: ${getName(cloudId!)} (${((data?.degree as number) * 100).toFixed(0)}%)`;
             case 'removeBlended':
@@ -266,6 +363,18 @@ export class SimulatorModel {
                 return `Ask "${data?.question}": ${getName(cloudId!)}`;
             case 'promoteToTarget':
                 return `Separated and joined: ${getName(cloudId!)}`;
+            case 'revealIdentity':
+                return `Revealed identity: ${getName(cloudId!)}`;
+            case 'revealAge':
+                return `Revealed age: ${getName(cloudId!)}`;
+            case 'revealRelationships':
+                return `Revealed relationships: ${getName(cloudId!)}`;
+            case 'revealProtects':
+                return `Revealed protects: ${getName(cloudId!)}`;
+            case 'setTrust':
+                return `Set trust: ${getName(cloudId!)} ${((data?.oldTrust as number) * 100).toFixed(0)}% → ${((data?.newTrust as number) * 100).toFixed(0)}%${data?.reason ? ` (${data.reason})` : ''}`;
+            case 'adjustTrust':
+                return `Adjust trust: ${getName(cloudId!)} ×${data?.multiplier} (${((data?.oldTrust as number) * 100).toFixed(0)}% → ${((data?.newTrust as number) * 100).toFixed(0)}%)${data?.reason ? ` (${data.reason})` : ''}`;
             default:
                 return type;
         }
@@ -279,8 +388,16 @@ export class SimulatorModel {
             cloned.supportingParts.set(k, new Set(v));
         }
         cloned.blendedParts = new Map(this.blendedParts);
-        cloned.markers = new Map(this.markers);
-        cloned.lastAssignedMarker = this.lastAssignedMarker;
+        cloned.selectedCloudId = this.selectedCloudId;
+        for (const [id, state] of this.partStates) {
+            cloned.partStates.set(id, {
+                ...state,
+                biography: { ...state.biography },
+                dialogues: { ...state.dialogues },
+            });
+        }
         return cloned;
     }
 }
+
+export { PartState, PartBiography, PartDialogues } from './partState.js';

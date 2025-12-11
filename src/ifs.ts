@@ -12,19 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const innerCritic = cloudManager.addCloud('Inner Critic', {
         trust: 0.3,
-        needAttention: 0.15,
-        agreedWaitDuration: 20,
+        needAttention: 1,
         partAge: 8,
         dialogues: {
             burdenedProtector: [
-                "You always make mistakes.",
-                "Don't do anything risky.",
-                "Be careful or you'll embarrass yourself.",
+                "This is why people don't respect us.",
+                "You're the reason we feel this way.",
             ],
             burdenedGrievance: [
                 "You got us criticized.",
-                "This is why people don't respect us.",
-                "You're the reason we feel this way.",
+                "You always make mistakes.",
+                "Don't do anything risky.",
+                "Be careful or you'll embarrass yourself.",
             ],
             unburdenedJob: "I help you foresee risks.",
         },
