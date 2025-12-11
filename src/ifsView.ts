@@ -67,6 +67,8 @@ export class SimulatorView {
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
     private previousSeatCount: number = 0;
+    private currentSeatCount: number = 0;
+    private targetSeatCount: number = 0;
 
     private committedBlendingDegrees: Map<string, number> = new Map();
     private readonly DEGREE_STEP_THRESHOLD = 0.06; // trigger overshoot every ~6% unblending
@@ -175,7 +177,8 @@ export class SimulatorView {
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         const radius = this.getConferenceTableRadius();
-        const angleStep = (2 * Math.PI) / totalSeats;
+        const animatedSeats = this.currentSeatCount > 0 ? this.currentSeatCount : totalSeats;
+        const angleStep = (2 * Math.PI) / animatedSeats;
         const angle = this.conferencePhaseShift + angleStep * seatIndex;
         return {
             x: centerX + radius * Math.cos(angle),
@@ -244,8 +247,12 @@ export class SimulatorView {
         }
 
         this.previousSeatCount = totalSeats;
+        this.targetSeatCount = totalSeats;
+        if (this.currentSeatCount === 0) {
+            this.currentSeatCount = totalSeats;
+        }
 
-        // Update cached star position
+        // Update cached star position using current animated seat count
         this.cachedStarPosition = this.getSeatPosition(0, totalSeats);
     }
 
@@ -911,6 +918,8 @@ export class SimulatorView {
             }
         }
 
+        this.animateSeatCount(deltaTime);
+
         for (const viewState of this.viewStates.values()) {
             if (viewState.supportingAnimation) {
                 const anim = viewState.supportingAnimation;
@@ -929,6 +938,41 @@ export class SimulatorView {
         }
 
         this.animateStar(deltaTime);
+    }
+
+    private animateSeatCount(deltaTime: number): void {
+        if (this.targetSeatCount === 0 || this.currentSeatCount === this.targetSeatCount) return;
+
+        const smoothing = 0.5;
+        const factor = 1 - Math.exp(-smoothing * deltaTime);
+        this.currentSeatCount += (this.targetSeatCount - this.currentSeatCount) * factor;
+
+        if (Math.abs(this.currentSeatCount - this.targetSeatCount) < 0.01) {
+            this.currentSeatCount = this.targetSeatCount;
+        }
+    }
+
+    isSeatCountAnimating(): boolean {
+        return this.targetSeatCount > 0 && Math.abs(this.currentSeatCount - this.targetSeatCount) > 0.01;
+    }
+
+    updateForegroundPositions(model: SimulatorModel, instances: CloudInstance[]): void {
+        if (this.mode !== 'foreground') return;
+
+        const foregroundPositions = this.calculateForegroundPositions(model, instances);
+
+        for (const instance of instances) {
+            const viewState = this.viewStates.get(instance.cloud.id);
+            if (!viewState) continue;
+
+            const fgPos = foregroundPositions.get(instance.cloud.id);
+            if (fgPos && !viewState.supportingAnimation) {
+                viewState.currentX = fgPos.x;
+                viewState.currentY = fgPos.y;
+            }
+        }
+
+        this.cachedStarPosition = this.getSeatPosition(0, this.targetSeatCount);
     }
 
     private animateStar(deltaTime: number): void {
@@ -1172,24 +1216,26 @@ export class SimulatorView {
         const blendedIds = model.getBlendedParts();
         const totalSeats = targetIds.length + blendedIds.length + 1;
 
-        const occupiedSeats = new Set<number>([0]);
+        const seatToCloudId = new Map<number, string>();
         for (const cloudId of targetIds) {
             const seat = this.conferenceSeatAssignments.get(cloudId);
-            if (seat !== undefined) occupiedSeats.add(seat);
+            if (seat !== undefined) seatToCloudId.set(seat, cloudId);
         }
         for (const cloudId of blendedIds) {
             const seat = this.conferenceSeatAssignments.get(cloudId);
-            if (seat !== undefined) occupiedSeats.add(seat);
+            if (seat !== undefined) seatToCloudId.set(seat, cloudId);
         }
 
         const seats: SeatInfo[] = [];
         for (let i = 0; i < totalSeats; i++) {
             const pos = this.getSeatPosition(i, totalSeats);
+            const cloudId = seatToCloudId.get(i);
             seats.push({
                 index: i,
                 x: pos.x,
                 y: pos.y,
-                occupied: occupiedSeats.has(i)
+                occupied: cloudId !== undefined,
+                cloudId
             });
         }
         return seats;

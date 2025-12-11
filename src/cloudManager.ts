@@ -1450,6 +1450,10 @@ export class CloudManager {
             this.syncViewWithModel();
         }
 
+        if (this.view.isSeatCountAnimating()) {
+            this.view.updateForegroundPositions(this.model, this.instances);
+        }
+
         const currentZoomFactor = this.view.getCurrentZoomFactor();
 
         this.updateCounterZoom(currentZoomFactor);

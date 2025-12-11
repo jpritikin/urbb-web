@@ -13,7 +13,7 @@ type EntryPhase = 'waiting' | 'to_center' | 'at_center' | 'to_seat' | 'done';
 type ExitPhase = 'to_center' | 'at_center' | 'to_exit' | 'done';
 
 interface CarpetState {
-    seatIndex: number;
+    cloudId: string;
     currentX: number;
     currentY: number;
     targetX: number;
@@ -102,10 +102,11 @@ export interface SeatInfo {
     x: number;
     y: number;
     occupied: boolean;
+    cloudId?: string;
 }
 
 export class CarpetRenderer {
-    private carpetStates: Map<number, CarpetState> = new Map();
+    private carpetStates: Map<string, CarpetState> = new Map();
     private windField: WindField;
     private canvasWidth: number;
     private canvasHeight: number;
@@ -180,10 +181,10 @@ export class CarpetRenderer {
     update(seats: SeatInfo[], deltaTime: number): void {
         this.windField.update(deltaTime);
 
-        const currentSeatIndices = new Set(seats.map(s => s.index));
+        const currentCloudIds = new Set(seats.filter(s => s.cloudId).map(s => s.cloudId!));
 
-        for (const [seatIndex, carpet] of this.carpetStates) {
-            if (!currentSeatIndices.has(seatIndex) && !carpet.exiting) {
+        for (const [cloudId, carpet] of this.carpetStates) {
+            if (!currentCloudIds.has(cloudId) && !carpet.exiting) {
                 carpet.exiting = true;
                 carpet.exitPhase = 'to_center';
                 carpet.phaseProgress = 0;
@@ -193,11 +194,12 @@ export class CarpetRenderer {
         }
 
         for (const seat of seats) {
-            if (!this.carpetStates.has(seat.index)) {
+            if (!seat.cloudId) continue;
+            if (!this.carpetStates.has(seat.cloudId)) {
                 const entryStartX = -CARPET_WIDTH;
                 const centerY = this.canvasHeight / 2;
-                this.carpetStates.set(seat.index, {
-                    seatIndex: seat.index,
+                this.carpetStates.set(seat.cloudId, {
+                    cloudId: seat.cloudId,
                     currentX: entryStartX,
                     currentY: centerY,
                     targetX: seat.x,
@@ -218,9 +220,9 @@ export class CarpetRenderer {
             }
         }
 
-        const occupiedIndices = new Set(seats.filter(s => s.occupied).map(s => s.index));
+        const occupiedCloudIds = new Set(seats.filter(s => s.occupied && s.cloudId).map(s => s.cloudId!));
 
-        for (const [seatIndex, carpet] of this.carpetStates) {
+        for (const [cloudId, carpet] of this.carpetStates) {
             const centerX = this.canvasWidth / 2;
             const centerY = this.canvasHeight / 2;
 
@@ -258,13 +260,13 @@ export class CarpetRenderer {
                     carpet.currentX = pos.x;
                     carpet.currentY = pos.y;
                     if (t >= 1) {
-                        this.carpetStates.delete(seatIndex);
+                        this.carpetStates.delete(cloudId);
                     }
                 }
                 continue;
             }
 
-            const seat = seats.find(s => s.index === seatIndex);
+            const seat = seats.find(s => s.cloudId === cloudId);
             if (carpet.entering) {
                 carpet.phaseProgress += deltaTime;
 
@@ -320,7 +322,7 @@ export class CarpetRenderer {
                 carpet.currentY += (carpet.targetY - carpet.currentY) * factor;
             }
 
-            const isNowOccupied = occupiedIndices.has(seatIndex);
+            const isNowOccupied = occupiedCloudIds.has(cloudId);
             carpet.isOccupied = isNowOccupied;
 
             const targetOffset = isNowOccupied ? this.CARPET_OCCUPIED_DROP : 0;
