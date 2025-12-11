@@ -855,6 +855,10 @@ export class CloudManager {
         }
     }
 
+    setCarpetDebug(enabled: boolean): void {
+        this.carpetRenderer?.setDebugMode(enabled);
+    }
+
     setZoom(zoomLevel: number): void {
         this.zoom = Math.max(0.1, Math.min(5, zoomLevel));
         this.updateViewBox();
@@ -1458,10 +1462,12 @@ export class CloudManager {
             this.updateThoughtBubble(deltaTime);
             this.view.animateStretchPositions(deltaTime);
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
-            if (this.carpetRenderer) {
+            const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
+            if (this.carpetRenderer && !transitioningToForeground) {
                 const seats = this.view.getSeatInfo(this.model);
                 this.carpetRenderer.update(seats, deltaTime);
                 this.carpetRenderer.render();
+                this.carpetRenderer.renderDebugWaveField();
             }
             if (!isTransitioning) {
                 this.updateMarkerElements();

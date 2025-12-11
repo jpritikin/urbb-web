@@ -9,6 +9,9 @@ interface CarpetVertex {
     velocity: number;
 }
 
+type EntryPhase = 'waiting' | 'to_center' | 'at_center' | 'to_seat' | 'done';
+type ExitPhase = 'to_center' | 'at_center' | 'to_exit' | 'done';
+
 interface CarpetState {
     seatIndex: number;
     currentX: number;
@@ -19,114 +22,78 @@ interface CarpetState {
     occupiedOffset: number;
     entering: boolean;
     exiting: boolean;
-    exitProgress: number;
-    entryProgress: number;
-    entryStartX: number;
-    entryStartY: number;
+    entryPhase: EntryPhase;
+    exitPhase: ExitPhase;
+    phaseProgress: number;
+    phaseStartX: number;
+    phaseStartY: number;
+    entryDelay: number;
     vertices: CarpetVertex[];
 }
 
-interface WindWave {
-    amplitude: number;
-    spatialFrequency: number;
-    speed: number;
-    phase: number;
-}
-
-interface WindImpulse {
-    startTime: number;
-    duration: number;
-    peakAmplitude: number;
-    position: number;
-    width: number;
-}
-
 class WindField {
-    private waves: WindWave[] = [];
-    private impulses: WindImpulse[] = [];
-    private direction: number;
     private time: number = 0;
-    private baseWindSpeed: number = 1;
-    private targetWindSpeed: number = 1;
     private canvasWidth: number;
+    private direction: number;
+    public debugEnabled: boolean = false;
+
+    private primaryFreq = 0.012;
+    private primarySpeed = 50;
+    private primaryAmplitude = 5;
+    private secondaryFreq = 0.04;
+    private secondarySpeed = 120;
+    private secondaryAmplitude = 2.5;
+
+    private targetPrimaryFreq = 0.012;
+    private targetPrimarySpeed = 50;
+    private targetPrimaryAmplitude = 5;
+    private targetSecondaryFreq = 0.04;
+    private targetSecondarySpeed = 120;
+    private targetSecondaryAmplitude = 2.5;
+
+    private nextTransitionTime: number;
 
     constructor(canvasWidth: number) {
         this.canvasWidth = canvasWidth;
         this.direction = Math.random() < 0.5 ? 1 : -1;
+        this.nextTransitionTime = 5 + Math.random() * 25;
+        this.pickNewTargets();
+    }
 
-        this.waves = [
-            { amplitude: 1.2, spatialFrequency: 0.015, speed: 80, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.8, spatialFrequency: 0.035, speed: 120, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.5, spatialFrequency: 0.008, speed: 40, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.6, spatialFrequency: 0.055, speed: 180, phase: Math.random() * Math.PI * 2 },
-        ];
-
-        for (let i = 0; i < 3; i++) {
-            this.impulses.push({
-                startTime: -Math.random() * 2,
-                duration: 0.4 + Math.random() * 0.4,
-                peakAmplitude: 0.8 + Math.random() * 1.5,
-                position: Math.random() * this.canvasWidth,
-                width: 100 + Math.random() * 200
-            });
-        }
+    private pickNewTargets(): void {
+        this.targetPrimaryFreq = 0.008 + Math.random() * 0.012;
+        this.targetPrimarySpeed = 30 + Math.random() * 40;
+        this.targetPrimaryAmplitude = 4 + Math.random() * 2;
+        this.targetSecondaryFreq = 0.025 + Math.random() * 0.04;
+        this.targetSecondarySpeed = 80 + Math.random() * 60;
+        this.targetSecondaryAmplitude = 2 + Math.random() * 1;
     }
 
     update(deltaTime: number): void {
         this.time += deltaTime;
 
-        if (Math.random() < 0.02 * deltaTime) {
-            this.targetWindSpeed = 0.3 + Math.random() * 1.4;
-        }
-        this.baseWindSpeed += (this.targetWindSpeed - this.baseWindSpeed) * deltaTime * 0.5;
-
-        if (Math.random() < 0.3 * deltaTime) {
-            this.impulses.push({
-                startTime: this.time,
-                duration: 0.3 + Math.random() * 0.5,
-                peakAmplitude: 1.2 + Math.random() * 2.5,
-                position: Math.random() * this.canvasWidth,
-                width: 100 + Math.random() * 200
-            });
+        if (this.time >= this.nextTransitionTime) {
+            this.pickNewTargets();
+            this.nextTransitionTime = this.time + 5 + Math.random() * 25;
         }
 
-        this.impulses = this.impulses.filter(imp =>
-            this.time < imp.startTime + imp.duration + 2
-        );
+        const lerpRate = 0.3 * deltaTime;
+        this.primaryFreq += (this.targetPrimaryFreq - this.primaryFreq) * lerpRate;
+        this.primarySpeed += (this.targetPrimarySpeed - this.primarySpeed) * lerpRate;
+        this.primaryAmplitude += (this.targetPrimaryAmplitude - this.primaryAmplitude) * lerpRate;
+        this.secondaryFreq += (this.targetSecondaryFreq - this.secondaryFreq) * lerpRate;
+        this.secondarySpeed += (this.targetSecondarySpeed - this.secondarySpeed) * lerpRate;
+        this.secondaryAmplitude += (this.targetSecondaryAmplitude - this.secondaryAmplitude) * lerpRate;
     }
 
     sample(x: number): number {
-        let windForce = 0;
+        const primary = Math.sin(x * this.primaryFreq - this.time * this.primarySpeed * 0.01 * this.direction) * this.primaryAmplitude;
+        const secondary = Math.sin(x * this.secondaryFreq - this.time * this.secondarySpeed * 0.01 * this.direction) * this.secondaryAmplitude;
+        return primary + secondary;
+    }
 
-        for (const wave of this.waves) {
-            const phase = (x * wave.spatialFrequency) - (this.time * wave.speed * 0.01 * this.direction) + wave.phase;
-            windForce += Math.sin(phase) * wave.amplitude;
-        }
-
-        for (const imp of this.impulses) {
-            const elapsed = this.time - imp.startTime;
-            if (elapsed < 0) continue;
-
-            const travelDistance = elapsed * 150 * this.direction;
-            const impulseCenter = imp.position + travelDistance;
-
-            const dist = Math.abs(x - impulseCenter);
-            if (dist < imp.width) {
-                const spatialFalloff = 1 - (dist / imp.width);
-                let temporalEnvelope: number;
-                if (elapsed < imp.duration * 0.3) {
-                    temporalEnvelope = elapsed / (imp.duration * 0.3);
-                } else if (elapsed < imp.duration) {
-                    temporalEnvelope = 1;
-                } else {
-                    const decay = (elapsed - imp.duration) / 2;
-                    temporalEnvelope = Math.exp(-decay * 2);
-                }
-                windForce += imp.peakAmplitude * spatialFalloff * temporalEnvelope;
-            }
-        }
-
-        return windForce * this.baseWindSpeed;
+    getCanvasWidth(): number {
+        return this.canvasWidth;
     }
 }
 
@@ -147,10 +114,17 @@ export class CarpetRenderer {
     private carpetElements: SVGGElement[] = [];
 
     private readonly CARPET_OCCUPIED_DROP = 35;
-    private readonly CARPET_FLY_DURATION = 0.8;
+    private readonly CARPET_FLY_DURATION = 1.2;
+    private readonly CARPET_CENTER_PAUSE = 0.1;
+    private readonly CARPET_ENTRY_STAGGER = 1.5;
     private readonly CARPET_DAMPING = 0.92;
     private readonly CARPET_SPRING_STRENGTH = 15;
-    private readonly CARPET_MAX_DISPLACEMENT = 12;
+    private readonly CARPET_WOBBLE_AMPLITUDE = 12;
+    private readonly CARPET_WOBBLE_FREQUENCY = 6;
+    private readonly CARPET_NOISE_AMPLITUDE = 35;
+    private readonly CARPET_NOISE_FREQUENCY = 2.5;
+
+    private entryQueue: number = 0;
 
     constructor(canvasWidth: number, canvasHeight: number, parentGroup: SVGGElement) {
         this.canvasWidth = canvasWidth;
@@ -164,6 +138,30 @@ export class CarpetRenderer {
 
     private easeInOutCubic(t: number): number {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    private noise(x: number): number {
+        // Simple pseudo-random noise using sine waves at incommensurate frequencies
+        return Math.sin(x * 1.0) * 0.5 +
+            Math.sin(x * 2.3 + 1.3) * 0.3 +
+            Math.sin(x * 4.1 + 2.7) * 0.2;
+    }
+
+    private computeFlightPosition(
+        startX: number, startY: number,
+        endX: number, endY: number,
+        t: number, phaseProgress: number
+    ): { x: number; y: number } {
+        const eased = this.easeInOutCubic(t);
+        const baseX = startX + (endX - startX) * eased;
+        const baseY = startY + (endY - startY) * eased;
+        // Perlin-like noise offset that fades at start and end
+        const noiseEnvelope = Math.sin(t * Math.PI);
+        const noiseX = this.noise(phaseProgress * this.CARPET_NOISE_FREQUENCY) * this.CARPET_NOISE_AMPLITUDE * noiseEnvelope;
+        const noiseY = this.noise(phaseProgress * this.CARPET_NOISE_FREQUENCY + 100) * this.CARPET_NOISE_AMPLITUDE * noiseEnvelope;
+        // Wobble perpendicular to travel
+        const wobble = Math.sin(phaseProgress * this.CARPET_WOBBLE_FREQUENCY) * this.CARPET_WOBBLE_AMPLITUDE * (1 - t);
+        return { x: baseX + noiseX + wobble, y: baseY + noiseY };
     }
 
     private createCarpetVertices(): CarpetVertex[] {
@@ -187,61 +185,130 @@ export class CarpetRenderer {
         for (const [seatIndex, carpet] of this.carpetStates) {
             if (!currentSeatIndices.has(seatIndex) && !carpet.exiting) {
                 carpet.exiting = true;
-                carpet.exitProgress = 0;
+                carpet.exitPhase = 'to_center';
+                carpet.phaseProgress = 0;
+                carpet.phaseStartX = carpet.currentX;
+                carpet.phaseStartY = carpet.currentY;
             }
         }
 
         for (const seat of seats) {
             if (!this.carpetStates.has(seat.index)) {
-                const entryAngle = Math.random() * Math.PI * 2;
-                const entryDistance = Math.max(this.canvasWidth, this.canvasHeight);
+                const entryStartX = -CARPET_WIDTH;
+                const centerY = this.canvasHeight / 2;
                 this.carpetStates.set(seat.index, {
                     seatIndex: seat.index,
-                    currentX: seat.x + Math.cos(entryAngle) * entryDistance,
-                    currentY: seat.y + Math.sin(entryAngle) * entryDistance,
+                    currentX: entryStartX,
+                    currentY: centerY,
                     targetX: seat.x,
                     targetY: seat.y,
                     isOccupied: false,
                     occupiedOffset: 0,
                     entering: true,
                     exiting: false,
-                    exitProgress: 0,
-                    entryProgress: 0,
-                    entryStartX: seat.x + Math.cos(entryAngle) * entryDistance,
-                    entryStartY: seat.y + Math.sin(entryAngle) * entryDistance,
+                    entryPhase: 'waiting',
+                    exitPhase: 'done',
+                    phaseProgress: 0,
+                    phaseStartX: entryStartX,
+                    phaseStartY: centerY,
+                    entryDelay: this.entryQueue * this.CARPET_ENTRY_STAGGER,
                     vertices: this.createCarpetVertices()
                 });
+                this.entryQueue++;
             }
         }
 
         const occupiedIndices = new Set(seats.filter(s => s.occupied).map(s => s.index));
 
         for (const [seatIndex, carpet] of this.carpetStates) {
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+
             if (carpet.exiting) {
-                carpet.exitProgress += deltaTime / this.CARPET_FLY_DURATION;
-                if (carpet.exitProgress >= 1) {
-                    this.carpetStates.delete(seatIndex);
-                    continue;
+                carpet.phaseProgress += deltaTime;
+
+                if (carpet.exitPhase === 'to_center') {
+                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                    const pos = this.computeFlightPosition(
+                        carpet.phaseStartX, carpet.phaseStartY,
+                        centerX, centerY,
+                        t, carpet.phaseProgress
+                    );
+                    carpet.currentX = pos.x;
+                    carpet.currentY = pos.y;
+                    if (t >= 1) {
+                        carpet.exitPhase = 'at_center';
+                        carpet.phaseProgress = 0;
+                    }
+                } else if (carpet.exitPhase === 'at_center') {
+                    if (carpet.phaseProgress >= this.CARPET_CENTER_PAUSE) {
+                        carpet.exitPhase = 'to_exit';
+                        carpet.phaseProgress = 0;
+                        carpet.phaseStartX = carpet.currentX;
+                        carpet.phaseStartY = carpet.currentY;
+                    }
+                } else if (carpet.exitPhase === 'to_exit') {
+                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                    const exitX = this.canvasWidth + CARPET_WIDTH;
+                    const pos = this.computeFlightPosition(
+                        carpet.phaseStartX, carpet.phaseStartY,
+                        exitX, centerY,
+                        t, carpet.phaseProgress
+                    );
+                    carpet.currentX = pos.x;
+                    carpet.currentY = pos.y;
+                    if (t >= 1) {
+                        this.carpetStates.delete(seatIndex);
+                    }
                 }
-                const eased = this.easeInOutCubic(carpet.exitProgress);
-                const exitAngle = Math.atan2(carpet.currentY - this.canvasHeight / 2, carpet.currentX - this.canvasWidth / 2);
-                const exitDistance = Math.max(this.canvasWidth, this.canvasHeight);
-                carpet.currentX = carpet.targetX + Math.cos(exitAngle) * exitDistance * eased;
-                carpet.currentY = carpet.targetY + Math.sin(exitAngle) * exitDistance * eased;
                 continue;
             }
 
             const seat = seats.find(s => s.index === seatIndex);
             if (carpet.entering) {
-                carpet.entryProgress += deltaTime / this.CARPET_FLY_DURATION;
-                if (carpet.entryProgress >= 1) {
-                    carpet.entering = false;
-                    carpet.currentX = carpet.targetX;
-                    carpet.currentY = carpet.targetY;
-                } else {
-                    const eased = this.easeInOutCubic(carpet.entryProgress);
-                    carpet.currentX = carpet.entryStartX + (carpet.targetX - carpet.entryStartX) * eased;
-                    carpet.currentY = carpet.entryStartY + (carpet.targetY - carpet.entryStartY) * eased;
+                carpet.phaseProgress += deltaTime;
+
+                if (carpet.entryPhase === 'waiting') {
+                    if (carpet.phaseProgress >= carpet.entryDelay) {
+                        carpet.entryPhase = 'to_center';
+                        carpet.phaseProgress = 0;
+                    }
+                } else if (carpet.entryPhase === 'to_center') {
+                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                    const pos = this.computeFlightPosition(
+                        carpet.phaseStartX, carpet.phaseStartY,
+                        centerX, centerY,
+                        t, carpet.phaseProgress
+                    );
+                    carpet.currentX = pos.x;
+                    carpet.currentY = pos.y;
+                    if (t >= 1) {
+                        carpet.entryPhase = 'at_center';
+                        carpet.phaseProgress = 0;
+                    }
+                } else if (carpet.entryPhase === 'at_center') {
+                    if (carpet.phaseProgress >= this.CARPET_CENTER_PAUSE) {
+                        carpet.entryPhase = 'to_seat';
+                        carpet.phaseProgress = 0;
+                        carpet.phaseStartX = carpet.currentX;
+                        carpet.phaseStartY = carpet.currentY;
+                    }
+                } else if (carpet.entryPhase === 'to_seat') {
+                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                    const pos = this.computeFlightPosition(
+                        carpet.phaseStartX, carpet.phaseStartY,
+                        carpet.targetX, carpet.targetY,
+                        t, carpet.phaseProgress
+                    );
+                    carpet.currentX = pos.x;
+                    carpet.currentY = pos.y;
+                    if (t >= 1) {
+                        carpet.entering = false;
+                        carpet.entryPhase = 'done';
+                        carpet.currentX = carpet.targetX;
+                        carpet.currentY = carpet.targetY;
+                        this.entryQueue = Math.max(0, this.entryQueue - 1);
+                    }
                 }
             } else if (seat) {
                 carpet.targetX = seat.x;
@@ -283,8 +350,6 @@ export class CarpetRenderer {
 
                 vertex.velocity *= this.CARPET_DAMPING;
                 vertex.yOffset += vertex.velocity * deltaTime;
-                vertex.yOffset = Math.max(-this.CARPET_MAX_DISPLACEMENT,
-                    Math.min(this.CARPET_MAX_DISPLACEMENT, vertex.yOffset));
             }
         }
     }
@@ -328,10 +393,14 @@ export class CarpetRenderer {
 
         for (const carpet of this.carpetStates.values()) {
             let opacity = 1;
-            if (carpet.entering) {
-                opacity = this.easeInOutCubic(carpet.entryProgress);
-            } else if (carpet.exiting) {
-                opacity = 1 - this.easeInOutCubic(carpet.exitProgress);
+            if (carpet.entering && carpet.entryPhase === 'waiting') {
+                opacity = 0;
+            } else if (carpet.entering && carpet.entryPhase === 'to_center') {
+                const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                opacity = this.easeInOutCubic(t);
+            } else if (carpet.exiting && carpet.exitPhase === 'to_exit') {
+                const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+                opacity = 1 - this.easeInOutCubic(t);
             }
 
             const vertices = carpet.vertices.map(v => ({
@@ -339,8 +408,11 @@ export class CarpetRenderer {
                 y: v.yOffset
             }));
 
+            const depthScale = Math.sqrt(CARPET_SCALE);
+            const isoX = 8 * depthScale * 2;
+
             carpets.push({
-                x: carpet.currentX,
+                x: carpet.currentX - isoX / 2,
                 y: carpet.currentY + carpet.occupiedOffset,
                 opacity,
                 vertices
@@ -512,6 +584,102 @@ export class CarpetRenderer {
             carpet.remove();
         }
         this.carpetElements = [];
+        // Don't clear carpetStates - preserve them so carpets don't fly in again when returning to fg mode
+    }
+
+    clearAll(): void {
+        for (const carpet of this.carpetElements) {
+            carpet.remove();
+        }
+        this.carpetElements = [];
         this.carpetStates.clear();
+    }
+
+    setDebugMode(enabled: boolean): void {
+        this.windField.debugEnabled = enabled;
+        if (!enabled) {
+            const existing = this.carpetGroup.parentElement?.querySelector('#wind-debug-group');
+            existing?.remove();
+        }
+    }
+
+    renderDebugWaveField(): void {
+        if (!this.windField.debugEnabled) return;
+
+        const parent = this.carpetGroup.parentElement;
+        if (!parent) return;
+
+        let debugGroup = parent.querySelector('#wind-debug-group') as SVGGElement | null;
+        if (!debugGroup) {
+            debugGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            debugGroup.setAttribute('id', 'wind-debug-group');
+            parent.insertBefore(debugGroup, parent.firstChild);
+        }
+
+        while (debugGroup.firstChild) {
+            debugGroup.removeChild(debugGroup.firstChild);
+        }
+
+        const sampleCount = 100;
+        const width = this.windField.getCanvasWidth();
+        const centerY = this.canvasHeight / 2;
+        const scale = 5;
+
+        let pathD = '';
+        for (let i = 0; i < sampleCount; i++) {
+            const x = (i / (sampleCount - 1)) * width;
+            const windForce = this.windField.sample(x);
+            const y = centerY + windForce * scale;
+            pathD += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+        }
+
+        const wavePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        wavePath.setAttribute('d', pathD);
+        wavePath.setAttribute('fill', 'none');
+        wavePath.setAttribute('stroke', 'rgba(255, 100, 100, 0.7)');
+        wavePath.setAttribute('stroke-width', '2');
+        debugGroup.appendChild(wavePath);
+
+        const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        zeroLine.setAttribute('x1', '0');
+        zeroLine.setAttribute('y1', String(centerY));
+        zeroLine.setAttribute('x2', String(width));
+        zeroLine.setAttribute('y2', String(centerY));
+        zeroLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
+        zeroLine.setAttribute('stroke-width', '1');
+        zeroLine.setAttribute('stroke-dasharray', '5,5');
+        debugGroup.appendChild(zeroLine);
+
+        for (const carpet of this.carpetStates.values()) {
+            for (const vertex of carpet.vertices) {
+                const worldX = carpet.currentX + vertex.baseX;
+                const windForce = this.windField.sample(worldX);
+
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                marker.setAttribute('cx', String(worldX));
+                marker.setAttribute('cy', String(centerY + windForce * scale));
+                marker.setAttribute('r', '4');
+                marker.setAttribute('fill', 'rgba(100, 255, 100, 0.8)');
+                debugGroup.appendChild(marker);
+
+                const vertLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                vertLine.setAttribute('x1', String(worldX));
+                vertLine.setAttribute('y1', String(centerY));
+                vertLine.setAttribute('x2', String(worldX));
+                vertLine.setAttribute('y2', String(centerY + windForce * scale));
+                vertLine.setAttribute('stroke', 'rgba(100, 255, 100, 0.4)');
+                vertLine.setAttribute('stroke-width', '1');
+                debugGroup.appendChild(vertLine);
+            }
+        }
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', '10');
+        label.setAttribute('y', '20');
+        label.setAttribute('fill', 'rgba(255, 100, 100, 0.9)');
+        label.setAttribute('font-size', '12');
+        label.setAttribute('font-family', 'monospace');
+        label.textContent = 'Wind Field Debug (red=wave, green=carpet vertices)';
+        debugGroup.appendChild(label);
     }
 }

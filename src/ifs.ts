@@ -43,4 +43,5 @@ document.addEventListener('DOMContentLoaded', () => {
     relationships.setGrievance(innerCritic.id, teenager.id, 0.7);
 
     cloudManager.startAnimation();
+    cloudManager.setCarpetDebug(false);
 });
