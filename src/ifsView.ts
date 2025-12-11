@@ -1,141 +1,10 @@
 import { SimulatorModel } from './ifsModel.js';
 import { Cloud } from './cloudShape.js';
+import { SeatInfo } from './carpetRenderer.js';
 
 export const STAR_OUTER_RADIUS = 20;
 export const STAR_INNER_RADIUS = 8;
 const BLENDED_OPACITY = 0.7;
-
-const CARPET_VERTEX_COUNT = 8;
-const CARPET_BASE_WIDTH = 40;
-export const CARPET_SCALE = 3;
-const CARPET_WIDTH = CARPET_BASE_WIDTH * CARPET_SCALE;
-
-interface CarpetVertex {
-    baseX: number;
-    yOffset: number;
-    velocity: number;
-}
-
-interface CarpetState {
-    seatIndex: number;
-    currentX: number;
-    currentY: number;
-    targetX: number;
-    targetY: number;
-    isOccupied: boolean;
-    occupiedOffset: number;
-    entering: boolean;
-    exiting: boolean;
-    exitProgress: number;
-    entryProgress: number;
-    entryStartX: number;
-    entryStartY: number;
-    vertices: CarpetVertex[];
-}
-
-interface WindWave {
-    amplitude: number;
-    spatialFrequency: number;
-    speed: number;
-    phase: number;
-}
-
-interface WindImpulse {
-    startTime: number;
-    duration: number;
-    peakAmplitude: number;
-    position: number;
-    width: number;
-}
-
-class WindField {
-    private waves: WindWave[] = [];
-    private impulses: WindImpulse[] = [];
-    private direction: number;
-    private time: number = 0;
-    private baseWindSpeed: number = 1;
-    private targetWindSpeed: number = 1;
-    private canvasWidth: number;
-
-    constructor(canvasWidth: number) {
-        this.canvasWidth = canvasWidth;
-        this.direction = Math.random() < 0.5 ? 1 : -1;
-
-        this.waves = [
-            { amplitude: 1.2, spatialFrequency: 0.015, speed: 80, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.8, spatialFrequency: 0.035, speed: 120, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.5, spatialFrequency: 0.008, speed: 40, phase: Math.random() * Math.PI * 2 },
-            { amplitude: 0.6, spatialFrequency: 0.055, speed: 180, phase: Math.random() * Math.PI * 2 },
-        ];
-
-        for (let i = 0; i < 3; i++) {
-            this.impulses.push({
-                startTime: -Math.random() * 2,
-                duration: 0.4 + Math.random() * 0.4,
-                peakAmplitude: 0.8 + Math.random() * 1.5,
-                position: Math.random() * this.canvasWidth,
-                width: 100 + Math.random() * 200
-            });
-        }
-    }
-
-    update(deltaTime: number): void {
-        this.time += deltaTime;
-
-        if (Math.random() < 0.02 * deltaTime) {
-            this.targetWindSpeed = 0.3 + Math.random() * 1.4;
-        }
-        this.baseWindSpeed += (this.targetWindSpeed - this.baseWindSpeed) * deltaTime * 0.5;
-
-        if (Math.random() < 0.3 * deltaTime) {
-            this.impulses.push({
-                startTime: this.time,
-                duration: 0.3 + Math.random() * 0.5,
-                peakAmplitude: 1.2 + Math.random() * 2.5,
-                position: Math.random() * this.canvasWidth,
-                width: 100 + Math.random() * 200
-            });
-        }
-
-        this.impulses = this.impulses.filter(imp =>
-            this.time < imp.startTime + imp.duration + 2
-        );
-    }
-
-    sample(x: number): number {
-        let windForce = 0;
-
-        for (const wave of this.waves) {
-            const phase = (x * wave.spatialFrequency) - (this.time * wave.speed * 0.01 * this.direction) + wave.phase;
-            windForce += Math.sin(phase) * wave.amplitude;
-        }
-
-        for (const imp of this.impulses) {
-            const elapsed = this.time - imp.startTime;
-            if (elapsed < 0) continue;
-
-            const travelDistance = elapsed * 150 * this.direction;
-            const impulseCenter = imp.position + travelDistance;
-
-            const dist = Math.abs(x - impulseCenter);
-            if (dist < imp.width) {
-                const spatialFalloff = 1 - (dist / imp.width);
-                let temporalEnvelope: number;
-                if (elapsed < imp.duration * 0.3) {
-                    temporalEnvelope = elapsed / (imp.duration * 0.3);
-                } else if (elapsed < imp.duration) {
-                    temporalEnvelope = 1;
-                } else {
-                    const decay = (elapsed - imp.duration) / 2;
-                    temporalEnvelope = Math.exp(-decay * 2);
-                }
-                windForce += imp.peakAmplitude * spatialFalloff * temporalEnvelope;
-            }
-        }
-
-        return windForce * this.baseWindSpeed;
-    }
-}
 
 interface Vec3 {
     x: number;
@@ -241,18 +110,9 @@ export class SimulatorView {
     private readonly GRIP_LOSS_POST_SETTLE_DELAY_MIN = 1.0;
     private readonly GRIP_LOSS_POST_SETTLE_DELAY_MAX = 3.0;
 
-    private carpetStates: Map<number, CarpetState> = new Map();
-    private windField: WindField | null = null;
-    private readonly CARPET_OCCUPIED_DROP = 35;
-    private readonly CARPET_FLY_DURATION = 0.8;
-    private readonly CARPET_DAMPING = 0.92;
-    private readonly CARPET_SPRING_STRENGTH = 15;
-    private readonly CARPET_MAX_DISPLACEMENT = 12;
-
     constructor(canvasWidth: number, canvasHeight: number) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
-        this.windField = new WindField(canvasWidth);
     }
 
     setStarElement(element: SVGElement): void {
@@ -1307,63 +1167,10 @@ export class SimulatorView {
         viewState.inCounterZoomGroup = true;
     }
 
-    private createCarpetVertices(): CarpetVertex[] {
-        const vertices: CarpetVertex[] = [];
-        const segmentWidth = CARPET_WIDTH / (CARPET_VERTEX_COUNT - 1);
-        for (let i = 0; i < CARPET_VERTEX_COUNT; i++) {
-            vertices.push({
-                baseX: -CARPET_WIDTH / 2 + i * segmentWidth,
-                yOffset: 0,
-                velocity: 0
-            });
-        }
-        return vertices;
-    }
-
-    updateCarpets(model: SimulatorModel, deltaTime: number): void {
-        if (!this.windField) return;
-
-        this.windField.update(deltaTime);
-
+    getSeatInfo(model: SimulatorModel): SeatInfo[] {
         const targetIds = Array.from(model.getTargetCloudIds());
         const blendedIds = model.getBlendedParts();
         const totalSeats = targetIds.length + blendedIds.length + 1;
-
-        const currentSeatIndices = new Set<number>();
-        for (let i = 0; i < totalSeats; i++) {
-            currentSeatIndices.add(i);
-        }
-
-        for (const [seatIndex, carpet] of this.carpetStates) {
-            if (!currentSeatIndices.has(seatIndex) && !carpet.exiting) {
-                carpet.exiting = true;
-                carpet.exitProgress = 0;
-            }
-        }
-
-        for (let seatIndex = 0; seatIndex < totalSeats; seatIndex++) {
-            if (!this.carpetStates.has(seatIndex)) {
-                const seatPos = this.getSeatPosition(seatIndex, totalSeats);
-                const entryAngle = Math.random() * Math.PI * 2;
-                const entryDistance = Math.max(this.canvasWidth, this.canvasHeight);
-                this.carpetStates.set(seatIndex, {
-                    seatIndex,
-                    currentX: seatPos.x + Math.cos(entryAngle) * entryDistance,
-                    currentY: seatPos.y + Math.sin(entryAngle) * entryDistance,
-                    targetX: seatPos.x,
-                    targetY: seatPos.y,
-                    isOccupied: false,
-                    occupiedOffset: 0,
-                    entering: true,
-                    exiting: false,
-                    exitProgress: 0,
-                    entryProgress: 0,
-                    entryStartX: seatPos.x + Math.cos(entryAngle) * entryDistance,
-                    entryStartY: seatPos.y + Math.sin(entryAngle) * entryDistance,
-                    vertices: this.createCarpetVertices()
-                });
-            }
-        }
 
         const occupiedSeats = new Set<number>([0]);
         for (const cloudId of targetIds) {
@@ -1375,116 +1182,16 @@ export class SimulatorView {
             if (seat !== undefined) occupiedSeats.add(seat);
         }
 
-        for (const [seatIndex, carpet] of this.carpetStates) {
-            if (carpet.exiting) {
-                carpet.exitProgress += deltaTime / this.CARPET_FLY_DURATION;
-                if (carpet.exitProgress >= 1) {
-                    this.carpetStates.delete(seatIndex);
-                    continue;
-                }
-                const eased = this.easeInOutCubic(carpet.exitProgress);
-                const exitAngle = Math.atan2(carpet.currentY - this.canvasHeight / 2, carpet.currentX - this.canvasWidth / 2);
-                const exitDistance = Math.max(this.canvasWidth, this.canvasHeight);
-                carpet.currentX = carpet.targetX + Math.cos(exitAngle) * exitDistance * eased;
-                carpet.currentY = carpet.targetY + Math.sin(exitAngle) * exitDistance * eased;
-                continue;
-            }
-
-            if (carpet.entering) {
-                carpet.entryProgress += deltaTime / this.CARPET_FLY_DURATION;
-                if (carpet.entryProgress >= 1) {
-                    carpet.entering = false;
-                    carpet.currentX = carpet.targetX;
-                    carpet.currentY = carpet.targetY;
-                } else {
-                    const eased = this.easeInOutCubic(carpet.entryProgress);
-                    carpet.currentX = carpet.entryStartX + (carpet.targetX - carpet.entryStartX) * eased;
-                    carpet.currentY = carpet.entryStartY + (carpet.targetY - carpet.entryStartY) * eased;
-                }
-            } else {
-                const seatPos = this.getSeatPosition(seatIndex, totalSeats);
-                carpet.targetX = seatPos.x;
-                carpet.targetY = seatPos.y;
-
-                const smoothing = 5;
-                const factor = 1 - Math.exp(-smoothing * deltaTime);
-                carpet.currentX += (carpet.targetX - carpet.currentX) * factor;
-                carpet.currentY += (carpet.targetY - carpet.currentY) * factor;
-            }
-
-            const isNowOccupied = occupiedSeats.has(seatIndex);
-            carpet.isOccupied = isNowOccupied;
-
-            const targetOffset = isNowOccupied ? this.CARPET_OCCUPIED_DROP : 0;
-            const offsetSmoothing = 4;
-            const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
-            carpet.occupiedOffset += (targetOffset - carpet.occupiedOffset) * offsetFactor;
-
-            for (let i = 0; i < carpet.vertices.length; i++) {
-                const vertex = carpet.vertices[i];
-                const worldX = carpet.currentX + vertex.baseX;
-
-                const windForce = this.windField.sample(worldX);
-
-                vertex.velocity += windForce * this.CARPET_SPRING_STRENGTH * deltaTime;
-
-                vertex.velocity -= vertex.yOffset * this.CARPET_SPRING_STRENGTH * 0.5 * deltaTime;
-
-                if (i > 0) {
-                    const prev = carpet.vertices[i - 1];
-                    const diff = prev.yOffset - vertex.yOffset;
-                    vertex.velocity += diff * this.CARPET_SPRING_STRENGTH * 0.3 * deltaTime;
-                }
-                if (i < carpet.vertices.length - 1) {
-                    const next = carpet.vertices[i + 1];
-                    const diff = next.yOffset - vertex.yOffset;
-                    vertex.velocity += diff * this.CARPET_SPRING_STRENGTH * 0.3 * deltaTime;
-                }
-
-                vertex.velocity *= this.CARPET_DAMPING;
-
-                vertex.yOffset += vertex.velocity * deltaTime;
-
-                vertex.yOffset = Math.max(-this.CARPET_MAX_DISPLACEMENT,
-                    Math.min(this.CARPET_MAX_DISPLACEMENT, vertex.yOffset));
-            }
-        }
-    }
-
-    getCarpetRenderData(): Array<{
-        x: number;
-        y: number;
-        opacity: number;
-        vertices: Array<{ x: number; y: number }>;
-    }> {
-        const carpets: Array<{
-            x: number;
-            y: number;
-            opacity: number;
-            vertices: Array<{ x: number; y: number }>;
-        }> = [];
-
-        for (const carpet of this.carpetStates.values()) {
-            let opacity = 1;
-            if (carpet.entering) {
-                opacity = this.easeInOutCubic(carpet.entryProgress);
-            } else if (carpet.exiting) {
-                opacity = 1 - this.easeInOutCubic(carpet.exitProgress);
-            }
-
-            const vertices = carpet.vertices.map(v => ({
-                x: v.baseX,
-                y: v.yOffset
-            }));
-
-            carpets.push({
-                x: carpet.currentX,
-                y: carpet.currentY + carpet.occupiedOffset,
-                opacity,
-                vertices
+        const seats: SeatInfo[] = [];
+        for (let i = 0; i < totalSeats; i++) {
+            const pos = this.getSeatPosition(i, totalSeats);
+            seats.push({
+                index: i,
+                x: pos.x,
+                y: pos.y,
+                occupied: occupiedSeats.has(i)
             });
         }
-
-        return carpets;
+        return seats;
     }
 }

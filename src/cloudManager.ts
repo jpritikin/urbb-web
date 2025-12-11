@@ -3,7 +3,8 @@ import { Point } from './geometry.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import { PhysicsEngine, PhysicsConfig } from './physicsEngine.js';
 import { SimulatorModel } from './ifsModel.js';
-import { SimulatorView, STAR_OUTER_RADIUS, STAR_INNER_RADIUS, CARPET_SCALE } from './ifsView.js';
+import { SimulatorView, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './ifsView.js';
+import { CarpetRenderer } from './carpetRenderer.js';
 
 export { CloudType };
 
@@ -85,8 +86,7 @@ export class CloudManager {
     private tracePanel: HTMLElement | null = null;
     private traceVisible: boolean = false;
     private resolvingClouds: Set<string> = new Set();
-    private carpetGroup: SVGGElement | null = null;
-    private carpetElements: SVGGElement[] = [];
+    private carpetRenderer: CarpetRenderer | null = null;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -124,9 +124,7 @@ export class CloudManager {
         this.counterZoomGroup.setAttribute('id', 'counter-zoom-group');
         this.svgElement.appendChild(this.counterZoomGroup);
 
-        this.carpetGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        this.carpetGroup.setAttribute('id', 'carpet-group');
-        this.counterZoomGroup.appendChild(this.carpetGroup);
+        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.counterZoomGroup);
 
         this.createSelfStar();
         this.createModeToggle();
@@ -1460,13 +1458,16 @@ export class CloudManager {
             this.updateThoughtBubble(deltaTime);
             this.view.animateStretchPositions(deltaTime);
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
-            this.view.updateCarpets(this.model, deltaTime);
-            this.renderCarpets();
+            if (this.carpetRenderer) {
+                const seats = this.view.getSeatInfo(this.model);
+                this.carpetRenderer.update(seats, deltaTime);
+                this.carpetRenderer.render();
+            }
             if (!isTransitioning) {
                 this.updateMarkerElements();
             }
         } else {
-            this.clearCarpets();
+            this.carpetRenderer?.clear();
         }
 
         const targetIds = this.model.getTargetCloudIds();
@@ -1522,210 +1523,5 @@ export class CloudManager {
 
     private applyPhysics(instance: CloudInstance, deltaTime: number): void {
         this.physicsEngine.applyPhysics(instance, this.instances, deltaTime);
-    }
-
-    private renderCarpets(): void {
-        if (!this.carpetGroup) return;
-
-        const carpetData = this.view.getCarpetRenderData();
-
-        while (this.carpetElements.length < carpetData.length) {
-            const carpet = this.createCarpetElement();
-            this.carpetGroup.appendChild(carpet);
-            this.carpetElements.push(carpet);
-        }
-
-        while (this.carpetElements.length > carpetData.length) {
-            const carpet = this.carpetElements.pop();
-            carpet?.remove();
-        }
-
-        for (let i = 0; i < carpetData.length; i++) {
-            const data = carpetData[i];
-            const carpet = this.carpetElements[i];
-            carpet.setAttribute('transform', `translate(${data.x}, ${data.y})`);
-            carpet.setAttribute('opacity', String(data.opacity));
-
-            this.updateCarpetPath(carpet, data.vertices);
-        }
-    }
-
-    private updateCarpetPath(group: SVGGElement, vertices: Array<{ x: number; y: number }>): void {
-        const topSurface = group.querySelector('.carpet-top-surface') as SVGPathElement;
-        const frontEdge = group.querySelector('.carpet-front-edge') as SVGPathElement;
-        const sideFace = group.querySelector('.carpet-side-face') as SVGPathElement;
-        const insetFrame = group.querySelector('.carpet-inset-frame') as SVGPathElement;
-
-        if (!topSurface || vertices.length < 2) return;
-
-        const depthScale = Math.sqrt(CARPET_SCALE);
-        const thickness = 1 * CARPET_SCALE;
-        const isoX = 8 * depthScale * 2;
-        const isoY = -6 * depthScale * 2;
-
-        const firstV = vertices[0];
-        const lastV = vertices[vertices.length - 1];
-
-        let topSurfaceD = `M ${firstV.x} ${firstV.y}`;
-        for (let i = 1; i < vertices.length; i++) {
-            const prev = vertices[i - 1];
-            const curr = vertices[i];
-            const cpX = (prev.x + curr.x) / 2;
-            topSurfaceD += ` Q ${cpX} ${(prev.y + curr.y) / 2} ${curr.x} ${curr.y}`;
-        }
-        topSurfaceD += ` L ${lastV.x + isoX} ${lastV.y + isoY}`;
-        for (let i = vertices.length - 2; i >= 0; i--) {
-            const next = vertices[i + 1];
-            const curr = vertices[i];
-            const cpX = (next.x + curr.x) / 2 + isoX;
-            topSurfaceD += ` Q ${cpX} ${(next.y + curr.y) / 2 + isoY} ${curr.x + isoX} ${curr.y + isoY}`;
-        }
-        topSurfaceD += ` Z`;
-
-        topSurface.setAttribute('d', topSurfaceD);
-
-        if (frontEdge) {
-            let frontD = `M ${firstV.x} ${firstV.y}`;
-            for (let i = 1; i < vertices.length; i++) {
-                const prev = vertices[i - 1];
-                const curr = vertices[i];
-                const cpX = (prev.x + curr.x) / 2;
-                frontD += ` Q ${cpX} ${(prev.y + curr.y) / 2} ${curr.x} ${curr.y}`;
-            }
-            frontD += ` L ${lastV.x} ${lastV.y + thickness}`;
-            for (let i = vertices.length - 2; i >= 0; i--) {
-                const next = vertices[i + 1];
-                const curr = vertices[i];
-                const cpX = (next.x + curr.x) / 2;
-                frontD += ` Q ${cpX} ${(next.y + curr.y) / 2 + thickness} ${curr.x} ${curr.y + thickness}`;
-            }
-            frontD += ` Z`;
-            frontEdge.setAttribute('d', frontD);
-        }
-
-        if (sideFace) {
-            const sideD = `M ${lastV.x} ${lastV.y}
-                L ${lastV.x + isoX} ${lastV.y + isoY}
-                L ${lastV.x + isoX} ${lastV.y + isoY + thickness}
-                L ${lastV.x} ${lastV.y + thickness} Z`;
-            sideFace.setAttribute('d', sideD);
-        }
-
-        if (insetFrame) {
-            const inset = 5;
-
-            // The left/right edges go in the (isoX, isoY) direction.
-            // To inset from them, we need to move perpendicular to that direction.
-            const isoLen = Math.sqrt(isoX * isoX + isoY * isoY);
-            // Perpendicular to (isoX, isoY) is (-isoY, isoX) or (isoY, -isoX)
-            // We want to move "inward" - for left edge that's toward right, for right edge toward left
-            const perpX = -isoY / isoLen;
-            const perpY = isoX / isoLen;
-
-            // Left edge inset: move in +perp direction
-            const leftInsetX = perpX * inset;
-            const leftInsetY = perpY * inset;
-
-            // Right edge inset: move in -perp direction
-            const rightInsetX = -perpX * inset;
-            const rightInsetY = -perpY * inset;
-
-            // Front edge: the front edge runs roughly horizontal, inset moves it "back" (in iso direction)
-            const frontInsetX = (isoX / isoLen) * inset;
-            const frontInsetY = (isoY / isoLen) * inset;
-
-            // Back edge: move toward front (opposite of iso direction)
-            const backInsetX = -(isoX / isoLen) * inset;
-            const backInsetY = -(isoY / isoLen) * inset;
-
-            // Front-left corner: firstV + leftInset + frontInset
-            const flX = firstV.x + leftInsetX + frontInsetX;
-            const flY = firstV.y + leftInsetY + frontInsetY;
-
-            // Front edge - starts at front-left corner
-            let insetD = `M ${flX} ${flY}`;
-            for (let i = 1; i < vertices.length; i++) {
-                const prev = vertices[i - 1];
-                const curr = vertices[i];
-
-                const prevInsetX = (i === 1 ? leftInsetX : 0) + frontInsetX;
-                const prevInsetY = (i === 1 ? leftInsetY : 0) + frontInsetY;
-                const currInsetX = (i === vertices.length - 1 ? rightInsetX : 0) + frontInsetX;
-                const currInsetY = (i === vertices.length - 1 ? rightInsetY : 0) + frontInsetY;
-
-                const cpX = (prev.x + curr.x) / 2 + (prevInsetX + currInsetX) / 2;
-                const cpY = (prev.y + curr.y) / 2 + (prevInsetY + currInsetY) / 2;
-                insetD += ` Q ${cpX} ${cpY} ${curr.x + currInsetX} ${curr.y + currInsetY}`;
-            }
-
-            // Front-right corner is now at: lastV + rightInset + frontInset
-            // Back-right corner: lastV + isoOffset + rightInset + backInset
-            const brX = lastV.x + isoX + rightInsetX + backInsetX;
-            const brY = lastV.y + isoY + rightInsetY + backInsetY;
-            insetD += ` L ${brX} ${brY}`;
-
-            // Back edge
-            for (let i = vertices.length - 2; i >= 0; i--) {
-                const next = vertices[i + 1];
-                const curr = vertices[i];
-
-                const nextInsetX = (i === vertices.length - 2 ? rightInsetX : 0) + backInsetX;
-                const nextInsetY = (i === vertices.length - 2 ? rightInsetY : 0) + backInsetY;
-                const currInsetX = (i === 0 ? leftInsetX : 0) + backInsetX;
-                const currInsetY = (i === 0 ? leftInsetY : 0) + backInsetY;
-
-                const cpX = (next.x + curr.x) / 2 + isoX + (nextInsetX + currInsetX) / 2;
-                const cpY = (next.y + curr.y) / 2 + isoY + (nextInsetY + currInsetY) / 2;
-                insetD += ` Q ${cpX} ${cpY} ${curr.x + isoX + currInsetX} ${curr.y + isoY + currInsetY}`;
-            }
-
-            // Back-left corner ends at: firstV + isoOffset + leftInset + backInset
-            // Close path back to front-left
-            insetD += ` Z`;
-
-            insetFrame.setAttribute('d', insetD);
-        }
-    }
-
-    private createCarpetElement(): SVGGElement {
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.setAttribute('class', 'flying-carpet');
-
-        const sideFace = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        sideFace.setAttribute('class', 'carpet-side-face');
-        sideFace.setAttribute('fill', '#2A1505');
-        sideFace.setAttribute('stroke', 'none');
-
-        const frontEdge = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        frontEdge.setAttribute('class', 'carpet-front-edge');
-        frontEdge.setAttribute('fill', '#3D2510');
-        frontEdge.setAttribute('stroke', '#1A0A02');
-        frontEdge.setAttribute('stroke-width', '0.5');
-
-        const topSurface = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        topSurface.setAttribute('class', 'carpet-top-surface');
-        topSurface.setAttribute('fill', '#B8860B');
-        topSurface.setAttribute('stroke', '#8B6914');
-        topSurface.setAttribute('stroke-width', '1');
-
-        const insetFrame = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        insetFrame.setAttribute('class', 'carpet-inset-frame');
-        insetFrame.setAttribute('fill', 'none');
-        insetFrame.setAttribute('stroke', '#8B0000');
-        insetFrame.setAttribute('stroke-width', '1.5');
-
-        group.appendChild(sideFace);
-        group.appendChild(frontEdge);
-        group.appendChild(topSurface);
-        group.appendChild(insetFrame);
-
-        return group;
-    }
-
-    private clearCarpets(): void {
-        for (const carpet of this.carpetElements) {
-            carpet.remove();
-        }
-        this.carpetElements = [];
     }
 }
