@@ -9,25 +9,20 @@ interface CarpetVertex {
     velocity: number;
 }
 
-type EntryPhase = 'waiting' | 'to_center' | 'at_center' | 'to_seat' | 'done';
-type ExitPhase = 'to_center' | 'at_center' | 'to_exit' | 'done';
-
 interface CarpetState {
     cloudId: string;
     currentX: number;
     currentY: number;
     targetX: number;
     targetY: number;
+    startX: number;
+    startY: number;
+    currentScale: number;
     isOccupied: boolean;
     occupiedOffset: number;
     entering: boolean;
     exiting: boolean;
-    entryPhase: EntryPhase;
-    exitPhase: ExitPhase;
-    phaseProgress: number;
-    phaseStartX: number;
-    phaseStartY: number;
-    entryDelay: number;
+    progress: number;
     vertices: CarpetVertex[];
 }
 
@@ -115,17 +110,12 @@ export class CarpetRenderer {
     private carpetElements: SVGGElement[] = [];
 
     private readonly CARPET_OCCUPIED_DROP = 35;
-    private readonly CARPET_FLY_DURATION = 1.2;
-    private readonly CARPET_CENTER_PAUSE = 0.1;
-    private readonly CARPET_ENTRY_STAGGER = 1.5;
+    private readonly CARPET_FLY_DURATION = 1.5;
+    private readonly CARPET_ENTRY_STAGGER = 0.5;
+    private readonly CARPET_START_SCALE = 10;
+    private readonly CARPET_OFFSCREEN_DISTANCE = 300;
     private readonly CARPET_DAMPING = 0.92;
     private readonly CARPET_SPRING_STRENGTH = 15;
-    private readonly CARPET_WOBBLE_AMPLITUDE = 12;
-    private readonly CARPET_WOBBLE_FREQUENCY = 6;
-    private readonly CARPET_NOISE_AMPLITUDE = 35;
-    private readonly CARPET_NOISE_FREQUENCY = 2.5;
-
-    private entryQueue: number = 0;
 
     constructor(canvasWidth: number, canvasHeight: number, parentGroup: SVGGElement) {
         this.canvasWidth = canvasWidth;
@@ -137,32 +127,23 @@ export class CarpetRenderer {
         parentGroup.appendChild(this.carpetGroup);
     }
 
+    private getOffscreenPosition(seatX: number, seatY: number): { x: number; y: number } {
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const dx = seatX - centerX;
+        const dy = seatY - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 1) return { x: centerX - this.CARPET_OFFSCREEN_DISTANCE, y: centerY };
+        const nx = dx / dist;
+        const ny = dy / dist;
+        return {
+            x: seatX + nx * this.CARPET_OFFSCREEN_DISTANCE,
+            y: seatY + ny * this.CARPET_OFFSCREEN_DISTANCE
+        };
+    }
+
     private easeInOutCubic(t: number): number {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    }
-
-    private noise(x: number): number {
-        // Simple pseudo-random noise using sine waves at incommensurate frequencies
-        return Math.sin(x * 1.0) * 0.5 +
-            Math.sin(x * 2.3 + 1.3) * 0.3 +
-            Math.sin(x * 4.1 + 2.7) * 0.2;
-    }
-
-    private computeFlightPosition(
-        startX: number, startY: number,
-        endX: number, endY: number,
-        t: number, phaseProgress: number
-    ): { x: number; y: number } {
-        const eased = this.easeInOutCubic(t);
-        const baseX = startX + (endX - startX) * eased;
-        const baseY = startY + (endY - startY) * eased;
-        // Perlin-like noise offset that fades at start and end
-        const noiseEnvelope = Math.sin(t * Math.PI);
-        const noiseX = this.noise(phaseProgress * this.CARPET_NOISE_FREQUENCY) * this.CARPET_NOISE_AMPLITUDE * noiseEnvelope;
-        const noiseY = this.noise(phaseProgress * this.CARPET_NOISE_FREQUENCY + 100) * this.CARPET_NOISE_AMPLITUDE * noiseEnvelope;
-        // Wobble perpendicular to travel
-        const wobble = Math.sin(phaseProgress * this.CARPET_WOBBLE_FREQUENCY) * this.CARPET_WOBBLE_AMPLITUDE * (1 - t);
-        return { x: baseX + noiseX + wobble, y: baseY + noiseY };
     }
 
     private createCarpetVertices(): CarpetVertex[] {
@@ -185,137 +166,79 @@ export class CarpetRenderer {
 
         for (const [cloudId, carpet] of this.carpetStates) {
             if (!currentCloudIds.has(cloudId) && !carpet.exiting) {
+                const exitPos = this.getOffscreenPosition(carpet.targetX, carpet.targetY);
                 carpet.exiting = true;
-                carpet.exitPhase = 'to_center';
-                carpet.phaseProgress = 0;
-                carpet.phaseStartX = carpet.currentX;
-                carpet.phaseStartY = carpet.currentY;
+                carpet.entering = false;
+                carpet.progress = 0;
+                carpet.startX = exitPos.x;
+                carpet.startY = exitPos.y;
             }
         }
 
+        let enteringCount = 0;
+        for (const carpet of this.carpetStates.values()) {
+            if (carpet.entering) enteringCount++;
+        }
         for (const seat of seats) {
             if (!seat.cloudId) continue;
             if (!this.carpetStates.has(seat.cloudId)) {
-                const entryStartX = -CARPET_WIDTH;
-                const centerY = this.canvasHeight / 2;
+                const startPos = this.getOffscreenPosition(seat.x, seat.y);
                 this.carpetStates.set(seat.cloudId, {
                     cloudId: seat.cloudId,
-                    currentX: entryStartX,
-                    currentY: centerY,
+                    currentX: startPos.x,
+                    currentY: startPos.y,
                     targetX: seat.x,
                     targetY: seat.y,
+                    startX: startPos.x,
+                    startY: startPos.y,
+                    currentScale: this.CARPET_START_SCALE,
                     isOccupied: false,
                     occupiedOffset: 0,
                     entering: true,
                     exiting: false,
-                    entryPhase: 'waiting',
-                    exitPhase: 'done',
-                    phaseProgress: 0,
-                    phaseStartX: entryStartX,
-                    phaseStartY: centerY,
-                    entryDelay: this.entryQueue * this.CARPET_ENTRY_STAGGER,
+                    progress: -enteringCount * this.CARPET_ENTRY_STAGGER,
                     vertices: this.createCarpetVertices()
                 });
-                this.entryQueue++;
+                enteringCount++;
             }
         }
 
         const occupiedCloudIds = new Set(seats.filter(s => s.occupied && s.cloudId).map(s => s.cloudId!));
 
         for (const [cloudId, carpet] of this.carpetStates) {
-            const centerX = this.canvasWidth / 2;
-            const centerY = this.canvasHeight / 2;
+            carpet.progress += deltaTime;
 
             if (carpet.exiting) {
-                carpet.phaseProgress += deltaTime;
-
-                if (carpet.exitPhase === 'to_center') {
-                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
-                    const pos = this.computeFlightPosition(
-                        carpet.phaseStartX, carpet.phaseStartY,
-                        centerX, centerY,
-                        t, carpet.phaseProgress
-                    );
-                    carpet.currentX = pos.x;
-                    carpet.currentY = pos.y;
-                    if (t >= 1) {
-                        carpet.exitPhase = 'at_center';
-                        carpet.phaseProgress = 0;
-                    }
-                } else if (carpet.exitPhase === 'at_center') {
-                    if (carpet.phaseProgress >= this.CARPET_CENTER_PAUSE) {
-                        carpet.exitPhase = 'to_exit';
-                        carpet.phaseProgress = 0;
-                        carpet.phaseStartX = carpet.currentX;
-                        carpet.phaseStartY = carpet.currentY;
-                    }
-                } else if (carpet.exitPhase === 'to_exit') {
-                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
-                    const exitX = this.canvasWidth + CARPET_WIDTH;
-                    const pos = this.computeFlightPosition(
-                        carpet.phaseStartX, carpet.phaseStartY,
-                        exitX, centerY,
-                        t, carpet.phaseProgress
-                    );
-                    carpet.currentX = pos.x;
-                    carpet.currentY = pos.y;
-                    if (t >= 1) {
-                        this.carpetStates.delete(cloudId);
-                    }
+                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const eased = this.easeInOutCubic(t);
+                carpet.currentX = carpet.targetX + (carpet.startX - carpet.targetX) * eased;
+                carpet.currentY = carpet.targetY + (carpet.startY - carpet.targetY) * eased;
+                carpet.currentScale = CARPET_SCALE + (this.CARPET_START_SCALE - CARPET_SCALE) * eased;
+                if (t >= 1) {
+                    this.carpetStates.delete(cloudId);
                 }
                 continue;
             }
 
             const seat = seats.find(s => s.cloudId === cloudId);
-            if (carpet.entering) {
-                carpet.phaseProgress += deltaTime;
-
-                if (carpet.entryPhase === 'waiting') {
-                    if (carpet.phaseProgress >= carpet.entryDelay) {
-                        carpet.entryPhase = 'to_center';
-                        carpet.phaseProgress = 0;
-                    }
-                } else if (carpet.entryPhase === 'to_center') {
-                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
-                    const pos = this.computeFlightPosition(
-                        carpet.phaseStartX, carpet.phaseStartY,
-                        centerX, centerY,
-                        t, carpet.phaseProgress
-                    );
-                    carpet.currentX = pos.x;
-                    carpet.currentY = pos.y;
-                    if (t >= 1) {
-                        carpet.entryPhase = 'at_center';
-                        carpet.phaseProgress = 0;
-                    }
-                } else if (carpet.entryPhase === 'at_center') {
-                    if (carpet.phaseProgress >= this.CARPET_CENTER_PAUSE) {
-                        carpet.entryPhase = 'to_seat';
-                        carpet.phaseProgress = 0;
-                        carpet.phaseStartX = carpet.currentX;
-                        carpet.phaseStartY = carpet.currentY;
-                    }
-                } else if (carpet.entryPhase === 'to_seat') {
-                    const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
-                    const pos = this.computeFlightPosition(
-                        carpet.phaseStartX, carpet.phaseStartY,
-                        carpet.targetX, carpet.targetY,
-                        t, carpet.phaseProgress
-                    );
-                    carpet.currentX = pos.x;
-                    carpet.currentY = pos.y;
-                    if (t >= 1) {
-                        carpet.entering = false;
-                        carpet.entryPhase = 'done';
-                        carpet.currentX = carpet.targetX;
-                        carpet.currentY = carpet.targetY;
-                        this.entryQueue = Math.max(0, this.entryQueue - 1);
-                    }
-                }
-            } else if (seat) {
+            if (seat) {
                 carpet.targetX = seat.x;
                 carpet.targetY = seat.y;
-
+            }
+            if (carpet.entering) {
+                if (carpet.progress < 0) continue;
+                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const eased = this.easeInOutCubic(t);
+                carpet.currentX = carpet.startX + (carpet.targetX - carpet.startX) * eased;
+                carpet.currentY = carpet.startY + (carpet.targetY - carpet.startY) * eased;
+                carpet.currentScale = this.CARPET_START_SCALE + (CARPET_SCALE - this.CARPET_START_SCALE) * eased;
+                if (t >= 1) {
+                    carpet.entering = false;
+                    carpet.currentX = carpet.targetX;
+                    carpet.currentY = carpet.targetY;
+                    carpet.currentScale = CARPET_SCALE;
+                }
+            } else {
                 const smoothing = 5;
                 const factor = 1 - Math.exp(-smoothing * deltaTime);
                 carpet.currentX += (carpet.targetX - carpet.currentX) * factor;
@@ -324,7 +247,6 @@ export class CarpetRenderer {
 
             const isNowOccupied = occupiedCloudIds.has(cloudId);
             carpet.isOccupied = isNowOccupied;
-
             const targetOffset = isNowOccupied ? this.CARPET_OCCUPIED_DROP : 0;
             const offsetSmoothing = 4;
             const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
@@ -333,12 +255,9 @@ export class CarpetRenderer {
             for (let i = 0; i < carpet.vertices.length; i++) {
                 const vertex = carpet.vertices[i];
                 const worldX = carpet.currentX + vertex.baseX;
-
                 const windForce = this.windField.sample(worldX);
-
                 vertex.velocity += windForce * this.CARPET_SPRING_STRENGTH * deltaTime;
                 vertex.velocity -= vertex.yOffset * this.CARPET_SPRING_STRENGTH * 0.5 * deltaTime;
-
                 if (i > 0) {
                     const prev = carpet.vertices[i - 1];
                     const diff = prev.yOffset - vertex.yOffset;
@@ -349,7 +268,6 @@ export class CarpetRenderer {
                     const diff = next.yOffset - vertex.yOffset;
                     vertex.velocity += diff * this.CARPET_SPRING_STRENGTH * 0.3 * deltaTime;
                 }
-
                 vertex.velocity *= this.CARPET_DAMPING;
                 vertex.yOffset += vertex.velocity * deltaTime;
             }
@@ -373,7 +291,7 @@ export class CarpetRenderer {
         for (let i = 0; i < carpetData.length; i++) {
             const data = carpetData[i];
             const carpet = this.carpetElements[i];
-            carpet.setAttribute('transform', `translate(${data.x}, ${data.y})`);
+            carpet.setAttribute('transform', `translate(${data.x}, ${data.y}) scale(${data.scale})`);
             carpet.setAttribute('opacity', String(data.opacity));
 
             this.updateCarpetPath(carpet, data.vertices);
@@ -383,25 +301,27 @@ export class CarpetRenderer {
     private getRenderData(): Array<{
         x: number;
         y: number;
+        scale: number;
         opacity: number;
         vertices: Array<{ x: number; y: number }>;
     }> {
         const carpets: Array<{
             x: number;
             y: number;
+            scale: number;
             opacity: number;
             vertices: Array<{ x: number; y: number }>;
         }> = [];
 
         for (const carpet of this.carpetStates.values()) {
             let opacity = 1;
-            if (carpet.entering && carpet.entryPhase === 'waiting') {
+            if (carpet.entering && carpet.progress < 0) {
                 opacity = 0;
-            } else if (carpet.entering && carpet.entryPhase === 'to_center') {
-                const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+            } else if (carpet.entering) {
+                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
                 opacity = this.easeInOutCubic(t);
-            } else if (carpet.exiting && carpet.exitPhase === 'to_exit') {
-                const t = Math.min(carpet.phaseProgress / this.CARPET_FLY_DURATION, 1);
+            } else if (carpet.exiting) {
+                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
                 opacity = 1 - this.easeInOutCubic(t);
             }
 
@@ -410,12 +330,13 @@ export class CarpetRenderer {
                 y: v.yOffset
             }));
 
-            const depthScale = Math.sqrt(CARPET_SCALE);
+            const depthScale = Math.sqrt(carpet.currentScale);
             const isoX = 8 * depthScale * 2;
 
             carpets.push({
                 x: carpet.currentX - isoX / 2,
                 y: carpet.currentY + carpet.occupiedOffset,
+                scale: carpet.currentScale / CARPET_SCALE,
                 opacity,
                 vertices
             });

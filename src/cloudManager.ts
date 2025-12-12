@@ -51,6 +51,9 @@ interface Message {
     endX: number;
     endY: number;
     element: SVGGElement | null;
+    phase: 'traveling' | 'lingering' | 'fading';
+    lingerTime: number;
+    lingerDuration: number;
 }
 
 declare global {
@@ -110,7 +113,9 @@ export class CloudManager {
     private carpetRenderer: CarpetRenderer | null = null;
     private messages: Message[] = [];
     private messageIdCounter: number = 0;
-    private messageCooldowns: Map<string, number> = new Map();
+    private messageCooldownTimers: Map<string, number> = new Map();
+    private blendStartTimers: Map<string, number> = new Map();
+    private readonly BLEND_MESSAGE_DELAY = 3;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -1404,12 +1409,12 @@ export class CloudManager {
             this.updateModeToggle();
             this.syncViewWithModel();
         } else if (this.view.getMode() === 'foreground') {
-            const viewState = this.view.getViewState(cloud.id);
-            console.log(`[Select] viewState opacity=${viewState?.currentOpacity}`);
-            if (viewState && viewState.currentOpacity > 0) {
-                this.togglePieMenu(cloud.id, viewState.currentX, viewState.currentY);
+            const cloudState = this.view.getCloudState(cloud.id);
+            console.log(`[Select] cloudState opacity=${cloudState?.opacity}`);
+            if (cloudState && cloudState.opacity > 0) {
+                this.togglePieMenu(cloud.id, cloudState.x, cloudState.y);
             } else {
-                console.log(`[Select] Blocked: viewState missing or opacity=0`);
+                console.log(`[Select] Blocked: cloudState missing or opacity=0`);
             }
         }
     }
@@ -1465,22 +1470,26 @@ export class CloudManager {
             return;
         }
 
-        const viewState = this.view.getViewState(firstTargetId);
-        if (!viewState) {
+        const cloudState = this.view.getCloudState(firstTargetId);
+        if (!cloudState) {
             this.showActionFeedback("Cannot locate target");
             return;
         }
 
-        cloud.startUnblending(viewState.currentX, viewState.currentY);
+        cloud.startUnblending(cloudState.x, cloudState.y);
     }
 
     private showActionFeedback(message: string): void {
         this.showThoughtBubble(message);
     }
 
-    private stepBackPart(cloudId: string): void {
+    private stepBackPart(cloudId: string, options?: { showThoughtBubble?: boolean }): void {
+        const showBubble = options?.showThoughtBubble ?? true;
+
         if (this.model.wasProxy(cloudId)) {
-            this.showThoughtBubble("I want to watch.");
+            if (showBubble) {
+                this.showThoughtBubble("I want to watch.");
+            }
             this.model.adjustTrust(cloudId, 0.98, 'refused to step back');
             return;
         }
@@ -1496,11 +1505,16 @@ export class CloudManager {
             });
         }
 
-        const panoramaPos = panoramaPositions.get(cloudId);
-        if (!panoramaPos) return;
+        if (showBubble) {
+            this.showThoughtBubble("Stepping back...");
+        }
 
-        this.showThoughtBubble("Stepping back...");
-        this.view.animateStepBack(cloudId, panoramaPos.x, panoramaPos.y, panoramaPos.scale);
+        // Set cloud to animate to panorama position and fade out
+        this.view.setCloudTarget(cloudId, {
+            positionTarget: { type: 'panorama' },
+            targetOpacity: 0
+        });
+
         this.model.stepBackPart(cloudId);
         this.updateBiographyPanel();
     }
@@ -1527,6 +1541,12 @@ export class CloudManager {
             return;
         }
 
+        // Skip stretch animation for spontaneous blends - go directly to target
+        if (this.model.getBlendReason(cloudId) !== 'therapist') {
+            this.completeUnblending(cloudId, targetPos);
+            return;
+        }
+
         // Animate the stretch resolving smoothly, then promote
         this.animateStretchResolution(cloudId, targetPos, 1.0);
     }
@@ -1550,7 +1570,7 @@ export class CloudManager {
         // Mark as resolving so updateBlendedLatticeDeformations doesn't interfere
         this.resolvingClouds.add(cloudId);
 
-        const viewState = this.view.getViewState(cloudId);
+        const cloudState = this.view.getCloudState(cloudId);
 
         // The cloud is stretched from anchor (near star) toward seat.
         // Position is where the anchor edge is. Visual center is offset by stretch/2.
@@ -1562,16 +1582,14 @@ export class CloudManager {
         // As stretch reduces, we move anchorPos toward the far edge to compensate.
         // Final position should be at targetPos (the seat).
 
-        // Get the ACTUAL current position from the stretch position state, not viewState
-        // During BLEND, the transform was set from stretchPositionState, not viewState
-        const stretchPosState = this.view.getStretchPositionState(cloudId);
-        const anchorPosX = stretchPosState?.currentX ?? viewState?.currentX ?? targetPos.x;
-        const anchorPosY = stretchPosState?.currentY ?? viewState?.currentY ?? targetPos.y;
+        // Get current position from cloudState
+        const anchorPosX = cloudState?.x ?? targetPos.x;
+        const anchorPosY = cloudState?.y ?? targetPos.y;
 
-        // Also update viewState to match so the main loop doesn't cause a jump
-        if (viewState) {
-            viewState.currentX = anchorPosX;
-            viewState.currentY = anchorPosY;
+        // Update cloudState to use absolute position during resolution
+        if (cloudState) {
+            cloudState.positionTarget = { type: 'absolute', x: anchorPosX, y: anchorPosY };
+            cloudState.smoothing.position = 0; // Instant during resolution animation
         }
 
         // The far edge of the stretched cloud (seat side) - use actual offset for accuracy
@@ -1603,17 +1621,24 @@ export class CloudManager {
             const currentFarEdgeX = farEdgeX + (targetPos.x - farEdgeX) * eased;
             const currentFarEdgeY = farEdgeY + (targetPos.y - farEdgeY) * eased;
 
-            if (viewState) {
-                viewState.currentX = currentFarEdgeX - startStretchX * remainingStretch;
-                viewState.currentY = currentFarEdgeY - startStretchY * remainingStretch;
-            }
+            const newX = currentFarEdgeX - startStretchX * remainingStretch;
+            const newY = currentFarEdgeY - startStretchY * remainingStretch;
 
+            if (cloudState) {
+                cloudState.positionTarget = { type: 'absolute', x: newX, y: newY };
+                cloudState.x = newX;
+                cloudState.y = newY;
+            }
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
                 cloud.clearBlendedStretch();
                 this.resolvingClouds.delete(cloudId);
+                // Restore smoothing before completing
+                if (cloudState) {
+                    cloudState.smoothing.position = 8;
+                }
                 this.completeUnblending(cloudId, targetPos);
             }
         };
@@ -1633,10 +1658,10 @@ export class CloudManager {
         this.syncViewWithModel(oldModel);
 
         // Ensure final position is at seat
-        const viewState = this.view.getViewState(cloudId);
-        if (viewState) {
-            viewState.currentX = targetPos.x;
-            viewState.currentY = targetPos.y;
+        const cloudState = this.view.getCloudState(cloudId);
+        if (cloudState) {
+            cloudState.x = targetPos.x;
+            cloudState.y = targetPos.y;
         }
 
         this.updateBiographyPanel();
@@ -1679,7 +1704,15 @@ export class CloudManager {
             this.hideThoughtBubble();
             this.hideRegionLabels();
             this.hidePieMenu();
+            this.clearMessages();
         }
+    }
+
+    private clearMessages(): void {
+        for (const message of this.messages) {
+            message.element?.remove();
+        }
+        this.messages = [];
     }
 
     private hidePieMenu(): void {
@@ -1712,11 +1745,11 @@ export class CloudManager {
                 this.hideThoughtBubble();
 
                 for (const targetId of currentTargets) {
-                    this.stepBackPart(targetId);
+                    this.stepBackPart(targetId, { showThoughtBubble: false });
                 }
                 for (const blendedId of currentBlended) {
                     if (!currentTargets.includes(blendedId)) {
-                        this.stepBackPart(blendedId);
+                        this.stepBackPart(blendedId, { showThoughtBubble: false });
                     }
                 }
 
@@ -1794,6 +1827,19 @@ export class CloudManager {
             this.view.updateForegroundPositions(this.model, this.instances);
         }
 
+        // Animate unified cloud states
+        const panoramaPositions = new Map<string, { x: number; y: number; scale: number }>();
+        for (const instance of this.instances) {
+            const projected = this.view.projectToScreen(instance);
+            panoramaPositions.set(instance.cloud.id, projected);
+        }
+        const { completedUnblendings } = this.view.animateCloudStates(deltaTime, panoramaPositions, this.model);
+        for (const cloudId of completedUnblendings) {
+            if (this.model.isBlended(cloudId)) {
+                this.finishUnblending(cloudId);
+            }
+        }
+
         const currentZoomFactor = this.view.getCurrentZoomFactor();
 
         this.updateCounterZoom(currentZoomFactor);
@@ -1804,13 +1850,7 @@ export class CloudManager {
 
         if (mode === 'foreground') {
             this.updateThoughtBubble(deltaTime);
-            this.view.animateStretchPositions(deltaTime);
-            const { completedUnblendings } = this.view.animateBlendingDegrees(this.instances);
-            for (const cloudId of completedUnblendings) {
-                if (this.model.isBlended(cloudId)) {
-                    this.finishUnblending(cloudId);
-                }
-            }
+            this.view.animateStretchEffects(deltaTime);
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
             const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
             if (this.carpetRenderer && !transitioningToForeground) {
@@ -1819,6 +1859,7 @@ export class CloudManager {
                 this.carpetRenderer.render();
                 this.carpetRenderer.renderDebugWaveField();
             }
+            this.updateMessageTimers(deltaTime);
             if (!isTransitioning && !this.pieMenuOpen) {
                 this.checkAndSendGrievanceMessages();
                 this.checkBlendedPartsAttention();
@@ -1838,27 +1879,27 @@ export class CloudManager {
 
                 if (this.view.getMode() === 'panorama' && !this.view.isTransitioning()) {
                     this.applyPhysics(instance, deltaTime * this.partitionCount);
-                    const projected = this.view.projectToScreen(instance);
-                    this.view.updatePanoramaPosition(instance.cloud.id, projected.x, projected.y, projected.scale);
                 }
                 const state = this.model.getPartState(instance.cloud.id);
                 instance.cloud.updateSVGElements(this.debug, state, this.model.isSelected(instance.cloud.id));
             }
 
-            const viewState = this.view.getViewState(instance.cloud.id);
-            if (viewState) {
+            const cloudState = this.view.getCloudState(instance.cloud.id);
+            if (cloudState) {
+                instance.cloud.animatedBlendingDegree = cloudState.blendingDegree;
+
                 const group = instance.cloud.getGroupElement();
                 if (group) {
-                    if (viewState.inCounterZoomGroup && group.parentNode !== this.counterZoomGroup) {
+                    if (cloudState.inCounterZoomGroup && group.parentNode !== this.counterZoomGroup) {
                         this.counterZoomGroup?.appendChild(group);
-                    } else if (!viewState.inCounterZoomGroup && group.parentNode !== this.svgElement) {
+                    } else if (!cloudState.inCounterZoomGroup && group.parentNode !== this.svgElement) {
                         this.svgElement?.appendChild(group);
                     }
 
                     group.setAttribute('transform',
-                        `translate(${viewState.currentX}, ${viewState.currentY}) scale(${viewState.currentScale})`);
-                    group.setAttribute('opacity', String(viewState.currentOpacity));
-                    group.setAttribute('pointer-events', viewState.currentOpacity > 0 ? 'auto' : 'none');
+                        `translate(${cloudState.x}, ${cloudState.y}) scale(${cloudState.scale})`);
+                    group.setAttribute('opacity', String(cloudState.opacity));
+                    group.setAttribute('pointer-events', cloudState.opacity > 0 ? 'auto' : 'none');
                 }
             }
         }
@@ -1891,9 +1932,9 @@ export class CloudManager {
     }
 
     private sendMessage(senderId: string, targetId: string, text: string, type: 'grievance'): void {
-        const senderViewState = this.view.getViewState(senderId);
-        const targetViewState = this.view.getViewState(targetId);
-        if (!senderViewState || !targetViewState) return;
+        const senderState = this.view.getCloudState(senderId);
+        const targetState = this.view.getCloudState(targetId);
+        if (!senderState || !targetState) return;
 
         const message: Message = {
             id: `msg_${this.messageIdCounter++}`,
@@ -1903,11 +1944,14 @@ export class CloudManager {
             text,
             progress: 0,
             duration: 3.0,
-            startX: senderViewState.currentX,
-            startY: senderViewState.currentY,
-            endX: targetViewState.currentX,
-            endY: targetViewState.currentY,
-            element: null
+            startX: senderState.x,
+            startY: senderState.y,
+            endX: targetState.x,
+            endY: targetState.y,
+            element: null,
+            phase: 'traveling',
+            lingerTime: 0,
+            lingerDuration: 1.0 + Math.random() * 1.0
         };
 
         message.element = this.createMessageElement(message);
@@ -1977,25 +2021,39 @@ export class CloudManager {
     }
 
     private updateMessages(deltaTime: number): void {
-        const completed: Message[] = [];
+        const toRemove: Message[] = [];
 
         for (const message of this.messages) {
-            message.progress += deltaTime / message.duration;
+            if (message.phase === 'traveling') {
+                message.progress += deltaTime / message.duration;
 
-            if (message.progress >= 1) {
-                completed.push(message);
-                continue;
+                if (message.progress >= 1) {
+                    message.progress = 1;
+                    message.phase = 'lingering';
+                    this.onMessageReceived(message);
+                }
+
+                const eased = this.easeInOutCubic(message.progress);
+                const x = message.startX + (message.endX - message.startX) * eased;
+                const y = message.startY + (message.endY - message.startY) * eased;
+                message.element?.setAttribute('transform', `translate(${x}, ${y})`);
+            } else if (message.phase === 'lingering') {
+                message.lingerTime += deltaTime;
+                if (message.lingerTime >= message.lingerDuration) {
+                    message.phase = 'fading';
+                }
+            } else if (message.phase === 'fading') {
+                message.lingerTime += deltaTime;
+                const fadeProgress = (message.lingerTime - message.lingerDuration) / 0.5;
+                if (fadeProgress >= 1) {
+                    toRemove.push(message);
+                } else {
+                    message.element?.setAttribute('opacity', String(1 - fadeProgress));
+                }
             }
-
-            const eased = this.easeInOutCubic(message.progress);
-            const x = message.startX + (message.endX - message.startX) * eased;
-            const y = message.startY + (message.endY - message.startY) * eased;
-
-            message.element?.setAttribute('transform', `translate(${x}, ${y})`);
         }
 
-        for (const message of completed) {
-            this.onMessageReceived(message);
+        for (const message of toRemove) {
             message.element?.remove();
             const idx = this.messages.indexOf(message);
             if (idx !== -1) this.messages.splice(idx, 1);
@@ -2053,13 +2111,40 @@ export class CloudManager {
         }
     }
 
+    private updateMessageTimers(deltaTime: number): void {
+        // Update cooldown timers
+        for (const [key, time] of this.messageCooldownTimers) {
+            this.messageCooldownTimers.set(key, time + deltaTime);
+        }
+        // Update blend start timers
+        for (const [key, time] of this.blendStartTimers) {
+            this.blendStartTimers.set(key, time + deltaTime);
+        }
+    }
+
     private checkAndSendGrievanceMessages(): void {
         const blendedParts = this.model.getBlendedParts();
         const targetIds = this.model.getTargetCloudIds();
 
+        // Track new blends and clean up old blend timers
+        for (const blendedId of blendedParts) {
+            if (!this.blendStartTimers.has(blendedId)) {
+                this.blendStartTimers.set(blendedId, 0);
+            }
+        }
+        for (const blendedId of this.blendStartTimers.keys()) {
+            if (!blendedParts.includes(blendedId)) {
+                this.blendStartTimers.delete(blendedId);
+            }
+        }
+
         for (const blendedId of blendedParts) {
             const blendedCloud = this.getCloudById(blendedId);
             if (!blendedCloud) continue;
+
+            // Delay messages until transition completes
+            const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
+            if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
 
             const grievances = this.relationships.getGrievances(blendedId);
 
@@ -2067,17 +2152,16 @@ export class CloudManager {
                 if (!targetIds.has(grievanceTargetId)) continue;
 
                 const cooldownKey = `${blendedId}->${grievanceTargetId}`;
-                const lastSent = this.messageCooldowns.get(cooldownKey) ?? 0;
-                const now = performance.now();
+                const timeSinceSent = this.messageCooldownTimers.get(cooldownKey) ?? 10;
 
-                if (now - lastSent < 10000) continue;
+                if (timeSinceSent < 10) continue;
 
                 const dialogues = this.model.getDialogues(blendedId);
                 if (!dialogues.burdenedGrievance || dialogues.burdenedGrievance.length === 0) continue;
 
                 const text = dialogues.burdenedGrievance[Math.floor(Math.random() * dialogues.burdenedGrievance.length)];
                 this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
-                this.messageCooldowns.set(cooldownKey, now);
+                this.messageCooldownTimers.set(cooldownKey, 0);
             }
         }
     }

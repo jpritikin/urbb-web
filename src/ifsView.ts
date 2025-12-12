@@ -18,31 +18,56 @@ interface CloudInstance {
     velocity: Vec3;
 }
 
-interface SupportingPartAnimation {
-    startX: number;
-    startY: number;
-    startScale: number;
-    startOpacity: number;
-    endX: number;
-    endY: number;
-    endScale: number;
-    endOpacity: number;
-    progress: number;
-    duration: number;
+// Semantic position targets - resolved to x/y each frame
+export type PositionTarget =
+    | { type: 'panorama' }
+    | { type: 'seat'; seatIndex: number }
+    | { type: 'star'; offsetX?: number; offsetY?: number }
+    | { type: 'supporting'; targetId: string; index: number }
+    | { type: 'blended'; seatIndex: number; offsetX: number; offsetY: number }
+    | { type: 'absolute'; x: number; y: number };
+
+// Smoothing configuration - higher = faster approach, 0 = instant
+export interface SmoothingConfig {
+    position: number;      // default 8
+    scale: number;         // default 8
+    opacity: number;       // default 8
+    blendingDegree: number; // default 4 (slower for visual effect)
 }
 
-interface CloudViewState {
+export const DEFAULT_SMOOTHING: SmoothingConfig = {
+    position: 8,
+    scale: 8,
+    opacity: 8,
+    blendingDegree: 4
+};
+
+// Unified animation state per cloud
+export interface CloudAnimatedState {
     cloudId: string;
-    currentX: number;
-    currentY: number;
-    currentScale: number;
-    currentOpacity: number;
+
+    // Current animated values
+    x: number;
+    y: number;
+    scale: number;
+    opacity: number;
+    blendingDegree: number;
+
+    // Semantic target (resolved to x/y each frame)
+    positionTarget: PositionTarget;
+    targetScale: number;
+    targetOpacity: number;
+    targetBlendingDegree: number;
+
+    // Smoothing factors
+    smoothing: SmoothingConfig;
+
+    // Flags
     inCounterZoomGroup: boolean;
-    supportingAnimation?: SupportingPartAnimation;
 }
 
 export class SimulatorView {
-    private viewStates: Map<string, CloudViewState> = new Map();
+    private cloudStates: Map<string, CloudAnimatedState> = new Map();
     private mode: 'panorama' | 'foreground' = 'panorama';
     private previousMode: 'panorama' | 'foreground' = 'panorama';
     private previousTargetIds: Set<string> = new Set();
@@ -62,7 +87,6 @@ export class SimulatorView {
     private starTargetY: number = 0;
     private blendedOffsets: Map<string, { x: number; y: number }> = new Map();
     private cachedStarPosition: { x: number; y: number } | null = null;
-    private stretchPositionState: Map<string, { targetX: number; targetY: number; currentX: number; currentY: number }> = new Map();
 
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceRotationSpeed: number = 0.05; // radians per second
@@ -73,13 +97,6 @@ export class SimulatorView {
 
     private committedBlendingDegrees: Map<string, number> = new Map();
     private readonly DEGREE_STEP_THRESHOLD = 0.06; // trigger overshoot every ~6% unblending
-
-    private blendingAnimations: Map<string, {
-        startDegree: number;
-        targetDegree: number;
-        startTime: number;
-        duration: number;
-    }> = new Map();
 
     // Unified stretch animation state (handles both user-triggered overshoot and idle grip loss)
     private stretchAnim: Map<string, {
@@ -150,14 +167,7 @@ export class SimulatorView {
         for (const instance of instances) {
             const pos = panoramaPositions.get(instance.cloud.id);
             if (pos) {
-                this.viewStates.set(instance.cloud.id, {
-                    cloudId: instance.cloud.id,
-                    currentX: pos.x,
-                    currentY: pos.y,
-                    currentScale: pos.scale,
-                    currentOpacity: 1,
-                    inCounterZoomGroup: false
-                });
+                this.initializeCloudState(instance.cloud.id, pos, { type: 'panorama' });
             }
         }
     }
@@ -200,6 +210,85 @@ export class SimulatorView {
 
     getStarPosition(): { x: number; y: number } {
         return this.cachedStarPosition ?? { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
+    }
+
+    resolvePositionTarget(
+        target: PositionTarget,
+        cloudId: string,
+        panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
+        model: SimulatorModel
+    ): { x: number; y: number; scale: number } {
+        const targetIds = Array.from(model.getTargetCloudIds());
+        const blendedParts = model.getBlendedParts();
+        const totalSeats = targetIds.length + blendedParts.length + 1;
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        switch (target.type) {
+            case 'panorama': {
+                const pos = panoramaPositions.get(cloudId);
+                let x = pos?.x ?? centerX;
+                let y = pos?.y ?? centerY;
+
+                // If cloud is in counter-zoom group, convert world position to counter-zoom coords
+                // Exception: during reverse transition, use unscaled position so clouds animate
+                // directly to their final panorama positions
+                const state = this.cloudStates.get(cloudId);
+                if (state?.inCounterZoomGroup && this.transitionDirection !== 'reverse') {
+                    const zoomFactor = this.getCurrentZoomFactor();
+                    x = centerX + (x - centerX) * zoomFactor;
+                    y = centerY + (y - centerY) * zoomFactor;
+                }
+
+                return { x, y, scale: pos?.scale ?? 1 };
+            }
+
+            case 'seat': {
+                const pos = this.getSeatPosition(target.seatIndex, totalSeats);
+                return { x: pos.x, y: pos.y, scale: 1 };
+            }
+
+            case 'star': {
+                const starPos = this.getStarPosition();
+                return {
+                    x: starPos.x + (target.offsetX ?? 0),
+                    y: starPos.y + (target.offsetY ?? 0),
+                    scale: 1
+                };
+            }
+
+            case 'supporting': {
+                const targetPos = this.conferenceSeatAssignments.has(target.targetId)
+                    ? this.getSeatPosition(this.conferenceSeatAssignments.get(target.targetId)!, totalSeats)
+                    : { x: centerX, y: centerY };
+                const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
+                const distance = 80 + target.index * 50;
+                return {
+                    x: targetPos.x + Math.cos(angle) * distance,
+                    y: targetPos.y + Math.sin(angle) * distance,
+                    scale: 1
+                };
+            }
+
+            case 'blended': {
+                const seatPos = this.getSeatPosition(target.seatIndex, totalSeats);
+                const starPos = this.getStarPosition();
+                const state = this.cloudStates.get(cloudId);
+                const degree = state?.blendingDegree ?? 1;
+                // degree=1 means fully blended (at star), degree->0 means separating (at seat)
+                const starX = starPos.x + target.offsetX;
+                const starY = starPos.y + target.offsetY;
+                return {
+                    x: seatPos.x + degree * (starX - seatPos.x),
+                    y: seatPos.y + degree * (starY - seatPos.y),
+                    scale: 1
+                };
+            }
+
+            case 'absolute': {
+                return { x: target.x, y: target.y, scale: 1 };
+            }
+        }
     }
 
     private updateSeatAssignments(model: SimulatorModel): void {
@@ -295,20 +384,9 @@ export class SimulatorView {
         instances: CloudInstance[],
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>
     ): void {
-        const cloudsWithAnimations = new Set<string>();
-        if (oldModel && this.mode === 'foreground') {
-            this.detectAndAnimateSupportingParts(oldModel, newModel, instances);
-            this.detectBlendingDegreeChanges(oldModel, newModel, instances);
-            for (const [cloudId, viewState] of this.viewStates) {
-                if (viewState.supportingAnimation) {
-                    cloudsWithAnimations.add(cloudId);
-                }
-            }
-        }
-
-        this.updateViewStates(newModel, instances, panoramaPositions, cloudsWithAnimations);
+        this.updateSeatAssignments(newModel);
         this.updateStarPosition(newModel);
-        this.updateBlendedCloudStates(newModel, instances);
+        this.updateCloudStateTargets(newModel, instances);
 
         const currentTargetIds = newModel.getTargetCloudIds();
         if (this.transitionDirection !== 'reverse' || this.transitionProgress >= 1) {
@@ -316,60 +394,104 @@ export class SimulatorView {
         }
     }
 
-    private detectBlendingDegreeChanges(oldModel: SimulatorModel, newModel: SimulatorModel, instances: CloudInstance[]): void {
-        const oldDegrees = oldModel.getBlendedPartsWithDegrees();
-        const newDegrees = newModel.getBlendedPartsWithDegrees();
+    private updateCloudStateTargets(model: SimulatorModel, instances: CloudInstance[]): void {
+        const targetIds = model.getTargetCloudIds();
+        const blendedParts = model.getBlendedParts();
+        const blendedDegrees = model.getBlendedPartsWithDegrees();
+        const allSupporting = model.getAllSupportingParts();
 
-        for (const [cloudId, newDegree] of newDegrees) {
-            const oldDegree = oldDegrees.get(cloudId);
-            if (oldDegree !== undefined && oldDegree !== newDegree) {
-                const instance = instances.find(i => i.cloud.id === cloudId);
-                if (instance) {
-                    this.startBlendingAnimation(cloudId, instance.cloud.animatedBlendingDegree, newDegree);
-                }
-            }
-        }
-    }
-
-    private startBlendingAnimation(cloudId: string, startDegree: number, targetDegree: number): void {
-        this.blendingAnimations.set(cloudId, {
-            startDegree,
-            targetDegree,
-            startTime: performance.now(),
-            duration: 500
-        });
-    }
-
-    animateBlendingDegrees(instances: CloudInstance[]): { completedUnblendings: string[] } {
-        const now = performance.now();
-        const completedUnblendings: string[] = [];
-
-        for (const [cloudId, anim] of this.blendingAnimations) {
-            const instance = instances.find(i => i.cloud.id === cloudId);
-            if (!instance) continue;
-
-            const elapsed = now - anim.startTime;
-            const progress = Math.min(1, elapsed / anim.duration);
-            const eased = progress < 0.5
-                ? 4 * progress * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-            const newDegree = anim.startDegree + (anim.targetDegree - anim.startDegree) * eased;
-            instance.cloud.animatedBlendingDegree = newDegree;
-
-            if (progress >= 1) {
-                this.blendingAnimations.delete(cloudId);
-                if (anim.targetDegree <= 0) {
-                    completedUnblendings.push(cloudId);
-                }
-            }
+        // Build supporting index map (which target each supporting cloud backs, and at what index)
+        const supportingInfo = new Map<string, { targetId: string; index: number }>();
+        for (const targetId of targetIds) {
+            const supportingIds = Array.from(model.getSupportingParts(targetId));
+            supportingIds.forEach((supportingId, index) => {
+                supportingInfo.set(supportingId, { targetId, index });
+            });
         }
 
-        return { completedUnblendings };
-    }
+        for (const instance of instances) {
+            const cloudId = instance.cloud.id;
+            const state = this.cloudStates.get(cloudId);
+            if (!state) continue;
 
-    isBlendingAnimating(cloudId: string): boolean {
-        return this.blendingAnimations.has(cloudId);
+            const isTarget = targetIds.has(cloudId);
+            const isBlended = blendedParts.includes(cloudId);
+            const isSupporting = allSupporting.has(cloudId);
+            const isInForeground = isTarget || isBlended || isSupporting;
+
+            // Determine position target based on role
+            let positionTarget: PositionTarget;
+            let targetOpacity = 1;
+            let inCounterZoomGroup = false;
+
+            if (this.mode === 'foreground' && isInForeground) {
+                inCounterZoomGroup = true;
+
+                if (isTarget) {
+                    const seatIndex = this.conferenceSeatAssignments.get(cloudId);
+                    positionTarget = { type: 'seat', seatIndex: seatIndex ?? 1 };
+                } else if (isBlended) {
+                    const blendReason = model.getBlendReason(cloudId);
+
+                    if (blendReason === 'spontaneous') {
+                        // Spontaneous blends stay at the star until they become targets
+                        positionTarget = { type: 'star' };
+                    } else {
+                        // Therapist-initiated blends interpolate between star and seat
+                        const seatIndex = this.conferenceSeatAssignments.get(cloudId);
+                        // Get or create blended offset
+                        if (!this.blendedOffsets.has(cloudId)) {
+                            const angle = Math.random() * 2 * Math.PI;
+                            const radius = Math.random() * 15;
+                            this.blendedOffsets.set(cloudId, {
+                                x: radius * Math.cos(angle),
+                                y: radius * Math.sin(angle)
+                            });
+                        }
+                        const offset = this.blendedOffsets.get(cloudId)!;
+                        positionTarget = {
+                            type: 'blended',
+                            seatIndex: seatIndex ?? 1,
+                            offsetX: offset.x,
+                            offsetY: offset.y
+                        };
+
+                        // Set blending degree target
+                        const degree = blendedDegrees.get(cloudId) ?? 1;
+                        state.targetBlendingDegree = degree;
+                    }
+                    targetOpacity = BLENDED_OPACITY;
+                } else if (isSupporting) {
+                    const info = supportingInfo.get(cloudId)!;
+                    positionTarget = {
+                        type: 'supporting',
+                        targetId: info.targetId,
+                        index: info.index
+                    };
+                } else {
+                    positionTarget = { type: 'panorama' };
+                }
+            } else if (this.mode === 'foreground') {
+                // In foreground but not part of the conference - fade out
+                positionTarget = { type: 'panorama' };
+                targetOpacity = 0;
+            } else {
+                // Panorama mode
+                positionTarget = { type: 'panorama' };
+
+                // During reverse transition, keep former fg clouds in counter-zoom group
+                if (this.transitionDirection === 'reverse' && this.transitionProgress < 1) {
+                    if (state.inCounterZoomGroup) {
+                        inCounterZoomGroup = true;
+                    }
+                }
+            }
+
+            state.positionTarget = positionTarget;
+            state.targetOpacity = targetOpacity;
+            state.targetScale = 1;
+            state.inCounterZoomGroup = inCounterZoomGroup;
+        }
     }
 
     private updateBlendedCloudStates(model: SimulatorModel, instances: CloudInstance[]): void {
@@ -393,57 +515,15 @@ export class SimulatorView {
 
             if (stretchInfo) {
                 cloud.setBlendedStretch(stretchInfo.stretchX, stretchInfo.stretchY, stretchInfo.anchorSide);
-
-                const viewState = this.viewStates.get(cloud.id);
-                if (viewState) {
-                    const starPos = this.getStarPosition();
-                    const cloudEdgeOffset = cloud.getAnchorEdgeOffset(stretchInfo.anchorSide);
-
-                    // Target position: anchor edge at far side of star
-                    const targetX = starPos.x + stretchInfo.anchorOffsetX + cloudEdgeOffset.x;
-                    const targetY = starPos.y + stretchInfo.anchorOffsetY + cloudEdgeOffset.y;
-
-                    // Get or create position state for smooth transition
-                    let posState = this.stretchPositionState.get(cloud.id);
-                    if (!posState) {
-                        // First frame of stretch - start from current position
-                        posState = {
-                            targetX,
-                            targetY,
-                            currentX: viewState.currentX,
-                            currentY: viewState.currentY
-                        };
-                        this.stretchPositionState.set(cloud.id, posState);
-                    } else {
-                        posState.targetX = targetX;
-                        posState.targetY = targetY;
-                    }
-
-                    viewState.currentX = posState.currentX;
-                    viewState.currentY = posState.currentY;
-                }
             } else {
                 cloud.clearBlendedStretch();
-                this.stretchPositionState.delete(cloud.id);
                 this.committedBlendingDegrees.delete(cloud.id);
                 this.stretchAnim.delete(cloud.id);
             }
         }
     }
 
-    animateStretchPositions(deltaTime: number): void {
-        const smoothing = 8;
-        const factor = 1 - Math.exp(-smoothing * deltaTime);
-
-        for (const [cloudId, posState] of this.stretchPositionState) {
-            posState.currentX += (posState.targetX - posState.currentX) * factor;
-            posState.currentY += (posState.targetY - posState.currentY) * factor;
-        }
-
-        this.animateStretchEffects(deltaTime);
-    }
-
-    private animateStretchEffects(deltaTime: number): void {
+    animateStretchEffects(deltaTime: number): void {
         const now = performance.now();
 
         for (const [cloudId, state] of this.stretchAnim) {
@@ -790,193 +870,12 @@ export class SimulatorView {
         return positions;
     }
 
-    private detectAndAnimateSupportingParts(
-        oldModel: SimulatorModel,
-        newModel: SimulatorModel,
-        instances: CloudInstance[]
-    ): void {
-        const oldTargets = oldModel.getTargetCloudIds();
-        const newTargets = newModel.getTargetCloudIds();
-        const oldSupporting = oldModel.getAllSupportingParts();
-        const newSupporting = newModel.getAllSupportingParts();
-        const oldBlended = oldModel.getBlendedParts();
-        const newBlended = newModel.getBlendedParts();
-
-        const targetInstances = Array.from(newTargets)
-            .map(id => instances.find(inst => inst.cloud.id === id))
-            .filter(inst => inst !== undefined) as CloudInstance[];
-
-        if (targetInstances.length === 0) return;
-
-        const conferencePositions = this.calculateConferenceRoomPositions(newModel, targetInstances);
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-
-        const cloudsToAnimate = new Set<string>();
-
-        const targetsChanged = oldTargets.size !== newTargets.size;
-
-        for (const id of newTargets) {
-            if (!oldTargets.has(id)) {
-                cloudsToAnimate.add(id);
-            } else if (targetsChanged) {
-                cloudsToAnimate.add(id);
-
-                const oldSupportingIds = oldModel.getSupportingParts(id);
-                for (const supportId of oldSupportingIds) {
-                    cloudsToAnimate.add(supportId);
-                }
-            }
-        }
-
-        for (const id of newSupporting) {
-            if (!oldSupporting.has(id)) {
-                cloudsToAnimate.add(id);
-            }
-        }
-
-        for (const id of newBlended) {
-            if (!oldBlended.includes(id)) {
-                cloudsToAnimate.add(id);
-            }
-        }
-
-        for (const targetId of newTargets) {
-            const targetPos = conferencePositions.clouds.get(targetId);
-            if (!targetPos) continue;
-
-            if (cloudsToAnimate.has(targetId)) {
-                this.animateSupportingPart(targetId, targetPos.x, targetPos.y, 1, 1, 0.5);
-            }
-
-            const supportingIds = newModel.getSupportingParts(targetId);
-            const supportingArray = Array.from(supportingIds);
-            supportingArray.forEach((supportingId, index) => {
-                if (!cloudsToAnimate.has(supportingId)) return;
-
-                const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
-                const distance = 80 + index * 50;
-                const supportX = targetPos.x + Math.cos(angle) * distance;
-                const supportY = targetPos.y + Math.sin(angle) * distance;
-
-                this.animateSupportingPart(supportingId, supportX, supportY, 1, 1, 0.5);
-            });
-        }
-
-        newBlended.forEach((cloudId, index) => {
-            if (!cloudsToAnimate.has(cloudId)) return;
-
-            if (!this.blendedOffsets.has(cloudId)) {
-                const angle = Math.random() * 2 * Math.PI;
-                const radius = Math.random() * 15;
-                this.blendedOffsets.set(cloudId, {
-                    x: radius * Math.cos(angle),
-                    y: radius * Math.sin(angle)
-                });
-            }
-            const offset = this.blendedOffsets.get(cloudId)!;
-            this.animateSupportingPart(
-                cloudId,
-                conferencePositions.starX + offset.x,
-                conferencePositions.starY + offset.y,
-                1,
-                BLENDED_OPACITY,
-                0.5
-            );
-        });
-    }
-
     private setsEqual(a: Set<string>, b: Set<string>): boolean {
         if (a.size !== b.size) return false;
         for (const item of a) {
             if (!b.has(item)) return false;
         }
         return true;
-    }
-
-    private updateViewStates(
-        model: SimulatorModel,
-        instances: CloudInstance[],
-        panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
-        cloudsWithFreshAnimations: Set<string> = new Set()
-    ): void {
-        const isTransitioning = this.transitionDirection !== 'none';
-
-        const foregroundPositions = this.calculateForegroundPositions(model, instances);
-        const eased = this.easeInOutCubic(this.transitionProgress);
-
-        if (this.mode === 'panorama') {
-            for (const instance of instances) {
-                const viewState = this.viewStates.get(instance.cloud.id);
-                const panoramaPos = panoramaPositions.get(instance.cloud.id);
-                if (!viewState || !panoramaPos) continue;
-
-                const fgPos = foregroundPositions.get(instance.cloud.id);
-                if (fgPos && isTransitioning) {
-                    viewState.currentX = fgPos.x + (panoramaPos.x - fgPos.x) * eased;
-                    viewState.currentY = fgPos.y + (panoramaPos.y - fgPos.y) * eased;
-                    viewState.currentScale = fgPos.scale + (panoramaPos.scale - fgPos.scale) * eased;
-                    viewState.currentOpacity = 1;
-                    viewState.inCounterZoomGroup = eased < 1;
-                } else if (isTransitioning) {
-                    viewState.currentX = panoramaPos.x;
-                    viewState.currentY = panoramaPos.y;
-                    viewState.currentScale = panoramaPos.scale;
-                    viewState.currentOpacity = eased;
-                    viewState.inCounterZoomGroup = false;
-                } else {
-                    viewState.currentX = panoramaPos.x;
-                    viewState.currentY = panoramaPos.y;
-                    viewState.currentScale = panoramaPos.scale;
-                    viewState.currentOpacity = 1;
-                    viewState.inCounterZoomGroup = false;
-                }
-            }
-        } else if (this.mode === 'foreground') {
-            const fadeProgress = isTransitioning ? eased : 1;
-
-            for (const instance of instances) {
-                const viewState = this.viewStates.get(instance.cloud.id);
-                if (!viewState) continue;
-
-                const fgPos = foregroundPositions.get(instance.cloud.id);
-                const panoramaPos = panoramaPositions.get(instance.cloud.id);
-
-                if (fgPos) {
-                    const isTarget = model.isTarget(instance.cloud.id);
-                    const isBlended = model.isBlended(instance.cloud.id);
-                    const hasFreshAnimation = cloudsWithFreshAnimations.has(instance.cloud.id);
-                    const targetOpacity = isBlended ? BLENDED_OPACITY : 1;
-
-                    // Keep animation if it exists and is still running (progress < 1)
-                    const hasRunningAnimation = viewState.supportingAnimation && viewState.supportingAnimation.progress < 1;
-
-                    if (hasRunningAnimation || (viewState.supportingAnimation && hasFreshAnimation)) {
-                        // Animation handles position - let it continue
-                    } else {
-                        viewState.supportingAnimation = undefined;
-                        if (isTransitioning && panoramaPos) {
-                            viewState.currentX = panoramaPos.x + (fgPos.x - panoramaPos.x) * fadeProgress;
-                            viewState.currentY = panoramaPos.y + (fgPos.y - panoramaPos.y) * fadeProgress;
-                            viewState.currentScale = panoramaPos.scale + (fgPos.scale - panoramaPos.scale) * fadeProgress;
-                            viewState.currentOpacity = targetOpacity;
-                        } else {
-                            viewState.currentX = fgPos.x;
-                            viewState.currentY = fgPos.y;
-                            viewState.currentScale = fgPos.scale;
-                            viewState.currentOpacity = targetOpacity;
-                        }
-                    }
-                    viewState.inCounterZoomGroup = true;
-                } else if (panoramaPos) {
-                    viewState.currentX = panoramaPos.x;
-                    viewState.currentY = panoramaPos.y;
-                    viewState.currentScale = panoramaPos.scale;
-                    viewState.currentOpacity = isTransitioning ? (1 - fadeProgress) : 0;
-                    viewState.inCounterZoomGroup = false;
-                }
-            }
-        }
     }
 
     animate(deltaTime: number): void {
@@ -992,25 +891,121 @@ export class SimulatorView {
         }
 
         this.animateSeatCount(deltaTime);
+        this.animateStar(deltaTime);
+    }
 
-        for (const viewState of this.viewStates.values()) {
-            if (viewState.supportingAnimation) {
-                const anim = viewState.supportingAnimation;
-                anim.progress = Math.min(1, anim.progress + deltaTime / anim.duration);
+    animateCloudStates(
+        deltaTime: number,
+        panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
+        model: SimulatorModel
+    ): { completedUnblendings: string[] } {
+        const completedUnblendings: string[] = [];
 
-                const eased = this.easeInOutCubic(anim.progress);
-                viewState.currentX = anim.startX + (anim.endX - anim.startX) * eased;
-                viewState.currentY = anim.startY + (anim.endY - anim.startY) * eased;
-                viewState.currentScale = anim.startScale + (anim.endScale - anim.startScale) * eased;
-                viewState.currentOpacity = anim.startOpacity + (anim.endOpacity - anim.startOpacity) * eased;
+        for (const [cloudId, state] of this.cloudStates) {
+            // Resolve semantic position target to actual x/y
+            const resolved = this.resolvePositionTarget(
+                state.positionTarget,
+                cloudId,
+                panoramaPositions,
+                model
+            );
 
-                if (anim.progress >= 1) {
-                    viewState.supportingAnimation = undefined;
-                }
+            // Apply exponential smoothing to each property
+            if (state.smoothing.position > 0) {
+                const factor = 1 - Math.exp(-state.smoothing.position * deltaTime);
+                state.x += (resolved.x - state.x) * factor;
+                state.y += (resolved.y - state.y) * factor;
+            } else {
+                state.x = resolved.x;
+                state.y = resolved.y;
+            }
+
+            if (state.smoothing.scale > 0) {
+                const factor = 1 - Math.exp(-state.smoothing.scale * deltaTime);
+                state.scale += (state.targetScale - state.scale) * factor;
+            } else {
+                state.scale = state.targetScale;
+            }
+
+            if (state.smoothing.opacity > 0) {
+                const factor = 1 - Math.exp(-state.smoothing.opacity * deltaTime);
+                state.opacity += (state.targetOpacity - state.opacity) * factor;
+            } else {
+                state.opacity = state.targetOpacity;
+            }
+
+            // Track previous degree for detecting completion
+            const prevDegree = state.blendingDegree;
+
+            if (state.smoothing.blendingDegree > 0) {
+                const factor = 1 - Math.exp(-state.smoothing.blendingDegree * deltaTime);
+                state.blendingDegree += (state.targetBlendingDegree - state.blendingDegree) * factor;
+            } else {
+                state.blendingDegree = state.targetBlendingDegree;
+            }
+
+            // Detect when blending completes (degree reaches ~0)
+            if (prevDegree > 0.01 && state.blendingDegree <= 0.01 && state.targetBlendingDegree <= 0) {
+                completedUnblendings.push(cloudId);
             }
         }
 
-        this.animateStar(deltaTime);
+        return { completedUnblendings };
+    }
+
+    getCloudState(cloudId: string): CloudAnimatedState | undefined {
+        return this.cloudStates.get(cloudId);
+    }
+
+    setCloudTarget(
+        cloudId: string,
+        target: Partial<{
+            positionTarget: PositionTarget;
+            targetScale: number;
+            targetOpacity: number;
+            targetBlendingDegree: number;
+            smoothing: Partial<SmoothingConfig>;
+        }>
+    ): void {
+        const state = this.cloudStates.get(cloudId);
+        if (!state) return;
+
+        if (target.positionTarget !== undefined) {
+            state.positionTarget = target.positionTarget;
+        }
+        if (target.targetScale !== undefined) {
+            state.targetScale = target.targetScale;
+        }
+        if (target.targetOpacity !== undefined) {
+            state.targetOpacity = target.targetOpacity;
+        }
+        if (target.targetBlendingDegree !== undefined) {
+            state.targetBlendingDegree = target.targetBlendingDegree;
+        }
+        if (target.smoothing) {
+            Object.assign(state.smoothing, target.smoothing);
+        }
+    }
+
+    initializeCloudState(
+        cloudId: string,
+        initialPosition: { x: number; y: number; scale: number },
+        positionTarget: PositionTarget
+    ): void {
+        this.cloudStates.set(cloudId, {
+            cloudId,
+            x: initialPosition.x,
+            y: initialPosition.y,
+            scale: initialPosition.scale,
+            opacity: 1,
+            blendingDegree: 1,
+            positionTarget,
+            targetScale: initialPosition.scale,
+            targetOpacity: 1,
+            targetBlendingDegree: 1,
+            smoothing: { ...DEFAULT_SMOOTHING },
+            inCounterZoomGroup: false
+        });
     }
 
     private animateSeatCount(deltaTime: number): void {
@@ -1040,19 +1035,7 @@ export class SimulatorView {
     updateForegroundPositions(model: SimulatorModel, instances: CloudInstance[]): void {
         if (this.mode !== 'foreground') return;
 
-        const foregroundPositions = this.calculateForegroundPositions(model, instances);
-
-        for (const instance of instances) {
-            const viewState = this.viewStates.get(instance.cloud.id);
-            if (!viewState) continue;
-
-            const fgPos = foregroundPositions.get(instance.cloud.id);
-            if (fgPos && !viewState.supportingAnimation) {
-                viewState.currentX = fgPos.x;
-                viewState.currentY = fgPos.y;
-            }
-        }
-
+        // Update cached star position for conference rotation
         this.cachedStarPosition = this.getSeatPosition(0, this.targetSeatCount);
 
         const centerX = this.canvasWidth / 2;
@@ -1096,25 +1079,8 @@ export class SimulatorView {
         }
     }
 
-    updatePanoramaPosition(cloudId: string, x: number, y: number, scale: number): void {
-        const viewState = this.viewStates.get(cloudId);
-        if (viewState) {
-            viewState.currentX = x;
-            viewState.currentY = y;
-            viewState.currentScale = scale;
-        }
-    }
-
-    getViewState(cloudId: string): CloudViewState | undefined {
-        return this.viewStates.get(cloudId);
-    }
-
-    clearAllViewStates(): void {
-        this.viewStates.clear();
-    }
-
-    getStretchPositionState(cloudId: string): { currentX: number; currentY: number; targetX: number; targetY: number } | undefined {
-        return this.stretchPositionState.get(cloudId);
+    clearAllCloudStates(): void {
+        this.cloudStates.clear();
     }
 
     getBlendedStretchTarget(cloud: Cloud, model: SimulatorModel): { x: number; y: number } | null {
@@ -1134,6 +1100,9 @@ export class SimulatorView {
     getBlendedLatticeStretch(cloud: Cloud, model: SimulatorModel): { stretchX: number; stretchY: number; anchorSide: 'left' | 'right' | 'top' | 'bottom'; anchorOffsetX: number; anchorOffsetY: number } | null {
         const cloudId = cloud.id;
         if (!model.isBlended(cloudId)) return null;
+
+        // No stretch animation for spontaneous blends
+        if (model.getBlendReason(cloudId) !== 'therapist') return null;
 
         const degree = cloud.animatedBlendingDegree;
         if (degree >= 1) return null;
@@ -1236,70 +1205,6 @@ export class SimulatorView {
             return maxZoomFactor;
         }
         return 1.0;
-    }
-
-    animateSupportingPart(cloudId: string, endX: number, endY: number, endScale: number, endOpacity: number, duration: number = 0.5): void {
-        const viewState = this.viewStates.get(cloudId);
-        if (!viewState) return;
-
-        viewState.supportingAnimation = {
-            startX: viewState.currentX,
-            startY: viewState.currentY,
-            startScale: viewState.currentScale,
-            startOpacity: viewState.currentOpacity,
-            endX,
-            endY,
-            endScale,
-            endOpacity,
-            progress: 0,
-            duration
-        };
-        viewState.currentX = endX;
-        viewState.currentY = endY;
-        viewState.currentScale = endScale;
-        viewState.currentOpacity = endOpacity;
-        viewState.inCounterZoomGroup = true;
-    }
-
-    animateFromPosition(cloudId: string, startX: number, startY: number, startScale: number, startOpacity: number, endX: number, endY: number, endScale: number, endOpacity: number, duration: number = 0.5): void {
-        const viewState = this.viewStates.get(cloudId);
-        if (!viewState) return;
-        viewState.supportingAnimation = {
-            startX,
-            startY,
-            startScale,
-            startOpacity,
-            endX,
-            endY,
-            endScale,
-            endOpacity,
-            progress: 0,
-            duration
-        };
-        viewState.currentX = startX;
-        viewState.currentY = startY;
-        viewState.currentScale = startScale;
-        viewState.currentOpacity = startOpacity;
-        viewState.inCounterZoomGroup = true;
-    }
-
-    animateStepBack(cloudId: string, panoramaX: number, panoramaY: number, panoramaScale: number, duration: number = 0.5): void {
-        const viewState = this.viewStates.get(cloudId);
-        if (!viewState) return;
-
-        viewState.supportingAnimation = {
-            startX: viewState.currentX,
-            startY: viewState.currentY,
-            startScale: viewState.currentScale,
-            startOpacity: viewState.currentOpacity,
-            endX: panoramaX,
-            endY: panoramaY,
-            endScale: panoramaScale,
-            endOpacity: 0,
-            progress: 0,
-            duration
-        };
-        viewState.inCounterZoomGroup = true;
     }
 
     getSeatInfo(model: SimulatorModel): SeatInfo[] {
