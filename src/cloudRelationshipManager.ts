@@ -9,15 +9,15 @@ interface GrievanceRelation {
     grievance: number;
 }
 
-interface SelfReferenceRelation {
+interface ProxyRelation {
     cloudId: string;
-    targetId: string;
+    proxyId: string;
 }
 
 export class CloudRelationshipManager {
     private protections: ProtectionRelation[] = [];
     private grievances: GrievanceRelation[] = [];
-    private selfRefs: SelfReferenceRelation[] = [];
+    private proxies: ProxyRelation[] = [];
 
     addProtection(protectorId: string, protectedId: string | string[]): void {
         const protectedIds = Array.isArray(protectedId) ? protectedId : [protectedId];
@@ -82,33 +82,37 @@ export class CloudRelationshipManager {
         );
     }
 
-    addSelfReference(cloudId: string, targetId: string | string[]): void {
-        const targetIds = Array.isArray(targetId) ? targetId : [targetId];
-        for (const id of targetIds) {
-            if (!this.hasSelfReference(cloudId, id)) {
-                this.selfRefs.push({ cloudId, targetId: id });
+    addProxy(cloudId: string, proxyId: string | string[]): void {
+        const proxyIds = Array.isArray(proxyId) ? proxyId : [proxyId];
+        for (const id of proxyIds) {
+            if (!this.hasProxy(cloudId, id)) {
+                this.proxies.push({ cloudId, proxyId: id });
             }
         }
     }
 
-    removeSelfReference(cloudId: string, targetId: string): void {
-        this.selfRefs = this.selfRefs.filter(
-            r => !(r.cloudId === cloudId && r.targetId === targetId)
+    removeProxy(cloudId: string, proxyId: string): void {
+        this.proxies = this.proxies.filter(
+            r => !(r.cloudId === cloudId && r.proxyId === proxyId)
         );
     }
 
-    getSelfReferences(cloudId: string): Set<string> {
+    clearProxies(cloudId: string): void {
+        this.proxies = this.proxies.filter(r => r.cloudId !== cloudId);
+    }
+
+    getProxies(cloudId: string): Set<string> {
         return new Set(
-            this.selfRefs
+            this.proxies
                 .filter(r => r.cloudId === cloudId)
-                .map(r => r.targetId)
+                .map(r => r.proxyId)
         );
     }
 
-    getReferencedBy(targetId: string): Set<string> {
+    getProxyFor(proxyId: string): Set<string> {
         return new Set(
-            this.selfRefs
-                .filter(r => r.targetId === targetId)
+            this.proxies
+                .filter(r => r.proxyId === proxyId)
                 .map(r => r.cloudId)
         );
     }
@@ -120,8 +124,8 @@ export class CloudRelationshipManager {
         this.grievances = this.grievances.filter(
             g => g.cloudId !== cloudId && g.targetId !== cloudId
         );
-        this.selfRefs = this.selfRefs.filter(
-            r => r.cloudId !== cloudId && r.targetId !== cloudId
+        this.proxies = this.proxies.filter(
+            r => r.cloudId !== cloudId && r.proxyId !== cloudId
         );
     }
 
@@ -131,9 +135,24 @@ export class CloudRelationshipManager {
         );
     }
 
-    hasSelfReference(cloudId: string, targetId: string): boolean {
-        return this.selfRefs.some(
-            r => r.cloudId === cloudId && r.targetId === targetId
+    hasProxy(cloudId: string, proxyId: string): boolean {
+        return this.proxies.some(
+            r => r.cloudId === cloudId && r.proxyId === proxyId
         );
+    }
+
+    assessNeedAttention(cloudId: string): number {
+        const isProtecting = this.getProtecting(cloudId).size > 0;
+        const grievances = this.getGrievances(cloudId);
+        const hasActiveGrievances = Array.from(grievances.values()).some(g => g > 0);
+        const isProxy = this.getProxyFor(cloudId).size > 0;
+
+        if (isProtecting || hasActiveGrievances) {
+            return 0.5;
+        }
+        if (isProxy) {
+            return 0.1;
+        }
+        return 0.3;
     }
 }

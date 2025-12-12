@@ -8,14 +8,20 @@ export interface StateAction {
 }
 
 export interface HistoryEntry {
-    timestamp: number;
     action: StateAction;
+}
+
+export type BlendReason = 'spontaneous' | 'therapist';
+
+export interface BlendedPartState {
+    degree: number;
+    reason: BlendReason;
 }
 
 export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
-    private blendedParts: Map<string, number> = new Map(); // cloudId -> blending degree (0-1)
+    private blendedParts: Map<string, BlendedPartState> = new Map();
     private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
     private partStates: Map<string, PartState> = new Map();
@@ -87,10 +93,10 @@ export class SimulatorModel {
         this.record({ type: 'clearSupportingParts' });
     }
 
-    addBlendedPart(cloudId: string, degree: number = 1): void {
+    addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
         if (!this.blendedParts.has(cloudId)) {
-            this.blendedParts.set(cloudId, Math.max(0.01, Math.min(1, degree)));
-            this.record({ type: 'addBlended', cloudId, data: { degree } });
+            this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
+            this.record({ type: 'addBlended', cloudId, data: { degree, reason } });
         }
     }
 
@@ -102,9 +108,10 @@ export class SimulatorModel {
     }
 
     setBlendingDegree(cloudId: string, degree: number): void {
-        if (this.blendedParts.has(cloudId)) {
+        const existing = this.blendedParts.get(cloudId);
+        if (existing) {
             const clampedDegree = Math.max(0, Math.min(1, degree));
-            this.blendedParts.set(cloudId, clampedDegree);
+            this.blendedParts.set(cloudId, { ...existing, degree: clampedDegree });
             this.record({ type: 'setBlendingDegree', cloudId, data: { degree: clampedDegree } });
         }
     }
@@ -117,7 +124,11 @@ export class SimulatorModel {
     }
 
     getBlendingDegree(cloudId: string): number {
-        return this.blendedParts.get(cloudId) ?? 0;
+        return this.blendedParts.get(cloudId)?.degree ?? 0;
+    }
+
+    getBlendReason(cloudId: string): BlendReason | null {
+        return this.blendedParts.get(cloudId)?.reason ?? null;
     }
 
     getBlendedParts(): string[] {
@@ -125,7 +136,11 @@ export class SimulatorModel {
     }
 
     getBlendedPartsWithDegrees(): Map<string, number> {
-        return new Map(this.blendedParts);
+        const result = new Map<string, number>();
+        for (const [id, state] of this.blendedParts) {
+            result.set(id, state.degree);
+        }
+        return result;
     }
 
     isBlended(cloudId: string): boolean {
@@ -187,7 +202,7 @@ export class SimulatorModel {
     }
 
     private record(action: StateAction): void {
-        this.history.push({ timestamp: Date.now(), action });
+        this.history.push({ action });
     }
 
     // PartState management
@@ -250,6 +265,17 @@ export class SimulatorModel {
         }
     }
 
+    markAsProxy(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.wasProxy = true;
+        }
+    }
+
+    wasProxy(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.wasProxy ?? false;
+    }
+
     getDialogues(cloudId: string): PartDialogues {
         return this.partStates.get(cloudId)?.dialogues ?? {};
     }
@@ -294,6 +320,39 @@ export class SimulatorModel {
         }
     }
 
+    revealJob(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.jobRevealed) {
+            state.biography.jobRevealed = true;
+            this.record({ type: 'revealJob', cloudId });
+        }
+    }
+
+    isJobRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.jobRevealed ?? false;
+    }
+
+    hasJob(cloudId: string): boolean {
+        const dialogues = this.partStates.get(cloudId)?.dialogues;
+        return !!dialogues?.unburdenedJob;
+    }
+
+    getUnrevealedBiographyFields(cloudId: string): ('age' | 'identity' | 'job')[] {
+        const state = this.partStates.get(cloudId);
+        if (!state) return [];
+        const unrevealed: ('age' | 'identity' | 'job')[] = [];
+        if (!state.biography.ageRevealed && state.biography.partAge !== null) {
+            unrevealed.push('age');
+        }
+        if (!state.biography.identityRevealed) {
+            unrevealed.push('identity');
+        }
+        if (!state.biography.jobRevealed && state.dialogues.unburdenedJob) {
+            unrevealed.push('job');
+        }
+        return unrevealed;
+    }
+
     getDisplayAge(cloudId: string): string | null {
         const state = this.partStates.get(cloudId);
         if (!state || !state.biography.ageRevealed) return null;
@@ -320,9 +379,8 @@ export class SimulatorModel {
 
         for (let i = 0; i < this.history.length; i++) {
             const entry = this.history[i];
-            const time = new Date(entry.timestamp).toLocaleTimeString();
             const action = this.formatAction(entry.action, getName);
-            lines.push(`[${i}] ${time}: ${action}`);
+            lines.push(`[${i}] ${action}`);
         }
 
         return lines.join('\n');
@@ -371,6 +429,8 @@ export class SimulatorModel {
                 return `Revealed relationships: ${getName(cloudId!)}`;
             case 'revealProtects':
                 return `Revealed protects: ${getName(cloudId!)}`;
+            case 'revealJob':
+                return `Revealed job: ${getName(cloudId!)}`;
             case 'setTrust':
                 return `Set trust: ${getName(cloudId!)} ${((data?.oldTrust as number) * 100).toFixed(0)}% → ${((data?.newTrust as number) * 100).toFixed(0)}%${data?.reason ? ` (${data.reason})` : ''}`;
             case 'adjustTrust':
@@ -387,7 +447,10 @@ export class SimulatorModel {
         for (const [k, v] of this.supportingParts) {
             cloned.supportingParts.set(k, new Set(v));
         }
-        cloned.blendedParts = new Map(this.blendedParts);
+        cloned.blendedParts = new Map();
+        for (const [id, state] of this.blendedParts) {
+            cloned.blendedParts.set(id, { ...state });
+        }
         cloned.selectedCloudId = this.selectedCloudId;
         for (const [id, state] of this.partStates) {
             cloned.partStates.set(id, {

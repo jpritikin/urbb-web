@@ -177,15 +177,19 @@ export class SimulatorView {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    private getConferenceTableRadius(): number {
-        return Math.min(this.canvasWidth, this.canvasHeight) * 0.3;
+    private getConferenceTableRadius(seatCount?: number): number {
+        const baseRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.3;
+        const seats = seatCount ?? this.currentSeatCount;
+        if (seats <= 2) return baseRadius * 0.5;
+        if (seats >= 7) return baseRadius;
+        return baseRadius * (0.5 + 0.5 * (seats - 2) / 5);
     }
 
     private getSeatPosition(seatIndex: number, totalSeats: number): { x: number; y: number } {
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
-        const radius = this.getConferenceTableRadius();
         const animatedSeats = this.currentSeatCount > 0 ? this.currentSeatCount : totalSeats;
+        const radius = this.getConferenceTableRadius(animatedSeats);
         const angleStep = (2 * Math.PI) / animatedSeats;
         const angle = this.conferencePhaseShift + angleStep * seatIndex;
         return {
@@ -1103,6 +1107,10 @@ export class SimulatorView {
 
     getViewState(cloudId: string): CloudViewState | undefined {
         return this.viewStates.get(cloudId);
+    }
+
+    clearAllViewStates(): void {
+        this.viewStates.clear();
     }
 
     getStretchPositionState(cloudId: string): { currentX: number; currentY: number; targetX: number; targetY: number } | undefined {

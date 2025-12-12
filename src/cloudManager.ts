@@ -17,9 +17,9 @@ export interface TherapistAction {
 }
 
 export const THERAPIST_ACTIONS: TherapistAction[] = [
-    { id: 'familiar', question: 'Is this part familiar to you?', shortName: 'Familiar?', category: 'discovery' },
     { id: 'first_memories', question: "When were this part's first memories?", shortName: 'Memories', category: 'history' },
     { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship' },
+    { id: 'who_do_you_see', question: 'Who do you see when you look at the client?', shortName: 'Who?', category: 'discovery' },
     { id: 'job', question: "What is this part's job?", shortName: 'Job', category: 'role' },
     { id: 'join_conference', question: 'Can this part join the conference?', shortName: 'Join', category: 'relationship' },
     { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
@@ -93,6 +93,7 @@ export class CloudManager {
     private thoughtBubbleGroup: SVGGElement | null = null;
     private thoughtBubbleFadeTimer: number = 0;
     private thoughtBubbleVisible: boolean = false;
+    private thoughtBubbleFollowUp: { label: string; targetCloudId: string } | null = null;
     private relationshipClouds: Map<string, { instance: CloudInstance; region: string }> = new Map();
     private regionLabelsGroup: SVGGElement | null = null;
     private modeToggleContainer: HTMLElement | null = null;
@@ -162,6 +163,22 @@ export class CloudManager {
         this.updateViewBox();
         this.setupVisibilityHandling();
         this.setupSelectionHandlers();
+        this.setupClickDiagnostics();
+    }
+
+    private setupClickDiagnostics(): void {
+        if (!this.svgElement) return;
+
+        this.svgElement.addEventListener('click', (e: MouseEvent) => {
+            const target = e.target as Element;
+            const isCloud = target.closest('g[transform]')?.querySelector('path') !== null;
+            if (!isCloud) {
+                const rect = this.svgElement!.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                console.log(`[SVG Click] Missed all clouds at (${x.toFixed(0)}, ${y.toFixed(0)}), target=${target.tagName}, mode=${this.view.getMode()}, thoughtBubble=${this.thoughtBubbleVisible}`);
+            }
+        });
     }
 
     private setupVisibilityHandling(): void {
@@ -368,6 +385,8 @@ export class CloudManager {
                 include = isTarget || isSupporting || isBlended;
             } else if (action.id === 'job') {
                 include = isTarget || isBlended;
+            } else if (action.id === 'who_do_you_see') {
+                include = isTarget && this.relationships.getProxies(cloudId).size > 0;
             } else {
                 include = isTarget;
             }
@@ -483,6 +502,11 @@ export class CloudManager {
             return;
         }
 
+        if (action.id === 'who_do_you_see') {
+            this.handleWhoDoYouSee(cloud);
+            return;
+        }
+
         if (action.id === 'first_memories') {
             this.model.revealAge(cloud.id);
         } else if (action.id === 'feel_toward') {
@@ -492,15 +516,33 @@ export class CloudManager {
             const oldModel = this.model.clone();
 
             const targetIds = this.model.getTargetCloudIds();
+            const alreadyBlended = this.model.getBlendedParts();
             const blendedResponses: { cloudId: string; response: string; isGrievance: boolean }[] = [];
 
+            for (const blendedId of alreadyBlended) {
+                const grievanceLevel = this.relationships.getGrievance(blendedId, cloud.id);
+                if (grievanceLevel > 0) {
+                    const blendedCloud = this.getCloudById(blendedId);
+                    if (blendedCloud) {
+                        const response = this.getGrievanceResponse(blendedCloud, cloud);
+                        if (response) {
+                            blendedResponses.push({
+                                cloudId: blendedId,
+                                response,
+                                isGrievance: true
+                            });
+                        }
+                    }
+                }
+            }
+
             for (const protectorId of protectorIds) {
-                if (!targetIds.has(protectorId)) {
+                if (!targetIds.has(protectorId) && !alreadyBlended.includes(protectorId)) {
                     const protectorCloud = this.getCloudById(protectorId);
                     if (protectorCloud) {
                         const response = this.getProtectorResponse(protectorCloud, cloud);
                         if (response) {
-                            this.model.addBlendedPart(protectorId);
+                            this.model.addBlendedPart(protectorId, 'therapist');
                             blendedResponses.push({
                                 cloudId: protectorId,
                                 response,
@@ -512,12 +554,12 @@ export class CloudManager {
             }
 
             for (const [grievanceId, grievanceLevel] of grievanceMap) {
-                if (grievanceLevel > 0 && !targetIds.has(grievanceId)) {
+                if (grievanceLevel > 0 && !targetIds.has(grievanceId) && !alreadyBlended.includes(grievanceId)) {
                     const grievanceCloud = this.getCloudById(grievanceId);
                     if (grievanceCloud && this.model.getTrust(grievanceId) < 0.5) {
                         const response = this.getGrievanceResponse(grievanceCloud, cloud);
                         if (response) {
-                            this.model.addBlendedPart(grievanceId);
+                            this.model.addBlendedPart(grievanceId, 'therapist');
                             blendedResponses.push({
                                 cloudId: grievanceId,
                                 response,
@@ -529,14 +571,23 @@ export class CloudManager {
             }
 
             const blendedParts = this.model.getBlendedParts();
+            const partDesc = this.buildPartDescription(cloud.id);
 
             if (blendedParts.length === 0) {
-                const selfAspects = ['compassion', 'curiosity', 'gratitude', 'patience'];
-                const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
-                this.showThoughtBubble(selfAspect);
+                const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
+                if (unrevealed.length > 0) {
+                    this.showThoughtBubble(`Feel toward ${partDesc}?\ncuriosity`, { label: 'Let the part know', targetCloudId: cloud.id });
+                } else {
+                    const selfAspects = ['compassion', 'gratitude'];
+                    const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
+                    this.showThoughtBubble(`Feel toward ${partDesc}?\n${selfAspect}`, { label: 'Let the part know', targetCloudId: cloud.id });
+                }
             } else if (blendedResponses.length > 0) {
                 const firstResponse = blendedResponses[0];
                 this.showThoughtBubble(firstResponse.response);
+                if (firstResponse.isGrievance) {
+                    this.model.adjustTrust(cloud.id, 0.9, 'therapist invited attack');
+                }
             }
 
             this.model.revealRelationships(cloud.id);
@@ -584,11 +635,52 @@ export class CloudManager {
         this.updateBiographyPanel();
     }
 
-    private reduceBlending(cloudId: string, amount: number): void {
+    private handleWhoDoYouSee(cloud: Cloud): void {
+        const proxies = this.relationships.getProxies(cloud.id);
+        if (proxies.size === 0) {
+            this.showThoughtBubble("I see you.");
+            return;
+        }
+
+        const targetIds = this.model.getTargetCloudIds();
+        const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
+        if (availableProxies.length === 0) {
+            if (Math.random() < 0.2) {
+                this.relationships.clearProxies(cloud.id);
+                this.showThoughtBubble("I see you.");
+                return;
+            }
+            const proxyIds = Array.from(proxies);
+            const proxyId = proxyIds[Math.floor(Math.random() * proxyIds.length)];
+            const proxyCloud = this.getCloudById(proxyId);
+            const proxyName = proxyCloud?.text ?? 'someone';
+            this.showThoughtBubble(`I see the ${proxyName}.`);
+            return;
+        }
+
+        const proxyId = availableProxies[Math.floor(Math.random() * availableProxies.length)];
+        const proxyCloud = this.getCloudById(proxyId);
+        const proxyName = proxyCloud?.text ?? 'someone';
+
+        const oldModel = this.model.clone();
+        this.model.addBlendedPart(proxyId, 'therapist');
+        this.model.revealIdentity(proxyId);
+        this.syncViewWithModel(oldModel);
+
+        this.showThoughtBubble(`I see the ${proxyName}.`);
+        this.updateBiographyPanel();
+    }
+
+    private reduceBlending(cloudId: string, baseAmount: number): void {
         if (!this.model.isBlended(cloudId)) return;
 
         const cloud = this.getCloudById(cloudId);
         if (!cloud) return;
+
+        // Parts with low needAttention unblend more readily (up to 3x faster)
+        const needAttention = this.model.getNeedAttention(cloudId);
+        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
+        const amount = baseAmount * multiplier;
 
         const oldModel = this.model.clone();
         const currentDegree = this.model.getBlendingDegree(cloudId);
@@ -613,24 +705,58 @@ export class CloudManager {
         return null;
     }
 
-    private showThoughtBubble(reaction: string): void {
+    private buildPartDescription(cloudId: string): string {
+        const parts: string[] = [];
+        const bio = this.model.getBiography(cloudId);
+        const dialogues = this.model.getDialogues(cloudId);
+        const cloud = this.getCloudById(cloudId);
+
+        if (bio?.ageRevealed && bio.partAge !== null) {
+            if (typeof bio.partAge === 'number') {
+                parts.push(`the ${bio.partAge} year old`);
+            } else {
+                parts.push(`the ${bio.partAge}`);
+            }
+        }
+
+        if (bio?.identityRevealed && cloud) {
+            parts.push(cloud.text);
+        }
+
+        if (bio?.jobRevealed && dialogues?.unburdenedJob) {
+            parts.push(`who ${dialogues.unburdenedJob.toLowerCase()}`);
+        }
+
+        if (parts.length === 0) {
+            return 'this part';
+        }
+        return parts.join(', ');
+    }
+
+    private showThoughtBubble(reaction: string, followUp?: { label: string; targetCloudId: string }): void {
         if (!this.counterZoomGroup) return;
 
+        console.log(`[ThoughtBubble] Showing: "${reaction.substring(0, 30)}..."`);
         this.hideThoughtBubble();
+        this.thoughtBubbleFollowUp = followUp ?? null;
 
         this.thoughtBubbleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.thoughtBubbleGroup.setAttribute('class', 'thought-bubble');
+        this.thoughtBubbleGroup.setAttribute('pointer-events', 'none');
 
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         const bubbleX = centerX - 100;
         const bubbleY = centerY - 60;
+        const hasFollowUp = !!followUp;
+        const lineCount = reaction.split('\n').length;
+        const bubbleRy = (hasFollowUp ? 55 : 40) + (lineCount > 1 ? (lineCount - 1) * 10 : 0);
 
         const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
         bubble.setAttribute('cx', String(bubbleX));
         bubble.setAttribute('cy', String(bubbleY));
         bubble.setAttribute('rx', '80');
-        bubble.setAttribute('ry', '40');
+        bubble.setAttribute('ry', String(bubbleRy));
         bubble.setAttribute('fill', 'white');
         bubble.setAttribute('stroke', '#333');
         bubble.setAttribute('stroke-width', '2');
@@ -639,7 +765,7 @@ export class CloudManager {
 
         const smallCircle1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         smallCircle1.setAttribute('cx', String(bubbleX + 50));
-        smallCircle1.setAttribute('cy', String(bubbleY + 30));
+        smallCircle1.setAttribute('cy', String(bubbleY + bubbleRy - 10));
         smallCircle1.setAttribute('r', '8');
         smallCircle1.setAttribute('fill', 'white');
         smallCircle1.setAttribute('stroke', '#333');
@@ -649,7 +775,7 @@ export class CloudManager {
 
         const smallCircle2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         smallCircle2.setAttribute('cx', String(bubbleX + 65));
-        smallCircle2.setAttribute('cy', String(bubbleY + 45));
+        smallCircle2.setAttribute('cy', String(bubbleY + bubbleRy + 5));
         smallCircle2.setAttribute('r', '5');
         smallCircle2.setAttribute('fill', 'white');
         smallCircle2.setAttribute('stroke', '#333');
@@ -658,14 +784,65 @@ export class CloudManager {
         this.thoughtBubbleGroup.appendChild(smallCircle2);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', String(bubbleX));
-        text.setAttribute('y', String(bubbleY + 5));
-        text.setAttribute('font-size', '18');
         text.setAttribute('font-family', 'sans-serif');
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('fill', '#333');
-        text.textContent = reaction;
+
+        const lines = reaction.split('\n');
+        const lineHeight = 20;
+        const totalTextHeight = lines.length * lineHeight;
+        const textStartY = bubbleY - (hasFollowUp ? 15 : 0) - totalTextHeight / 2 + lineHeight / 2;
+
+        for (let i = 0; i < lines.length; i++) {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', String(bubbleX));
+            tspan.setAttribute('y', String(textStartY + i * lineHeight));
+            tspan.setAttribute('font-size', i === lines.length - 1 ? '18' : '14');
+            if (i === lines.length - 1) {
+                tspan.setAttribute('font-style', 'italic');
+            }
+            tspan.textContent = lines[i];
+            text.appendChild(tspan);
+        }
         this.thoughtBubbleGroup.appendChild(text);
+
+        if (followUp) {
+            const buttonGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            buttonGroup.setAttribute('class', 'thought-bubble-button');
+            buttonGroup.setAttribute('pointer-events', 'auto');
+            buttonGroup.style.cursor = 'pointer';
+
+            const buttonRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const buttonWidth = 100;
+            const buttonHeight = 24;
+            buttonRect.setAttribute('x', String(bubbleX - buttonWidth / 2));
+            buttonRect.setAttribute('y', String(bubbleY + 15));
+            buttonRect.setAttribute('width', String(buttonWidth));
+            buttonRect.setAttribute('height', String(buttonHeight));
+            buttonRect.setAttribute('rx', '12');
+            buttonRect.setAttribute('fill', '#e8f4fd');
+            buttonRect.setAttribute('stroke', '#3498db');
+            buttonRect.setAttribute('stroke-width', '1.5');
+            buttonRect.setAttribute('pointer-events', 'auto');
+            buttonGroup.appendChild(buttonRect);
+
+            const buttonText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            buttonText.setAttribute('x', String(bubbleX));
+            buttonText.setAttribute('y', String(bubbleY + 15 + buttonHeight / 2 + 4));
+            buttonText.setAttribute('font-size', '12');
+            buttonText.setAttribute('font-family', 'sans-serif');
+            buttonText.setAttribute('text-anchor', 'middle');
+            buttonText.setAttribute('fill', '#2980b9');
+            buttonText.textContent = followUp.label;
+            buttonGroup.appendChild(buttonText);
+
+            buttonGroup.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleThoughtBubbleFollowUp();
+            });
+
+            this.thoughtBubbleGroup.appendChild(buttonGroup);
+        }
 
         this.counterZoomGroup.appendChild(this.thoughtBubbleGroup);
         this.thoughtBubbleVisible = true;
@@ -674,11 +851,91 @@ export class CloudManager {
 
     private hideThoughtBubble(): void {
         if (this.thoughtBubbleGroup && this.thoughtBubbleGroup.parentNode) {
+            console.log(`[ThoughtBubble] Hiding`);
             this.thoughtBubbleGroup.parentNode.removeChild(this.thoughtBubbleGroup);
         }
         this.thoughtBubbleGroup = null;
         this.thoughtBubbleVisible = false;
         this.thoughtBubbleFadeTimer = 0;
+        this.thoughtBubbleFollowUp = null;
+    }
+
+    private handleThoughtBubbleFollowUp(): void {
+        const followUp = this.thoughtBubbleFollowUp;
+        if (!followUp) return;
+
+        const cloudId = followUp.targetCloudId;
+        const proxies = this.relationships.getProxies(cloudId);
+
+        if (proxies.size > 0) {
+            const deflections = ["The part is looking away.", "Shrug.", "I don't trust you."];
+            const response = deflections[Math.floor(Math.random() * deflections.length)];
+            this.showThoughtBubble(response);
+            return;
+        }
+
+        const unrevealed = this.model.getUnrevealedBiographyFields(cloudId);
+
+        if (unrevealed.length === 0) {
+            if (this.otherPartsNeedMoreAttention(cloudId)) {
+                this.showThoughtBubble("Other parts need your attention more than me.");
+            } else {
+                this.model.adjustTrust(cloudId, 1.2, 'received compassion');
+                this.showThoughtBubble("Thank you for seeing me.");
+            }
+            this.updateBiographyPanel();
+            return;
+        }
+
+        const fieldToReveal = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        const cloud = this.getCloudById(cloudId);
+        const partState = this.model.getPartState(cloudId);
+
+        let response: string;
+        switch (fieldToReveal) {
+            case 'age':
+                this.model.revealAge(cloudId);
+                const age = partState?.biography.partAge;
+                if (typeof age === 'number') {
+                    response = `I'm ${age} years old.`;
+                } else if (typeof age === 'string') {
+                    response = `I'm a ${age}.`;
+                } else {
+                    response = "I'm not sure how old I am.";
+                }
+                break;
+            case 'identity':
+                this.model.revealIdentity(cloudId);
+                response = `I'm the ${cloud?.text ?? 'part'}.`;
+                break;
+            case 'job':
+                this.model.revealJob(cloudId);
+                response = partState?.dialogues.unburdenedJob ?? "I help in my own way.";
+                break;
+            default:
+                response = "...";
+        }
+
+        this.showThoughtBubble(response);
+        this.updateBiographyPanel();
+    }
+
+    private otherPartsNeedMoreAttention(cloudId: string): boolean {
+        const targetTrust = this.model.getTrust(cloudId);
+        const allStates = this.model.getAllPartStates();
+
+        let totalTrust = 0;
+        let count = 0;
+        for (const [id, state] of allStates) {
+            if (id !== cloudId) {
+                totalTrust += state.trust;
+                count++;
+            }
+        }
+
+        if (count === 0) return false;
+        const averageTrust = totalTrust / count;
+        return averageTrust < targetTrust;
     }
 
     private updateThoughtBubble(deltaTime: number): void {
@@ -954,6 +1211,16 @@ export class CloudManager {
         return this.relationships;
     }
 
+    applyAssessedNeedAttention(): void {
+        for (const instance of this.instances) {
+            const assessed = this.relationships.assessNeedAttention(instance.cloud.id);
+            this.model.setNeedAttention(instance.cloud.id, assessed);
+            if (this.relationships.getProxyFor(instance.cloud.id).size > 0) {
+                this.model.markAsProxy(instance.cloud.id);
+            }
+        }
+    }
+
     getCloudById(id: string): Cloud | null {
         const instance = this.instances.find(i => i.cloud.id === id);
         return instance?.cloud ?? null;
@@ -1018,14 +1285,6 @@ export class CloudManager {
 
         this.svgElement?.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${scaledWidth} ${scaledHeight}`);
 
-        if (this.debugBox) {
-            const debugText =
-                `Mode: ${mode}\n` +
-                `Transition: ${isTransitioning ? 'yes' : 'no'} (${(this.view.getTransitionProgress() * 100).toFixed(0)}%)\n` +
-                `ViewBox: ${viewBoxX.toFixed(1)} ${viewBoxY.toFixed(1)} ${scaledWidth.toFixed(1)} ${scaledHeight.toFixed(1)}\n` +
-                `Zoom: ${effectiveZoom.toFixed(2)}x`;
-            this.debugBox.textContent = debugText;
-        }
     }
 
     clear(): void {
@@ -1118,11 +1377,15 @@ export class CloudManager {
     }
 
     private handleCloudClick(cloud: Cloud): void {
+        console.log(`[Click] Cloud "${cloud.text}" clicked, mode=${this.view.getMode()}, thoughtBubble=${this.thoughtBubbleVisible}, pieMenu=${this.pieMenuOpen}`);
+
         if (this.isLongPressActive()) {
+            console.log(`[Click] Blocked: long press active`);
             return;
         }
 
         if (this.view.getMode() === 'foreground' && this.model.isSelected(cloud.id)) {
+            console.log(`[Click] Deselecting already-selected cloud`);
             this.model.deselectCloud();
             return;
         }
@@ -1132,6 +1395,7 @@ export class CloudManager {
 
     selectCloud(cloud: Cloud): void {
         this.selectedCloud = cloud;
+        console.log(`[Select] Cloud "${cloud.text}", mode=${this.view.getMode()}`);
 
         if (this.view.getMode() === 'panorama') {
             this.model.setTargetCloud(cloud.id);
@@ -1141,8 +1405,11 @@ export class CloudManager {
             this.syncViewWithModel();
         } else if (this.view.getMode() === 'foreground') {
             const viewState = this.view.getViewState(cloud.id);
+            console.log(`[Select] viewState opacity=${viewState?.currentOpacity}`);
             if (viewState && viewState.currentOpacity > 0) {
                 this.togglePieMenu(cloud.id, viewState.currentX, viewState.currentY);
+            } else {
+                console.log(`[Select] Blocked: viewState missing or opacity=0`);
             }
         }
     }
@@ -1150,18 +1417,27 @@ export class CloudManager {
     private togglePieMenu(cloudId: string, x: number, y: number): void {
         if (!this.pieMenu) return;
 
+        const cloud = this.getCloudById(cloudId);
+        console.log(`[PieMenu] togglePieMenu for "${cloud?.text}", pieMenuOpen=${this.pieMenuOpen}, selectedCloudId=${this.selectedCloudId}`);
+
         if (this.pieMenuOpen && this.selectedCloudId === cloudId) {
+            console.log(`[PieMenu] Hiding (same cloud clicked)`);
             this.pieMenu.hide();
             return;
         }
 
         if (this.pieMenuOpen) {
+            console.log(`[PieMenu] Hiding (different cloud)`);
             this.pieMenu.hide();
         }
 
         const items = this.getPieMenuItemsForCloud(cloudId);
-        if (items.length === 0) return;
+        if (items.length === 0) {
+            console.log(`[PieMenu] No items for cloud, not showing`);
+            return;
+        }
 
+        console.log(`[PieMenu] Showing with ${items.length} items`);
         this.pieMenu.setItems(items);
         this.pieMenu.show(x, y, cloudId);
         this.pieMenuOpen = true;
@@ -1203,6 +1479,12 @@ export class CloudManager {
     }
 
     private stepBackPart(cloudId: string): void {
+        if (this.model.wasProxy(cloudId)) {
+            this.showThoughtBubble("I want to watch.");
+            this.model.adjustTrust(cloudId, 0.98, 'refused to step back');
+            return;
+        }
+
         const panoramaPositions = new Map<string, { x: number; y: number; scale: number }>();
 
         for (const instance of this.instances) {
@@ -1413,10 +1695,35 @@ export class CloudManager {
 
         for (const instance of sorted) {
             const cloud = instance.cloud;
-            if (this.model.getNeedAttention(cloud.id) <= 1) break;
+            const needAttention = this.model.getNeedAttention(cloud.id);
+            if (needAttention <= 1) break;
 
             const protectors = this.relationships.getProtectedBy(cloud.id);
             if (protectors.size > 0) continue;
+
+            console.log(`[HighAttention] "${cloud.text}" demands attention (needAttention=${needAttention.toFixed(2)})`);
+
+            if (this.view.getMode() === 'foreground') {
+                const currentTargets = Array.from(this.model.getTargetCloudIds());
+                const currentBlended = this.model.getBlendedParts();
+                console.log(`[HighAttention] Clearing current targets: ${currentTargets.join(', ')}, blended: ${currentBlended.join(', ')}`);
+
+                this.hidePieMenu();
+                this.hideThoughtBubble();
+
+                for (const targetId of currentTargets) {
+                    this.stepBackPart(targetId);
+                }
+                for (const blendedId of currentBlended) {
+                    if (!currentTargets.includes(blendedId)) {
+                        this.stepBackPart(blendedId);
+                    }
+                }
+
+                this.model.clearTargets();
+                this.model.clearBlendedParts();
+                this.model.clearSupportingParts();
+            }
 
             const grievances = this.relationships.getGrievances(cloud.id);
             if (grievances.size > 0) {
@@ -1425,7 +1732,8 @@ export class CloudManager {
                 this.model.setTargetCloud(targetGrievanceId);
             }
 
-            this.model.addBlendedPart(cloud.id);
+            this.model.addBlendedPart(cloud.id, 'spontaneous');
+            this.model.setNeedAttention(cloud.id, 0.95);
             this.view.setMode('foreground');
             this.updateUIForMode();
             this.updateModeToggle();
@@ -1437,7 +1745,11 @@ export class CloudManager {
     private depthSort(): void {
         if (!this.svgElement) return;
 
-        this.instances.sort((a, b) => a.position.z - b.position.z);
+        const DEPTH_THRESHOLD = 15;
+        this.instances.sort((a, b) => {
+            const diff = a.position.z - b.position.z;
+            return Math.abs(diff) < DEPTH_THRESHOLD ? 0 : diff;
+        });
 
         let selfInserted = false;
         for (const instance of this.instances) {
@@ -1546,13 +1858,18 @@ export class CloudManager {
                     group.setAttribute('transform',
                         `translate(${viewState.currentX}, ${viewState.currentY}) scale(${viewState.currentScale})`);
                     group.setAttribute('opacity', String(viewState.currentOpacity));
+                    group.setAttribute('pointer-events', viewState.currentOpacity > 0 ? 'auto' : 'none');
                 }
             }
         }
 
+        this.increaseGrievanceNeedAttention(deltaTime);
+        this.updateDebugBox();
         if (this.view.getMode() === 'panorama') {
             this.checkHighAttentionParts();
             this.depthSort();
+        } else if (!this.pieMenuOpen) {
+            this.checkHighAttentionParts();
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
         this.animationFrameId = requestAnimationFrame(() => this.animate());
@@ -1700,10 +2017,39 @@ export class CloudManager {
         const blendedParts = this.model.getBlendedParts();
         for (const cloudId of blendedParts) {
             if (this.resolvingClouds.has(cloudId)) continue;
+            if (this.model.getBlendReason(cloudId) !== 'spontaneous') continue;
 
             if (this.model.getNeedAttention(cloudId) < 0.5) {
                 this.finishUnblending(cloudId);
             }
+        }
+    }
+
+    private updateDebugBox(): void {
+        if (!this.debugBox) return;
+        let maxNeedAttention = 0;
+        let maxNeedAttentionName = '';
+        for (const instance of this.instances) {
+            const na = this.model.getNeedAttention(instance.cloud.id);
+            if (na > maxNeedAttention) {
+                maxNeedAttention = na;
+                maxNeedAttentionName = instance.cloud.text;
+            }
+        }
+        this.debugBox.textContent = `${maxNeedAttentionName}: ${maxNeedAttention.toFixed(2)}`;
+    }
+
+    private increaseGrievanceNeedAttention(deltaTime: number): void {
+        for (const instance of this.instances) {
+            const cloudId = instance.cloud.id;
+            const grievances = this.relationships.getGrievances(cloudId);
+            const hasActiveGrievances = Array.from(grievances.values()).some(g => g > 0);
+            if (!hasActiveGrievances) continue;
+
+            if (this.model.isBlended(cloudId) || this.model.isTarget(cloudId)) continue;
+
+            const current = this.model.getNeedAttention(cloudId);
+            this.model.setNeedAttention(cloudId, current + deltaTime * 0.05);
         }
     }
 

@@ -7,6 +7,7 @@ export interface PartBiography {
     selfReaction: SelfReaction;
     relationshipsRevealed: boolean;
     identityRevealed: boolean;
+    jobRevealed: boolean;
 }
 
 export interface PartDialogues {
@@ -21,6 +22,7 @@ export interface PartState {
     trust: number;
     needAttention: number;
     agreedWaitUntil: number;
+    wasProxy: boolean;
     biography: PartBiography;
     dialogues: PartDialogues;
 }
@@ -39,6 +41,7 @@ export function createPartState(id: string, name: string, options?: {
         trust: options?.trust ?? 0.5,
         needAttention: options?.needAttention ?? 0.1,
         agreedWaitUntil: Date.now() + waitDuration * 1000,
+        wasProxy: false,
         biography: {
             ageRevealed: false,
             partAge: options?.partAge ?? null,
@@ -46,6 +49,7 @@ export function createPartState(id: string, name: string, options?: {
             selfReaction: null,
             relationshipsRevealed: false,
             identityRevealed: false,
+            jobRevealed: false,
         },
         dialogues: options?.dialogues ?? {},
     };

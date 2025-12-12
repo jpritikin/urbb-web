@@ -6,6 +6,7 @@ OVERVIEW
 The IFS Simulator is an interactive visualization where "parts" (represented as
 animated cloud shapes) can be explored through IFS therapy-inspired interactions.
 The simulator has two modes: panorama (overview) and foreground (conference room).
+See plan.txt for initial specification.
 
 
 MODES

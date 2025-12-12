@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const innerCritic = cloudManager.addCloud('Inner Critic', {
         trust: 0.3,
-        needAttention: 1,
         partAge: 8,
         dialogues: {
             burdenedProtector: [
@@ -30,16 +29,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const criticized = cloudManager.addCloud('criticized', { partAge: 'child', trust: 0.2 });
-    const threeYearOld = cloudManager.addCloud('3 year old', { partAge: 3 });
-    const tenYearOld = cloudManager.addCloud('ten year old', { partAge: 10 });
-    const teenager = cloudManager.addCloud('teenager', { partAge: 'teenager' });
-    const adult = cloudManager.addCloud('adult', { partAge: 'adult' });
+    const threeYearOld = cloudManager.addCloud('toddler', { partAge: 3 });
+    const tenYearOld = cloudManager.addCloud('child', { partAge: 10 });
+    const teenager = cloudManager.addCloud('teenager', { partAge: 14 });
+    const adult = cloudManager.addCloud('self-image', { partAge: 'adult' });
 
     const relationships = cloudManager.getRelationships();
     relationships.addProtection(innerCritic.id, criticized.id);
     relationships.setGrievance(innerCritic.id, threeYearOld.id, 0.6);
     relationships.setGrievance(innerCritic.id, tenYearOld.id, 0.5);
     relationships.setGrievance(innerCritic.id, teenager.id, 0.7);
+
+    relationships.addProxy(innerCritic.id, adult.id);
+    relationships.addProxy(criticized.id, adult.id);
+    relationships.addProxy(threeYearOld.id, adult.id);
+    relationships.addProxy(tenYearOld.id, adult.id);
+    relationships.addProxy(teenager.id, adult.id);
+    relationships.addProxy(adult.id, adult.id);
+
+    cloudManager.applyAssessedNeedAttention();
 
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
