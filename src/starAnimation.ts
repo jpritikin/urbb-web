@@ -1,12 +1,20 @@
-const STAR_RADIUS_SCALE = 4;
-export const STAR_OUTER_RADIUS = 20 * STAR_RADIUS_SCALE;
-export const STAR_INNER_RADIUS = 8 * STAR_RADIUS_SCALE;
+import {
+    STAR_OUTER_RADIUS,
+    STAR_INNER_RADIUS,
+    THREE_ARM_INNER_RADIUS_FACTOR,
+    dist,
+    computeTransitionPosition,
+    computeAdjacentArmPosition,
+    computeSourceArmPosition,
+    computeFinalArmPosition,
+    TransitionContext,
+} from './starAnimationCore.js';
+
+export { STAR_OUTER_RADIUS, STAR_INNER_RADIUS };
 
 type RotationState = 'stationary' | 'rotating_cw' | 'rotating_ccw';
 type PulseTarget = 'inner' | 'outer' | 'none';
 type PulseDirection = 'expand' | 'contract';
-
-const THREE_ARM_INNER_RADIUS_FACTOR = 0.5;
 
 const BASE_ROTATION_SPEED = 0.15;
 const STATE_CHANGE_MIN = 2.0;
@@ -24,11 +32,34 @@ const ARM_EXPANSION_FACTOR = 0.15;
 
 const VALID_ARM_COUNTS = [5, 6, 7];
 
+interface DebugCheckpoint {
+    label: string;
+    progress: number;
+    T: { x: number, y: number };
+    b1: { x: number, y: number };
+    b2: { x: number, y: number };
+    St: { x: number, y: number };
+    S1: { x: number, y: number };
+    S2: { x: number, y: number };
+    At: { x: number, y: number };
+    A1: { x: number, y: number };
+    A2: { x: number, y: number };
+    fin?: { tipX: number, tipY: number, base1X: number, base1Y: number };
+}
+
 interface ArmTransition {
     type: 'adding' | 'removing';
     progress: number;
     sourceArmIndex: number;
     unfoldAngle: number;
+    opNum: number;
+    debugCheckpoints: DebugCheckpoint[];
+    debugPhase1Start: boolean;
+    debugPhase1Mid: boolean;
+    debugPhase1End: boolean;
+    debugPhase2Start: boolean;
+    debugPhase2Mid: boolean;
+    debugPhase2End: boolean;
 }
 
 export class AnimatedStar {
@@ -62,6 +93,9 @@ export class AnimatedStar {
     private armTransition: ArmTransition | null = null;
     private secondArmTransition: ArmTransition | null = null;
     private expansionFactor: number = 0;
+    private opCounter: number = 0;
+    private nextArmToTest: number = 0;
+    private nextTransitionType: 'adding' | 'removing' = 'removing';
 
     constructor(centerX: number, centerY: number) {
         this.centerX = centerX;
@@ -262,13 +296,16 @@ export class AnimatedStar {
         const canAdd = currentIndex < VALID_ARM_COUNTS.length - 1;
         const canRemove = currentIndex > 0;
 
+        // Systematic selection: alternate between removing and adding, cycle through arms
         let adding: boolean;
-        if (canAdd && canRemove) {
-            adding = Math.random() < 0.5;
-        } else if (canAdd) {
-            adding = true;
-        } else {
+        if (this.nextTransitionType === 'removing' && canRemove) {
             adding = false;
+        } else if (this.nextTransitionType === 'adding' && canAdd) {
+            adding = true;
+        } else if (canRemove) {
+            adding = false;
+        } else {
+            adding = true;
         }
 
         const targetArmCount = adding
@@ -276,19 +313,38 @@ export class AnimatedStar {
             : VALID_ARM_COUNTS[currentIndex - 1];
 
         const armDiff = Math.abs(targetArmCount - this.armCount);
-        const sourceArmIndex = Math.floor(Math.random() * this.armCount);
 
+        // Systematic arm selection: cycle through all arms
+        const sourceArmIndex = this.nextArmToTest % this.armCount;
+        this.nextArmToTest = (this.nextArmToTest + 1) % 10; // cycle 0-9 to cover all arm counts
+
+        // Toggle transition type for next time
+        this.nextTransitionType = adding ? 'removing' : 'adding';
+
+        this.opCounter++;
         this.armTransition = {
             type: adding ? 'adding' : 'removing',
             progress: 0,
             sourceArmIndex,
-            unfoldAngle: 0
+            unfoldAngle: 0,
+            opNum: this.opCounter,
+            debugCheckpoints: [],
+            debugPhase1Start: false,
+            debugPhase1Mid: false,
+            debugPhase1End: false,
+            debugPhase2Start: false,
+            debugPhase2Mid: false,
+            debugPhase2End: false
         };
+
+        console.log(`[Op${this.opCounter}] Starting ${this.armTransition.type} on arm ${sourceArmIndex} (${this.armCount} -> ${targetArmCount} arms)`);
 
         this.createTransitionElement();
 
         if (armDiff === 2) {
             const secondSourceIndex = (sourceArmIndex + Math.floor(this.armCount / 2)) % this.armCount;
+            const secondOpNum = this.opCounter + 1;
+            this.opCounter++;
 
             setTimeout(() => {
                 if (this.armTransition) {
@@ -296,8 +352,17 @@ export class AnimatedStar {
                         type: adding ? 'adding' : 'removing',
                         progress: 0,
                         sourceArmIndex: secondSourceIndex,
-                        unfoldAngle: 0
+                        unfoldAngle: 0,
+                        opNum: secondOpNum,
+                        debugCheckpoints: [],
+                        debugPhase1Start: false,
+                        debugPhase1Mid: false,
+                        debugPhase1End: false,
+                        debugPhase2Start: false,
+                        debugPhase2Mid: false,
+                        debugPhase2End: false
                     };
+                    console.log(`[Op${secondOpNum}] Starting ${this.secondArmTransition.type} on arm ${secondSourceIndex} (second transition)`);
                     this.createSecondTransitionElement();
                 }
             }, ARM_TRANSITION_DURATION * 0.3 * 1000);
@@ -337,6 +402,8 @@ export class AnimatedStar {
     private completeArmTransition(): void {
         if (!this.armTransition) return;
 
+        this.printDebugReport(this.armTransition);
+
         if (this.armTransition.type === 'adding') {
             this.armCount++;
         } else {
@@ -360,6 +427,8 @@ export class AnimatedStar {
     private completeSecondArmTransition(): void {
         if (!this.secondArmTransition) return;
 
+        this.printDebugReport(this.secondArmTransition);
+
         if (this.secondArmTransition.type === 'adding') {
             this.armCount++;
         } else {
@@ -375,6 +444,65 @@ export class AnimatedStar {
 
         // Recreate arm elements for new arm count
         this.createArmElements();
+    }
+
+    private printDebugReport(transition: ArmTransition): void {
+        const op = `Op${transition.opNum}`;
+        const tolerance = 2;
+        console.log(`\n[${op}] === ${transition.type.toUpperCase()} arm ${transition.sourceArmIndex} REPORT ===`);
+
+        for (const cp of transition.debugCheckpoints) {
+            const close = (p1: {x: number, y: number}, p2: {x: number, y: number}) =>
+                dist(p1.x, p1.y, p2.x, p2.y) < tolerance;
+
+            const finT = cp.fin ? { x: cp.fin.tipX, y: cp.fin.tipY } : cp.T;
+            const finB1 = cp.fin ? { x: cp.fin.base1X, y: cp.fin.base1Y } : cp.b1;
+            const inPhase1 = cp.label.startsWith('P1');
+
+            let checks: string;
+            if (transition.type === 'removing') {
+                if (inPhase1) {
+                    // P1: pivot=S2, T moves St->At
+                    // start: T@St, 1@S1, 2@S2 | mid: 2@S2 | end: T@At, 2@S2
+                    checks = [
+                        `T@St:${close(cp.T, cp.St) ? '✓' : '✗'}`,
+                        `1@S1:${close(cp.b1, cp.S1) ? '✓' : '✗'}`,
+                        `2@S2:${close(cp.b2, cp.S2) ? '✓' : '✗'}`,
+                        `T@At:${close(cp.T, cp.At) ? '✓' : '✗'}`,
+                    ].join(' ');
+                } else {
+                    // P2: pivot=At(moving), base points collapse onto A
+                    // start: T@At | mid: T@At | end: T@At, 1@A1, 2@A2
+                    checks = [
+                        `T@At:${close(cp.T, cp.At) ? '✓' : '✗'}`,
+                        `1@A1:${close(cp.b1, cp.A1) ? '✓' : '✗'}`,
+                        `2@A2:${close(cp.b2, cp.A2) ? '✓' : '✗'}`,
+                    ].join(' ');
+                }
+            } else {
+                if (inPhase1) {
+                    // P1: pivot=At(fixed), base2 moves A2->A1
+                    // start: T@At, 1@A1, 2@A2 | mid: T@At | end: T@At, 2@A1
+                    checks = [
+                        `T@At:${close(cp.T, cp.At) ? '✓' : '✗'}`,
+                        `1@A1:${close(cp.b1, cp.A1) ? '✓' : '✗'}`,
+                        `2@A2:${close(cp.b2, cp.A2) ? '✓' : '✗'}`,
+                        `2@A1:${close(cp.b2, cp.A1) ? '✓' : '✗'}`,
+                    ].join(' ');
+                } else {
+                    // P2: pivot=2(at A1, moving), T and 1 move to final
+                    // start: 2@A1, T@At | mid: 2@A1 | end: T@fin, 1@fin, 2@A1
+                    checks = [
+                        `T@At:${close(cp.T, cp.At) ? '✓' : '✗'}`,
+                        `2@A1:${close(cp.b2, cp.A1) ? '✓' : '✗'}`,
+                        `T@fin:${close(cp.T, finT) ? '✓' : '✗'}`,
+                        `1@fin:${close(cp.b1, finB1) ? '✓' : '✗'}`,
+                    ].join(' ');
+                }
+            }
+            console.log(`[${op}] ${cp.label.padEnd(10)} p=${cp.progress.toFixed(3)} | ${checks}`);
+        }
+        console.log(`[${op}] === END REPORT ===\n`);
     }
 
     private updateArms(): void {
@@ -524,35 +652,6 @@ export class AnimatedStar {
         }
     }
 
-    private dist(x1: number, y1: number, x2: number, y2: number): number {
-        return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
-    }
-
-    private angle(fromX: number, fromY: number, toX: number, toY: number): number {
-        return Math.atan2(toY - fromY, toX - fromX);
-    }
-
-    private normalizeAngle(angle: number): number {
-        while (angle > Math.PI) angle -= 2 * Math.PI;
-        while (angle < -Math.PI) angle += 2 * Math.PI;
-        return angle;
-    }
-
-    private lerp(start: number, end: number, t: number): number {
-        return start + (end - start) * t;
-    }
-
-    private getArmGeometry(tipAngle: number, halfStep: number, innerR: number, outerR: number) {
-        return {
-            tipX: this.centerX + outerR * Math.cos(tipAngle),
-            tipY: this.centerY + outerR * Math.sin(tipAngle),
-            base1X: this.centerX + innerR * Math.cos(tipAngle - halfStep),
-            base1Y: this.centerY + innerR * Math.sin(tipAngle - halfStep),
-            base2X: this.centerX + innerR * Math.cos(tipAngle + halfStep),
-            base2Y: this.centerY + innerR * Math.sin(tipAngle + halfStep),
-        };
-    }
-
     private updateSingleTransitionElement(
         element: SVGPolygonElement,
         transition: ArmTransition
@@ -560,216 +659,36 @@ export class AnimatedStar {
         const innerRadiusFactor = this.armCount === 3 ? THREE_ARM_INNER_RADIUS_FACTOR : 1;
         const innerRadius = STAR_INNER_RADIUS * innerRadiusFactor * (1 + this.innerRadiusOffset + this.expansionFactor);
         const outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset + this.expansionFactor);
-
-        const baseAngleStep = (2 * Math.PI) / this.armCount;
-        const baseHalfStep = baseAngleStep / 2;
         const phase1End = 0.5;
 
-        let tipX: number, tipY: number;
-        let base1X: number, base1Y: number;
-        let base2X: number, base2Y: number;
+        const ctx: TransitionContext = {
+            type: transition.type,
+            progress: transition.progress,
+            sourceArmIndex: transition.sourceArmIndex,
+            armCount: this.armCount,
+            rotation: this.rotation,
+            centerX: this.centerX,
+            centerY: this.centerY,
+            innerRadius,
+            outerRadius,
+        };
 
-        if (transition.type === 'removing') {
-            // Removing: P1 pivot around S2 until T reaches At, P2 rotate around At to align
-            const srcAngle = this.rotation - Math.PI / 2 + transition.sourceArmIndex * baseAngleStep;
-            const src = this.getArmGeometry(srcAngle, baseHalfStep, innerRadius, outerRadius);
-            const adjAngle = srcAngle + baseAngleStep;
-            const adj = this.getArmGeometry(adjAngle, baseHalfStep, innerRadius, outerRadius);
+        const pos = computeTransitionPosition(ctx);
+        const { tipX, tipY, base1X, base1Y, base2X, base2Y } = pos;
 
-            // Phase 1: rigid rotation around S2 (src.base2)
-            const tipDistFromS2 = this.dist(src.tipX, src.tipY, src.base2X, src.base2Y);
-            const base1DistFromS2 = this.dist(src.base1X, src.base1Y, src.base2X, src.base2Y);
-            const tipAngleFromS2Start = this.angle(src.base2X, src.base2Y, src.tipX, src.tipY);
-            const base1AngleFromS2Start = this.angle(src.base2X, src.base2Y, src.base1X, src.base1Y);
-            const tipAngleFromS2End = this.angle(src.base2X, src.base2Y, adj.tipX, adj.tipY);
-            const phase1Rotation = this.normalizeAngle(tipAngleFromS2End - tipAngleFromS2Start);
-
-            if (transition.progress < phase1End) {
-                const t = transition.progress / phase1End;
-                const rot = phase1Rotation * t;
-                base2X = src.base2X;
-                base2Y = src.base2Y;
-                tipX = src.base2X + tipDistFromS2 * Math.cos(tipAngleFromS2Start + rot);
-                tipY = src.base2Y + tipDistFromS2 * Math.sin(tipAngleFromS2Start + rot);
-                base1X = src.base2X + base1DistFromS2 * Math.cos(base1AngleFromS2Start + rot);
-                base1Y = src.base2Y + base1DistFromS2 * Math.sin(base1AngleFromS2Start + rot);
-            } else {
-                // Phase 2: T stays at moving At, base points rotate around T
-                const t = (transition.progress - phase1End) / (1 - phase1End);
-                const adjIndex = (transition.sourceArmIndex + 1) % this.armCount;
-                const targetAngleStep = (2 * Math.PI) / (this.armCount - 1);
-                const targetHalfStep = targetAngleStep / 2;
-
-                const adjStartAngle = this.rotation - Math.PI / 2 + adjIndex * baseAngleStep;
-                const adjEndAngle = this.rotation - Math.PI / 2 + (adjIndex - 1) * targetAngleStep;
-                const adjCurrentAngle = this.lerp(adjStartAngle, adjEndAngle, t);
-
-                // T follows moving At
-                tipX = this.centerX + outerRadius * Math.cos(adjCurrentAngle);
-                tipY = this.centerY + outerRadius * Math.sin(adjCurrentAngle);
-
-                // Phase 1 end positions
-                const base1AtP1End = {
-                    x: src.base2X + base1DistFromS2 * Math.cos(base1AngleFromS2Start + phase1Rotation),
-                    y: src.base2Y + base1DistFromS2 * Math.sin(base1AngleFromS2Start + phase1Rotation)
-                };
-
-                // Start: distances/angles from original At
-                const base1DistStart = this.dist(base1AtP1End.x, base1AtP1End.y, adj.tipX, adj.tipY);
-                const base2DistStart = this.dist(src.base2X, src.base2Y, adj.tipX, adj.tipY);
-                const base1AngleStart = this.angle(adj.tipX, adj.tipY, base1AtP1End.x, base1AtP1End.y);
-                const base2AngleStart = this.angle(adj.tipX, adj.tipY, src.base2X, src.base2Y);
-
-                // End: adjacent arm final geometry
-                const adjEnd = this.getArmGeometry(adjEndAngle, targetHalfStep, innerRadius, outerRadius);
-                const base1DistEnd = this.dist(adjEnd.base1X, adjEnd.base1Y, adjEnd.tipX, adjEnd.tipY);
-                const base2DistEnd = this.dist(adjEnd.base2X, adjEnd.base2Y, adjEnd.tipX, adjEnd.tipY);
-                const base1AngleEnd = this.angle(adjEnd.tipX, adjEnd.tipY, adjEnd.base1X, adjEnd.base1Y);
-                const base2AngleEnd = this.angle(adjEnd.tipX, adjEnd.tipY, adjEnd.base2X, adjEnd.base2Y);
-
-                // Force long way rotation (clockwise)
-                let base1Rot = this.normalizeAngle(base1AngleEnd - base1AngleStart) + 2 * Math.PI;
-                let base2Rot = this.normalizeAngle(base2AngleEnd - base2AngleStart) + 2 * Math.PI;
-
-                base1X = tipX + this.lerp(base1DistStart, base1DistEnd, t) * Math.cos(base1AngleStart + base1Rot * t);
-                base1Y = tipY + this.lerp(base1DistStart, base1DistEnd, t) * Math.sin(base1AngleStart + base1Rot * t);
-                base2X = tipX + this.lerp(base2DistStart, base2DistEnd, t) * Math.cos(base2AngleStart + base2Rot * t);
-                base2Y = tipY + this.lerp(base2DistStart, base2DistEnd, t) * Math.sin(base2AngleStart + base2Rot * t);
-            }
-        } else {
-            // Adding: P1 rotate around T(=At) until 2 aligns with A1, P2 pivot around 2(=A1)
-            const targetArmCount = this.armCount + 1;
-            const targetAngleStep = (2 * Math.PI) / targetArmCount;
-            const targetHalfStep = targetAngleStep / 2;
-
-            const adjIndex = transition.sourceArmIndex;
-            const adjStartAngle = this.rotation - Math.PI / 2 + adjIndex * baseAngleStep;
-            const adj = this.getArmGeometry(adjStartAngle, baseHalfStep, innerRadius, outerRadius);
-
-            const finalTipAngle = this.rotation - Math.PI / 2 + transition.sourceArmIndex * targetAngleStep;
-            const final = this.getArmGeometry(finalTipAngle, targetHalfStep, innerRadius, outerRadius);
-
-            if (transition.progress < phase1End) {
-                // Phase 1: T at At, base points rotate around T until base2 reaches A1
-                const t = transition.progress / phase1End;
-                tipX = adj.tipX;
-                tipY = adj.tipY;
-
-                const base1AngleStart = this.angle(tipX, tipY, adj.base1X, adj.base1Y);
-                const base2AngleStart = this.angle(tipX, tipY, adj.base2X, adj.base2Y);
-                const base2AngleEnd = this.angle(tipX, tipY, adj.base1X, adj.base1Y); // base2 -> A1
-                const baseDist = this.dist(adj.base1X, adj.base1Y, tipX, tipY);
-
-                // Force long way counterclockwise
-                let rotation = this.normalizeAngle(base2AngleEnd - base2AngleStart) - 2 * Math.PI;
-
-                base1X = tipX + baseDist * Math.cos(base1AngleStart + rotation * t);
-                base1Y = tipY + baseDist * Math.sin(base1AngleStart + rotation * t);
-                base2X = tipX + baseDist * Math.cos(base2AngleStart + rotation * t);
-                base2Y = tipY + baseDist * Math.sin(base2AngleStart + rotation * t);
-            } else {
-                // Phase 2: base2 stays at moving A1, T and base1 pivot around base2
-                const t = (transition.progress - phase1End) / (1 - phase1End);
-
-                // A1 moves as adjacent arm shifts
-                const adjEndAngle = this.rotation - Math.PI / 2 + (adjIndex + 1) * targetAngleStep;
-                const adjCurrentAngle = this.lerp(adjStartAngle, adjEndAngle, t);
-                const adjCurrentHalfStep = this.lerp(baseHalfStep, targetHalfStep, t);
-                const a1CurrentAngle = adjCurrentAngle - adjCurrentHalfStep;
-                base2X = this.centerX + innerRadius * Math.cos(a1CurrentAngle);
-                base2Y = this.centerY + innerRadius * Math.sin(a1CurrentAngle);
-
-                // Phase 1 end state: base2 at A1 (adj.base1), base1 rotated same amount
-                const baseDist = this.dist(adj.base1X, adj.base1Y, adj.tipX, adj.tipY);
-                const base2AngleStart = this.angle(adj.tipX, adj.tipY, adj.base2X, adj.base2Y);
-                const base2AngleEnd = this.angle(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
-                const phase1Rot = this.normalizeAngle(base2AngleEnd - base2AngleStart) - 2 * Math.PI;
-
-                const base1AngleStart = this.angle(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
-                const base1AtP1EndAngle = base1AngleStart + phase1Rot;
-                const base1AtP1EndX = adj.tipX + baseDist * Math.cos(base1AtP1EndAngle);
-                const base1AtP1EndY = adj.tipY + baseDist * Math.sin(base1AtP1EndAngle);
-
-                // Pivot around base2 (at adj.base1 at phase 1 end)
-                const tipDistStart = this.dist(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
-                const base1DistStart = this.dist(base1AtP1EndX, base1AtP1EndY, adj.base1X, adj.base1Y);
-                const tipAngleStart = this.angle(adj.base1X, adj.base1Y, adj.tipX, adj.tipY);
-                const base1AngleFromPivotStart = this.angle(adj.base1X, adj.base1Y, base1AtP1EndX, base1AtP1EndY);
-
-                const tipDistEnd = this.dist(final.tipX, final.tipY, final.base2X, final.base2Y);
-                const base1DistEnd = this.dist(final.base1X, final.base1Y, final.base2X, final.base2Y);
-                const tipAngleEnd = this.angle(final.base2X, final.base2Y, final.tipX, final.tipY);
-                const base1AngleFromPivotEnd = this.angle(final.base2X, final.base2Y, final.base1X, final.base1Y);
-
-                const tipRot = this.normalizeAngle(tipAngleEnd - tipAngleStart);
-                const base1Rot = this.normalizeAngle(base1AngleFromPivotEnd - base1AngleFromPivotStart);
-
-                tipX = base2X + this.lerp(tipDistStart, tipDistEnd, t) * Math.cos(tipAngleStart + tipRot * t);
-                tipY = base2Y + this.lerp(tipDistStart, tipDistEnd, t) * Math.sin(tipAngleStart + tipRot * t);
-                base1X = base2X + this.lerp(base1DistStart, base1DistEnd, t) * Math.cos(base1AngleFromPivotStart + base1Rot * t);
-                base1Y = base2Y + this.lerp(base1DistStart, base1DistEnd, t) * Math.sin(base1AngleFromPivotStart + base1Rot * t);
-            }
-        }
-
-        // Set the triangle points directly in world coordinates
         element.setAttribute('points',
             `${tipX.toFixed(2)},${tipY.toFixed(2)} ${base1X.toFixed(2)},${base1Y.toFixed(2)} ${base2X.toFixed(2)},${base2Y.toFixed(2)}`
         );
         element.removeAttribute('transform');
 
-        // Calculate actual arm positions using the same logic as updateArms()
-        const debugBaseAngleStep = (2 * Math.PI) / this.armCount;
-        const sourceIndex = transition.sourceArmIndex;
-        // For removing: adjacent is the next arm (sourceIndex + 1)
-        // For adding: adjacent is the arm at sourceIndex (we unfold from it)
-        const adjIndex = transition.type === 'removing'
-            ? (sourceIndex + 1) % this.armCount
-            : sourceIndex;
-
-        // Calculate source arm position (fixed at original position since it's hidden)
-        const srcTipAngle = this.rotation - Math.PI / 2 + sourceIndex * debugBaseAngleStep;
-        const srcHalfStep = debugBaseAngleStep / 2;
-        const srcBase1Angle = srcTipAngle - srcHalfStep;
-        const srcBase2Angle = srcTipAngle + srcHalfStep;
-        const srcTipX = this.centerX + outerRadius * Math.cos(srcTipAngle);
-        const srcTipY = this.centerY + outerRadius * Math.sin(srcTipAngle);
-        const srcBase1X = this.centerX + innerRadius * Math.cos(srcBase1Angle);
-        const srcBase1Y = this.centerY + innerRadius * Math.sin(srcBase1Angle);
-        const srcBase2X = this.centerX + innerRadius * Math.cos(srcBase2Angle);
-        const srcBase2Y = this.centerY + innerRadius * Math.sin(srcBase2Angle);
-
-        // Calculate adjacent arm position (may shift during phase 2)
-        let adjTipAngle = this.rotation - Math.PI / 2 + adjIndex * debugBaseAngleStep;
-        let adjHalfStep = debugBaseAngleStep / 2;
-
-        if (transition.type === 'removing' && transition.progress > 0.5) {
-            const phase2Progress = (transition.progress - 0.5) / 0.5;
-            const targetAngleStep = (2 * Math.PI) / (this.armCount - 1);
-            // Adjacent arm shifts backward to close gap
-            const currentAngle = this.rotation - Math.PI / 2 + adjIndex * debugBaseAngleStep;
-            const targetAngle = this.rotation - Math.PI / 2 + (adjIndex - 1) * targetAngleStep;
-            adjTipAngle = currentAngle + (targetAngle - currentAngle) * phase2Progress;
-            adjHalfStep = debugBaseAngleStep / 2 + (targetAngleStep / 2 - debugBaseAngleStep / 2) * phase2Progress;
-        }
-
-        if (transition.type === 'adding' && transition.progress > 0.5) {
-            const phase2Progress = (transition.progress - 0.5) / 0.5;
-            const targetAngleStep = (2 * Math.PI) / (this.armCount + 1);
-            // Adjacent arm shifts forward to make room
-            const currentAngle = this.rotation - Math.PI / 2 + adjIndex * debugBaseAngleStep;
-            const targetAngle = this.rotation - Math.PI / 2 + (adjIndex + 1) * targetAngleStep;
-            adjTipAngle = currentAngle + (targetAngle - currentAngle) * phase2Progress;
-            adjHalfStep = debugBaseAngleStep / 2 + (targetAngleStep / 2 - debugBaseAngleStep / 2) * phase2Progress;
-        }
-
-        const adjBase1Angle = adjTipAngle - adjHalfStep;
-        const adjBase2Angle = adjTipAngle + adjHalfStep;
-        const adjTipX = this.centerX + outerRadius * Math.cos(adjTipAngle);
-        const adjTipY = this.centerY + outerRadius * Math.sin(adjTipAngle);
-        const adjBase1X = this.centerX + innerRadius * Math.cos(adjBase1Angle);
-        const adjBase1Y = this.centerY + innerRadius * Math.sin(adjBase1Angle);
-        const adjBase2X = this.centerX + innerRadius * Math.cos(adjBase2Angle);
-        const adjBase2Y = this.centerY + innerRadius * Math.sin(adjBase2Angle);
+        const src = computeSourceArmPosition(ctx);
+        const adj = computeAdjacentArmPosition(ctx);
+        const srcTipX = src.tipX, srcTipY = src.tipY;
+        const srcBase1X = src.base1X, srcBase1Y = src.base1Y;
+        const srcBase2X = src.base2X, srcBase2Y = src.base2Y;
+        const adjTipX = adj.tipX, adjTipY = adj.tipY;
+        const adjBase1X = adj.base1X, adjBase1Y = adj.base1Y;
+        const adjBase2X = adj.base2X, adjBase2Y = adj.base2Y;
 
         // Update debug labels
         // For removing: show source arm (S) being removed and adjacent arm (A) it folds onto
@@ -794,15 +713,61 @@ export class AnimatedStar {
         }
         this.updateDebugLabels(debugLabels);
 
-        // Debug logging at key frames only
-        const isFirstFrame = transition.progress < 0.002;
-        const isPhase1End = transition.progress >= 0.498 && transition.progress <= 0.502;
-        const isPhase2Start = transition.progress >= 0.502 && transition.progress <= 0.506;
-        const isLastFrame = transition.progress > 0.998;
-        if (isFirstFrame || isPhase1End || isPhase2Start || isLastFrame) {
-            const phase = transition.progress < phase1End ? 1 : 2;
-            const label = isFirstFrame ? 'START' : isPhase1End ? 'P1-END' : isPhase2Start ? 'P2-START' : 'END';
-            console.log(`[${label}] ${transition.type} arm${transition.sourceArmIndex} p${phase}: T(${tipX.toFixed(0)},${tipY.toFixed(0)}) 1(${base1X.toFixed(0)},${base1Y.toFixed(0)}) 2(${base2X.toFixed(0)},${base2Y.toFixed(0)}) At(${adjTipX.toFixed(0)},${adjTipY.toFixed(0)})`);
+        // Collect debug checkpoints at phase boundaries
+        const p = transition.progress;
+        const inPhase1 = p < phase1End;
+
+        let label: string | null = null;
+        if (inPhase1) {
+            if (!transition.debugPhase1Start) {
+                label = 'P1-start';
+                transition.debugPhase1Start = true;
+            } else if (!transition.debugPhase1Mid && p >= 0.25) {
+                label = 'P1-mid';
+                transition.debugPhase1Mid = true;
+            } else if (!transition.debugPhase1End && p >= 0.49) {
+                label = 'P1-end';
+                transition.debugPhase1End = true;
+            }
+        } else {
+            if (!transition.debugPhase2Start) {
+                label = 'P2-start';
+                transition.debugPhase2Start = true;
+            } else if (!transition.debugPhase2Mid && p >= 0.75) {
+                label = 'P2-mid';
+                transition.debugPhase2Mid = true;
+            } else if (!transition.debugPhase2End && p >= 0.99) {
+                label = 'P2-end';
+                transition.debugPhase2End = true;
+            }
+        }
+
+        if (label) {
+            const checkpoint: DebugCheckpoint = {
+                label,
+                progress: p,
+                T: { x: tipX, y: tipY },
+                b1: { x: base1X, y: base1Y },
+                b2: { x: base2X, y: base2Y },
+                St: { x: srcTipX, y: srcTipY },
+                S1: { x: srcBase1X, y: srcBase1Y },
+                S2: { x: srcBase2X, y: srcBase2Y },
+                At: { x: adjTipX, y: adjTipY },
+                A1: { x: adjBase1X, y: adjBase1Y },
+                A2: { x: adjBase2X, y: adjBase2Y },
+            };
+
+            const fin = computeFinalArmPosition(ctx);
+            if (fin) {
+                checkpoint.fin = {
+                    tipX: fin.tipX,
+                    tipY: fin.tipY,
+                    base1X: fin.base1X,
+                    base1Y: fin.base1Y,
+                };
+            }
+
+            transition.debugCheckpoints.push(checkpoint);
         }
     }
 
@@ -846,5 +811,70 @@ export class AnimatedStar {
     setPosition(centerX: number, centerY: number): void {
         this.centerX = centerX;
         this.centerY = centerY;
+    }
+
+    // Console API for testing specific transitions
+    testTransition(type: 'adding' | 'removing', armCount: number, sourceArmIndex: number): void {
+        // Cancel any existing transition
+        if (this.armTransition) {
+            if (this.transitionElement?.parentNode) {
+                this.transitionElement.parentNode.removeChild(this.transitionElement);
+            }
+            this.transitionElement = null;
+            this.armTransition = null;
+        }
+        if (this.secondArmTransition) {
+            if (this.secondTransitionElement?.parentNode) {
+                this.secondTransitionElement.parentNode.removeChild(this.secondTransitionElement);
+            }
+            this.secondTransitionElement = null;
+            this.secondArmTransition = null;
+        }
+        this.expansionFactor = 0;
+
+        // Set arm count
+        this.armCount = armCount;
+        this.createArmElements();
+        this.updateArms();
+
+        // Validate
+        if (type === 'removing' && armCount <= VALID_ARM_COUNTS[0]) {
+            console.error(`Cannot remove: already at minimum ${VALID_ARM_COUNTS[0]} arms`);
+            return;
+        }
+        if (type === 'adding' && armCount >= VALID_ARM_COUNTS[VALID_ARM_COUNTS.length - 1]) {
+            console.error(`Cannot add: already at maximum ${VALID_ARM_COUNTS[VALID_ARM_COUNTS.length - 1]} arms`);
+            return;
+        }
+        if (sourceArmIndex < 0 || sourceArmIndex >= armCount) {
+            console.error(`Invalid sourceArmIndex ${sourceArmIndex} for ${armCount} arms`);
+            return;
+        }
+
+        // Start transition
+        this.opCounter++;
+        this.armTransition = {
+            type,
+            progress: 0,
+            sourceArmIndex,
+            unfoldAngle: 0,
+            opNum: this.opCounter,
+            debugCheckpoints: [],
+            debugPhase1Start: false,
+            debugPhase1Mid: false,
+            debugPhase1End: false,
+            debugPhase2Start: false,
+            debugPhase2Mid: false,
+            debugPhase2End: false
+        };
+
+        const targetArmCount = type === 'adding' ? armCount + 1 : armCount - 1;
+        console.log(`[Op${this.opCounter}] TEST: ${type} arm ${sourceArmIndex} (${armCount} -> ${targetArmCount} arms)`);
+
+        this.createTransitionElement();
+    }
+
+    getArmCount(): number {
+        return this.armCount;
     }
 }

@@ -256,6 +256,9 @@ export class CloudManager {
 
         this.counterZoomGroup.appendChild(starElement);
         this.view.setStarElement(starElement);
+
+        // Expose star for console testing: star.testTransition('removing', 6, 5)
+        (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
     }
 
     private createDebugBox(): void {
