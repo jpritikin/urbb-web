@@ -3,10 +3,11 @@ import { Point } from './geometry.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import { PhysicsEngine, PhysicsConfig } from './physicsEngine.js';
 import { SimulatorModel } from './ifsModel.js';
-import { SimulatorView, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './ifsView.js';
+import { SimulatorView } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { Vec3, CloudInstance } from './types.js';
+import { AnimatedStar, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './starAnimation.js';
 
 export { CloudType };
 
@@ -70,7 +71,7 @@ export class CloudManager {
     private selectedCloud: Cloud | null = null;
     private partitionCount: number = 8;
     private currentPartition: number = 0;
-    private selfElement: SVGElement | null = null;
+    private animatedStar: AnimatedStar | null = null;
     private counterZoomGroup: SVGGElement | null = null;
 
     private uiContainer: HTMLElement | null = null;
@@ -245,31 +246,16 @@ export class CloudManager {
     }
 
     private createSelfStar(): void {
-        if (!this.svgElement) return;
+        if (!this.counterZoomGroup) return;
 
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
-        const points = 5;
 
-        const starPoints: string[] = [];
-        for (let i = 0; i < points * 2; i++) {
-            const radius = i % 2 === 0 ? STAR_OUTER_RADIUS : STAR_INNER_RADIUS;
-            const angle = (Math.PI / points) * i - Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
-            starPoints.push(`${x.toFixed(2)},${y.toFixed(2)}`);
-        }
+        this.animatedStar = new AnimatedStar(centerX, centerY);
+        const starElement = this.animatedStar.createElement();
 
-        const star = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        star.setAttribute('points', starPoints.join(' '));
-        star.setAttribute('fill', '#FFD700');
-        star.setAttribute('stroke', '#DAA520');
-        star.setAttribute('stroke-width', '1.5');
-        star.setAttribute('opacity', '0.9');
-
-        this.counterZoomGroup!.appendChild(star);
-        this.selfElement = star;
-        this.view.setStarElement(star);
+        this.counterZoomGroup.appendChild(starElement);
+        this.view.setStarElement(starElement);
     }
 
     private createDebugBox(): void {
@@ -1749,6 +1735,8 @@ export class CloudManager {
     }
 
     private checkHighAttentionParts(): void {
+        return; //testing
+
         const sorted = [...this.instances].sort(
             (a, b) => this.model.getNeedAttention(b.cloud.id) - this.model.getNeedAttention(a.cloud.id)
         );
@@ -1790,10 +1778,11 @@ export class CloudManager {
             return Math.abs(diff) < DEPTH_THRESHOLD ? 0 : diff;
         });
 
+        const starElement = this.animatedStar?.getElement();
         let selfInserted = false;
         for (const instance of this.instances) {
-            if (!selfInserted && instance.position.z >= 0 && this.selfElement && this.selfElement.parentNode === this.svgElement) {
-                this.svgElement.appendChild(this.selfElement);
+            if (!selfInserted && instance.position.z >= 0 && starElement && starElement.parentNode === this.svgElement) {
+                this.svgElement.appendChild(starElement);
                 selfInserted = true;
             }
             const group = instance.cloud.getGroupElement();
@@ -1802,8 +1791,8 @@ export class CloudManager {
             }
         }
 
-        if (!selfInserted && this.selfElement && this.selfElement.parentNode === this.svgElement) {
-            this.svgElement.appendChild(this.selfElement);
+        if (!selfInserted && starElement && starElement.parentNode === this.svgElement) {
+            this.svgElement.appendChild(starElement);
         }
     }
 
@@ -1821,6 +1810,7 @@ export class CloudManager {
         this.lastFrameTime = currentTime;
 
         this.view.animate(deltaTime);
+        this.animatedStar?.animate(deltaTime);
 
         const mode = this.view.getMode();
         const isTransitioning = this.view.isTransitioning();

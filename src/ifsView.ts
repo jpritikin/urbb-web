@@ -11,9 +11,10 @@ import {
     CARPET_ENTRY_STAGGER
 } from './carpetRenderer.js';
 import { Vec3, CloudInstance } from './types.js';
+import { STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './starAnimation.js';
 
-export const STAR_OUTER_RADIUS = 20;
-export const STAR_INNER_RADIUS = 8;
+export { STAR_OUTER_RADIUS, STAR_INNER_RADIUS };
+
 const BLENDED_OPACITY = 0.7;
 
 // Semantic position targets - resolved to x/y each frame
