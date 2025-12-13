@@ -82,7 +82,7 @@ export class PieMenu {
         backdrop.setAttribute('cx', '0');
         backdrop.setAttribute('cy', '0');
         backdrop.setAttribute('r', String(this.radius + 30));
-        backdrop.setAttribute('fill', 'rgba(0, 0, 0, 0.01)');
+        backdrop.setAttribute('fill', 'rgba(0, 0, 0, 0.15)');
         backdrop.setAttribute('class', 'pie-menu-backdrop');
         backdrop.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -209,16 +209,25 @@ export class PieMenu {
 
         const padding = 10;
         const fontSize = 13;
+        const lineHeight = fontSize + 4;
         const tooltipY = this.radius + 15;
+
+        const lines = text.split('\n');
 
         const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         textEl.setAttribute('x', '0');
-        textEl.setAttribute('y', String(tooltipY + padding + fontSize - 2));
         textEl.setAttribute('text-anchor', 'middle');
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
         textEl.setAttribute('pointer-events', 'none');
-        textEl.textContent = text;
+
+        for (let i = 0; i < lines.length; i++) {
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', '0');
+            tspan.setAttribute('y', String(tooltipY + padding + fontSize - 2 + i * lineHeight));
+            tspan.textContent = lines[i];
+            textEl.appendChild(tspan);
+        }
 
         this.tooltipElement.appendChild(textEl);
         this.group.appendChild(this.tooltipElement);

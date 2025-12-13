@@ -1,6 +1,15 @@
 import { SimulatorModel } from './ifsModel.js';
 import { Cloud } from './cloudShape.js';
-import { SeatInfo } from './carpetRenderer.js';
+import {
+    SeatInfo,
+    CarpetState,
+    createCarpetVertices,
+    getOffscreenPosition,
+    CARPET_START_SCALE,
+    CARPET_SCALE,
+    CARPET_FLY_DURATION,
+    CARPET_ENTRY_STAGGER
+} from './carpetRenderer.js';
 
 export const STAR_OUTER_RADIUS = 20;
 export const STAR_INNER_RADIUS = 8;
@@ -71,6 +80,7 @@ export class SimulatorView {
     private mode: 'panorama' | 'foreground' = 'panorama';
     private previousMode: 'panorama' | 'foreground' = 'panorama';
     private previousTargetIds: Set<string> = new Set();
+    private previousForegroundIds: Set<string> = new Set();
     private transitionProgress: number = 0;
     private transitionDuration: number = 1.0;
     private transitionDirection: 'forward' | 'reverse' | 'none' = 'none';
@@ -91,12 +101,38 @@ export class SimulatorView {
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceRotationSpeed: number = 0.05; // radians per second
     private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
+    private carpetStates: Map<string, CarpetState> = new Map();
     private previousSeatCount: number = 0;
     private currentSeatCount: number = 0;
     private targetSeatCount: number = 0;
 
     private committedBlendingDegrees: Map<string, number> = new Map();
     private readonly DEGREE_STEP_THRESHOLD = 0.06; // trigger overshoot every ~6% unblending
+
+    // Spiral exit animation state for parts forced out by spontaneous blends
+    private spiralExits: Map<string, {
+        startX: number;
+        startY: number;
+        startTime: number;
+        duration: number;
+        spiralRadius: number;
+        rotations: number;
+        exitAngle: number; // angle toward edge of screen
+    }> = new Map();
+
+    // Fly-out exit animation (carpet-style) for stepping back
+    private flyOutExits: Map<string, {
+        startX: number;
+        startY: number;
+        exitX: number;
+        exitY: number;
+        startTime: number;
+        duration: number;
+        startScale: number;
+    }> = new Map();
+
+    // Delayed arrivals for parts that should appear after displaced parts exit
+    private delayedArrivals: Map<string, { arrivalTime: number }> = new Map();
 
     // Unified stretch animation state (handles both user-triggered overshoot and idle grip loss)
     private stretchAnim: Map<string, {
@@ -160,6 +196,11 @@ export class SimulatorView {
                 this.transitionDirection = 'reverse';
             }
             this.transitionProgress = 0;
+
+            // Reset opacity smoothing for all clouds to ensure consistent transition speed
+            for (const state of this.cloudStates.values()) {
+                state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+            }
         }
     }
 
@@ -271,16 +312,32 @@ export class SimulatorView {
             }
 
             case 'blended': {
+                // Position cloud so anchor edge stays at star's far side
+                // The lattice stretch moves the far edge toward the seat
                 const seatPos = this.getSeatPosition(target.seatIndex, totalSeats);
                 const starPos = this.getStarPosition();
-                const state = this.cloudStates.get(cloudId);
-                const degree = state?.blendingDegree ?? 1;
-                // degree=1 means fully blended (at star), degree->0 means separating (at seat)
                 const starX = starPos.x + target.offsetX;
                 const starY = starPos.y + target.offsetY;
+
+                // Direction from star to seat
+                const dx = seatPos.x - starX;
+                const dy = seatPos.y - starY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 1) {
+                    return { x: starX, y: starY, scale: 1 };
+                }
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+
+                // Position cloud center so anchor edge is at star's far side
+                // Anchor edge offset from cloud center is roughly half cloud width (~40px)
+                // Star's far edge is STAR_OUTER_RADIUS (~20px) from star center
+                // So cloud center is shifted toward seat by (half_cloud_width - STAR_OUTER_RADIUS)
+                const ESTIMATED_HALF_CLOUD_WIDTH = 40;
+                const anchorToCenter = ESTIMATED_HALF_CLOUD_WIDTH - STAR_OUTER_RADIUS;
                 return {
-                    x: seatPos.x + degree * (starX - seatPos.x),
-                    y: seatPos.y + degree * (starY - seatPos.y),
+                    x: starX + dirX * anchorToCenter,
+                    y: starY + dirY * anchorToCenter,
                     scale: 1
                 };
             }
@@ -301,6 +358,7 @@ export class SimulatorView {
         for (const cloudId of this.conferenceSeatAssignments.keys()) {
             if (!allSeatedIds.includes(cloudId)) {
                 this.conferenceSeatAssignments.delete(cloudId);
+                this.markCarpetForExit(cloudId);
             }
         }
 
@@ -310,11 +368,18 @@ export class SimulatorView {
             const oldAssignments = new Map(this.conferenceSeatAssignments);
             this.conferenceSeatAssignments.clear();
 
+            const usedInRedistribution = new Set<number>([0]); // 0 is star
             for (const [cloudId, oldSeat] of oldAssignments) {
                 if (allSeatedIds.includes(cloudId)) {
                     // Scale the seat position proportionally
-                    const newSeat = Math.round((oldSeat / this.previousSeatCount) * totalSeats);
-                    this.conferenceSeatAssignments.set(cloudId, newSeat % totalSeats || 1);
+                    let newSeat = Math.round((oldSeat / this.previousSeatCount) * totalSeats);
+                    newSeat = newSeat % totalSeats || 1;
+                    // Resolve collisions by finding next available seat
+                    while (usedInRedistribution.has(newSeat)) {
+                        newSeat = (newSeat % (totalSeats - 1)) + 1;
+                    }
+                    this.conferenceSeatAssignments.set(cloudId, newSeat);
+                    usedInRedistribution.add(newSeat);
                 }
             }
         }
@@ -323,6 +388,11 @@ export class SimulatorView {
         const usedSeats = new Set<number>([0]); // 0 is always the star
         for (const seat of this.conferenceSeatAssignments.values()) {
             usedSeats.add(seat);
+        }
+
+        let enteringCount = 0;
+        for (const carpet of this.carpetStates.values()) {
+            if (carpet.entering) enteringCount++;
         }
 
         for (const cloudId of allSeatedIds) {
@@ -335,14 +405,19 @@ export class SimulatorView {
                     }
                 }
 
+                let seatIndex: number;
                 if (availableSeats.length > 0) {
-                    const randomSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-                    this.conferenceSeatAssignments.set(cloudId, randomSeat);
-                    usedSeats.add(randomSeat);
+                    seatIndex = availableSeats[Math.floor(Math.random() * availableSeats.length)];
                 } else {
-                    // Fallback: assign next seat
-                    this.conferenceSeatAssignments.set(cloudId, usedSeats.size);
-                    usedSeats.add(usedSeats.size);
+                    seatIndex = usedSeats.size;
+                }
+                this.conferenceSeatAssignments.set(cloudId, seatIndex);
+                usedSeats.add(seatIndex);
+
+                // Create carpet for new seat
+                if (!this.carpetStates.has(cloudId)) {
+                    this.createCarpet(cloudId, seatIndex, totalSeats, enteringCount);
+                    enteringCount++;
                 }
             }
         }
@@ -355,6 +430,51 @@ export class SimulatorView {
 
         // Update cached star position using current animated seat count
         this.cachedStarPosition = this.getSeatPosition(0, totalSeats);
+    }
+
+    private createCarpet(cloudId: string, seatIndex: number, totalSeats: number, enteringCount: number): void {
+        const targetPos = this.getSeatPosition(seatIndex, totalSeats);
+        const startPos = getOffscreenPosition(targetPos.x, targetPos.y, this.canvasWidth, this.canvasHeight);
+
+        this.carpetStates.set(cloudId, {
+            cloudId,
+            currentX: startPos.x,
+            currentY: startPos.y,
+            targetX: targetPos.x,
+            targetY: targetPos.y,
+            startX: startPos.x,
+            startY: startPos.y,
+            currentScale: CARPET_START_SCALE,
+            isOccupied: false,
+            occupiedOffset: 0,
+            entering: true,
+            exiting: false,
+            progress: -enteringCount * CARPET_ENTRY_STAGGER,
+            vertices: createCarpetVertices()
+        });
+    }
+
+    private markCarpetForExit(cloudId: string): void {
+        const carpet = this.carpetStates.get(cloudId);
+        if (carpet && !carpet.exiting) {
+            // Use current visual position, not target, so carpet leaves immediately
+            const exitPos = getOffscreenPosition(carpet.currentX, carpet.currentY, this.canvasWidth, this.canvasHeight);
+            carpet.exiting = true;
+            carpet.entering = false;
+            carpet.progress = 0;
+            carpet.targetX = carpet.currentX;
+            carpet.targetY = carpet.currentY;
+            carpet.startX = exitPos.x;
+            carpet.startY = exitPos.y;
+        }
+    }
+
+    getCarpetStates(): Map<string, CarpetState> {
+        return this.carpetStates;
+    }
+
+    clearCarpetStates(): void {
+        this.carpetStates.clear();
     }
 
     private calculateConferenceRoomPositions(model: SimulatorModel, targetInstances: CloudInstance[]): { clouds: Map<string, { x: number; y: number }>, starX: number, starY: number } {
@@ -384,6 +504,45 @@ export class SimulatorView {
         instances: CloudInstance[],
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>
     ): void {
+        // Check for displaced parts and start spiral exits
+        const displacedParts = newModel.getDisplacedParts();
+        const hasDisplacements = displacedParts.size > 0;
+
+        for (const cloudId of displacedParts) {
+            this.startSpiralExit(cloudId);
+            newModel.clearDisplacedPart(cloudId);
+        }
+
+        // If parts were displaced, delay the arrival of NEW parts (not parts that were already visible)
+        if (hasDisplacements) {
+            const arrivalDelay = 4.0;
+            const arrivalTime = performance.now() + arrivalDelay * 1000;
+
+            // Only delay parts that weren't already in foreground (i.e., truly new arrivals)
+            // Parts that were displaced are spiraling away; parts NOT displaced were already visible
+            for (const blendedId of newModel.getBlendedParts()) {
+                if (!this.delayedArrivals.has(blendedId)) {
+                    const state = this.cloudStates.get(blendedId);
+                    // Only delay if this part wasn't already visible (opacity near 0 or in panorama)
+                    if (state && state.opacity < 0.1) {
+                        this.delayedArrivals.set(blendedId, { arrivalTime });
+                        state.targetOpacity = 0;
+                    }
+                }
+            }
+
+            // Delay targets only if they weren't already visible
+            for (const targetId of newModel.getTargetCloudIds()) {
+                if (!this.delayedArrivals.has(targetId)) {
+                    const state = this.cloudStates.get(targetId);
+                    if (state && state.opacity < 0.1) {
+                        this.delayedArrivals.set(targetId, { arrivalTime });
+                        state.targetOpacity = 0;
+                    }
+                }
+            }
+        }
+
         this.updateSeatAssignments(newModel);
         this.updateStarPosition(newModel);
         this.updateCloudStateTargets(newModel, instances);
@@ -409,6 +568,9 @@ export class SimulatorView {
             });
         }
 
+        // Build current foreground set
+        const currentForegroundIds = new Set<string>();
+
         for (const instance of instances) {
             const cloudId = instance.cloud.id;
             const state = this.cloudStates.get(cloudId);
@@ -419,6 +581,16 @@ export class SimulatorView {
             const isSupporting = allSupporting.has(cloudId);
             const isInForeground = isTarget || isBlended || isSupporting;
 
+            if (this.mode === 'foreground' && isInForeground) {
+                currentForegroundIds.add(cloudId);
+            }
+
+            // Skip clouds that are currently fly-out exiting
+            if (this.flyOutExits.has(cloudId)) {
+                state.inCounterZoomGroup = true;
+                continue;
+            }
+
             // Determine position target based on role
             let positionTarget: PositionTarget;
             let targetOpacity = 1;
@@ -427,10 +599,7 @@ export class SimulatorView {
             if (this.mode === 'foreground' && isInForeground) {
                 inCounterZoomGroup = true;
 
-                if (isTarget) {
-                    const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-                    positionTarget = { type: 'seat', seatIndex: seatIndex ?? 1 };
-                } else if (isBlended) {
+                if (isBlended) {
                     const blendReason = model.getBlendReason(cloudId);
 
                     if (blendReason === 'spontaneous') {
@@ -461,6 +630,9 @@ export class SimulatorView {
                         state.targetBlendingDegree = degree;
                     }
                     targetOpacity = BLENDED_OPACITY;
+                } else if (isTarget) {
+                    const seatIndex = this.conferenceSeatAssignments.get(cloudId);
+                    positionTarget = { type: 'seat', seatIndex: seatIndex ?? 1 };
                 } else if (isSupporting) {
                     const info = supportingInfo.get(cloudId)!;
                     positionTarget = {
@@ -472,7 +644,13 @@ export class SimulatorView {
                     positionTarget = { type: 'panorama' };
                 }
             } else if (this.mode === 'foreground') {
-                // In foreground but not part of the conference - fade out
+                // In foreground mode but not part of the conference
+                // Check if this part just left foreground - trigger fly-out exit
+                if (this.previousForegroundIds.has(cloudId) && !this.spiralExits.has(cloudId)) {
+                    this.startFlyOutExit(cloudId);
+                    state.inCounterZoomGroup = true;
+                    continue;
+                }
                 positionTarget = { type: 'panorama' };
                 targetOpacity = 0;
             } else {
@@ -488,10 +666,17 @@ export class SimulatorView {
             }
 
             state.positionTarget = positionTarget;
-            state.targetOpacity = targetOpacity;
+            // Don't override opacity for delayed arrivals - they should stay invisible until arrival time
+            if (!this.delayedArrivals.has(cloudId)) {
+                state.targetOpacity = targetOpacity;
+            }
             state.targetScale = 1;
-            state.inCounterZoomGroup = inCounterZoomGroup;
+            // Keep spiral-exiting or fly-out-exiting clouds in counter-zoom group
+            state.inCounterZoomGroup = inCounterZoomGroup || this.spiralExits.has(cloudId) || this.flyOutExits.has(cloudId);
         }
+
+        // Update previous foreground set for next frame
+        this.previousForegroundIds = currentForegroundIds;
     }
 
     private updateBlendedCloudStates(model: SimulatorModel, instances: CloudInstance[]): void {
@@ -930,6 +1115,10 @@ export class SimulatorView {
             if (state.smoothing.opacity > 0) {
                 const factor = 1 - Math.exp(-state.smoothing.opacity * deltaTime);
                 state.opacity += (state.targetOpacity - state.opacity) * factor;
+                // Snap to target when very close to avoid lingering at near-zero opacity
+                if (Math.abs(state.opacity - state.targetOpacity) < 0.05) {
+                    state.opacity = state.targetOpacity;
+                }
             } else {
                 state.opacity = state.targetOpacity;
             }
@@ -1011,9 +1200,10 @@ export class SimulatorView {
     private animateSeatCount(deltaTime: number): void {
         if (this.targetSeatCount === 0 || this.currentSeatCount === this.targetSeatCount) return;
 
-        const smoothing = 0.5;
-        const factor = 1 - Math.exp(-smoothing * deltaTime);
-        this.currentSeatCount += (this.targetSeatCount - this.currentSeatCount) * factor;
+        const speed = 0.2; // seats per second (linear)
+        const diff = this.targetSeatCount - this.currentSeatCount;
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * deltaTime);
+        this.currentSeatCount += step;
 
         if (Math.abs(this.currentSeatCount - this.targetSeatCount) < 0.01) {
             this.currentSeatCount = this.targetSeatCount;
@@ -1153,8 +1343,14 @@ export class SimulatorView {
         const stretchOffset = this.getStretchOffset(cloudId);
         const stretchAngle = this.getStretchAngle(cloudId);
 
-        // Stretch: base amount (relative) * factor (for contraction) + offset (absolute overshoot)
-        const baseStretchAmount = (1 - degree) * qLength;
+        // Cloud center is offset from star (anchor edge at star's far side)
+        // Stretch only needs to move far edge from its current position to seat
+        // effectiveDistance = qLength - anchorToCenter - halfWidth
+        //                   = qLength - (halfWidth - STAR_OUTER_RADIUS) - halfWidth
+        //                   = qLength - 2*halfWidth + STAR_OUTER_RADIUS
+        const ESTIMATED_HALF_CLOUD_WIDTH = 40;
+        const effectiveDistance = Math.max(0, qLength - 2 * ESTIMATED_HALF_CLOUD_WIDTH + STAR_OUTER_RADIUS);
+        const baseStretchAmount = (1 - degree) * effectiveDistance;
         const stretchAmount = baseStretchAmount * stretchFactor + stretchOffset;
 
         // Apply angle offset to stretch direction
@@ -1177,6 +1373,180 @@ export class SimulatorView {
         const anchorOffsetY = -(qDy / qLength) * STAR_OUTER_RADIUS;
 
         return { stretchX, stretchY, anchorSide, anchorOffsetX, anchorOffsetY };
+    }
+
+    startSpiralExit(cloudId: string): void {
+        const state = this.cloudStates.get(cloudId);
+        if (!state) return;
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const dx = state.x - centerX;
+        const dy = state.y - centerY;
+        const startRadius = Math.sqrt(dx * dx + dy * dy);
+        const startAngle = Math.atan2(dy, dx);
+
+        this.spiralExits.set(cloudId, {
+            startX: state.x,
+            startY: state.y,
+            startTime: performance.now(),
+            duration: 10.0,
+            spiralRadius: startRadius,
+            rotations: 1.5,
+            exitAngle: startAngle
+        });
+
+        // Set target opacity to fade out during spiral
+        state.targetOpacity = 0;
+        state.smoothing.opacity = 0.25; // Very slow fade to match spiral duration
+    }
+
+    isSpiralExiting(cloudId: string): boolean {
+        return this.spiralExits.has(cloudId);
+    }
+
+    isAwaitingArrival(cloudId: string): boolean {
+        return this.delayedArrivals.has(cloudId);
+    }
+
+    hasActiveSpiralExits(): boolean {
+        return this.spiralExits.size > 0;
+    }
+
+    animateSpiralExits(): void {
+        const now = performance.now();
+        const toRemove: string[] = [];
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const maxRadius = Math.max(this.canvasWidth, this.canvasHeight) * 1.05;
+
+        for (const [cloudId, spiral] of this.spiralExits) {
+            const state = this.cloudStates.get(cloudId);
+            if (!state) {
+                toRemove.push(cloudId);
+                continue;
+            }
+
+            const elapsed = (now - spiral.startTime) / 1000;
+            const progress = Math.min(1, elapsed / spiral.duration);
+
+            if (progress >= 1) {
+                toRemove.push(cloudId);
+                state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+                continue;
+            }
+
+            // Ease out for smooth deceleration at the end
+            const eased = 1 - Math.pow(1 - progress, 2);
+
+            // Spiral around screen center:
+            // - Start at initial angle and radius
+            // - Rotate while expanding outward
+            const currentAngle = spiral.exitAngle + eased * spiral.rotations * Math.PI * 2;
+            const currentRadius = spiral.spiralRadius + eased * (maxRadius - spiral.spiralRadius);
+
+            state.x = centerX + Math.cos(currentAngle) * currentRadius;
+            state.y = centerY + Math.sin(currentAngle) * currentRadius;
+
+            // Override position target to prevent smoothing from interfering
+            state.positionTarget = { type: 'absolute', x: state.x, y: state.y };
+        }
+
+        for (const cloudId of toRemove) {
+            this.spiralExits.delete(cloudId);
+        }
+    }
+
+    startFlyOutExit(cloudId: string): void {
+        const state = this.cloudStates.get(cloudId);
+        if (!state) return;
+
+        const exitPos = getOffscreenPosition(state.x, state.y, this.canvasWidth, this.canvasHeight);
+
+        this.flyOutExits.set(cloudId, {
+            startX: state.x,
+            startY: state.y,
+            exitX: exitPos.x,
+            exitY: exitPos.y,
+            startTime: performance.now(),
+            duration: CARPET_FLY_DURATION,
+            startScale: state.scale
+        });
+
+        state.targetOpacity = 0;
+        state.smoothing.opacity = 0; // We'll handle opacity manually in animateFlyOutExits
+    }
+
+    isFlyOutExiting(cloudId: string): boolean {
+        return this.flyOutExits.has(cloudId);
+    }
+
+    hasActiveFlyOutExits(): boolean {
+        return this.flyOutExits.size > 0;
+    }
+
+    animateFlyOutExits(): void {
+        const now = performance.now();
+        const toRemove: string[] = [];
+
+        for (const [cloudId, flyOut] of this.flyOutExits) {
+            const state = this.cloudStates.get(cloudId);
+            if (!state) {
+                toRemove.push(cloudId);
+                continue;
+            }
+
+            const elapsed = (now - flyOut.startTime) / 1000;
+            const progress = Math.min(1, elapsed / flyOut.duration);
+
+            if (progress >= 1) {
+                toRemove.push(cloudId);
+                state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+                state.opacity = 0;
+                continue;
+            }
+
+            const eased = this.easeInOutCubic(progress);
+
+            // Animate position from start to exit (like carpet)
+            state.x = flyOut.startX + (flyOut.exitX - flyOut.startX) * eased;
+            state.y = flyOut.startY + (flyOut.exitY - flyOut.startY) * eased;
+
+            // Scale up as it exits (like carpet growing to CARPET_START_SCALE)
+            state.scale = flyOut.startScale + (CARPET_START_SCALE / CARPET_SCALE - flyOut.startScale) * eased;
+
+            // Fade out
+            state.opacity = 1 - eased;
+
+            // Override position target to prevent smoothing from interfering
+            state.positionTarget = { type: 'absolute', x: state.x, y: state.y };
+        }
+
+        for (const cloudId of toRemove) {
+            this.flyOutExits.delete(cloudId);
+        }
+    }
+
+    animateDelayedArrivals(model: SimulatorModel): void {
+        const now = performance.now();
+        const toRemove: string[] = [];
+
+        for (const [cloudId, arrival] of this.delayedArrivals) {
+            if (now >= arrival.arrivalTime) {
+                const state = this.cloudStates.get(cloudId);
+                if (state) {
+                    // Set appropriate opacity based on whether it's a blended part or target
+                    const isBlended = model.isBlended(cloudId);
+                    state.targetOpacity = isBlended ? BLENDED_OPACITY : 1;
+                    state.smoothing.opacity = 2; // Gentle fade in
+                }
+                toRemove.push(cloudId);
+            }
+        }
+
+        for (const cloudId of toRemove) {
+            this.delayedArrivals.delete(cloudId);
+        }
     }
 
     isTransitioning(): boolean {

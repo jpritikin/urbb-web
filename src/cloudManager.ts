@@ -20,6 +20,7 @@ export const THERAPIST_ACTIONS: TherapistAction[] = [
     { id: 'first_memories', question: "When were this part's first memories?", shortName: 'Memories', category: 'history' },
     { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship' },
     { id: 'who_do_you_see', question: 'Who do you see when you look at the client?', shortName: 'Who?', category: 'discovery' },
+    { id: 'expand_calm', question: 'Expand and deepen calm and patience', shortName: 'Calm', category: 'relationship' },
     { id: 'job', question: "What is this part's job?", shortName: 'Job', category: 'role' },
     { id: 'join_conference', question: 'Can this part join the conference?', shortName: 'Join', category: 'relationship' },
     { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
@@ -116,6 +117,7 @@ export class CloudManager {
     private messageCooldownTimers: Map<string, number> = new Map();
     private blendStartTimers: Map<string, number> = new Map();
     private readonly BLEND_MESSAGE_DELAY = 3;
+    private compassionBubbleTargetId: string | null = null;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -376,6 +378,15 @@ export class CloudManager {
         const isTarget = this.model.isTarget(cloudId);
         const isBlended = this.model.isBlended(cloudId);
         const isSupporting = this.model.getAllSupportingParts().has(cloudId);
+        const proxyAsTargetId = this.getProxyAsTarget(cloudId);
+        const proxyRevealed = proxyAsTargetId && this.model.isIdentityRevealed(proxyAsTargetId);
+        const targetIds = this.model.getTargetCloudIds();
+        const proxies = this.relationships.getProxies(cloudId);
+        const hasRevealedProxy = Array.from(proxies).some(id => this.model.isIdentityRevealed(id));
+        const noBlendedParts = this.model.getBlendedParts().length === 0;
+        const isSoleTargetWithRevealedProxy = isTarget && targetIds.size === 1 && hasRevealedProxy && noBlendedParts;
+        const blendReason = this.model.getBlendReason(cloudId);
+        const isSpontaneousBlend = isBlended && blendReason === 'spontaneous';
 
         const items: PieMenuItem[] = [];
 
@@ -387,19 +398,34 @@ export class CloudManager {
             } else if (action.id === 'separate') {
                 include = isBlended;
             } else if (action.id === 'step_back') {
-                include = isTarget || isSupporting || isBlended;
+                const hasOtherTargets = targetIds.size > 0;
+                include = (isTarget || isSupporting || (isBlended && hasOtherTargets)) && !isSpontaneousBlend;
             } else if (action.id === 'job') {
                 include = isTarget || isBlended;
             } else if (action.id === 'who_do_you_see') {
-                include = isTarget && this.relationships.getProxies(cloudId).size > 0;
+                include = isTarget && proxies.size > 0;
+            } else if (action.id === 'expand_calm') {
+                include = isSoleTargetWithRevealedProxy;
             } else {
                 include = isTarget;
             }
 
             if (include) {
+                let label = action.question;
+
+                if (action.id === 'feel_toward' && proxyRevealed) {
+                    label = "How do you feel toward this part that doesn't know you very well?";
+                } else if (action.id === 'who_do_you_see' && this.compassionBubbleTargetId === cloudId && proxyRevealed) {
+                    const proxyCloud = this.getCloudById(proxyAsTargetId!);
+                    const proxyName = proxyCloud?.text ?? 'the proxy';
+                    label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
+                } else if (action.id === 'separate') {
+                    label = "Can you make a little space for client?";
+                }
+
                 items.push({
                     id: action.id,
-                    label: action.question,
+                    label,
                     shortName: action.shortName,
                     category: action.category
                 });
@@ -438,6 +464,12 @@ export class CloudManager {
         title.textContent = 'State History';
         header.appendChild(title);
 
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'trace-copy-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', () => this.copyTraceToClipboard());
+        header.appendChild(copyBtn);
+
         this.tracePanel.appendChild(header);
 
         const content = document.createElement('pre');
@@ -471,11 +503,31 @@ export class CloudManager {
         content.textContent = this.model.formatTrace(cloudNames);
     }
 
+    private copyTraceToClipboard(): void {
+        const content = this.tracePanel?.querySelector('.trace-content');
+        if (!content?.textContent) return;
+
+        navigator.clipboard.writeText(content.textContent);
+
+        const copyBtn = this.tracePanel?.querySelector('.trace-copy-btn');
+        if (copyBtn) {
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 1000);
+        }
+    }
+
     private handleActionClick(action: TherapistAction, targetCloud?: Cloud): void {
         const cloud = targetCloud ?? (this.selectedCloudId ? this.getCloudById(this.selectedCloudId) : null);
         if (!cloud) return;
 
         this.selectedAction = action;
+
+        if (this.model.getBlendReason(cloud.id) === 'spontaneous') {
+            this.model.setBlendReason(cloud.id, 'therapist');
+        }
 
         if (action.id === 'join_conference') {
             this.showThoughtBubble("Joining the conference...");
@@ -512,64 +564,40 @@ export class CloudManager {
             return;
         }
 
+        if (action.id === 'expand_calm') {
+            this.handleExpandCalm(cloud);
+            return;
+        }
+
         if (action.id === 'first_memories') {
             this.model.revealAge(cloud.id);
         } else if (action.id === 'feel_toward') {
-            const protectorIds = this.relationships.getProtectedBy(cloud.id);
-            const grievanceMap = this.relationships.getGrievances(cloud.id);
+            const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
+            const proxyAsTargetId = this.getProxyAsTarget(cloud.id);
 
             const oldModel = this.model.clone();
 
             const targetIds = this.model.getTargetCloudIds();
             const alreadyBlended = this.model.getBlendedParts();
-            const blendedResponses: { cloudId: string; response: string; isGrievance: boolean }[] = [];
+            const blendedResponses: { cloudId: string; response: string }[] = [];
 
             for (const blendedId of alreadyBlended) {
-                const grievanceLevel = this.relationships.getGrievance(blendedId, cloud.id);
-                if (grievanceLevel > 0) {
-                    const blendedCloud = this.getCloudById(blendedId);
-                    if (blendedCloud) {
-                        const response = this.getGrievanceResponse(blendedCloud, cloud);
-                        if (response) {
-                            blendedResponses.push({
-                                cloudId: blendedId,
-                                response,
-                                isGrievance: true
-                            });
-                        }
+                if (this.relationships.hasGrievance(blendedId, cloud.id)) {
+                    const response = this.getGrievanceResponse(blendedId, cloud.id);
+                    if (response) {
+                        blendedResponses.push({ cloudId: blendedId, response });
                     }
                 }
             }
 
-            for (const protectorId of protectorIds) {
-                if (!targetIds.has(protectorId) && !alreadyBlended.includes(protectorId)) {
-                    const protectorCloud = this.getCloudById(protectorId);
-                    if (protectorCloud) {
-                        const response = this.getProtectorResponse(protectorCloud, cloud);
-                        if (response) {
-                            this.model.addBlendedPart(protectorId, 'therapist');
-                            blendedResponses.push({
-                                cloudId: protectorId,
-                                response,
-                                isGrievance: false
-                            });
-                        }
-                    }
-                }
-            }
-
-            for (const [grievanceId, grievanceLevel] of grievanceMap) {
-                if (grievanceLevel > 0 && !targetIds.has(grievanceId) && !alreadyBlended.includes(grievanceId)) {
+            for (const grievanceId of grievanceTargets) {
+                if (!targetIds.has(grievanceId) && !alreadyBlended.includes(grievanceId)) {
                     const grievanceCloud = this.getCloudById(grievanceId);
                     if (grievanceCloud && this.model.getTrust(grievanceId) < 0.5) {
-                        const response = this.getGrievanceResponse(grievanceCloud, cloud);
+                        const response = this.getGrievanceResponse(grievanceId, cloud.id);
                         if (response) {
                             this.model.addBlendedPart(grievanceId, 'therapist');
-                            blendedResponses.push({
-                                cloudId: grievanceId,
-                                response,
-                                isGrievance: true
-                            });
+                            blendedResponses.push({ cloudId: grievanceId, response });
                         }
                     }
                 }
@@ -578,21 +606,24 @@ export class CloudManager {
             const blendedParts = this.model.getBlendedParts();
             const partDesc = this.buildPartDescription(cloud.id);
 
+            this.compassionBubbleTargetId = null;
             if (blendedParts.length === 0) {
-                const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
-                if (unrevealed.length > 0) {
-                    this.showThoughtBubble(`Feel toward ${partDesc}?\ncuriosity`, { label: 'Let the part know', targetCloudId: cloud.id });
+                if (proxyAsTargetId) {
+                    this.showThoughtBubble(`Feel toward ${partDesc}?\nCompassion`, { label: 'Let the part know', targetCloudId: cloud.id });
+                    this.compassionBubbleTargetId = cloud.id;
                 } else {
-                    const selfAspects = ['compassion', 'gratitude'];
-                    const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
-                    this.showThoughtBubble(`Feel toward ${partDesc}?\n${selfAspect}`, { label: 'Let the part know', targetCloudId: cloud.id });
+                    const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
+                    if (unrevealed.length > 0) {
+                        this.showThoughtBubble(`Feel toward ${partDesc}?\ncuriosity`, { label: 'Let the part know', targetCloudId: cloud.id });
+                    } else {
+                        const selfAspects = ['compassion', 'gratitude'];
+                        const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
+                        this.showThoughtBubble(`Feel toward ${partDesc}?\n${selfAspect}`, { label: 'Let the part know', targetCloudId: cloud.id });
+                    }
                 }
             } else if (blendedResponses.length > 0) {
-                const firstResponse = blendedResponses[0];
-                this.showThoughtBubble(firstResponse.response);
-                if (firstResponse.isGrievance) {
-                    this.model.adjustTrust(cloud.id, 0.9, 'therapist invited attack');
-                }
+                this.showThoughtBubble(blendedResponses[0].response);
+                this.model.adjustTrust(cloud.id, 0.9, 'therapist invited attack');
             }
 
             this.model.revealRelationships(cloud.id);
@@ -640,6 +671,19 @@ export class CloudManager {
         this.updateBiographyPanel();
     }
 
+    private handleExpandCalm(cloud: Cloud): void {
+        this.showThoughtBubble("Expanding calm and patience...", { label: 'Did the part notice?', targetCloudId: cloud.id });
+    }
+
+    private handleExpandCalmFollowUp(cloudId: string): void {
+        if (Math.random() < 0.75) {
+            this.relationships.clearProxies(cloudId);
+            this.showThoughtBubble("I see you.");
+        } else {
+            this.showThoughtBubble("The part didn't notice yet.");
+        }
+    }
+
     private handleWhoDoYouSee(cloud: Cloud): void {
         const proxies = this.relationships.getProxies(cloud.id);
         if (proxies.size === 0) {
@@ -650,7 +694,8 @@ export class CloudManager {
         const targetIds = this.model.getTargetCloudIds();
         const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
         if (availableProxies.length === 0) {
-            if (Math.random() < 0.2) {
+            const successChance = this.compassionBubbleTargetId === cloud.id ? 0.6 : 0.2;
+            if (Math.random() < successChance) {
                 this.relationships.clearProxies(cloud.id);
                 this.showThoughtBubble("I see you.");
                 return;
@@ -694,18 +739,10 @@ export class CloudManager {
         this.syncViewWithModel(oldModel);
     }
 
-    private getProtectorResponse(protectorCloud: Cloud, targetCloud: Cloud): string | null {
-        const dialogues = this.model.getDialogues(protectorCloud.id);
-        if (dialogues.burdenedProtector && dialogues.burdenedProtector.length > 0) {
-            return dialogues.burdenedProtector[Math.floor(Math.random() * dialogues.burdenedProtector.length)];
-        }
-        return null;
-    }
-
-    private getGrievanceResponse(grievanceCloud: Cloud, targetCloud: Cloud): string | null {
-        const dialogues = this.model.getDialogues(grievanceCloud.id);
-        if (dialogues.burdenedGrievance && dialogues.burdenedGrievance.length > 0) {
-            return dialogues.burdenedGrievance[Math.floor(Math.random() * dialogues.burdenedGrievance.length)];
+    private getGrievanceResponse(cloudId: string, targetId: string): string | null {
+        const dialogues = this.relationships.getGrievanceDialogues(cloudId, targetId);
+        if (dialogues.length > 0) {
+            return dialogues[Math.floor(Math.random() * dialogues.length)];
         }
         return null;
     }
@@ -863,6 +900,7 @@ export class CloudManager {
         this.thoughtBubbleVisible = false;
         this.thoughtBubbleFadeTimer = 0;
         this.thoughtBubbleFollowUp = null;
+        this.compassionBubbleTargetId = null;
     }
 
     private handleThoughtBubbleFollowUp(): void {
@@ -870,6 +908,12 @@ export class CloudManager {
         if (!followUp) return;
 
         const cloudId = followUp.targetCloudId;
+
+        if (followUp.label === 'Did the part notice?') {
+            this.handleExpandCalmFollowUp(cloudId);
+            return;
+        }
+
         const proxies = this.relationships.getProxies(cloudId);
 
         if (proxies.size > 0) {
@@ -943,6 +987,16 @@ export class CloudManager {
         return averageTrust < targetTrust;
     }
 
+    private getProxyAsTarget(cloudId: string): string | null {
+        const targetIds = this.model.getTargetCloudIds();
+        if (!targetIds.has(cloudId)) return null;
+        const proxies = this.relationships.getProxies(cloudId);
+        for (const proxyId of proxies) {
+            if (targetIds.has(proxyId)) return proxyId;
+        }
+        return null;
+    }
+
     private updateThoughtBubble(deltaTime: number): void {
         if (!this.thoughtBubbleVisible || !this.thoughtBubbleGroup) return;
 
@@ -995,8 +1049,7 @@ export class CloudManager {
         this.clearRelatedClouds();
 
         const protectorIds = this.relationships.getProtectedBy(primaryTargetId);
-        const grievanceMap = this.relationships.getGrievances(primaryTargetId);
-        const grievanceIds = new Set(Array.from(grievanceMap.keys()).filter(id => grievanceMap.get(id)! > 0));
+        const grievanceIds = this.relationships.getGrievanceTargets(primaryTargetId);
 
         const filteredProtectorIds = new Set(
             Array.from(protectorIds).filter(id => !targetIds.has(id))
@@ -1166,7 +1219,7 @@ export class CloudManager {
         needAttention?: number;
         agreedWaitUntil?: number;
         partAge?: number | string;
-        dialogues?: { burdenedProtector?: string[]; burdenedGrievance?: string[]; unburdenedJob?: string };
+        dialogues?: { burdenedJobAppraisal?: string[]; burdenedJobImpact?: string[]; unburdenedJob?: string };
     }): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
@@ -1494,28 +1547,13 @@ export class CloudManager {
             return;
         }
 
-        const panoramaPositions = new Map<string, { x: number; y: number; scale: number }>();
-
-        for (const instance of this.instances) {
-            const projected = this.view.projectToScreen(instance);
-            panoramaPositions.set(instance.cloud.id, {
-                x: projected.x,
-                y: projected.y,
-                scale: projected.scale
-            });
-        }
-
         if (showBubble) {
             this.showThoughtBubble("Stepping back...");
         }
 
-        // Set cloud to animate to panorama position and fade out
-        this.view.setCloudTarget(cloudId, {
-            positionTarget: { type: 'panorama' },
-            targetOpacity: 0
-        });
-
+        // Model change triggers view to detect part left foreground and start fly-out
         this.model.stepBackPart(cloudId);
+        this.syncViewWithModel();
         this.updateBiographyPanel();
     }
 
@@ -1736,36 +1774,15 @@ export class CloudManager {
 
             console.log(`[HighAttention] "${cloud.text}" demands attention (needAttention=${needAttention.toFixed(2)})`);
 
-            if (this.view.getMode() === 'foreground') {
-                const currentTargets = Array.from(this.model.getTargetCloudIds());
-                const currentBlended = this.model.getBlendedParts();
-                console.log(`[HighAttention] Clearing current targets: ${currentTargets.join(', ')}, blended: ${currentBlended.join(', ')}`);
+            this.hidePieMenu();
+            this.hideThoughtBubble();
 
-                this.hidePieMenu();
-                this.hideThoughtBubble();
+            const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
+            const targetGrievanceId = grievanceTargets.size > 0
+                ? Array.from(grievanceTargets)[Math.floor(Math.random() * grievanceTargets.size)]
+                : undefined;
 
-                for (const targetId of currentTargets) {
-                    this.stepBackPart(targetId, { showThoughtBubble: false });
-                }
-                for (const blendedId of currentBlended) {
-                    if (!currentTargets.includes(blendedId)) {
-                        this.stepBackPart(blendedId, { showThoughtBubble: false });
-                    }
-                }
-
-                this.model.clearTargets();
-                this.model.clearBlendedParts();
-                this.model.clearSupportingParts();
-            }
-
-            const grievances = this.relationships.getGrievances(cloud.id);
-            if (grievances.size > 0) {
-                const grievanceIds = Array.from(grievances.keys());
-                const targetGrievanceId = grievanceIds[Math.floor(Math.random() * grievanceIds.length)];
-                this.model.setTargetCloud(targetGrievanceId);
-            }
-
-            this.model.addBlendedPart(cloud.id, 'spontaneous');
+            this.model.partDemandsAttention(cloud.id, targetGrievanceId);
             this.model.setNeedAttention(cloud.id, 0.95);
             this.view.setMode('foreground');
             this.updateUIForMode();
@@ -1851,13 +1868,17 @@ export class CloudManager {
         if (mode === 'foreground') {
             this.updateThoughtBubble(deltaTime);
             this.view.animateStretchEffects(deltaTime);
+            this.view.animateSpiralExits();
+            this.view.animateFlyOutExits();
+            this.view.animateDelayedArrivals(this.model);
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
             const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
             if (this.carpetRenderer && !transitioningToForeground) {
+                const carpetStates = this.view.getCarpetStates();
                 const seats = this.view.getSeatInfo(this.model);
-                this.carpetRenderer.update(seats, deltaTime);
-                this.carpetRenderer.render();
-                this.carpetRenderer.renderDebugWaveField();
+                this.carpetRenderer.update(carpetStates, seats, deltaTime);
+                this.carpetRenderer.render(carpetStates);
+                this.carpetRenderer.renderDebugWaveField(carpetStates);
             }
             this.updateMessageTimers(deltaTime);
             if (!isTransitioning && !this.pieMenuOpen) {
@@ -1899,7 +1920,8 @@ export class CloudManager {
                     group.setAttribute('transform',
                         `translate(${cloudState.x}, ${cloudState.y}) scale(${cloudState.scale})`);
                     group.setAttribute('opacity', String(cloudState.opacity));
-                    group.setAttribute('pointer-events', cloudState.opacity > 0 ? 'auto' : 'none');
+                    const enablePointerEvents = cloudState.targetOpacity > 0 && !this.pieMenuOpen;
+                    group.setAttribute('pointer-events', enablePointerEvents ? 'auto' : 'none');
                 }
             }
         }
@@ -2033,9 +2055,17 @@ export class CloudManager {
                     this.onMessageReceived(message);
                 }
 
-                const eased = this.easeInOutCubic(message.progress);
-                const x = message.startX + (message.endX - message.startX) * eased;
-                const y = message.startY + (message.endY - message.startY) * eased;
+                let x: number, y: number;
+                if (message.senderId === message.targetId) {
+                    const angle = message.progress * 2 * Math.PI;
+                    const radius = 40;
+                    x = message.startX + radius * Math.cos(angle);
+                    y = message.startY + radius * Math.sin(angle);
+                } else {
+                    const eased = this.easeInOutCubic(message.progress);
+                    x = message.startX + (message.endX - message.startX) * eased;
+                    y = message.startY + (message.endY - message.startY) * eased;
+                }
                 message.element?.setAttribute('transform', `translate(${x}, ${y})`);
             } else if (message.phase === 'lingering') {
                 message.lingerTime += deltaTime;
@@ -2100,9 +2130,8 @@ export class CloudManager {
     private increaseGrievanceNeedAttention(deltaTime: number): void {
         for (const instance of this.instances) {
             const cloudId = instance.cloud.id;
-            const grievances = this.relationships.getGrievances(cloudId);
-            const hasActiveGrievances = Array.from(grievances.values()).some(g => g > 0);
-            if (!hasActiveGrievances) continue;
+            const hasGrievances = this.relationships.getGrievanceTargets(cloudId).size > 0;
+            if (!hasGrievances) continue;
 
             if (this.model.isBlended(cloudId) || this.model.isTarget(cloudId)) continue;
 
@@ -2123,6 +2152,9 @@ export class CloudManager {
     }
 
     private checkAndSendGrievanceMessages(): void {
+        // Don't send messages while spiral exits are active or parts are awaiting arrival
+        if (this.view.hasActiveSpiralExits()) return;
+
         const blendedParts = this.model.getBlendedParts();
         const targetIds = this.model.getTargetCloudIds();
 
@@ -2142,24 +2174,28 @@ export class CloudManager {
             const blendedCloud = this.getCloudById(blendedId);
             if (!blendedCloud) continue;
 
-            // Delay messages until transition completes
+            // Don't send messages from parts that haven't visually arrived yet
+            if (this.view.isAwaitingArrival(blendedId)) continue;
+
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
 
-            const grievances = this.relationships.getGrievances(blendedId);
+            const grievanceTargets = this.relationships.getGrievanceTargets(blendedId);
 
-            for (const [grievanceTargetId] of grievances) {
+            for (const grievanceTargetId of grievanceTargets) {
                 if (!targetIds.has(grievanceTargetId)) continue;
+
+                // Don't send messages to parts that haven't visually arrived yet
+                if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
+
+                const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
+                if (dialogues.length === 0) continue;
 
                 const cooldownKey = `${blendedId}->${grievanceTargetId}`;
                 const timeSinceSent = this.messageCooldownTimers.get(cooldownKey) ?? 10;
-
                 if (timeSinceSent < 10) continue;
 
-                const dialogues = this.model.getDialogues(blendedId);
-                if (!dialogues.burdenedGrievance || dialogues.burdenedGrievance.length === 0) continue;
-
-                const text = dialogues.burdenedGrievance[Math.floor(Math.random() * dialogues.burdenedGrievance.length)];
+                const text = dialogues[Math.floor(Math.random() * dialogues.length)];
                 this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
                 this.messageCooldownTimers.set(cooldownKey, 0);
             }

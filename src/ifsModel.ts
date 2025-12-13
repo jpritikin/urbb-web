@@ -25,6 +25,7 @@ export class SimulatorModel {
     private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
     private partStates: Map<string, PartState> = new Map();
+    private displacedParts: Set<string> = new Set();
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -131,6 +132,14 @@ export class SimulatorModel {
         return this.blendedParts.get(cloudId)?.reason ?? null;
     }
 
+    setBlendReason(cloudId: string, reason: BlendReason): void {
+        const existing = this.blendedParts.get(cloudId);
+        if (existing && existing.reason !== reason) {
+            existing.reason = reason;
+            this.record({ type: 'setBlendReason', cloudId, data: { reason } });
+        }
+    }
+
     getBlendedParts(): string[] {
         return Array.from(this.blendedParts.keys());
     }
@@ -199,6 +208,45 @@ export class SimulatorModel {
         }
 
         this.record({ type: 'stepBack', cloudId, data: { wasTarget, wasBlended } });
+    }
+
+    partDemandsAttention(demandingCloudId: string, grievanceTargetId?: string): void {
+        const currentTargets = Array.from(this.targetCloudIds);
+        const currentBlended = this.getBlendedParts();
+
+        // Mark current foreground parts as displaced, EXCEPT the grievance target which will stay
+        for (const targetId of currentTargets) {
+            if (targetId !== grievanceTargetId) {
+                this.displacedParts.add(targetId);
+            }
+            this.stepBackPart(targetId);
+        }
+        for (const blendedId of currentBlended) {
+            if (!currentTargets.includes(blendedId) && blendedId !== grievanceTargetId) {
+                this.displacedParts.add(blendedId);
+                this.stepBackPart(blendedId);
+            }
+        }
+
+        this.clearTargets();
+        this.clearBlendedParts();
+        this.clearSupportingParts();
+
+        // Set up the new focus
+        if (grievanceTargetId) {
+            this.setTargetCloud(grievanceTargetId);
+        }
+        this.addBlendedPart(demandingCloudId, 'spontaneous');
+
+        this.record({ type: 'partDemandsAttention', cloudId: demandingCloudId, data: { grievanceTargetId } });
+    }
+
+    getDisplacedParts(): Set<string> {
+        return new Set(this.displacedParts);
+    }
+
+    clearDisplacedPart(cloudId: string): void {
+        this.displacedParts.delete(cloudId);
     }
 
     private record(action: StateAction): void {

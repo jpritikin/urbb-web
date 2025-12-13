@@ -11,8 +11,8 @@ export interface PartBiography {
 }
 
 export interface PartDialogues {
-    burdenedProtector?: string[];
-    burdenedGrievance?: string[];
+    burdenedJobAppraisal?: string[];
+    burdenedJobImpact?: string[];
     unburdenedJob?: string;
 }
 

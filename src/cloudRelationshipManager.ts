@@ -5,8 +5,8 @@ interface ProtectionRelation {
 
 interface GrievanceRelation {
     cloudId: string;
-    targetId: string;
-    grievance: number;
+    targetIds: Set<string>;
+    dialogues: string[];
 }
 
 interface ProxyRelation {
@@ -50,36 +50,50 @@ export class CloudRelationshipManager {
         );
     }
 
-    setGrievance(cloudId: string, targetId: string, grievance: number): void {
-        const existing = this.grievances.findIndex(
-            g => g.cloudId === cloudId && g.targetId === targetId
-        );
-        if (existing !== -1) {
-            this.grievances[existing].grievance = grievance;
-        } else {
-            this.grievances.push({ cloudId, targetId, grievance });
+    setGrievance(cloudId: string, targetIds: string | string[], dialogues: string | string[]): void {
+        const targets = new Set(Array.isArray(targetIds) ? targetIds : [targetIds]);
+        const dialogueArray = Array.isArray(dialogues) ? dialogues : [dialogues];
+        if (dialogueArray.length === 0) {
+            throw new Error(`Grievance from ${cloudId} must have at least one dialogue`);
         }
+        this.grievances.push({ cloudId, targetIds: targets, dialogues: dialogueArray });
     }
 
-    getGrievance(cloudId: string, targetId: string): number {
-        const relation = this.grievances.find(
-            g => g.cloudId === cloudId && g.targetId === targetId
-        );
-        return relation?.grievance ?? 0;
+    hasGrievance(cloudId: string, targetId: string): boolean {
+        return this.grievances.some(g => g.cloudId === cloudId && g.targetIds.has(targetId));
     }
 
-    getGrievances(cloudId: string): Map<string, number> {
-        const map = new Map<string, number>();
-        this.grievances
-            .filter(g => g.cloudId === cloudId)
-            .forEach(g => map.set(g.targetId, g.grievance));
-        return map;
+    getGrievanceTargets(cloudId: string): Set<string> {
+        const targets = new Set<string>();
+        for (const g of this.grievances) {
+            if (g.cloudId === cloudId) {
+                for (const t of g.targetIds) targets.add(t);
+            }
+        }
+        return targets;
     }
 
-    removeGrievance(cloudId: string, targetId: string): void {
-        this.grievances = this.grievances.filter(
-            g => !(g.cloudId === cloudId && g.targetId === targetId)
-        );
+    getGrievanceDialogues(cloudId: string, targetId?: string): string[] {
+        if (targetId === undefined) {
+            const all: string[] = [];
+            for (const g of this.grievances) {
+                if (g.cloudId === cloudId) all.push(...g.dialogues);
+            }
+            return all;
+        }
+        const relation = this.grievances.find(g => g.cloudId === cloudId && g.targetIds.has(targetId));
+        return relation?.dialogues ?? [];
+    }
+
+    removeGrievance(cloudId: string, targetId?: string): void {
+        if (targetId === undefined) {
+            this.grievances = this.grievances.filter(g => g.cloudId !== cloudId);
+        } else {
+            for (const g of this.grievances) {
+                if (g.cloudId === cloudId) g.targetIds.delete(targetId);
+            }
+            this.grievances = this.grievances.filter(g => g.targetIds.size > 0);
+        }
     }
 
     addProxy(cloudId: string, proxyId: string | string[]): void {
@@ -121,9 +135,11 @@ export class CloudRelationshipManager {
         this.protections = this.protections.filter(
             p => p.protectorId !== cloudId && p.protectedId !== cloudId
         );
-        this.grievances = this.grievances.filter(
-            g => g.cloudId !== cloudId && g.targetId !== cloudId
-        );
+        this.grievances = this.grievances.filter(g => g.cloudId !== cloudId);
+        for (const g of this.grievances) {
+            g.targetIds.delete(cloudId);
+        }
+        this.grievances = this.grievances.filter(g => g.targetIds.size > 0);
         this.proxies = this.proxies.filter(
             r => r.cloudId !== cloudId && r.proxyId !== cloudId
         );
@@ -143,11 +159,10 @@ export class CloudRelationshipManager {
 
     assessNeedAttention(cloudId: string): number {
         const isProtecting = this.getProtecting(cloudId).size > 0;
-        const grievances = this.getGrievances(cloudId);
-        const hasActiveGrievances = Array.from(grievances.values()).some(g => g > 0);
+        const hasGrievances = this.getGrievanceTargets(cloudId).size > 0;
         const isProxy = this.getProxyFor(cloudId).size > 0;
 
-        if (isProtecting || hasActiveGrievances) {
+        if (isProtecting || hasGrievances) {
             return 0.5;
         }
         if (isProxy) {

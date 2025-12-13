@@ -14,15 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
         trust: 0.3,
         partAge: 8,
         dialogues: {
-            burdenedProtector: [
-                "This is why people don't respect us.",
-                "You're the reason we feel this way.",
+            burdenedJobAppraisal: [
+                "I'm exhausted with my job.",
+                "I don't want to criticize, but I have to.",
             ],
-            burdenedGrievance: [
-                "You got us criticized.",
-                "You always make mistakes.",
-                "Don't do anything risky.",
-                "Be careful or you'll embarrass yourself.",
+            burdenedJobImpact: [
+                "I am harsh, but I help avoid critiques from outside.",
             ],
             unburdenedJob: "I help you foresee risks.",
         },
@@ -36,9 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const relationships = cloudManager.getRelationships();
     relationships.addProtection(innerCritic.id, criticized.id);
-    relationships.setGrievance(innerCritic.id, threeYearOld.id, 0.6);
-    relationships.setGrievance(innerCritic.id, tenYearOld.id, 0.5);
-    relationships.setGrievance(innerCritic.id, teenager.id, 0.7);
+    relationships.setGrievance(innerCritic.id, [threeYearOld.id, tenYearOld.id, teenager.id], [
+        "You got us criticized.",
+        "You always make mistakes.",
+        "Don't do anything risky.",
+        "Be careful or you'll embarrass yourself.",
+    ]);
+    relationships.setGrievance(innerCritic.id, [innerCritic.id], [
+        "I'm a terrible person.",
+        "I hate myself."
+    ]);
 
     relationships.addProxy(innerCritic.id, adult.id);
     relationships.addProxy(criticized.id, adult.id);

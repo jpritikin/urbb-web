@@ -1,15 +1,15 @@
-const CARPET_VERTEX_COUNT = 8;
+export const CARPET_VERTEX_COUNT = 8;
 const CARPET_BASE_WIDTH = 40;
 export const CARPET_SCALE = 3;
 const CARPET_WIDTH = CARPET_BASE_WIDTH * CARPET_SCALE;
 
-interface CarpetVertex {
+export interface CarpetVertex {
     baseX: number;
     yOffset: number;
     velocity: number;
 }
 
-interface CarpetState {
+export interface CarpetState {
     cloudId: string;
     currentX: number;
     currentY: number;
@@ -24,6 +24,39 @@ interface CarpetState {
     exiting: boolean;
     progress: number;
     vertices: CarpetVertex[];
+}
+
+export const CARPET_FLY_DURATION = 1.5;
+export const CARPET_ENTRY_STAGGER = 0.5;
+export const CARPET_START_SCALE = 10;
+export const CARPET_OFFSCREEN_DISTANCE = 300;
+
+export function createCarpetVertices(): CarpetVertex[] {
+    const vertices: CarpetVertex[] = [];
+    const segmentWidth = CARPET_WIDTH / (CARPET_VERTEX_COUNT - 1);
+    for (let i = 0; i < CARPET_VERTEX_COUNT; i++) {
+        vertices.push({
+            baseX: -CARPET_WIDTH / 2 + i * segmentWidth,
+            yOffset: 0,
+            velocity: 0
+        });
+    }
+    return vertices;
+}
+
+export function getOffscreenPosition(seatX: number, seatY: number, canvasWidth: number, canvasHeight: number): { x: number; y: number } {
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+    const dx = seatX - centerX;
+    const dy = seatY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return { x: centerX - CARPET_OFFSCREEN_DISTANCE, y: centerY };
+    const nx = dx / dist;
+    const ny = dy / dist;
+    return {
+        x: seatX + nx * CARPET_OFFSCREEN_DISTANCE,
+        y: seatY + ny * CARPET_OFFSCREEN_DISTANCE
+    };
 }
 
 class WindField {
@@ -101,7 +134,6 @@ export interface SeatInfo {
 }
 
 export class CarpetRenderer {
-    private carpetStates: Map<string, CarpetState> = new Map();
     private windField: WindField;
     private canvasWidth: number;
     private canvasHeight: number;
@@ -110,10 +142,6 @@ export class CarpetRenderer {
     private carpetElements: SVGGElement[] = [];
 
     private readonly CARPET_OCCUPIED_DROP = 35;
-    private readonly CARPET_FLY_DURATION = 1.5;
-    private readonly CARPET_ENTRY_STAGGER = 0.5;
-    private readonly CARPET_START_SCALE = 10;
-    private readonly CARPET_OFFSCREEN_DISTANCE = 300;
     private readonly CARPET_DAMPING = 0.92;
     private readonly CARPET_SPRING_STRENGTH = 15;
 
@@ -127,95 +155,26 @@ export class CarpetRenderer {
         parentGroup.appendChild(this.carpetGroup);
     }
 
-    private getOffscreenPosition(seatX: number, seatY: number): { x: number; y: number } {
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-        const dx = seatX - centerX;
-        const dy = seatY - centerY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 1) return { x: centerX - this.CARPET_OFFSCREEN_DISTANCE, y: centerY };
-        const nx = dx / dist;
-        const ny = dy / dist;
-        return {
-            x: seatX + nx * this.CARPET_OFFSCREEN_DISTANCE,
-            y: seatY + ny * this.CARPET_OFFSCREEN_DISTANCE
-        };
-    }
-
     private easeInOutCubic(t: number): number {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    private createCarpetVertices(): CarpetVertex[] {
-        const vertices: CarpetVertex[] = [];
-        const segmentWidth = CARPET_WIDTH / (CARPET_VERTEX_COUNT - 1);
-        for (let i = 0; i < CARPET_VERTEX_COUNT; i++) {
-            vertices.push({
-                baseX: -CARPET_WIDTH / 2 + i * segmentWidth,
-                yOffset: 0,
-                velocity: 0
-            });
-        }
-        return vertices;
-    }
-
-    update(seats: SeatInfo[], deltaTime: number): void {
+    update(carpetStates: Map<string, CarpetState>, seats: SeatInfo[], deltaTime: number): void {
         this.windField.update(deltaTime);
-
-        const currentCloudIds = new Set(seats.filter(s => s.cloudId).map(s => s.cloudId!));
-
-        for (const [cloudId, carpet] of this.carpetStates) {
-            if (!currentCloudIds.has(cloudId) && !carpet.exiting) {
-                const exitPos = this.getOffscreenPosition(carpet.targetX, carpet.targetY);
-                carpet.exiting = true;
-                carpet.entering = false;
-                carpet.progress = 0;
-                carpet.startX = exitPos.x;
-                carpet.startY = exitPos.y;
-            }
-        }
-
-        let enteringCount = 0;
-        for (const carpet of this.carpetStates.values()) {
-            if (carpet.entering) enteringCount++;
-        }
-        for (const seat of seats) {
-            if (!seat.cloudId) continue;
-            if (!this.carpetStates.has(seat.cloudId)) {
-                const startPos = this.getOffscreenPosition(seat.x, seat.y);
-                this.carpetStates.set(seat.cloudId, {
-                    cloudId: seat.cloudId,
-                    currentX: startPos.x,
-                    currentY: startPos.y,
-                    targetX: seat.x,
-                    targetY: seat.y,
-                    startX: startPos.x,
-                    startY: startPos.y,
-                    currentScale: this.CARPET_START_SCALE,
-                    isOccupied: false,
-                    occupiedOffset: 0,
-                    entering: true,
-                    exiting: false,
-                    progress: -enteringCount * this.CARPET_ENTRY_STAGGER,
-                    vertices: this.createCarpetVertices()
-                });
-                enteringCount++;
-            }
-        }
 
         const occupiedCloudIds = new Set(seats.filter(s => s.occupied && s.cloudId).map(s => s.cloudId!));
 
-        for (const [cloudId, carpet] of this.carpetStates) {
+        for (const [cloudId, carpet] of carpetStates) {
             carpet.progress += deltaTime;
 
             if (carpet.exiting) {
-                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const t = Math.min(carpet.progress / CARPET_FLY_DURATION, 1);
                 const eased = this.easeInOutCubic(t);
                 carpet.currentX = carpet.targetX + (carpet.startX - carpet.targetX) * eased;
                 carpet.currentY = carpet.targetY + (carpet.startY - carpet.targetY) * eased;
-                carpet.currentScale = CARPET_SCALE + (this.CARPET_START_SCALE - CARPET_SCALE) * eased;
+                carpet.currentScale = CARPET_SCALE + (CARPET_START_SCALE - CARPET_SCALE) * eased;
                 if (t >= 1) {
-                    this.carpetStates.delete(cloudId);
+                    carpetStates.delete(cloudId);
                 }
                 continue;
             }
@@ -227,11 +186,11 @@ export class CarpetRenderer {
             }
             if (carpet.entering) {
                 if (carpet.progress < 0) continue;
-                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const t = Math.min(carpet.progress / CARPET_FLY_DURATION, 1);
                 const eased = this.easeInOutCubic(t);
                 carpet.currentX = carpet.startX + (carpet.targetX - carpet.startX) * eased;
                 carpet.currentY = carpet.startY + (carpet.targetY - carpet.startY) * eased;
-                carpet.currentScale = this.CARPET_START_SCALE + (CARPET_SCALE - this.CARPET_START_SCALE) * eased;
+                carpet.currentScale = CARPET_START_SCALE + (CARPET_SCALE - CARPET_START_SCALE) * eased;
                 if (t >= 1) {
                     carpet.entering = false;
                     carpet.currentX = carpet.targetX;
@@ -274,8 +233,8 @@ export class CarpetRenderer {
         }
     }
 
-    render(): void {
-        const carpetData = this.getRenderData();
+    render(carpetStates: Map<string, CarpetState>): void {
+        const carpetData = this.getRenderData(carpetStates);
 
         while (this.carpetElements.length < carpetData.length) {
             const carpet = this.createCarpetElement();
@@ -298,7 +257,7 @@ export class CarpetRenderer {
         }
     }
 
-    private getRenderData(): Array<{
+    private getRenderData(carpetStates: Map<string, CarpetState>): Array<{
         x: number;
         y: number;
         scale: number;
@@ -313,15 +272,15 @@ export class CarpetRenderer {
             vertices: Array<{ x: number; y: number }>;
         }> = [];
 
-        for (const carpet of this.carpetStates.values()) {
+        for (const carpet of carpetStates.values()) {
             let opacity = 1;
             if (carpet.entering && carpet.progress < 0) {
                 opacity = 0;
             } else if (carpet.entering) {
-                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const t = Math.min(carpet.progress / CARPET_FLY_DURATION, 1);
                 opacity = this.easeInOutCubic(t);
             } else if (carpet.exiting) {
-                const t = Math.min(carpet.progress / this.CARPET_FLY_DURATION, 1);
+                const t = Math.min(carpet.progress / CARPET_FLY_DURATION, 1);
                 opacity = 1 - this.easeInOutCubic(t);
             }
 
@@ -507,15 +466,6 @@ export class CarpetRenderer {
             carpet.remove();
         }
         this.carpetElements = [];
-        // Don't clear carpetStates - preserve them so carpets don't fly in again when returning to fg mode
-    }
-
-    clearAll(): void {
-        for (const carpet of this.carpetElements) {
-            carpet.remove();
-        }
-        this.carpetElements = [];
-        this.carpetStates.clear();
     }
 
     setDebugMode(enabled: boolean): void {
@@ -526,7 +476,7 @@ export class CarpetRenderer {
         }
     }
 
-    renderDebugWaveField(): void {
+    renderDebugWaveField(carpetStates: Map<string, CarpetState>): void {
         if (!this.windField.debugEnabled) return;
 
         const parent = this.carpetGroup.parentElement;
@@ -573,7 +523,7 @@ export class CarpetRenderer {
         zeroLine.setAttribute('stroke-dasharray', '5,5');
         debugGroup.appendChild(zeroLine);
 
-        for (const carpet of this.carpetStates.values()) {
+        for (const carpet of carpetStates.values()) {
             for (const vertex of carpet.vertices) {
                 const worldX = carpet.currentX + vertex.baseX;
                 const windForce = this.windField.sample(worldX);
