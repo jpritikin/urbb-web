@@ -524,39 +524,45 @@ export class AnimatedStar {
         }
     }
 
+    private dist(x1: number, y1: number, x2: number, y2: number): number {
+        return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+    }
+
+    private angle(fromX: number, fromY: number, toX: number, toY: number): number {
+        return Math.atan2(toY - fromY, toX - fromX);
+    }
+
+    private normalizeAngle(angle: number): number {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
+    }
+
+    private lerp(start: number, end: number, t: number): number {
+        return start + (end - start) * t;
+    }
+
+    private getArmGeometry(tipAngle: number, halfStep: number, innerR: number, outerR: number) {
+        return {
+            tipX: this.centerX + outerR * Math.cos(tipAngle),
+            tipY: this.centerY + outerR * Math.sin(tipAngle),
+            base1X: this.centerX + innerR * Math.cos(tipAngle - halfStep),
+            base1Y: this.centerY + innerR * Math.sin(tipAngle - halfStep),
+            base2X: this.centerX + innerR * Math.cos(tipAngle + halfStep),
+            base2Y: this.centerY + innerR * Math.sin(tipAngle + halfStep),
+        };
+    }
+
     private updateSingleTransitionElement(
         element: SVGPolygonElement,
         transition: ArmTransition
     ): void {
-        // Use the same radius calculations as updateArms() for accurate tracking
         const innerRadiusFactor = this.armCount === 3 ? THREE_ARM_INNER_RADIUS_FACTOR : 1;
-        const baseInnerRadius = STAR_INNER_RADIUS * innerRadiusFactor;
-        const innerRadius = baseInnerRadius * (1 + this.innerRadiusOffset + this.expansionFactor);
+        const innerRadius = STAR_INNER_RADIUS * innerRadiusFactor * (1 + this.innerRadiusOffset + this.expansionFactor);
         const outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset + this.expansionFactor);
 
-        // Use base angle step (no spacing adjustment) for fixed reference positions
         const baseAngleStep = (2 * Math.PI) / this.armCount;
         const baseHalfStep = baseAngleStep / 2;
-
-        // The arm being animated - fixed starting position (no spacing adjustment)
-        const armAngle = this.rotation - Math.PI / 2 + transition.sourceArmIndex * baseAngleStep;
-
-        // Adjacent arm (the one we're folding onto for removing, or unfolding from for adding)
-        const adjacentArmAngle = armAngle + baseAngleStep; // next arm
-
-        // The arm's starting geometry (fixed, no spacing adjustment)
-        const tipStartX = this.centerX + outerRadius * Math.cos(armAngle);
-        const tipStartY = this.centerY + outerRadius * Math.sin(armAngle);
-        const base1StartX = this.centerX + innerRadius * Math.cos(armAngle - baseHalfStep);
-        const base1StartY = this.centerY + innerRadius * Math.sin(armAngle - baseHalfStep);
-        const base2StartX = this.centerX + innerRadius * Math.cos(armAngle + baseHalfStep);
-        const base2StartY = this.centerY + innerRadius * Math.sin(armAngle + baseHalfStep);
-
-        // Adjacent arm's tip (fixed position - where our tip will end up after phase 1)
-        const adjacentTipX = this.centerX + outerRadius * Math.cos(adjacentArmAngle);
-        const adjacentTipY = this.centerY + outerRadius * Math.sin(adjacentArmAngle);
-
-        // Phase 1 ends when tips touch (about halfway through)
         const phase1End = 0.5;
 
         let tipX: number, tipY: number;
@@ -564,283 +570,144 @@ export class AnimatedStar {
         let base2X: number, base2Y: number;
 
         if (transition.type === 'removing') {
-            if (transition.progress < 0.002) {
-                console.log(`=== REMOVING arm Y${transition.sourceArmIndex} (${this.armCount}->${this.armCount - 1}) ===`);
-                console.log(`P1: pivot around S2 until T reaches At(Y${(transition.sourceArmIndex + 1) % this.armCount}) | P2: rotate around At to align`);
-            }
+            // Removing: P1 pivot around S2 until T reaches At, P2 rotate around At to align
+            const srcAngle = this.rotation - Math.PI / 2 + transition.sourceArmIndex * baseAngleStep;
+            const src = this.getArmGeometry(srcAngle, baseHalfStep, innerRadius, outerRadius);
+            const adjAngle = srcAngle + baseAngleStep;
+            const adj = this.getArmGeometry(adjAngle, baseHalfStep, innerRadius, outerRadius);
 
-            // Phase 1: Pivot around S2 (base2Start) until tip reaches At (adjacentTip)
-            // Distances from S2 (pivot point) - stay constant during rotation
-            const tipDistFromS2 = Math.sqrt((tipStartX - base2StartX) ** 2 + (tipStartY - base2StartY) ** 2);
-            const base1DistFromS2 = Math.sqrt((base1StartX - base2StartX) ** 2 + (base1StartY - base2StartY) ** 2);
-
-            // Angles from S2 to each point
-            const tipAngleFromS2Start = Math.atan2(tipStartY - base2StartY, tipStartX - base2StartX);
-            const base1AngleFromS2Start = Math.atan2(base1StartY - base2StartY, base1StartX - base2StartX);
-            const tipAngleFromS2End = Math.atan2(adjacentTipY - base2StartY, adjacentTipX - base2StartX);
-
-            // Total rotation needed in phase 1: from St to At
-            // Ensure we rotate the SHORT way (clockwise direction toward adjacent arm)
-            let phase1TotalRotation = tipAngleFromS2End - tipAngleFromS2Start;
-            // Normalize to take the shorter path (should be negative for clockwise)
-            if (phase1TotalRotation > Math.PI) phase1TotalRotation -= 2 * Math.PI;
-            if (phase1TotalRotation < -Math.PI) phase1TotalRotation += 2 * Math.PI;
+            // Phase 1: rigid rotation around S2 (src.base2)
+            const tipDistFromS2 = this.dist(src.tipX, src.tipY, src.base2X, src.base2Y);
+            const base1DistFromS2 = this.dist(src.base1X, src.base1Y, src.base2X, src.base2Y);
+            const tipAngleFromS2Start = this.angle(src.base2X, src.base2Y, src.tipX, src.tipY);
+            const base1AngleFromS2Start = this.angle(src.base2X, src.base2Y, src.base1X, src.base1Y);
+            const tipAngleFromS2End = this.angle(src.base2X, src.base2Y, adj.tipX, adj.tipY);
+            const phase1Rotation = this.normalizeAngle(tipAngleFromS2End - tipAngleFromS2Start);
 
             if (transition.progress < phase1End) {
-                // Phase 1: Pivot around S2
-                const phase1Progress = transition.progress / phase1End;
-                const currentRotation = phase1TotalRotation * phase1Progress;
-
-                // S2 is the pivot - stays fixed
-                base2X = base2StartX;
-                base2Y = base2StartY;
-
-                // Rotate tip around S2
-                const tipAngle = tipAngleFromS2Start + currentRotation;
-                tipX = base2StartX + tipDistFromS2 * Math.cos(tipAngle);
-                tipY = base2StartY + tipDistFromS2 * Math.sin(tipAngle);
-
-                // Rotate base1 around S2 by the same amount
-                const base1Angle = base1AngleFromS2Start + currentRotation;
-                base1X = base2StartX + base1DistFromS2 * Math.cos(base1Angle);
-                base1Y = base2StartY + base1DistFromS2 * Math.sin(base1Angle);
+                const t = transition.progress / phase1End;
+                const rot = phase1Rotation * t;
+                base2X = src.base2X;
+                base2Y = src.base2Y;
+                tipX = src.base2X + tipDistFromS2 * Math.cos(tipAngleFromS2Start + rot);
+                tipY = src.base2Y + tipDistFromS2 * Math.sin(tipAngleFromS2Start + rot);
+                base1X = src.base2X + base1DistFromS2 * Math.cos(base1AngleFromS2Start + rot);
+                base1Y = src.base2Y + base1DistFromS2 * Math.sin(base1AngleFromS2Start + rot);
             } else {
-                // Phase 2: Red arm rotates clockwise around T (which stays at At)
-                // At moves as arms redistribute, and red arm rotates around it
-                const phase2Progress = (transition.progress - phase1End) / (1 - phase1End);
-
-                // Calculate where adjacent arm tip (At) is NOW as it shifts during phase 2
+                // Phase 2: T stays at moving At, base points rotate around T
+                const t = (transition.progress - phase1End) / (1 - phase1End);
                 const adjIndex = (transition.sourceArmIndex + 1) % this.armCount;
                 const targetAngleStep = (2 * Math.PI) / (this.armCount - 1);
+                const targetHalfStep = targetAngleStep / 2;
 
-                // Adjacent arm tip angle shifts from current to target
                 const adjStartAngle = this.rotation - Math.PI / 2 + adjIndex * baseAngleStep;
                 const adjEndAngle = this.rotation - Math.PI / 2 + (adjIndex - 1) * targetAngleStep;
-                const adjCurrentAngle = adjStartAngle + (adjEndAngle - adjStartAngle) * phase2Progress;
+                const adjCurrentAngle = this.lerp(adjStartAngle, adjEndAngle, t);
 
-                // Current position of At - this is where T stays
-                const atX = this.centerX + outerRadius * Math.cos(adjCurrentAngle);
-                const atY = this.centerY + outerRadius * Math.sin(adjCurrentAngle);
+                // T follows moving At
+                tipX = this.centerX + outerRadius * Math.cos(adjCurrentAngle);
+                tipY = this.centerY + outerRadius * Math.sin(adjCurrentAngle);
 
-                // T stays at At
-                tipX = atX;
-                tipY = atY;
+                // Phase 1 end positions
+                const base1AtP1End = {
+                    x: src.base2X + base1DistFromS2 * Math.cos(base1AngleFromS2Start + phase1Rotation),
+                    y: src.base2Y + base1DistFromS2 * Math.sin(base1AngleFromS2Start + phase1Rotation)
+                };
 
-                // Calculate where red arm's base1 and base2 were at end of phase 1
-                const base1AngleAtPhase1End = base1AngleFromS2Start + phase1TotalRotation;
-                const base1AtPhase1EndX = base2StartX + base1DistFromS2 * Math.cos(base1AngleAtPhase1End);
-                const base1AtPhase1EndY = base2StartY + base1DistFromS2 * Math.sin(base1AngleAtPhase1End);
-                const base2AtPhase1EndX = base2StartX; // S2 was the pivot in phase 1
-                const base2AtPhase1EndY = base2StartY;
+                // Start: distances/angles from original At
+                const base1DistStart = this.dist(base1AtP1End.x, base1AtP1End.y, adj.tipX, adj.tipY);
+                const base2DistStart = this.dist(src.base2X, src.base2Y, adj.tipX, adj.tipY);
+                const base1AngleStart = this.angle(adj.tipX, adj.tipY, base1AtP1End.x, base1AtP1End.y);
+                const base2AngleStart = this.angle(adj.tipX, adj.tipY, src.base2X, src.base2Y);
 
-                // At end of phase 1, T was at adjacentTipX/Y (original At position)
-                // Distances from T at phase 1 end
-                const base1DistFromTStart = Math.sqrt((base1AtPhase1EndX - adjacentTipX) ** 2 + (base1AtPhase1EndY - adjacentTipY) ** 2);
-                const base2DistFromTStart = Math.sqrt((base2AtPhase1EndX - adjacentTipX) ** 2 + (base2AtPhase1EndY - adjacentTipY) ** 2);
+                // End: adjacent arm final geometry
+                const adjEnd = this.getArmGeometry(adjEndAngle, targetHalfStep, innerRadius, outerRadius);
+                const base1DistEnd = this.dist(adjEnd.base1X, adjEnd.base1Y, adjEnd.tipX, adjEnd.tipY);
+                const base2DistEnd = this.dist(adjEnd.base2X, adjEnd.base2Y, adjEnd.tipX, adjEnd.tipY);
+                const base1AngleEnd = this.angle(adjEnd.tipX, adjEnd.tipY, adjEnd.base1X, adjEnd.base1Y);
+                const base2AngleEnd = this.angle(adjEnd.tipX, adjEnd.tipY, adjEnd.base2X, adjEnd.base2Y);
 
-                // Angles from T (at phase 1 end position) to base points at START of phase 2
-                const base1AngleStart = Math.atan2(base1AtPhase1EndY - adjacentTipY, base1AtPhase1EndX - adjacentTipX);
-                const base2AngleStart = Math.atan2(base2AtPhase1EndY - adjacentTipY, base2AtPhase1EndX - adjacentTipX);
+                // Force long way rotation (clockwise)
+                let base1Rot = this.normalizeAngle(base1AngleEnd - base1AngleStart) + 2 * Math.PI;
+                let base2Rot = this.normalizeAngle(base2AngleEnd - base2AngleStart) + 2 * Math.PI;
 
-                // Target: at END of phase 2, red arm should overlap with adjacent arm
-                const adjEndHalfStep = targetAngleStep / 2;
-
-                // At end position (where At will be)
-                const atEndX = this.centerX + outerRadius * Math.cos(adjEndAngle);
-                const atEndY = this.centerY + outerRadius * Math.sin(adjEndAngle);
-
-                // A1 position (Red-2 should end here)
-                const adjEndBase1Angle = adjEndAngle - adjEndHalfStep;
-                const adjEndBase1X = this.centerX + innerRadius * Math.cos(adjEndBase1Angle);
-                const adjEndBase1Y = this.centerY + innerRadius * Math.sin(adjEndBase1Angle);
-
-                // A2 position (Red-1 should end here)
-                const adjEndBase2Angle = adjEndAngle + adjEndHalfStep;
-                const adjEndBase2X = this.centerX + innerRadius * Math.cos(adjEndBase2Angle);
-                const adjEndBase2Y = this.centerY + innerRadius * Math.sin(adjEndBase2Angle);
-
-                // Target distances from tip to base points
-                const base1DistFromTEnd = Math.sqrt((adjEndBase1X - atEndX) ** 2 + (adjEndBase1Y - atEndY) ** 2); // Red-1 -> A1
-                const base2DistFromTEnd = Math.sqrt((adjEndBase2X - atEndX) ** 2 + (adjEndBase2Y - atEndY) ** 2); // Red-2 -> A2
-
-                // Interpolate distances during phase 2
-                const base1DistFromT = base1DistFromTStart + (base1DistFromTEnd - base1DistFromTStart) * phase2Progress;
-                const base2DistFromT = base2DistFromTStart + (base2DistFromTEnd - base2DistFromTStart) * phase2Progress;
-
-                // Target angles: Red-1 -> A1, Red-2 -> A2 (consistent with distances)
-                const base1AngleEnd = Math.atan2(adjEndBase1Y - atEndY, adjEndBase1X - atEndX);
-                const base2AngleEnd = Math.atan2(adjEndBase2Y - atEndY, adjEndBase2X - atEndX);
-
-                // Calculate rotation for base2
-                let base2Rotation = base2AngleEnd - base2AngleStart;
-                while (base2Rotation > Math.PI) base2Rotation -= 2 * Math.PI;
-                while (base2Rotation < -Math.PI) base2Rotation += 2 * Math.PI;
-                // Force the LONG way (positive = clockwise on screen)
-                base2Rotation = base2Rotation + 2 * Math.PI;
-
-                // Calculate rotation for base1
-                let base1Rotation = base1AngleEnd - base1AngleStart;
-                while (base1Rotation > Math.PI) base1Rotation -= 2 * Math.PI;
-                while (base1Rotation < -Math.PI) base1Rotation += 2 * Math.PI;
-                // Force the LONG way
-                base1Rotation = base1Rotation + 2 * Math.PI;
-
-                // Apply rotations
-                const base1Angle = base1AngleStart + base1Rotation * phase2Progress;
-                const base2Angle = base2AngleStart + base2Rotation * phase2Progress;
-
-                // Position base points relative to current T position (which is at moving At)
-                base1X = tipX + base1DistFromT * Math.cos(base1Angle);
-                base1Y = tipY + base1DistFromT * Math.sin(base1Angle);
-                base2X = tipX + base2DistFromT * Math.cos(base2Angle);
-                base2Y = tipY + base2DistFromT * Math.sin(base2Angle);
-
-                if (phase2Progress > 0.99) {
-                    console.log(`Phase2 end: Red arm: T(${tipX.toFixed(1)},${tipY.toFixed(1)}) 1(${base1X.toFixed(1)},${base1Y.toFixed(1)}) 2(${base2X.toFixed(1)},${base2Y.toFixed(1)})`);
-                    console.log(`Phase2 end: Adj arm: At(${atEndX.toFixed(1)},${atEndY.toFixed(1)}) A1(${adjEndBase1X.toFixed(1)},${adjEndBase1Y.toFixed(1)}) A2(${adjEndBase2X.toFixed(1)},${adjEndBase2Y.toFixed(1)})`);
-                }
+                base1X = tipX + this.lerp(base1DistStart, base1DistEnd, t) * Math.cos(base1AngleStart + base1Rot * t);
+                base1Y = tipY + this.lerp(base1DistStart, base1DistEnd, t) * Math.sin(base1AngleStart + base1Rot * t);
+                base2X = tipX + this.lerp(base2DistStart, base2DistEnd, t) * Math.cos(base2AngleStart + base2Rot * t);
+                base2Y = tipY + this.lerp(base2DistStart, base2DistEnd, t) * Math.sin(base2AngleStart + base2Rot * t);
             }
         } else {
-            // Adding: reverse of removing
-            // Phase 1: T stays at At, Green-2 rotates around T to align with A1
-            // Phase 2: Green-2 stays at A1 (moving), T and Green-1 pivot around Green-2 to final positions
-
-            if (transition.progress < 0.002) {
-                console.log(`=== ADDING arm at pos ${transition.sourceArmIndex} (${this.armCount}->${this.armCount + 1}) ===`);
-                console.log(`P1: rotate around T(=At) until 2 aligns with A1 | P2: pivot around 2(=A1) to final pos`);
-            }
-
+            // Adding: P1 rotate around T(=At) until 2 aligns with A1, P2 pivot around 2(=A1)
             const targetArmCount = this.armCount + 1;
             const targetAngleStep = (2 * Math.PI) / targetArmCount;
             const targetHalfStep = targetAngleStep / 2;
 
-            // Adjacent arm (Y at sourceArmIndex) - this is where green arm starts aligned
             const adjIndex = transition.sourceArmIndex;
             const adjStartAngle = this.rotation - Math.PI / 2 + adjIndex * baseAngleStep;
-            const adjStartTipX = this.centerX + outerRadius * Math.cos(adjStartAngle);
-            const adjStartTipY = this.centerY + outerRadius * Math.sin(adjStartAngle);
-            const adjStartBase1X = this.centerX + innerRadius * Math.cos(adjStartAngle - baseHalfStep);
-            const adjStartBase1Y = this.centerY + innerRadius * Math.sin(adjStartAngle - baseHalfStep);
-            const adjStartBase2X = this.centerX + innerRadius * Math.cos(adjStartAngle + baseHalfStep);
-            const adjStartBase2Y = this.centerY + innerRadius * Math.sin(adjStartAngle + baseHalfStep);
+            const adj = this.getArmGeometry(adjStartAngle, baseHalfStep, innerRadius, outerRadius);
 
-            // Final position of the new arm
             const finalTipAngle = this.rotation - Math.PI / 2 + transition.sourceArmIndex * targetAngleStep;
-            const finalTipX = this.centerX + outerRadius * Math.cos(finalTipAngle);
-            const finalTipY = this.centerY + outerRadius * Math.sin(finalTipAngle);
-            const finalBase1X = this.centerX + innerRadius * Math.cos(finalTipAngle - targetHalfStep);
-            const finalBase1Y = this.centerY + innerRadius * Math.sin(finalTipAngle - targetHalfStep);
-            const finalBase2X = this.centerX + innerRadius * Math.cos(finalTipAngle + targetHalfStep);
-            const finalBase2Y = this.centerY + innerRadius * Math.sin(finalTipAngle + targetHalfStep);
+            const final = this.getArmGeometry(finalTipAngle, targetHalfStep, innerRadius, outerRadius);
 
             if (transition.progress < phase1End) {
-                // Phase 1: T stays at At (fixed), base points rotate around T
-                // Goal: Green-2 ends at A1 position
-                const phase1Progress = transition.progress / phase1End;
+                // Phase 1: T at At, base points rotate around T until base2 reaches A1
+                const t = transition.progress / phase1End;
+                tipX = adj.tipX;
+                tipY = adj.tipY;
 
-                // T stays at original adjacent tip throughout phase 1
-                tipX = adjStartTipX;
-                tipY = adjStartTipY;
+                const base1AngleStart = this.angle(tipX, tipY, adj.base1X, adj.base1Y);
+                const base2AngleStart = this.angle(tipX, tipY, adj.base2X, adj.base2Y);
+                const base2AngleEnd = this.angle(tipX, tipY, adj.base1X, adj.base1Y); // base2 -> A1
+                const baseDist = this.dist(adj.base1X, adj.base1Y, tipX, tipY);
 
-                // Start: Green-1 at A1, Green-2 at A2
-                const base1AngleStart = Math.atan2(adjStartBase1Y - tipY, adjStartBase1X - tipX);
-                const base2AngleStart = Math.atan2(adjStartBase2Y - tipY, adjStartBase2X - tipX);
-                const base1DistFromT = Math.sqrt((adjStartBase1X - tipX) ** 2 + (adjStartBase1Y - tipY) ** 2);
-                const base2DistFromT = Math.sqrt((adjStartBase2X - tipX) ** 2 + (adjStartBase2Y - tipY) ** 2);
+                // Force long way counterclockwise
+                let rotation = this.normalizeAngle(base2AngleEnd - base2AngleStart) - 2 * Math.PI;
 
-                // End: Green-2 at A1 position (Green-1 position doesn't matter yet)
-                const base2AngleEnd = Math.atan2(adjStartBase1Y - tipY, adjStartBase1X - tipX); // Green-2 -> A1
-
-                // Green-2 rotation: from A2 angle to A1 angle (counterclockwise, the long way)
-                let base2Rotation = base2AngleEnd - base2AngleStart;
-                while (base2Rotation > Math.PI) base2Rotation -= 2 * Math.PI;
-                while (base2Rotation < -Math.PI) base2Rotation += 2 * Math.PI;
-                base2Rotation = base2Rotation - 2 * Math.PI; // Force long way counterclockwise
-
-                // Green-1 rotates the same amount (rigid body rotation around T)
-                const base1Rotation = base2Rotation;
-
-                const base1Angle = base1AngleStart + base1Rotation * phase1Progress;
-                const base2Angle = base2AngleStart + base2Rotation * phase1Progress;
-
-                base1X = tipX + base1DistFromT * Math.cos(base1Angle);
-                base1Y = tipY + base1DistFromT * Math.sin(base1Angle);
-                base2X = tipX + base2DistFromT * Math.cos(base2Angle);
-                base2Y = tipY + base2DistFromT * Math.sin(base2Angle);
-
+                base1X = tipX + baseDist * Math.cos(base1AngleStart + rotation * t);
+                base1Y = tipY + baseDist * Math.sin(base1AngleStart + rotation * t);
+                base2X = tipX + baseDist * Math.cos(base2AngleStart + rotation * t);
+                base2Y = tipY + baseDist * Math.sin(base2AngleStart + rotation * t);
             } else {
-                // Phase 2: Green-2 stays at A1 (which moves as arms spread), T and Green-1 pivot around Green-2
-                const phase2Progress = (transition.progress - phase1End) / (1 - phase1End);
+                // Phase 2: base2 stays at moving A1, T and base1 pivot around base2
+                const t = (transition.progress - phase1End) / (1 - phase1End);
 
-                // A1 position moves during phase 2 as adjacent arm shifts
-                // Adjacent arm shifts from adjIndex to adjIndex+1 in target spacing
+                // A1 moves as adjacent arm shifts
                 const adjEndAngle = this.rotation - Math.PI / 2 + (adjIndex + 1) * targetAngleStep;
-                const adjCurrentAngle = adjStartAngle + (adjEndAngle - adjStartAngle) * phase2Progress;
-                const adjCurrentHalfStep = baseHalfStep + (targetHalfStep - baseHalfStep) * phase2Progress;
-
-                // Current A1 position (Green-2 stays here)
+                const adjCurrentAngle = this.lerp(adjStartAngle, adjEndAngle, t);
+                const adjCurrentHalfStep = this.lerp(baseHalfStep, targetHalfStep, t);
                 const a1CurrentAngle = adjCurrentAngle - adjCurrentHalfStep;
                 base2X = this.centerX + innerRadius * Math.cos(a1CurrentAngle);
                 base2Y = this.centerY + innerRadius * Math.sin(a1CurrentAngle);
 
-                // At end of phase 1, T was at adjStartTip, base points had rotated
-                // Distances from Green-2 (pivot point)
-                const tipDistFromBase2 = Math.sqrt((adjStartTipX - adjStartBase1X) ** 2 + (adjStartTipY - adjStartBase1Y) ** 2);
-                const base1DistFromBase2 = Math.sqrt((adjStartBase1X - adjStartBase1X) ** 2 + (adjStartBase1Y - adjStartBase1Y) ** 2); // 0 at start
+                // Phase 1 end state: base2 at A1 (adj.base1), base1 rotated same amount
+                const baseDist = this.dist(adj.base1X, adj.base1Y, adj.tipX, adj.tipY);
+                const base2AngleStart = this.angle(adj.tipX, adj.tipY, adj.base2X, adj.base2Y);
+                const base2AngleEnd = this.angle(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
+                const phase1Rot = this.normalizeAngle(base2AngleEnd - base2AngleStart) - 2 * Math.PI;
 
-                // Actually need to recalculate based on phase 1 end state
-                // At phase 1 end: T at adjStartTip, Green-2 at adjStartBase1 (A1)
-                const tipDistFromPivot = Math.sqrt((adjStartTipX - adjStartBase1X) ** 2 + (adjStartTipY - adjStartBase1Y) ** 2);
+                const base1AngleStart = this.angle(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
+                const base1AtP1EndAngle = base1AngleStart + phase1Rot;
+                const base1AtP1EndX = adj.tipX + baseDist * Math.cos(base1AtP1EndAngle);
+                const base1AtP1EndY = adj.tipY + baseDist * Math.sin(base1AtP1EndAngle);
 
-                // At phase 1 end, Green-1 had rotated the same as Green-2
-                // Green-2 went from A2 to A1, so Green-1 rotated the same amount
-                const base2StartAngle = Math.atan2(adjStartBase2Y - adjStartTipY, adjStartBase2X - adjStartTipX);
-                const base2EndAngle = Math.atan2(adjStartBase1Y - adjStartTipY, adjStartBase1X - adjStartTipX);
-                let phase1Rotation = base2EndAngle - base2StartAngle;
-                while (phase1Rotation > Math.PI) phase1Rotation -= 2 * Math.PI;
-                while (phase1Rotation < -Math.PI) phase1Rotation += 2 * Math.PI;
-                phase1Rotation = phase1Rotation - 2 * Math.PI;
+                // Pivot around base2 (at adj.base1 at phase 1 end)
+                const tipDistStart = this.dist(adj.tipX, adj.tipY, adj.base1X, adj.base1Y);
+                const base1DistStart = this.dist(base1AtP1EndX, base1AtP1EndY, adj.base1X, adj.base1Y);
+                const tipAngleStart = this.angle(adj.base1X, adj.base1Y, adj.tipX, adj.tipY);
+                const base1AngleFromPivotStart = this.angle(adj.base1X, adj.base1Y, base1AtP1EndX, base1AtP1EndY);
 
-                const base1StartAngle = Math.atan2(adjStartBase1Y - adjStartTipY, adjStartBase1X - adjStartTipX);
-                const base1AtPhase1EndAngle = base1StartAngle + phase1Rotation;
-                const base1AtPhase1EndX = adjStartTipX + Math.sqrt((adjStartBase1X - adjStartTipX) ** 2 + (adjStartBase1Y - adjStartTipY) ** 2) * Math.cos(base1AtPhase1EndAngle);
-                const base1AtPhase1EndY = adjStartTipY + Math.sqrt((adjStartBase1X - adjStartTipX) ** 2 + (adjStartBase1Y - adjStartTipY) ** 2) * Math.sin(base1AtPhase1EndAngle);
+                const tipDistEnd = this.dist(final.tipX, final.tipY, final.base2X, final.base2Y);
+                const base1DistEnd = this.dist(final.base1X, final.base1Y, final.base2X, final.base2Y);
+                const tipAngleEnd = this.angle(final.base2X, final.base2Y, final.tipX, final.tipY);
+                const base1AngleFromPivotEnd = this.angle(final.base2X, final.base2Y, final.base1X, final.base1Y);
 
-                // Distances from pivot (Green-2 at A1 position at phase 1 end)
-                const base1DistFromPivot = Math.sqrt((base1AtPhase1EndX - adjStartBase1X) ** 2 + (base1AtPhase1EndY - adjStartBase1Y) ** 2);
+                const tipRot = this.normalizeAngle(tipAngleEnd - tipAngleStart);
+                const base1Rot = this.normalizeAngle(base1AngleFromPivotEnd - base1AngleFromPivotStart);
 
-                // Angles from pivot at phase 1 end
-                const tipAngleFromPivotStart = Math.atan2(adjStartTipY - adjStartBase1Y, adjStartTipX - adjStartBase1X);
-                const base1AngleFromPivotStart = Math.atan2(base1AtPhase1EndY - adjStartBase1Y, base1AtPhase1EndX - adjStartBase1X);
-
-                // Final angles from pivot (Green-2 at finalBase2)
-                const tipAngleFromPivotEnd = Math.atan2(finalTipY - finalBase2Y, finalTipX - finalBase2X);
-                const base1AngleFromPivotEnd = Math.atan2(finalBase1Y - finalBase2Y, finalBase1X - finalBase2X);
-
-                // Distances at end
-                const tipDistFromPivotEnd = Math.sqrt((finalTipX - finalBase2X) ** 2 + (finalTipY - finalBase2Y) ** 2);
-                const base1DistFromPivotEnd = Math.sqrt((finalBase1X - finalBase2X) ** 2 + (finalBase1Y - finalBase2Y) ** 2);
-
-                // Interpolate distances
-                const tipDist = tipDistFromPivot + (tipDistFromPivotEnd - tipDistFromPivot) * phase2Progress;
-                const base1Dist = base1DistFromPivot + (base1DistFromPivotEnd - base1DistFromPivot) * phase2Progress;
-
-                // Calculate rotations
-                let tipRotation = tipAngleFromPivotEnd - tipAngleFromPivotStart;
-                while (tipRotation > Math.PI) tipRotation -= 2 * Math.PI;
-                while (tipRotation < -Math.PI) tipRotation += 2 * Math.PI;
-
-                let base1Rotation2 = base1AngleFromPivotEnd - base1AngleFromPivotStart;
-                while (base1Rotation2 > Math.PI) base1Rotation2 -= 2 * Math.PI;
-                while (base1Rotation2 < -Math.PI) base1Rotation2 += 2 * Math.PI;
-
-                const tipAngle = tipAngleFromPivotStart + tipRotation * phase2Progress;
-                const base1Angle = base1AngleFromPivotStart + base1Rotation2 * phase2Progress;
-
-                tipX = base2X + tipDist * Math.cos(tipAngle);
-                tipY = base2Y + tipDist * Math.sin(tipAngle);
-                base1X = base2X + base1Dist * Math.cos(base1Angle);
-                base1Y = base2Y + base1Dist * Math.sin(base1Angle);
+                tipX = base2X + this.lerp(tipDistStart, tipDistEnd, t) * Math.cos(tipAngleStart + tipRot * t);
+                tipY = base2Y + this.lerp(tipDistStart, tipDistEnd, t) * Math.sin(tipAngleStart + tipRot * t);
+                base1X = base2X + this.lerp(base1DistStart, base1DistEnd, t) * Math.cos(base1AngleFromPivotStart + base1Rot * t);
+                base1Y = base2Y + this.lerp(base1DistStart, base1DistEnd, t) * Math.sin(base1AngleFromPivotStart + base1Rot * t);
             }
         }
 
