@@ -6,6 +6,7 @@ import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
+import { Vec3, CloudInstance } from './types.js';
 
 export { CloudType };
 
@@ -26,18 +27,6 @@ export const THERAPIST_ACTIONS: TherapistAction[] = [
     { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
     { id: 'step_back', question: 'Can you ask this part to step back?', shortName: 'Step back', category: 'relationship' },
 ];
-
-interface Vec3 {
-    x: number;
-    y: number;
-    z: number;
-}
-
-interface CloudInstance {
-    cloud: Cloud;
-    position: Vec3;
-    velocity: Vec3;
-}
 
 interface Message {
     id: string;
@@ -655,7 +644,7 @@ export class CloudManager {
 
         const protectedIds = this.relationships.getProtecting(cloud.id);
         if (protectedIds.size === 0) {
-            this.showThoughtBubble("I don't protect anyone.");
+            this.showThoughtBubble("I don't have a job.");
         } else {
             const protectedId = Array.from(protectedIds)[0];
             const protectedCloud = this.getCloudById(protectedId);

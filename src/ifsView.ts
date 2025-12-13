@@ -10,22 +10,11 @@ import {
     CARPET_FLY_DURATION,
     CARPET_ENTRY_STAGGER
 } from './carpetRenderer.js';
+import { Vec3, CloudInstance } from './types.js';
 
 export const STAR_OUTER_RADIUS = 20;
 export const STAR_INNER_RADIUS = 8;
 const BLENDED_OPACITY = 0.7;
-
-interface Vec3 {
-    x: number;
-    y: number;
-    z: number;
-}
-
-interface CloudInstance {
-    cloud: Cloud;
-    position: Vec3;
-    velocity: Vec3;
-}
 
 // Semantic position targets - resolved to x/y each frame
 export type PositionTarget =

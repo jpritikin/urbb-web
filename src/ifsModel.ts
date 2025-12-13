@@ -1,4 +1,4 @@
-import { PartState, PartBiography, PartDialogues, createPartState } from './partState.js';
+import { PartStateManager, PartState, PartBiography, PartDialogues, PartStateChange } from './partStateManager.js';
 
 export interface StateAction {
     type: string;
@@ -24,8 +24,14 @@ export class SimulatorModel {
     private blendedParts: Map<string, BlendedPartState> = new Map();
     private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
-    private partStates: Map<string, PartState> = new Map();
+    private parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
+
+    constructor() {
+        this.parts.setChangeListener((change: PartStateChange) => {
+            this.record({ type: change.type, cloudId: change.cloudId, data: change.data });
+        });
+    }
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -253,7 +259,7 @@ export class SimulatorModel {
         this.history.push({ action });
     }
 
-    // PartState management
+    // PartState management (delegated to PartStateManager)
 
     registerPart(id: string, name: string, options?: {
         trust?: number;
@@ -262,155 +268,99 @@ export class SimulatorModel {
         partAge?: number | string;
         dialogues?: PartDialogues;
     }): PartState {
-        const state = createPartState(id, name, options);
-        this.partStates.set(id, state);
-        return state;
+        return this.parts.registerPart(id, name, options);
     }
 
     getPartState(cloudId: string): PartState | undefined {
-        return this.partStates.get(cloudId);
+        return this.parts.getPartState(cloudId);
     }
 
     getAllPartStates(): Map<string, PartState> {
-        return new Map(this.partStates);
+        return this.parts.getAllPartStates();
     }
 
     getTrust(cloudId: string): number {
-        return this.partStates.get(cloudId)?.trust ?? 0.5;
+        return this.parts.getTrust(cloudId);
     }
 
     setTrust(cloudId: string, trust: number, reason?: string): void {
-        const state = this.partStates.get(cloudId);
-        if (!state) return;
-        const oldTrust = state.trust;
-        state.trust = Math.max(0, Math.min(1, trust));
-        this.record({ type: 'setTrust', cloudId, data: { oldTrust, newTrust: state.trust, reason } });
+        this.parts.setTrust(cloudId, trust, reason);
     }
 
     adjustTrust(cloudId: string, multiplier: number, reason?: string): void {
-        const state = this.partStates.get(cloudId);
-        if (!state) return;
-        const oldTrust = state.trust;
-        state.trust = Math.max(0, Math.min(1, state.trust * multiplier));
-        this.record({ type: 'adjustTrust', cloudId, data: { oldTrust, newTrust: state.trust, multiplier, reason } });
+        this.parts.adjustTrust(cloudId, multiplier, reason);
     }
 
     getNeedAttention(cloudId: string): number {
-        return this.partStates.get(cloudId)?.needAttention ?? 0.1;
+        return this.parts.getNeedAttention(cloudId);
     }
 
     setNeedAttention(cloudId: string, needAttention: number): void {
-        const state = this.partStates.get(cloudId);
-        if (state) {
-            state.needAttention = needAttention;
-        }
+        this.parts.setNeedAttention(cloudId, needAttention);
     }
 
     adjustNeedAttention(cloudId: string, multiplier: number): void {
-        const state = this.partStates.get(cloudId);
-        if (state) {
-            state.needAttention *= multiplier;
-        }
+        this.parts.adjustNeedAttention(cloudId, multiplier);
     }
 
     markAsProxy(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state) {
-            state.wasProxy = true;
-        }
+        this.parts.markAsProxy(cloudId);
     }
 
     wasProxy(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.wasProxy ?? false;
+        return this.parts.wasProxy(cloudId);
     }
 
     getDialogues(cloudId: string): PartDialogues {
-        return this.partStates.get(cloudId)?.dialogues ?? {};
+        return this.parts.getDialogues(cloudId);
     }
 
     getBiography(cloudId: string): PartBiography | undefined {
-        return this.partStates.get(cloudId)?.biography;
+        return this.parts.getBiography(cloudId);
     }
 
     revealIdentity(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.identityRevealed) {
-            state.biography.identityRevealed = true;
-            this.record({ type: 'revealIdentity', cloudId });
-        }
+        this.parts.revealIdentity(cloudId);
     }
 
     isIdentityRevealed(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.biography.identityRevealed ?? false;
+        return this.parts.isIdentityRevealed(cloudId);
     }
 
     revealAge(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.ageRevealed) {
-            state.biography.ageRevealed = true;
-            this.record({ type: 'revealAge', cloudId });
-        }
+        this.parts.revealAge(cloudId);
     }
 
     revealRelationships(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.relationshipsRevealed) {
-            state.biography.relationshipsRevealed = true;
-            this.record({ type: 'revealRelationships', cloudId });
-        }
+        this.parts.revealRelationships(cloudId);
     }
 
     revealProtects(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.protectsRevealed) {
-            state.biography.protectsRevealed = true;
-            this.record({ type: 'revealProtects', cloudId });
-        }
+        this.parts.revealProtects(cloudId);
     }
 
     revealJob(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.jobRevealed) {
-            state.biography.jobRevealed = true;
-            this.record({ type: 'revealJob', cloudId });
-        }
+        this.parts.revealJob(cloudId);
     }
 
     isJobRevealed(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.biography.jobRevealed ?? false;
+        return this.parts.isJobRevealed(cloudId);
     }
 
     hasJob(cloudId: string): boolean {
-        const dialogues = this.partStates.get(cloudId)?.dialogues;
-        return !!dialogues?.unburdenedJob;
+        return this.parts.hasJob(cloudId);
     }
 
     getUnrevealedBiographyFields(cloudId: string): ('age' | 'identity' | 'job')[] {
-        const state = this.partStates.get(cloudId);
-        if (!state) return [];
-        const unrevealed: ('age' | 'identity' | 'job')[] = [];
-        if (!state.biography.ageRevealed && state.biography.partAge !== null) {
-            unrevealed.push('age');
-        }
-        if (!state.biography.identityRevealed) {
-            unrevealed.push('identity');
-        }
-        if (!state.biography.jobRevealed && state.dialogues.unburdenedJob) {
-            unrevealed.push('job');
-        }
-        return unrevealed;
+        return this.parts.getUnrevealedBiographyFields(cloudId);
     }
 
     getDisplayAge(cloudId: string): string | null {
-        const state = this.partStates.get(cloudId);
-        if (!state || !state.biography.ageRevealed) return null;
-        if (state.biography.partAge === null) return null;
-        if (typeof state.biography.partAge === 'string') return state.biography.partAge;
-        return `${state.biography.partAge} years old`;
+        return this.parts.getDisplayAge(cloudId);
     }
 
     getPartName(cloudId: string): string {
-        return this.partStates.get(cloudId)?.name ?? cloudId;
+        return this.parts.getPartName(cloudId);
     }
 
     recordQuestion(cloudId: string, question: string): void {
@@ -500,15 +450,12 @@ export class SimulatorModel {
             cloned.blendedParts.set(id, { ...state });
         }
         cloned.selectedCloudId = this.selectedCloudId;
-        for (const [id, state] of this.partStates) {
-            cloned.partStates.set(id, {
-                ...state,
-                biography: { ...state.biography },
-                dialogues: { ...state.dialogues },
-            });
-        }
+        cloned.parts = this.parts.clone();
+        cloned.parts.setChangeListener((change: PartStateChange) => {
+            cloned.record({ type: change.type, cloudId: change.cloudId, data: change.data });
+        });
         return cloned;
     }
 }
 
-export { PartState, PartBiography, PartDialogues } from './partState.js';
+export { PartState, PartBiography, PartDialogues } from './partStateManager.js';
