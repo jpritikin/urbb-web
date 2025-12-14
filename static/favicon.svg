@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Outer eye shape - slightly asymmetric for faux-janky feel -->
+  <ellipse cx="16" cy="16" rx="14" ry="10" fill="none" stroke="#1a5f4a" stroke-width="2.5"/>
+
+  <!-- Iris - forest green -->
+  <circle cx="16" cy="16" r="7" fill="#2d8a6e"/>
+
+  <!-- Pupil - off-center for that "possessed" look -->
+  <circle cx="16.5" cy="15.5" r="3" fill="#0d2818"/>
+
+  <!-- Highlight - gives it life -->
+  <circle cx="14" cy="14" r="1.5" fill="#fff" opacity="0.8"/>
+
+  <!-- Rays emanating - mystical touch -->
+  <g stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity="0.7">
+    <line x1="16" y1="2" x2="16" y2="5"/>
+    <line x1="6" y1="6" x2="8.5" y2="8.5"/>
+    <line x1="26" y1="6" x2="23.5" y2="8.5"/>
+  </g>
+</svg>
