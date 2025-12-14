@@ -5,6 +5,7 @@ import {
     getTransitionInnerRadius,
     computeTransitionPosition,
     type TransitionContext,
+    type TransitionDirection,
 } from './starAnimationCore.js';
 
 export { STAR_OUTER_RADIUS, STAR_INNER_RADIUS };
@@ -27,10 +28,29 @@ const ARM_CHANGE_MAX_INTERVAL = 5.0;
 const ARM_TRANSITION_DURATION = 8;
 const ARM_EXPANSION_FACTOR = 0.15;
 
-const VALID_ARM_COUNTS = [4, 5];
+const VALID_ARM_COUNTS = [3, 4, 5, 6, 7];
+
+const DOT_COUNT = 15;
+const DOT_GROUPS = 3;
+const DOT_FIELD_SIZE = 200;
+const CURL_NOISE_SCALE = 0.02;
+const CURL_TIME_SCALE = 1.0;  // how fast forces evolve
+const SPEED_NOISE_RATE = 0.25;  // how fast per-dot speed evolves
+const DOT_TRAIL_LENGTH = 8;
+const TRAIL_UPDATE_PERIOD = 1;
+const TRAIL_POINTS_PER_SEGMENT = 4;
+
+interface Dot {
+    x: number;
+    y: number;
+    trail: { x: number; y: number }[];
+    updateCount: number;
+    noiseOffset: number;
+}
 
 interface ArmTransition {
     type: 'adding' | 'removing';
+    direction: TransitionDirection;  // +1 for CW, -1 for CCW
     progress: number;
     sourceArmIndex: number;
 }
@@ -65,6 +85,13 @@ export class AnimatedStar {
     private armTransition: ArmTransition | null = null;
     private secondArmTransition: ArmTransition | null = null;
     private expansionFactor: number = 0;
+
+    private dotCanvas: HTMLCanvasElement | null = null;
+    private dotCtx: CanvasRenderingContext2D | null = null;
+    private dotPatternImage: SVGImageElement | null = null;
+    private dots: Dot[] = [];
+    private noiseTime: number = 0;
+    private currentDotGroup: number = 0;
 
     constructor(centerX: number, centerY: number) {
         this.centerX = centerX;
@@ -102,10 +129,39 @@ export class AnimatedStar {
         filter.appendChild(blur);
         filter.appendChild(merge);
         defs.appendChild(filter);
+
+        this.dotCanvas = document.createElement('canvas');
+        this.dotCanvas.width = DOT_FIELD_SIZE;
+        this.dotCanvas.height = DOT_FIELD_SIZE;
+        this.dotCtx = this.dotCanvas.getContext('2d');
+
+        for (let i = 0; i < DOT_COUNT; i++) {
+            const x = Math.random() * DOT_FIELD_SIZE;
+            const y = Math.random() * DOT_FIELD_SIZE;
+            const trail: { x: number; y: number }[] = [];
+            for (let t = 0; t < DOT_TRAIL_LENGTH; t++) {
+                trail.push({ x, y });
+            }
+            this.dots.push({ x, y, trail, updateCount: 0, noiseOffset: Math.random() * 1000 });
+        }
+
+        const dotPattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        dotPattern.setAttribute('id', 'starDots');
+        dotPattern.setAttribute('patternUnits', 'userSpaceOnUse');
+        dotPattern.setAttribute('width', String(DOT_FIELD_SIZE));
+        dotPattern.setAttribute('height', String(DOT_FIELD_SIZE));
+        const patternImage = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        patternImage.setAttribute('width', String(DOT_FIELD_SIZE));
+        patternImage.setAttribute('height', String(DOT_FIELD_SIZE));
+        patternImage.setAttribute('href', this.dotCanvas.toDataURL());
+        dotPattern.appendChild(patternImage);
+        defs.appendChild(dotPattern);
+        this.dotPatternImage = patternImage;
+
         this.wrapperGroup.appendChild(defs);
 
         this.innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        this.innerCircle.setAttribute('fill', '#FFD700');
+        this.innerCircle.setAttribute('fill', 'url(#starDots)');
         this.innerCircle.setAttribute('stroke', 'none');
         this.innerCircle.setAttribute('cx', String(this.centerX));
         this.innerCircle.setAttribute('cy', String(this.centerY));
@@ -129,7 +185,7 @@ export class AnimatedStar {
 
         for (let i = 0; i < this.armCount; i++) {
             const arm = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            arm.setAttribute('fill', '#FFD700');
+            arm.setAttribute('fill', 'url(#starDots)');
             arm.setAttribute('opacity', '0.9');
             arm.setAttribute('filter', 'url(#starGlow)');
             this.wrapperGroup.appendChild(arm);
@@ -146,8 +202,178 @@ export class AnimatedStar {
         this.updateRotation(deltaTime);
         this.updatePulse(deltaTime);
         this.updateArmTransition(deltaTime);
+        this.updateDotCurlNoise(deltaTime);
         this.updateArms();
         this.updateTransitionElements();
+    }
+
+    private permutation: number[] = [];
+
+    private initPerlin(): void {
+        const p = [];
+        for (let i = 0; i < 256; i++) p[i] = i;
+        for (let i = 255; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [p[i], p[j]] = [p[j], p[i]];
+        }
+        this.permutation = [...p, ...p];
+    }
+
+    private fade(t: number): number {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+    }
+
+    private lerp(a: number, b: number, t: number): number {
+        return a + t * (b - a);
+    }
+
+    private grad(hash: number, x: number, y: number): number {
+        const h = hash & 3;
+        const u = h < 2 ? x : y;
+        const v = h < 2 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    }
+
+    private perlin(x: number, y: number): number {
+        if (this.permutation.length === 0) this.initPerlin();
+        const p = this.permutation;
+
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+
+        const aa = p[p[xi] + yi];
+        const ab = p[p[xi] + yi + 1];
+        const ba = p[p[xi + 1] + yi];
+        const bb = p[p[xi + 1] + yi + 1];
+
+        return this.lerp(
+            this.lerp(this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf), u),
+            this.lerp(this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1), u),
+            v
+        );
+    }
+
+    private noise(x: number, y: number, t: number): number {
+        return Math.sin(x * 1.0 + t) * Math.cos(y * 1.3) +
+            Math.sin(x * 2.1 - t * 0.7) * Math.cos(y * 1.9 + t * 0.3) * 0.5 +
+            Math.sin(x * 4.3 + t * 0.4) * Math.cos(y * 3.7 - t * 0.2) * 0.25;
+    }
+
+    private curlNoise(x: number, y: number, t: number): { vx: number; vy: number } {
+        const eps = 0.01;
+        const dPdy = (this.noise(x, y + eps, t) - this.noise(x, y - eps, t)) / (2 * eps);
+        const dPdx = (this.noise(x + eps, y, t) - this.noise(x - eps, y, t)) / (2 * eps);
+        return { vx: dPdy, vy: -dPdx };
+    }
+
+    private updateDotCurlNoise(deltaTime: number): void {
+        if (!this.dotCtx || !this.dotCanvas || !this.dotPatternImage) return;
+
+        this.noiseTime += deltaTime * CURL_TIME_SCALE;
+
+        const dotsPerGroup = Math.ceil(DOT_COUNT / DOT_GROUPS);
+        const startIdx = this.currentDotGroup * dotsPerGroup;
+        const endIdx = Math.min(startIdx + dotsPerGroup, this.dots.length);
+        this.currentDotGroup = (this.currentDotGroup + 1) % DOT_GROUPS;
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const dot = this.dots[i];
+
+            dot.updateCount++;
+            if (dot.updateCount >= TRAIL_UPDATE_PERIOD) {
+                dot.updateCount = 0;
+                for (let t = DOT_TRAIL_LENGTH - 1; t > 0; t--) {
+                    dot.trail[t].x = dot.trail[t - 1].x;
+                    dot.trail[t].y = dot.trail[t - 1].y;
+                }
+                dot.trail[0].x = dot.x;
+                dot.trail[0].y = dot.y;
+            }
+
+            const { vx, vy } = this.curlNoise(
+                dot.x * CURL_NOISE_SCALE,
+                dot.y * CURL_NOISE_SCALE,
+                this.noiseTime
+            );
+
+            const speedNoise = this.perlin(dot.noiseOffset, this.noiseTime * SPEED_NOISE_RATE);
+            const speed = 1 + speedNoise * 5
+
+            dot.x += vx * speed;
+            dot.y += vy * speed;
+
+            if (dot.x < 0) dot.x = -dot.x;
+            else if (dot.x > DOT_FIELD_SIZE) dot.x = 2 * DOT_FIELD_SIZE - dot.x;
+            if (dot.y < 0) dot.y = -dot.y;
+            else if (dot.y > DOT_FIELD_SIZE) dot.y = 2 * DOT_FIELD_SIZE - dot.y;
+        }
+
+        const ctx = this.dotCtx;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(0, 0, DOT_FIELD_SIZE, DOT_FIELD_SIZE);
+
+        const maxDistSq = (DOT_FIELD_SIZE / 4) ** 2;
+
+        for (const dot of this.dots) {
+            const colorNoise = this.noise(
+                dot.x * CURL_NOISE_SCALE * 0.5,
+                dot.y * CURL_NOISE_SCALE * 0.5,
+                this.noiseTime * 0.5
+            );
+            const hueNoise = this.noise(
+                dot.x * CURL_NOISE_SCALE * 0.3 + 100,
+                dot.y * CURL_NOISE_SCALE * 0.3 + 100,
+                this.noiseTime * 0.3
+            );
+            const ct = (colorNoise + 1.75) / 3.5;
+            const hueShift = hueNoise * 25;
+            const r = Math.round(Math.min(255, Math.max(0, 180 + ct * 75 + hueShift)));
+            const g = Math.round(Math.min(255, Math.max(0, 100 + ct * 140 - Math.abs(hueShift) * 0.8)));
+            const b = Math.round(Math.min(255, Math.max(0, 20 + ct * 220)));
+            const color = `rgb(${r},${g},${b})`;
+
+            const segments = Math.ceil(DOT_TRAIL_LENGTH / TRAIL_POINTS_PER_SEGMENT);
+
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 1.5;
+
+            let prevX = dot.x;
+            let prevY = dot.y;
+            for (let seg = 0; seg < segments; seg++) {
+                const endIdx = Math.min((seg + 1) * TRAIL_POINTS_PER_SEGMENT, DOT_TRAIL_LENGTH - 1);
+                const endPoint = dot.trail[endIdx];
+
+                const dx = prevX - endPoint.x;
+                const dy = prevY - endPoint.y;
+                const distSq = dx * dx + dy * dy;
+
+                if (distSq < maxDistSq) {
+                    const opacity = 1 - (seg / segments) * 0.75;
+                    ctx.globalAlpha = opacity;
+                    ctx.strokeStyle = color;
+                    ctx.beginPath();
+                    ctx.moveTo(prevX, prevY);
+                    ctx.lineTo(endPoint.x, endPoint.y);
+                    ctx.stroke();
+                }
+
+                prevX = endPoint.x;
+                prevY = endPoint.y;
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        this.dotPatternImage.setAttribute('href', this.dotCanvas.toDataURL());
     }
 
     private updateRotationState(deltaTime: number): void {
@@ -285,12 +511,16 @@ export class AnimatedStar {
 
         const armDiff = Math.abs(targetArmCount - this.armCount);
         const sourceArmIndex = Math.floor(Math.random() * this.armCount);
+        const direction: TransitionDirection = Math.random() < 0.5 ? 1 : -1;
 
         this.armTransition = {
             type: adding ? 'adding' : 'removing',
+            direction,
             progress: 0,
             sourceArmIndex,
         };
+
+        console.log(`Star transition: ${this.armTransition.type} arm, ${this.armCount}→${adding ? this.armCount + 1 : this.armCount - 1} arms, sourceIdx=${sourceArmIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}; replay: star.testTransition('${this.armTransition.type}', ${this.armCount}, ${sourceArmIndex}, ${direction})`);
 
         this.createTransitionElement();
 
@@ -301,9 +531,11 @@ export class AnimatedStar {
                 if (this.armTransition) {
                     this.secondArmTransition = {
                         type: adding ? 'adding' : 'removing',
+                        direction,
                         progress: 0,
                         sourceArmIndex: secondSourceIndex,
                     };
+                    console.log(`Star transition (2nd): ${this.secondArmTransition.type} arm, sourceIdx=${secondSourceIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}`);
                     this.createSecondTransitionElement();
                 }
             }, ARM_TRANSITION_DURATION * 0.3 * 1000);
@@ -314,7 +546,7 @@ export class AnimatedStar {
         if (!this.wrapperGroup || !this.armTransition) return;
 
         this.transitionElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        this.transitionElement.setAttribute('fill', '#FFD700');
+        this.transitionElement.setAttribute('fill', 'url(#starDots)');
         this.transitionElement.setAttribute('opacity', '0.9');
         this.transitionElement.setAttribute('filter', 'url(#starGlow)');
         this.wrapperGroup.appendChild(this.transitionElement);
@@ -324,7 +556,7 @@ export class AnimatedStar {
         if (!this.wrapperGroup || !this.secondArmTransition) return;
 
         this.secondTransitionElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        this.secondTransitionElement.setAttribute('fill', '#FFD700');
+        this.secondTransitionElement.setAttribute('fill', 'url(#starDots)');
         this.secondTransitionElement.setAttribute('opacity', '0.9');
         this.secondTransitionElement.setAttribute('filter', 'url(#starGlow)');
         this.wrapperGroup.appendChild(this.secondTransitionElement);
@@ -432,9 +664,13 @@ export class AnimatedStar {
             if (this.armTransition?.type === 'adding' && this.armTransition.progress > 0.5) {
                 const t = (this.armTransition.progress - 0.5) / 0.5;
                 const sourceIndex = this.armTransition.sourceArmIndex;
+                const dir = this.armTransition.direction;
                 const targetAngleStep = (2 * Math.PI) / (this.armCount + 1);
 
-                if (i >= sourceIndex) {
+                // CW: new arm at sourceIndex+1, so arms > sourceIndex shift by +1
+                // CCW: new arm at sourceIndex, so arms >= sourceIndex shift by +1
+                const shouldShift = dir === 1 ? (i > sourceIndex) : (i >= sourceIndex);
+                if (shouldShift) {
                     const currentAngle = this.rotation - Math.PI / 2 + i * baseAngleStep;
                     const targetAngle = this.rotation - Math.PI / 2 + (i + 1) * targetAngleStep;
                     tipAngle = currentAngle + (targetAngle - currentAngle) * t;
@@ -478,6 +714,7 @@ export class AnimatedStar {
 
         const ctx: TransitionContext = {
             type: transition.type,
+            direction: transition.direction,
             progress: transition.progress,
             sourceArmIndex: transition.sourceArmIndex,
             armCount: this.armCount,
@@ -500,7 +737,7 @@ export class AnimatedStar {
         this.centerY = centerY;
     }
 
-    testTransition(type: 'adding' | 'removing', armCount: number, sourceArmIndex: number): void {
+    testTransition(type: 'adding' | 'removing', armCount: number, sourceArmIndex: number, direction: TransitionDirection = 1): void {
         if (this.armTransition) {
             this.transitionElement?.remove();
             this.transitionElement = null;
@@ -532,9 +769,12 @@ export class AnimatedStar {
 
         this.armTransition = {
             type,
+            direction,
             progress: 0,
             sourceArmIndex,
         };
+
+        console.log(`Star testTransition: ${type} arm, ${armCount}→${type === 'adding' ? armCount + 1 : armCount - 1} arms, sourceIdx=${sourceArmIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}`);
 
         this.createTransitionElement();
     }
