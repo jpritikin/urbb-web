@@ -1,7 +1,8 @@
 import {
     STAR_OUTER_RADIUS,
     STAR_INNER_RADIUS,
-    THREE_ARM_INNER_RADIUS_FACTOR,
+    getInnerRadiusForArmCount,
+    getTransitionInnerRadius,
     computeTransitionPosition,
     type TransitionContext,
 } from './starAnimationCore.js';
@@ -26,7 +27,7 @@ const ARM_CHANGE_MAX_INTERVAL = 5.0;
 const ARM_TRANSITION_DURATION = 8;
 const ARM_EXPANSION_FACTOR = 0.15;
 
-const VALID_ARM_COUNTS = [5, 6, 7];
+const VALID_ARM_COUNTS = [4, 5];
 
 interface ArmTransition {
     type: 'adding' | 'removing';
@@ -108,8 +109,7 @@ export class AnimatedStar {
         this.innerCircle.setAttribute('stroke', 'none');
         this.innerCircle.setAttribute('cx', String(this.centerX));
         this.innerCircle.setAttribute('cy', String(this.centerY));
-        const innerRadiusFactor = this.armCount === 3 ? THREE_ARM_INNER_RADIUS_FACTOR : 1;
-        this.innerCircle.setAttribute('r', String(STAR_INNER_RADIUS * innerRadiusFactor));
+        this.innerCircle.setAttribute('r', String(getInnerRadiusForArmCount(this.armCount)));
         this.innerCircle.setAttribute('opacity', '0.9');
         this.innerCircle.setAttribute('filter', 'url(#starGlow)');
         this.wrapperGroup.appendChild(this.innerCircle);
@@ -368,8 +368,12 @@ export class AnimatedStar {
     }
 
     private updateArms(): void {
-        const innerRadiusFactor = this.armCount === 3 ? THREE_ARM_INNER_RADIUS_FACTOR : 1;
-        const baseInnerRadius = STAR_INNER_RADIUS * innerRadiusFactor;
+        const transition = this.armTransition ?? this.secondArmTransition;
+        const baseInnerRadius = getTransitionInnerRadius(
+            this.armCount,
+            transition?.type ?? null,
+            transition?.progress ?? 0
+        );
         const innerRadius = baseInnerRadius * (1 + this.innerRadiusOffset + this.expansionFactor);
 
         if (this.innerCircle) {
@@ -469,8 +473,7 @@ export class AnimatedStar {
     }
 
     private updateSingleTransitionElement(element: SVGPolygonElement, transition: ArmTransition): void {
-        const innerRadiusFactor = this.armCount === 3 ? THREE_ARM_INNER_RADIUS_FACTOR : 1;
-        const innerRadius = STAR_INNER_RADIUS * innerRadiusFactor * (1 + this.innerRadiusOffset + this.expansionFactor);
+        const innerRadius = getInnerRadiusForArmCount(this.armCount) * (1 + this.innerRadiusOffset + this.expansionFactor);
         const outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset + this.expansionFactor);
 
         const ctx: TransitionContext = {

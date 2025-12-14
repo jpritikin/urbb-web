@@ -2,7 +2,7 @@ export const STAR_RADIUS_SCALE = 4;
 export const STAR_OUTER_RADIUS = 20 * STAR_RADIUS_SCALE;
 export const STAR_INNER_RADIUS = 8 * STAR_RADIUS_SCALE;
 
-export const THREE_ARM_INNER_RADIUS_FACTOR = 0.5;
+export const FOUR_ARM_INNER_RADIUS_FACTOR = 0.5;
 
 // Arm geometry follows the spec naming (see docs/star.txt):
 // - T (tip): the outer point of the arm
@@ -60,6 +60,25 @@ export function lerp(start: number, end: number, t: number): number {
     return start + (end - start) * t;
 }
 
+export function getInnerRadiusForArmCount(armCount: number): number {
+    return armCount <= 4 ? STAR_INNER_RADIUS * FOUR_ARM_INNER_RADIUS_FACTOR : STAR_INNER_RADIUS;
+}
+
+export function getTransitionInnerRadius(
+    armCount: number,
+    transitionType: 'adding' | 'removing' | null,
+    progress: number
+): number {
+    const startRadius = getInnerRadiusForArmCount(armCount);
+    if (!transitionType || progress <= 0.5) {
+        return startRadius;
+    }
+    const t = (progress - 0.5) / 0.5;
+    const endArmCount = transitionType === 'adding' ? armCount + 1 : armCount - 1;
+    const endRadius = getInnerRadiusForArmCount(endArmCount);
+    return lerp(startRadius, endRadius, t);
+}
+
 function rotatePoint(pivot: Point, point: Point, radians: number): Point {
     const d = pointDist(pivot, point);
     const a = pointAngle(pivot, point) + radians;
@@ -101,7 +120,10 @@ export function computeTransitionPosition(ctx: TransitionContext) {
 // Phase 1 (0→0.5): Pivot around S2, rotate CW until T reaches At
 // Phase 2 (0.5→1): Pivot around At (moving), rotate base points CW until they collapse onto A
 function computeRemovingPosition(ctx: TransitionContext): ArmPoints {
-    const { progress, sourceArmIndex, armCount, rotation, centerX, centerY, innerRadius, outerRadius } = ctx;
+    const { progress, sourceArmIndex, armCount, rotation, centerX, centerY, outerRadius } = ctx;
+
+    const startInnerRadius = getInnerRadiusForArmCount(armCount);
+    const endInnerRadius = getInnerRadiusForArmCount(armCount - 1);
 
     const angleStep = (2 * Math.PI) / armCount;
     const halfStep = angleStep / 2;
@@ -109,8 +131,8 @@ function computeRemovingPosition(ctx: TransitionContext): ArmPoints {
     // S = source arm being removed, A = adjacent arm (CW neighbor at sourceArmIndex + 1)
     const srcAngle = rotation - Math.PI / 2 + sourceArmIndex * angleStep;
     const adjAngle = srcAngle + angleStep;
-    const S = getArmPoints(centerX, centerY, srcAngle, halfStep, innerRadius, outerRadius);
-    const A = getArmPoints(centerX, centerY, adjAngle, halfStep, innerRadius, outerRadius);
+    const S = getArmPoints(centerX, centerY, srcAngle, halfStep, startInnerRadius, outerRadius);
+    const A = getArmPoints(centerX, centerY, adjAngle, halfStep, startInnerRadius, outerRadius);
 
     if (progress < 0.5) {
         // PHASE 1: Rigid rotation around S2 (source arm's CW base)
@@ -130,6 +152,7 @@ function computeRemovingPosition(ctx: TransitionContext): ArmPoints {
         // Pivot is At (which moves as remaining arms redistribute)
         // Rotate CW "long way" (+2π) until base points align with A
         const t = (progress - 0.5) / 0.5;
+        const currentInnerRadius = lerp(startInnerRadius, endInnerRadius, t);
 
         // Compute where adjacent arm moves to during redistribution
         const adjIndex = (sourceArmIndex + 1) % armCount;
@@ -139,7 +162,7 @@ function computeRemovingPosition(ctx: TransitionContext): ArmPoints {
         const adjEndAngle = rotation - Math.PI / 2 + newAdjIndex * targetAngleStep;
         const adjCurrentAngle = lerp(adjStartAngle, adjEndAngle, t);
         const adjCurrentHalfStep = lerp(halfStep, targetAngleStep / 2, t);
-        const AMoving = getArmPoints(centerX, centerY, adjCurrentAngle, adjCurrentHalfStep, innerRadius, outerRadius);
+        const AMoving = getArmPoints(centerX, centerY, adjCurrentAngle, adjCurrentHalfStep, currentInnerRadius, outerRadius);
 
         // Where were b1 and b2 at end of phase 1?
         const phase1Rotation = normalizeAngle(pointAngle(S.b2, A.t) - pointAngle(S.b2, S.t));
@@ -178,7 +201,10 @@ function computeRemovingPosition(ctx: TransitionContext): ArmPoints {
 // Phase 1 (0→0.5): Pivot around At (fixed), rotate CCW until b2 reaches A1
 // Phase 2 (0.5→1): Pivot around b2 (locked to A1 which moves), rotate until T and b1 reach final position
 function computeAddingPosition(ctx: TransitionContext): ArmPoints {
-    const { progress, sourceArmIndex, armCount, rotation, centerX, centerY, innerRadius, outerRadius } = ctx;
+    const { progress, sourceArmIndex, armCount, rotation, centerX, centerY, outerRadius } = ctx;
+
+    const startInnerRadius = getInnerRadiusForArmCount(armCount);
+    const endInnerRadius = getInnerRadiusForArmCount(armCount + 1);
 
     const angleStep = (2 * Math.PI) / armCount;
     const halfStep = angleStep / 2;
@@ -187,9 +213,9 @@ function computeAddingPosition(ctx: TransitionContext): ArmPoints {
 
     // A = adjacent arm we unfold from, SFinal = final position of new arm
     const adjAngle = rotation - Math.PI / 2 + sourceArmIndex * angleStep;
-    const A = getArmPoints(centerX, centerY, adjAngle, halfStep, innerRadius, outerRadius);
+    const A = getArmPoints(centerX, centerY, adjAngle, halfStep, startInnerRadius, outerRadius);
     const finalAngle = rotation - Math.PI / 2 + sourceArmIndex * targetAngleStep;
-    const SFinal = getArmPoints(centerX, centerY, finalAngle, targetHalfStep, innerRadius, outerRadius);
+    const SFinal = getArmPoints(centerX, centerY, finalAngle, targetHalfStep, endInnerRadius, outerRadius);
 
     if (progress < 0.5) {
         // PHASE 1: New arm unfolds from adjacent arm
@@ -218,6 +244,7 @@ function computeAddingPosition(ctx: TransitionContext): ArmPoints {
         // PHASE 2: T and b1 swing out to final position
         // Pivot is b2 (locked to A1, which moves as existing arms spread)
         const t = (progress - 0.5) / 0.5;
+        const currentInnerRadius = lerp(startInnerRadius, endInnerRadius, t);
 
         // A1 moves as adjacent arm shifts to make room
         const adjEndAngle = rotation - Math.PI / 2 + (sourceArmIndex + 1) * targetAngleStep;
@@ -225,8 +252,8 @@ function computeAddingPosition(ctx: TransitionContext): ArmPoints {
         const adjCurrentHalfStep = lerp(halfStep, targetHalfStep, t);
         const a1CurrentAngle = adjCurrentAngle - adjCurrentHalfStep;
         const pivot: Point = {
-            x: centerX + innerRadius * Math.cos(a1CurrentAngle),
-            y: centerY + innerRadius * Math.sin(a1CurrentAngle),
+            x: centerX + currentInnerRadius * Math.cos(a1CurrentAngle),
+            y: centerY + currentInnerRadius * Math.sin(a1CurrentAngle),
         };
 
         // Where was b1 at end of phase 1?

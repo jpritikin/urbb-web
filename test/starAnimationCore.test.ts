@@ -1,7 +1,10 @@
 import {
     STAR_OUTER_RADIUS,
     STAR_INNER_RADIUS,
+    FOUR_ARM_INNER_RADIUS_FACTOR,
     dist,
+    getInnerRadiusForArmCount,
+    getTransitionInnerRadius,
     computeTransitionPosition,
     TransitionContext,
 } from '../src/starAnimationCore.js';
@@ -42,9 +45,13 @@ function makeCtx(type: 'adding' | 'removing', armCount: number, sourceArmIndex: 
         rotation: 0,
         centerX: CENTER_X,
         centerY: CENTER_Y,
-        innerRadius: STAR_INNER_RADIUS,
+        innerRadius: getInnerRadius(armCount),
         outerRadius: STAR_OUTER_RADIUS,
     };
+}
+
+function getInnerRadius(armCount: number): number {
+    return armCount <= 4 ? STAR_INNER_RADIUS * FOUR_ARM_INNER_RADIUS_FACTOR : STAR_INNER_RADIUS;
 }
 
 // Independent computation of arm geometry - source of truth
@@ -52,13 +59,14 @@ function getExpectedArm(armCount: number, armIndex: number): { tipX: number, tip
     const angleStep = (2 * Math.PI) / armCount;
     const halfStep = angleStep / 2;
     const tipAngle = -Math.PI / 2 + armIndex * angleStep;
+    const innerRadius = getInnerRadius(armCount);
     return {
         tipX: CENTER_X + STAR_OUTER_RADIUS * Math.cos(tipAngle),
         tipY: CENTER_Y + STAR_OUTER_RADIUS * Math.sin(tipAngle),
-        base1X: CENTER_X + STAR_INNER_RADIUS * Math.cos(tipAngle - halfStep),
-        base1Y: CENTER_Y + STAR_INNER_RADIUS * Math.sin(tipAngle - halfStep),
-        base2X: CENTER_X + STAR_INNER_RADIUS * Math.cos(tipAngle + halfStep),
-        base2Y: CENTER_Y + STAR_INNER_RADIUS * Math.sin(tipAngle + halfStep),
+        base1X: CENTER_X + innerRadius * Math.cos(tipAngle - halfStep),
+        base1Y: CENTER_Y + innerRadius * Math.sin(tipAngle - halfStep),
+        base2X: CENTER_X + innerRadius * Math.cos(tipAngle + halfStep),
+        base2Y: CENTER_Y + innerRadius * Math.sin(tipAngle + halfStep),
     };
 }
 
@@ -74,14 +82,17 @@ function getInterpolatedArm(
 
     const tipAngle = startTipAngle + (endTipAngle - startTipAngle) * t;
     const halfStep = startAngleStep / 2 + (endAngleStep / 2 - startAngleStep / 2) * t;
+    const startInnerRadius = getInnerRadius(startArmCount);
+    const endInnerRadius = getInnerRadius(endArmCount);
+    const innerRadius = startInnerRadius + (endInnerRadius - startInnerRadius) * t;
 
     return {
         tipX: CENTER_X + STAR_OUTER_RADIUS * Math.cos(tipAngle),
         tipY: CENTER_Y + STAR_OUTER_RADIUS * Math.sin(tipAngle),
-        base1X: CENTER_X + STAR_INNER_RADIUS * Math.cos(tipAngle - halfStep),
-        base1Y: CENTER_Y + STAR_INNER_RADIUS * Math.sin(tipAngle - halfStep),
-        base2X: CENTER_X + STAR_INNER_RADIUS * Math.cos(tipAngle + halfStep),
-        base2Y: CENTER_Y + STAR_INNER_RADIUS * Math.sin(tipAngle + halfStep),
+        base1X: CENTER_X + innerRadius * Math.cos(tipAngle - halfStep),
+        base1Y: CENTER_Y + innerRadius * Math.sin(tipAngle - halfStep),
+        base2X: CENTER_X + innerRadius * Math.cos(tipAngle + halfStep),
+        base2Y: CENTER_Y + innerRadius * Math.sin(tipAngle + halfStep),
     };
 }
 
@@ -212,9 +223,101 @@ function testAddingPhase2(armCount: number, sourceArmIndex: number): TestResult[
     return results;
 }
 
+function testInnerRadiusInterpolation(): TestResult[] {
+    const results: TestResult[] = [];
+    const r4 = getInnerRadiusForArmCount(4);
+    const r5 = getInnerRadiusForArmCount(5);
+
+    // No transition: should return base radius
+    let actual = getTransitionInnerRadius(4, null, 0);
+    results.push({
+        name: 'No transition at 4 arms',
+        passed: Math.abs(actual - r4) < TOLERANCE,
+        details: `got ${actual}, expected ${r4}`,
+        distance: Math.abs(actual - r4),
+    });
+
+    actual = getTransitionInnerRadius(5, null, 0);
+    results.push({
+        name: 'No transition at 5 arms',
+        passed: Math.abs(actual - r5) < TOLERANCE,
+        details: `got ${actual}, expected ${r5}`,
+        distance: Math.abs(actual - r5),
+    });
+
+    // Phase 1 (progress <= 0.5): should return start radius, no interpolation
+    actual = getTransitionInnerRadius(4, 'adding', 0.25);
+    results.push({
+        name: 'Adding from 4, phase 1 (p=0.25)',
+        passed: Math.abs(actual - r4) < TOLERANCE,
+        details: `got ${actual}, expected ${r4}`,
+        distance: Math.abs(actual - r4),
+    });
+
+    actual = getTransitionInnerRadius(4, 'adding', 0.5);
+    results.push({
+        name: 'Adding from 4, phase 1 end (p=0.5)',
+        passed: Math.abs(actual - r4) < TOLERANCE,
+        details: `got ${actual}, expected ${r4}`,
+        distance: Math.abs(actual - r4),
+    });
+
+    // Phase 2 adding from 4->5: should interpolate from r4 to r5
+    actual = getTransitionInnerRadius(4, 'adding', 0.75);
+    let expected = r4 + (r5 - r4) * 0.5;
+    results.push({
+        name: 'Adding 4->5, phase 2 mid (p=0.75)',
+        passed: Math.abs(actual - expected) < TOLERANCE,
+        details: `got ${actual}, expected ${expected}`,
+        distance: Math.abs(actual - expected),
+    });
+
+    actual = getTransitionInnerRadius(4, 'adding', 1.0);
+    results.push({
+        name: 'Adding 4->5, phase 2 end (p=1.0)',
+        passed: Math.abs(actual - r5) < TOLERANCE,
+        details: `got ${actual}, expected ${r5}`,
+        distance: Math.abs(actual - r5),
+    });
+
+    // Phase 2 removing from 5->4: should interpolate from r5 to r4
+    actual = getTransitionInnerRadius(5, 'removing', 0.75);
+    expected = r5 + (r4 - r5) * 0.5;
+    results.push({
+        name: 'Removing 5->4, phase 2 mid (p=0.75)',
+        passed: Math.abs(actual - expected) < TOLERANCE,
+        details: `got ${actual}, expected ${expected}`,
+        distance: Math.abs(actual - expected),
+    });
+
+    actual = getTransitionInnerRadius(5, 'removing', 1.0);
+    results.push({
+        name: 'Removing 5->4, phase 2 end (p=1.0)',
+        passed: Math.abs(actual - r4) < TOLERANCE,
+        details: `got ${actual}, expected ${r4}`,
+        distance: Math.abs(actual - r4),
+    });
+
+    // Non-threshold transitions (5->6, 6->5) should have no radius change
+    const r6 = getInnerRadiusForArmCount(6);
+    actual = getTransitionInnerRadius(5, 'adding', 0.75);
+    results.push({
+        name: 'Adding 5->6, phase 2 mid (no change)',
+        passed: Math.abs(actual - r5) < TOLERANCE && Math.abs(r5 - r6) < TOLERANCE,
+        details: `got ${actual}, r5=${r5}, r6=${r6}`,
+        distance: Math.abs(actual - r5),
+    });
+
+    return results;
+}
+
 function runAllTests(filterType?: 'adding' | 'removing', filterArmCount?: number, filterIdx?: number): void {
     const allResults: TestResult[] = [];
-    const armCounts = filterArmCount ? [filterArmCount] : [5, 6, 7];
+
+    // Inner radius interpolation tests
+    allResults.push(...testInnerRadiusInterpolation());
+
+    const armCounts = filterArmCount ? [filterArmCount] : [4, 5, 6, 7];
 
     for (const armCount of armCounts) {
         const indices = filterIdx !== undefined ? [filterIdx] : Array.from({length: armCount}, (_, i) => i);
