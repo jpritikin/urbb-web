@@ -1,4 +1,4 @@
-export const CARPET_VERTEX_COUNT = 8;
+export const CARPET_VERTEX_COUNT = 12;
 const CARPET_BASE_WIDTH = 40;
 export const CARPET_SCALE = 3;
 const CARPET_WIDTH = CARPET_BASE_WIDTH * CARPET_SCALE;
@@ -29,7 +29,7 @@ export interface CarpetState {
 export const CARPET_FLY_DURATION = 1.5;
 export const CARPET_ENTRY_STAGGER = 0.5;
 export const CARPET_START_SCALE = 10;
-export const CARPET_OFFSCREEN_DISTANCE = 300;
+export const CARPET_OFFSCREEN_DISTANCE = 350;
 
 export function createCarpetVertices(): CarpetVertex[] {
     const vertices: CarpetVertex[] = [];
@@ -51,8 +51,13 @@ export function getOffscreenPosition(seatX: number, seatY: number, canvasWidth: 
     const dy = seatY - centerY;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist < 1) return { x: centerX - CARPET_OFFSCREEN_DISTANCE, y: centerY };
-    const nx = dx / dist;
-    const ny = dy / dist;
+
+    const baseAngle = Math.atan2(dy, dx);
+    const angleOffset = (Math.random() * 2 - 1) * (40 * Math.PI / 180);
+    const finalAngle = baseAngle + angleOffset;
+    const nx = Math.cos(finalAngle);
+    const ny = Math.sin(finalAngle);
+
     return {
         x: seatX + nx * CARPET_OFFSCREEN_DISTANCE,
         y: seatY + ny * CARPET_OFFSCREEN_DISTANCE
@@ -62,62 +67,46 @@ export function getOffscreenPosition(seatX: number, seatY: number, canvasWidth: 
 class WindField {
     private time: number = 0;
     private canvasWidth: number;
-    private direction: number;
     public debugEnabled: boolean = false;
 
-    private primaryFreq = 0.012;
-    private primarySpeed = 50;
-    private primaryAmplitude = 5;
-    private secondaryFreq = 0.04;
-    private secondarySpeed = 120;
-    private secondaryAmplitude = 2.5;
+    private readonly bumpFreq = 0.08;
+    private readonly bumpSpeed: number;
+    private readonly bumpAmplitude = 2.5;
 
-    private targetPrimaryFreq = 0.012;
-    private targetPrimarySpeed = 50;
-    private targetPrimaryAmplitude = 5;
-    private targetSecondaryFreq = 0.04;
-    private targetSecondarySpeed = 120;
-    private targetSecondaryAmplitude = 2.5;
-
-    private nextTransitionTime: number;
+    private gustStrength: number = 0;
+    private gustStartX: number = 0;
+    private gustDirection: number = 1;
+    private readonly gustSpeed = 50;
+    private readonly gustWidth = 100;
+    private nextGustTime: number = 0;
 
     constructor(canvasWidth: number) {
         this.canvasWidth = canvasWidth;
-        this.direction = Math.random() < 0.5 ? 1 : -1;
-        this.nextTransitionTime = 5 + Math.random() * 25;
-        this.pickNewTargets();
-    }
-
-    private pickNewTargets(): void {
-        this.targetPrimaryFreq = 0.008 + Math.random() * 0.012;
-        this.targetPrimarySpeed = 30 + Math.random() * 40;
-        this.targetPrimaryAmplitude = 4 + Math.random() * 2;
-        this.targetSecondaryFreq = 0.025 + Math.random() * 0.04;
-        this.targetSecondarySpeed = 80 + Math.random() * 60;
-        this.targetSecondaryAmplitude = 2 + Math.random() * 1;
+        this.bumpSpeed = (Math.random() < 0.5 ? -1 : 1) * 2;
     }
 
     update(deltaTime: number): void {
         this.time += deltaTime;
 
-        if (this.time >= this.nextTransitionTime) {
-            this.pickNewTargets();
-            this.nextTransitionTime = this.time + 5 + Math.random() * 25;
+        if (this.time >= this.nextGustTime) {
+            this.gustStrength = 8 + Math.random() * 8;
+            this.gustDirection = Math.random() < 0.5 ? -1 : 1;
+            this.gustStartX = this.gustDirection > 0 ? -this.gustWidth : this.canvasWidth + this.gustWidth;
+            this.nextGustTime = this.time + 15 + Math.random() * 5;
         }
 
-        const lerpRate = 0.3 * deltaTime;
-        this.primaryFreq += (this.targetPrimaryFreq - this.primaryFreq) * lerpRate;
-        this.primarySpeed += (this.targetPrimarySpeed - this.primarySpeed) * lerpRate;
-        this.primaryAmplitude += (this.targetPrimaryAmplitude - this.primaryAmplitude) * lerpRate;
-        this.secondaryFreq += (this.targetSecondaryFreq - this.secondaryFreq) * lerpRate;
-        this.secondarySpeed += (this.targetSecondarySpeed - this.secondarySpeed) * lerpRate;
-        this.secondaryAmplitude += (this.targetSecondaryAmplitude - this.secondaryAmplitude) * lerpRate;
+        this.gustStartX += this.gustDirection * this.gustSpeed * deltaTime;
     }
 
     sample(x: number): number {
-        const primary = Math.sin(x * this.primaryFreq - this.time * this.primarySpeed * 0.01 * this.direction) * this.primaryAmplitude;
-        const secondary = Math.sin(x * this.secondaryFreq - this.time * this.secondarySpeed * 0.01 * this.direction) * this.secondaryAmplitude;
-        return primary + secondary;
+        const bump = Math.sin(x * this.bumpFreq + this.time * this.bumpSpeed) * this.bumpAmplitude;
+
+        const relX = (x - this.gustStartX) / this.gustWidth;
+        const gust = (relX >= -1 && relX <= 1)
+            ? this.gustStrength * Math.sin((relX + 1) * Math.PI)
+            : 0;
+
+        return bump + gust;
     }
 
     getCanvasWidth(): number {

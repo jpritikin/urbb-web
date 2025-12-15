@@ -9,7 +9,8 @@
     "build:ts": "tsc",
     "build:css": "NODE_ENV=production postcss ./static/css/input.css -o ./static/css/output.css",
     "build": "npm run build:ts && npm run build:css && hugo --minify",
-    "start": "hugo server"
+    "start": "hugo server",
+    "test": "npx tsx test/runTests.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

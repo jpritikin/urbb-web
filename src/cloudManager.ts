@@ -7,7 +7,7 @@ import { SimulatorView } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { Vec3, CloudInstance } from './types.js';
-import { AnimatedStar, STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './starAnimation.js';
+import { AnimatedStar, STAR_OUTER_RADIUS } from './starAnimation.js';
 
 export { CloudType };
 
@@ -19,7 +19,6 @@ export interface TherapistAction {
 }
 
 export const THERAPIST_ACTIONS: TherapistAction[] = [
-    { id: 'first_memories', question: "When were this part's first memories?", shortName: 'Memories', category: 'history' },
     { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship' },
     { id: 'who_do_you_see', question: 'Who do you see when you look at the client?', shortName: 'Who?', category: 'discovery' },
     { id: 'expand_calm', question: 'Expand and deepen calm and patience', shortName: 'Calm', category: 'relationship' },
@@ -137,7 +136,7 @@ export class CloudManager {
         this.svgElement.setAttribute('viewBox', `0 0 ${this.canvasWidth} ${this.canvasHeight}`);
         this.svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
         this.svgElement.style.border = '1px solid #ccc';
-        this.svgElement.style.background = '#f0f0f0';
+        this.svgElement.style.background = '#e5fdff';
 
         this.container.appendChild(this.svgElement);
 
@@ -547,9 +546,7 @@ export class CloudManager {
             return;
         }
 
-        if (action.id === 'first_memories') {
-            this.model.revealAge(cloud.id);
-        } else if (action.id === 'feel_toward') {
+        if (action.id === 'feel_toward') {
             const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
             const proxyAsTargetId = this.getProxyAsTarget(cloud.id);
 
@@ -1215,12 +1212,15 @@ export class CloudManager {
         const state = this.model.getPartState(cloud.id);
         const group = cloud.createSVGElements({
             onClick: () => this.handleCloudClick(cloud),
-            onHover: (hovered) => this.setHoveredCloud(hovered ? cloud.id : null),
+            onHover: (hovered) => {
+                this.setHoveredCloud(hovered ? cloud.id : null);
+                cloud.updateSVGElements(this.debug, state, this.model.isSelected(cloud.id), hovered);
+            },
             onLongPressStart: () => this.startLongPress(cloud.id),
             onLongPressEnd: () => this.cancelLongPress(),
         });
         this.svgElement.appendChild(group);
-        cloud.updateSVGElements(this.debug, state, this.model.isSelected(cloud.id));
+        cloud.updateSVGElements(this.debug, state, this.model.isSelected(cloud.id), false);
 
         const instance: CloudInstance = {
             cloud,
@@ -1281,7 +1281,8 @@ export class CloudManager {
         this.debug = enabled;
         for (const instance of this.instances) {
             const state = this.model.getPartState(instance.cloud.id);
-            instance.cloud.updateSVGElements(enabled, state, this.model.isSelected(instance.cloud.id));
+            const hovered = this.hoveredCloudId === instance.cloud.id;
+            instance.cloud.updateSVGElements(enabled, state, this.model.isSelected(instance.cloud.id), hovered);
         }
     }
 
@@ -1419,6 +1420,8 @@ export class CloudManager {
             console.log(`[Click] Blocked: long press active`);
             return;
         }
+
+        this.hoveredCloudId = null;
 
         if (this.view.getMode() === 'foreground' && this.model.isSelected(cloud.id)) {
             console.log(`[Click] Deselecting already-selected cloud`);
@@ -1738,7 +1741,6 @@ export class CloudManager {
     }
 
     private checkHighAttentionParts(): void {
-        return; //testing
 
         const sorted = [...this.instances].sort(
             (a, b) => this.model.getNeedAttention(b.cloud.id) - this.model.getNeedAttention(a.cloud.id)
@@ -1782,9 +1784,15 @@ export class CloudManager {
         });
 
         const starElement = this.animatedStar?.getElement();
+
+        // Move star to svgElement for proper depth sorting in panorama mode
+        if (starElement && starElement.parentNode !== this.svgElement) {
+            this.svgElement.appendChild(starElement);
+        }
+
         let selfInserted = false;
         for (const instance of this.instances) {
-            if (!selfInserted && instance.position.z >= 0 && starElement && starElement.parentNode === this.svgElement) {
+            if (!selfInserted && instance.position.z >= 0 && starElement) {
                 this.svgElement.appendChild(starElement);
                 selfInserted = true;
             }
@@ -1794,7 +1802,7 @@ export class CloudManager {
             }
         }
 
-        if (!selfInserted && starElement && starElement.parentNode === this.svgElement) {
+        if (!selfInserted && starElement) {
             this.svgElement.appendChild(starElement);
         }
     }
@@ -1813,6 +1821,7 @@ export class CloudManager {
         this.lastFrameTime = currentTime;
 
         this.view.animate(deltaTime);
+        this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
 
         const mode = this.view.getMode();
@@ -1884,7 +1893,8 @@ export class CloudManager {
                     this.applyPhysics(instance, deltaTime * this.partitionCount);
                 }
                 const state = this.model.getPartState(instance.cloud.id);
-                instance.cloud.updateSVGElements(this.debug, state, this.model.isSelected(instance.cloud.id));
+                const hovered = this.hoveredCloudId === instance.cloud.id;
+                instance.cloud.updateSVGElements(this.debug, state, this.model.isSelected(instance.cloud.id), hovered);
             }
 
             const cloudState = this.view.getCloudState(instance.cloud.id);
@@ -1913,11 +1923,35 @@ export class CloudManager {
         if (this.view.getMode() === 'panorama') {
             this.checkHighAttentionParts();
             this.depthSort();
-        } else if (!this.pieMenuOpen) {
-            this.checkHighAttentionParts();
+        } else {
+            // Move star to counterZoomGroup and ensure it's behind all clouds in foreground mode
+            const starElement = this.animatedStar?.getElement();
+            if (starElement && this.counterZoomGroup) {
+                if (starElement.parentNode !== this.counterZoomGroup) {
+                    this.counterZoomGroup.insertBefore(starElement, this.counterZoomGroup.firstChild);
+                } else if (starElement !== this.counterZoomGroup.firstChild) {
+                    this.counterZoomGroup.insertBefore(starElement, this.counterZoomGroup.firstChild);
+                }
+            }
+            if (!this.pieMenuOpen) {
+                this.checkHighAttentionParts();
+            }
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
         this.animationFrameId = requestAnimationFrame(() => this.animate());
+    }
+
+    private updateStarScale(): void {
+        if (!this.animatedStar) return;
+
+        if (this.view.getMode() === 'foreground') {
+            const targetIds = this.model.getTargetCloudIds();
+            const blendedParts = this.model.getBlendedParts();
+            const totalParts = targetIds.size + blendedParts.length;
+            this.animatedStar.setTargetRadiusScale(5 / Math.sqrt(totalParts));
+        } else {
+            this.animatedStar.setTargetRadiusScale(1.5);
+        }
     }
 
     private updateCounterZoom(currentZoomFactor: number): void {

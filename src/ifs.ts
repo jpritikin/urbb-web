@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!cloudContainer) return;
 
     const cloudManager = new CloudManager();
+    (window as any).cloudManager = cloudManager;
+    console.log('[Debug] cloudManager.setCarpetDebug(true) to show wind field');
     cloudManager.init('cloud-container');
 
     const innerCritic = cloudManager.addCloud('Inner Critic', {

@@ -21,7 +21,7 @@ Arm Add/Remove Animation Analysis
   | Start alignment    | T at St, 1 at S1, 2 at S2       |
   | End condition      | T aligns with At (adjacent tip) |
 
-  The source arm rotates rigidly around its S2 base corner. The whole triangle swings clockwise until the tip reaches the adjacent arm's tip position.
+  The source arm rotates rigidly around its S2 base corner (less than 180 degrees). The whole triangle swings clockwise until the tip reaches the adjacent arm's tip position.
 
   Phase 2 (progress 0.5 → 1.0)
 
@@ -32,7 +32,7 @@ Arm Add/Remove Animation Analysis
   | Start alignment    | T at At, base points still extended          |
   | End condition      | 1 aligns with A1, 2 aligns with A2           |
 
-  The tip locks onto the adjacent tip (which moves as remaining arms redistribute). The base points rotate clockwise around the tip until they collapse onto the adjacent arm's base points.
+  The tip locks onto the adjacent tip by between 180 and 360 degrees (which moves as remaining arms redistribute). The base points rotate clockwise around the tip until they collapse onto the adjacent arm's base points.
 
   ---
   ADDING Animation
@@ -46,7 +46,7 @@ Arm Add/Remove Animation Analysis
   | Start alignment    | T at At, 1 at A1, 2 at A2 (collapsed onto adjacent arm) |
   | End condition      | 2 aligns with A1                                        |
 
-  The new arm starts collapsed onto the adjacent arm. With the tip fixed at At, the base points rotate counter-clockwise until base2 swings around to where A1 is.
+  The new arm starts collapsed onto the adjacent arm. With the tip fixed at At, the base points rotate counter-clockwise by between 180 and 360 degrees until base2 swings around to where A1 is.
 
   Phase 2 (progress 0.5 → 1.0)
 
@@ -57,4 +57,4 @@ Arm Add/Remove Animation Analysis
   | Start alignment    | 2 at A1, T at At                                        |
   | End condition      | T aligns with final St, 1 aligns with final S1          |
 
-  Base2 stays locked to A1 (which moves as existing arms spread apart). The tip and base1 pivot counter-clockwise around base2 until the new arm reaches its final position in the expanded star.
+  Base2 stays locked to A1 (which moves as existing arms spread apart). The tip and base1 pivot counter-clockwise around base2 (less than 180 degrees) until the new arm reaches its final position in the expanded star.

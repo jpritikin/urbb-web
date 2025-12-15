@@ -11,9 +11,9 @@ import {
     CARPET_ENTRY_STAGGER
 } from './carpetRenderer.js';
 import { Vec3, CloudInstance } from './types.js';
-import { STAR_OUTER_RADIUS, STAR_INNER_RADIUS } from './starAnimation.js';
+import { STAR_OUTER_RADIUS } from './starAnimation.js';
 
-export { STAR_OUTER_RADIUS, STAR_INNER_RADIUS };
+export { STAR_OUTER_RADIUS };
 
 const BLENDED_OPACITY = 0.7;
 

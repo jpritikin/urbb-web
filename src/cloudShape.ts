@@ -983,17 +983,8 @@ export class Cloud {
         return { minX, maxX, minY, maxY };
     }
 
-    getFillColor(trust: number): string {
-        const grayValue = Math.floor(trust * 255);
-        return `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
-    }
-
-    getTextColor(trust: number): string {
-        return trust < 0.5 ? 'white' : 'black';
-    }
-
-    getTextWeight(trust: number): string {
-        return trust < 0.5 ? 'bold' : 'normal';
+    getFillColor(hovered: boolean): string {
+        return hovered ? '#e0e0e0' : '#ffffff';
     }
 
     renderText(textElement: SVGTextElement, identityRevealed: boolean): void {
@@ -1016,7 +1007,7 @@ export class Cloud {
         }
     }
 
-    updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean, trust: number): void {
+    updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean, hovered: boolean): void {
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#1a1a1a' : '#ffffff';
         const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
@@ -1029,7 +1020,7 @@ export class Cloud {
             textElement.style.stroke = '';
             textElement.style.strokeWidth = '';
         } else {
-            pathElement.style.fill = this.getFillColor(trust);
+            pathElement.style.fill = this.getFillColor(hovered);
             pathElement.style.stroke = '#000000';
             pathElement.style.strokeOpacity = '1';
             pathElement.style.strokeLinejoin = 'round';
@@ -1037,7 +1028,7 @@ export class Cloud {
             textElement.style.strokeWidth = '3';
             textElement.style.strokeLinejoin = 'round';
             textElement.style.fill = textColor;
-            textElement.style.fontWeight = this.getTextWeight(trust);
+            textElement.style.fontWeight = 'normal';
             textElement.style.paintOrder = 'stroke fill';
         }
     }
@@ -1088,15 +1079,14 @@ export class Cloud {
         return this.groupElement;
     }
 
-    updateSVGElements(debug: boolean, state?: PartState, selected?: boolean): void {
+    updateSVGElements(debug: boolean, state?: PartState, selected?: boolean, hovered?: boolean): void {
         if (!this.groupElement || !this.pathElement || !this.textElement) return;
 
-        const trust = state?.trust ?? 0.5;
         const identityRevealed = state?.biography.identityRevealed ?? false;
 
         const outlinePath = this.generateOutlinePath();
         this.pathElement.setAttribute('d', outlinePath);
-        this.updateStyles(this.pathElement, this.textElement, debug, trust);
+        this.updateStyles(this.pathElement, this.textElement, debug, hovered ?? false);
         this.renderText(this.textElement, identityRevealed);
 
         if (selected) {
