@@ -1,3 +1,5 @@
+import { PerlinNoise } from './perlinNoise.js';
+
 const DOT_COUNT = 400;
 const DOT_GROUPS = 10;
 const FIELD_SIZE = 400;
@@ -25,7 +27,7 @@ export class StarFillField {
     private dots: Dot[] = [];
     private noiseTime: number = 0;
     private currentDotGroup: number = 0;
-    private permutation: number[] = [];
+    private perlinNoise: PerlinNoise;
     private fillHue: number;
     private fillSaturation: number;
     private fillLightness: number;
@@ -36,6 +38,7 @@ export class StarFillField {
         this.fillHue = fillHue;
         this.fillSaturation = fillSaturation;
         this.fillLightness = fillLightness;
+        this.perlinNoise = new PerlinNoise();
 
         this.canvas = document.createElement('canvas');
         this.canvas.width = FIELD_SIZE;
@@ -104,55 +107,6 @@ export class StarFillField {
         this.blobUrlDirty = true;
     }
 
-    private initPerlin(): void {
-        const p = [];
-        for (let i = 0; i < 256; i++) p[i] = i;
-        for (let i = 255; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [p[i], p[j]] = [p[j], p[i]];
-        }
-        this.permutation = [...p, ...p];
-    }
-
-    private fade(t: number): number {
-        return t * t * t * (t * (t * 6 - 15) + 10);
-    }
-
-    private lerp(a: number, b: number, t: number): number {
-        return a + t * (b - a);
-    }
-
-    private grad(hash: number, x: number, y: number): number {
-        const h = hash & 3;
-        const u = h < 2 ? x : y;
-        const v = h < 2 ? y : x;
-        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-    }
-
-    private perlin(x: number, y: number): number {
-        if (this.permutation.length === 0) this.initPerlin();
-        const p = this.permutation;
-
-        const xi = Math.floor(x) & 255;
-        const yi = Math.floor(y) & 255;
-        const xf = x - Math.floor(x);
-        const yf = y - Math.floor(y);
-
-        const u = this.fade(xf);
-        const v = this.fade(yf);
-
-        const aa = p[p[xi] + yi];
-        const ab = p[p[xi] + yi + 1];
-        const ba = p[p[xi + 1] + yi];
-        const bb = p[p[xi + 1] + yi + 1];
-
-        return this.lerp(
-            this.lerp(this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf), u),
-            this.lerp(this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1), u),
-            v
-        );
-    }
-
     private noise(x: number, y: number, t: number): number {
         return Math.sin(x * 1.0 + t) * Math.cos(y * 1.3) +
             Math.sin(x * 2.1 - t * 0.7) * Math.cos(y * 1.9 + t * 0.3) * 0.5 +
@@ -194,7 +148,7 @@ export class StarFillField {
                 this.noiseTime
             );
 
-            const speedNoise = this.perlin(dot.noiseOffset, this.noiseTime * SPEED_NOISE_RATE);
+            const speedNoise = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * SPEED_NOISE_RATE);
             const speed = 1 + speedNoise * 5
 
             dot.x += vx * speed;

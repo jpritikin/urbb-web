@@ -48,6 +48,10 @@ export function lerp(start: number, end: number, t: number): number {
     return start + (end - start) * t;
 }
 
+export function getAngleStep(armCount: number): number {
+    return (2 * Math.PI) / armCount;
+}
+
 export function getInnerRadiusRatio(armCount: number): number {
     if (armCount <= 4) {
         return .2;
@@ -100,15 +104,6 @@ export function getArmPoints(
     };
 }
 
-function toFlatResult(arm: ArmPoints) {
-    return {
-        tipX: arm.t.x, tipY: arm.t.y,
-        base1X: arm.b1.x, base1Y: arm.b1.y,
-        base2X: arm.b2.x, base2Y: arm.b2.y,
-    };
-}
-
-// Modular index helper
 export function mod(n: number, m: number): number {
     return ((n % m) + m) % m;
 }
@@ -419,9 +414,8 @@ function computFinalPositionForAdding(
     addingArmCount: number,
     rotation: number
 ): FinalPositionResult {
-    // New arm goes to the target star position
     const targetArmCount = addingArmCount + 1;
-    const targetAngleStep = (2 * Math.PI) / targetArmCount;
+    const targetAngleStep = getAngleStep(targetArmCount);
     const finalArmIndex = addingDirection === 1 ? addingSourceIndex + 1 : addingSourceIndex;
     return {
         tipAngle: rotation - Math.PI / 2 + finalArmIndex * targetAngleStep,
@@ -434,8 +428,7 @@ function computeFinalPositionForRemoving(
     armCount: number,
     rotation: number
 ): FinalPositionResult {
-    // For removing: the "extended" position is the arm's original position
-    const angleStep = (2 * Math.PI) / armCount;
+    const angleStep = getAngleStep(armCount);
     return {
         tipAngle: rotation - Math.PI / 2 + sourceArmIndex * angleStep,
         halfStep: angleStep / 2,
@@ -447,7 +440,7 @@ export function createSingleTransitionGeometry(params: SingleTransitionParams): 
 
     const { addingArmCount, addingDirection, addingSourceIndex } = toAddingCoordinates(type, sourceArmIndex, armCount, direction);
 
-    const angleStep = (2 * Math.PI) / addingArmCount;
+    const angleStep = getAngleStep(addingArmCount);
     const halfStep = angleStep / 2;
 
     // Adjacent is always the source arm for adding (we unfold FROM it)
@@ -546,10 +539,10 @@ export function createFirstTransitionGeometry(
         firstType, firstSourceIndex, firstStartArmCount, firstDirection
     );
 
-    const angleStep = (2 * Math.PI) / addingArmCount;
+    const angleStep = getAngleStep(addingArmCount);
     const halfStep = angleStep / 2;
     const targetArmCount = addingArmCount + 1;
-    const targetAngleStep = (2 * Math.PI) / targetArmCount;
+    const targetAngleStep = getAngleStep(targetArmCount);
     const targetHalfStep = targetAngleStep / 2;
 
     // Adjacent is always the source arm for adding (we unfold FROM it)
@@ -705,7 +698,7 @@ export function createSecondTransitionGeometry(
 
         // Fallback to intermediate positions
         const addingArmCount = secondType === 'adding' ? intermediateCount : intermediateCount - 1;
-        const angleStep = (2 * Math.PI) / addingArmCount;
+        const angleStep = getAngleStep(addingArmCount);
         const halfStep = angleStep / 2;
         const adjTipAngle = rotation - Math.PI / 2 + addingSourceIndex * angleStep;
         return { tipAngle: adjTipAngle, halfStep };
@@ -744,50 +737,6 @@ export function createSecondTransitionGeometry(
             return finalTipAngle + finalHalfStep;
         },
     };
-}
-
-// ============== Normalized Index System ==============
-//
-// For each transition, we use a "local" coordinate system where:
-// - Local index 0: The source arm (being removed, or unfolding from)
-// - Local index 1: The adjacent arm in the transition direction (target for Phase 1)
-// - Local indices 2, 3, ...: Other arms going in the transition direction
-//
-// This makes the transition logic direction-agnostic:
-// - Pivot base is always between local 0 and local 1 (the "forward" base)
-// - Swinging base is always between local 0 and local (N-1) (the "backward" base)
-// - Phase 1 always rotates toward local index 1
-// - Redistribution: arms with local index > 1 shift toward local index 1
-
-/**
- * Convert global arm index to local index relative to source arm.
- * Local 0 = source, Local 1 = adjacent in transition direction, etc.
- */
-function toLocalIndex(globalIndex: number, sourceIndex: number, armCount: number, direction: TransitionDirection): number {
-    const offset = mod(globalIndex - sourceIndex, armCount);
-    // For CW (dir=1): offset is already correct (0, 1, 2, ... going CW)
-    // For CCW (dir=-1): we need to reverse (0, N-1, N-2, ... going CCW becomes 0, 1, 2, ...)
-    return direction === 1 ? offset : (offset === 0 ? 0 : armCount - offset);
-}
-
-/**
- * Convert local index back to global arm index.
- */
-function toGlobalIndex(localIndex: number, sourceIndex: number, armCount: number, direction: TransitionDirection): number {
-    // Inverse of toLocalIndex
-    // For CW: global = source + local
-    // For CCW: global = source - local (mod armCount)
-    const offset = direction === 1 ? localIndex : mod(-localIndex, armCount);
-    return mod(sourceIndex + offset, armCount);
-}
-
-/**
- * Get the arm angle for a given local index.
- * Local index 0 is at sourceAngle, local index 1 is one step in the transition direction, etc.
- */
-function getLocalArmAngle(localIndex: number, sourceAngle: number, angleStep: number, direction: TransitionDirection): number {
-    // Positive direction always means "toward local index 1"
-    return sourceAngle + localIndex * direction * angleStep;
 }
 
 // ============== Overlapping Transition Support ==============
@@ -859,7 +808,7 @@ export function computeArmRedistribution(
     //   Phase 2: Source arm collapses onto adjacent, others redistribute angularly
 
     const targetArmCount = transitionType === 'adding' ? currentArmCount + 1 : currentArmCount - 1;
-    const targetAngleStep = (2 * Math.PI) / targetArmCount;
+    const targetAngleStep = getAngleStep(targetArmCount);
     const targetHalfStep = targetAngleStep / 2;
 
     // Phase timing differs for adding vs removing:
@@ -947,10 +896,10 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
     // Skip second source arm only for removing
     if (secondType === 'removing' && i === secondSourceOriginal) return null;
 
-    const baseAngleStep = (2 * Math.PI) / startArmCount;
+    const baseAngleStep = getAngleStep(startArmCount);
     const intermediateCount = firstType === 'adding' ? startArmCount + 1 : startArmCount - 1;
     const finalCount = secondType === 'adding' ? intermediateCount + 1 : intermediateCount - 1;
-    const finalAngleStep = (2 * Math.PI) / finalCount;
+    const finalAngleStep = getAngleStep(finalCount);
     const finalHalfStep = finalAngleStep / 2;
 
     const origTipAngle = rotation - Math.PI / 2 + i * baseAngleStep;
@@ -1000,7 +949,7 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
     } else {
         if (i > firstSourceIndex) intermediateIndex--;
     }
-    const intermediateAngleStep = (2 * Math.PI) / intermediateCount;
+    const intermediateAngleStep = getAngleStep(intermediateCount);
     const intermediateTipAngle = rotation - Math.PI / 2 + intermediateIndex * intermediateAngleStep;
     const intermediateHalfStep = intermediateAngleStep / 2;
 
@@ -1131,7 +1080,7 @@ function computeStaticArmSpec(
     armCount: number,
     rotation: number
 ): ArmRenderSpec {
-    const baseAngleStep = (2 * Math.PI) / armCount;
+    const baseAngleStep = getAngleStep(armCount);
     let tipAngle = rotation - Math.PI / 2 + armIndex * baseAngleStep;
     let halfStep = baseAngleStep / 2;
 
@@ -1303,7 +1252,7 @@ export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
 
     if (!bundle) {
         innerRadius = getInnerRadiusForArmCount(armCount);
-        const baseAngleStep = (2 * Math.PI) / armCount;
+        const baseAngleStep = getAngleStep(armCount);
         for (let i = 0; i < armCount; i++) {
             staticArms.set(i, {
                 tipAngle: rotation - Math.PI / 2 + i * baseAngleStep,

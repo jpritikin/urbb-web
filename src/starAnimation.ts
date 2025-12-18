@@ -6,22 +6,18 @@ import {
     type PlannedTransitionBundle,
 } from './starAnimationCore.js';
 import { StarFillField } from './starFillField.js';
+import { getCSSColor, type HSLColor } from './colorUtils.js';
+import { PulseAnimation } from './pulseAnimation.js';
+import { TransitionElements } from './transitionElements.js';
+import { CoordinateConverter } from './coordinateConverter.js';
 
 export { STAR_OUTER_RADIUS };
 
 type RotationState = 'stationary' | 'rotating_cw' | 'rotating_ccw';
-type PulseTarget = 'inner' | 'outer' | 'tipAngle' | 'none';
-type PulseDirection = 'expand' | 'contract';
 
 const BASE_ROTATION_SPEED = 0.15;
 const STATE_CHANGE_MIN = 2.0;
 const STATE_CHANGE_MAX = 6.0;
-const PULSE_MIN_INTERVAL = 3.0;
-const PULSE_MAX_INTERVAL = 8.0;
-const PULSE_MAGNITUDE = 0.35;
-const PULSE_TIP_ANGLE_MAGNITUDE = 0.9;
-const PULSE_ATTACK_DURATION = 0.15;
-const PULSE_DECAY_DURATION = 0.6;
 
 const ARM_CHANGE_MIN_INTERVAL = 1.0;
 const ARM_CHANGE_MAX_INTERVAL = 5.0;
@@ -29,53 +25,12 @@ const ARM_TRANSITION_DURATION = 8;
 
 const VALID_ARM_COUNTS = new Set([3, 5, 6, 7]);
 
-function hexToHSL(hex: string): { h: number; s: number; l: number } {
-    hex = hex.replace('#', '');
-    const r = parseInt(hex.slice(0, 2), 16) / 255;
-    const g = parseInt(hex.slice(2, 4), 16) / 255;
-    const b = parseInt(hex.slice(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const l = (max + min) / 2;
-
-    if (max === min) return { h: 0, s: 0, l: l * 100 };
-
-    const d = max - min;
-    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-    let h = 0;
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) h = ((b - r) / d + 2) / 6;
-    else h = ((r - g) / d + 4) / 6;
-
-    return { h: h * 360, s: s * 100, l: l * 100 };
+interface TransitionScheduling {
+    queuedSecondStart: number | null;
+    pendingSecondSourceIndex: number | null;
 }
 
-function getFillColor(): { h: number; s: number; l: number } {
-    const gold = getComputedStyle(document.documentElement).getPropertyValue('--daime-gold').trim();
-    if (gold && gold.startsWith('#')) return hexToHSL(gold);
-    return { h: 50, s: 100, l: 50 };
-}
-
-interface SingleTransition {
-    type: 'adding' | 'removing';
-    direction: TransitionDirection;
-    progress: number;
-    sourceArmIndex: number;
-    startArmCount: number;
-}
-
-interface TransitionBundle {
-    first: SingleTransition;
-    second: SingleTransition | null;
-    overlapStart: number | null;  // first.progress when second started
-    queuedSecondStart: number | null;  // first.progress when second should start (0.25-0.75)
-    pendingSecondSourceIndex: number | null;  // for test method: override second source
-    firstCompleted: boolean;  // true once first's arm count change has been applied
-}
-
-function createBundle(first: SingleTransition, isDouble: boolean, armCount: number): TransitionBundle {
+function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean, armCount: number): PlannedTransitionBundle & TransitionScheduling {
     let pendingSecondSourceIndex: number | null = null;
     if (isDouble) {
         const intermediateCount = first.type === 'adding' ? armCount + 1 : armCount - 1;
@@ -86,14 +41,13 @@ function createBundle(first: SingleTransition, isDouble: boolean, armCount: numb
         first,
         second: null,
         overlapStart: null,
+        firstCompleted: false,
         queuedSecondStart: isDouble ? 0.25 + Math.random() * 0.5 : null,
         pendingSecondSourceIndex,
-        firstCompleted: false,
     };
 }
 
-
-function isBundleComplete(bundle: TransitionBundle): 'none' | 'first' | 'both' {
+function isBundleComplete(bundle: PlannedTransitionBundle): 'none' | 'first' | 'both' {
     const firstDone = bundle.first.progress >= 1;
     const secondDone = !bundle.second || bundle.second.progress >= 1;
 
@@ -110,8 +64,6 @@ export class AnimatedStar {
     private wrapperGroup: SVGGElement | null = null;
     private innerCircle: SVGCircleElement | null = null;
     private armElements: SVGPathElement[] = [];
-    private transitionElement: SVGPolygonElement | null = null;
-    private secondTransitionElement: SVGPolygonElement | null = null;
     private outlinePath: SVGPathElement | null = null;
     private centerX: number;
     private centerY: number;
@@ -122,23 +74,14 @@ export class AnimatedStar {
     private stateTimer: number = 0;
     private nextStateChange: number;
 
-    private pulseTarget: PulseTarget = 'none';
-    private pulseDirection: PulseDirection = 'expand';
-    private pulsePhase: 'attack' | 'decay' | 'idle' = 'idle';
-    private pulseProgress: number = 0;
-    private pulseTimer: number = 0;
-    private nextPulse: number;
-
-    private innerRadiusOffset: number = 0;
-    private outerRadiusOffset: number = 0;
-    private tipAngleOffset: number = 0;
+    private pulse: PulseAnimation;
 
     private radiusScale: number = 1.0;
     private targetRadiusScale: number = 1.0;
 
     private armChangeTimer: number = 0;
     private nextArmChange: number;
-    private transitionBundle: TransitionBundle | null = null;
+    private transitionBundle: (PlannedTransitionBundle & TransitionScheduling) | null = null;
 
     private fillField: StarFillField | null = null;
     private fillHue: number;
@@ -146,17 +89,19 @@ export class AnimatedStar {
     private fillLightness: number;
     private clipPathGroup: SVGClipPathElement | null = null;
     private foreignObject: SVGForeignObjectElement | null = null;
+    private transitionElements: TransitionElements | null = null;
+    private coordinateConverter: CoordinateConverter | null = null;
 
     constructor(centerX: number, centerY: number) {
-        const baseColor = getFillColor();
+        const baseColor = getCSSColor('--daime-gold', { h: 50, s: 100, l: 50 });
         this.fillHue = baseColor.h;
         this.fillSaturation = 92;
         this.fillLightness = 69;
         this.centerX = centerX;
         this.centerY = centerY;
         this.nextStateChange = this.randomInterval(STATE_CHANGE_MIN, STATE_CHANGE_MAX);
-        this.nextPulse = this.randomInterval(PULSE_MIN_INTERVAL, PULSE_MAX_INTERVAL);
         this.nextArmChange = this.randomInterval(ARM_CHANGE_MIN_INTERVAL, ARM_CHANGE_MAX_INTERVAL);
+        this.pulse = new PulseAnimation();
     }
 
     private randomInterval(min: number, max: number): number {
@@ -169,6 +114,7 @@ export class AnimatedStar {
 
         this.fillField = new StarFillField(this.fillHue, this.fillSaturation, this.fillLightness);
         const fieldSize = this.fillField.getSize();
+        this.coordinateConverter = new CoordinateConverter(fieldSize, this.centerX, this.centerY);
 
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
@@ -177,6 +123,7 @@ export class AnimatedStar {
         this.innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         clipPath.appendChild(this.innerCircle);
         this.clipPathGroup = clipPath;
+        this.transitionElements = new TransitionElements(clipPath);
         defs.appendChild(clipPath);
         this.wrapperGroup.appendChild(defs);
 
@@ -240,7 +187,7 @@ export class AnimatedStar {
         }
     }
 
-    getFillColor(): { h: number; s: number; l: number } {
+    getFillColor(): HSLColor {
         return { h: this.fillHue, s: this.fillSaturation, l: this.fillLightness };
     }
 
@@ -255,7 +202,8 @@ export class AnimatedStar {
     animate(deltaTime: number): void {
         this.updateRotationState(deltaTime);
         this.updateRotation(deltaTime);
-        this.updatePulse(deltaTime);
+        this.pulse.setArmCount(this.armCount);
+        this.pulse.update(deltaTime, this.transitionBundle !== null);
         this.updateArmTransition(deltaTime);
         this.updateRadiusScale(deltaTime);
         this.updateFillField(deltaTime);
@@ -305,71 +253,6 @@ export class AnimatedStar {
         this.rotation = this.rotation % (2 * Math.PI);
     }
 
-    private updatePulse(deltaTime: number): void {
-        if (this.transitionBundle) return;
-
-        if (this.pulsePhase === 'idle') {
-            this.pulseTimer += deltaTime;
-            if (this.pulseTimer >= this.nextPulse) {
-                this.pulseTimer = 0;
-                this.nextPulse = this.randomInterval(PULSE_MIN_INTERVAL, PULSE_MAX_INTERVAL);
-                this.startPulse();
-            }
-        } else if (this.pulsePhase === 'attack') {
-            this.pulseProgress += deltaTime / PULSE_ATTACK_DURATION;
-            if (this.pulseProgress >= 1) {
-                this.pulseProgress = 1;
-                this.pulsePhase = 'decay';
-            }
-            this.applyPulseOffset(this.easeOut(this.pulseProgress));
-        } else if (this.pulsePhase === 'decay') {
-            this.pulseProgress -= deltaTime / PULSE_DECAY_DURATION;
-            if (this.pulseProgress <= 0) {
-                this.pulseProgress = 0;
-                this.pulsePhase = 'idle';
-                this.pulseTarget = 'none';
-                this.innerRadiusOffset = 0;
-                this.outerRadiusOffset = 0;
-                this.tipAngleOffset = 0;
-            } else {
-                this.applyPulseOffset(this.easeOut(this.pulseProgress));
-            }
-        }
-    }
-
-    private startPulse(): void {
-        this.pulsePhase = 'attack';
-        this.pulseProgress = 0;
-        if (this.armCount === 3 && Math.random() < 0.33) {
-            this.pulseTarget = 'tipAngle';
-        } else {
-            this.pulseTarget = Math.random() < 0.5 ? 'inner' : 'outer';
-        }
-        this.pulseDirection = Math.random() < 0.5 ? 'expand' : 'contract';
-    }
-
-    private applyPulseOffset(t: number): void {
-        const sign = this.pulseDirection === 'expand' ? 1 : -1;
-        if (this.pulseTarget === 'tipAngle') {
-            this.tipAngleOffset = t * PULSE_TIP_ANGLE_MAGNITUDE * sign;
-            this.innerRadiusOffset = 0;
-            this.outerRadiusOffset = 0;
-        } else {
-            const offset = t * PULSE_MAGNITUDE * sign;
-            this.tipAngleOffset = 0;
-            if (this.pulseTarget === 'inner') {
-                this.innerRadiusOffset = offset;
-                this.outerRadiusOffset = 0;
-            } else if (this.pulseTarget === 'outer') {
-                this.outerRadiusOffset = offset;
-                this.innerRadiusOffset = 0;
-            }
-        }
-    }
-
-    private easeOut(t: number): number {
-        return 1 - Math.pow(1 - t, 2);
-    }
 
     private updateArmTransition(deltaTime: number): void {
         const bundle = this.transitionBundle;
@@ -398,7 +281,7 @@ export class AnimatedStar {
         }
 
         // Start new transition when none are active and pulse is idle
-        if (!this.transitionBundle && this.pulsePhase === 'idle') {
+        if (!this.transitionBundle && this.pulse.isIdle()) {
             this.armChangeTimer += deltaTime;
             if (this.armChangeTimer >= this.nextArmChange) {
                 this.armChangeTimer = 0;
@@ -433,7 +316,7 @@ export class AnimatedStar {
         bundle.queuedSecondStart = null;
         bundle.pendingSecondSourceIndex = null;
 
-        this.createSecondTransitionElement();
+        this.transitionElements?.createSecond();
     }
 
     private selectDisjointSourceArm(firstSourceIndex: number, armCount: number): number {
@@ -488,21 +371,7 @@ export class AnimatedStar {
             console.log(`Star transition: ${adding ? 'adding' : 'removing'} arm, ${this.armCount}→${targetCount} arms, sourceIdx=${sourceArmIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}; replay: ${replayCmd}`);
         }
 
-        this.createTransitionElement();
-    }
-
-    private createTransitionElement(): void {
-        if (!this.clipPathGroup || !this.transitionBundle) return;
-
-        this.transitionElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        this.clipPathGroup.appendChild(this.transitionElement);
-    }
-
-    private createSecondTransitionElement(): void {
-        if (!this.clipPathGroup || !this.transitionBundle?.second) return;
-
-        this.secondTransitionElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        this.clipPathGroup.appendChild(this.secondTransitionElement);
+        this.transitionElements?.createFirst();
     }
 
     private completeFirstTransition(): void {
@@ -515,8 +384,7 @@ export class AnimatedStar {
             this.armCount--;
         }
 
-        this.transitionElement?.remove();
-        this.transitionElement = null;
+        this.transitionElements?.removeFirst();
         bundle.firstCompleted = true;
 
         this.createArmElements();
@@ -542,29 +410,12 @@ export class AnimatedStar {
             } else {
                 this.armCount--;
             }
-            this.secondTransitionElement?.remove();
-            this.secondTransitionElement = null;
         }
 
-        this.transitionElement?.remove();
-        this.transitionElement = null;
+        this.transitionElements?.removeAll();
         this.transitionBundle = null;
 
         this.createArmElements();
-    }
-
-    private getFieldSize(): number {
-        return this.fillField?.getSize() ?? 200;
-    }
-
-    private toNormalized(absX: number, absY: number): { x: number; y: number } {
-        const fieldSize = this.getFieldSize();
-        const originX = this.centerX - fieldSize / 2;
-        const originY = this.centerY - fieldSize / 2;
-        return {
-            x: (absX - originX) / fieldSize,
-            y: (absY - originY) / fieldSize,
-        };
     }
 
     private toBundleState(): PlannedTransitionBundle | null {
@@ -573,12 +424,7 @@ export class AnimatedStar {
 
         // Case 1: Second transition is already active
         if (bundle.second) {
-            return {
-                first: bundle.first,
-                second: bundle.second,
-                overlapStart: bundle.overlapStart,
-                firstCompleted: bundle.firstCompleted,
-            };
+            return bundle;
         }
 
         // Case 2: Second transition is planned but not yet started
@@ -587,29 +433,22 @@ export class AnimatedStar {
                 ? bundle.first.startArmCount + 1
                 : bundle.first.startArmCount - 1;
 
-            const second = {
-                type: bundle.first.type,
-                direction: bundle.first.direction,
-                progress: 0,
-                sourceArmIndex: bundle.pendingSecondSourceIndex,
-                startArmCount: intermediateCount,
-            };
-
             return {
                 first: bundle.first,
-                second,
+                second: {
+                    type: bundle.first.type,
+                    direction: bundle.first.direction,
+                    progress: 0,
+                    sourceArmIndex: bundle.pendingSecondSourceIndex,
+                    startArmCount: intermediateCount,
+                },
                 overlapStart: bundle.queuedSecondStart,
                 firstCompleted: bundle.firstCompleted,
             };
         }
 
         // Case 3: Single transition only
-        return {
-            first: bundle.first,
-            second: null,
-            overlapStart: null,
-            firstCompleted: bundle.firstCompleted,
-        };
+        return bundle;
     }
 
     private updateArms(): void {
@@ -628,11 +467,15 @@ export class AnimatedStar {
             outerRadius: STAR_OUTER_RADIUS,
         });
 
-        const innerRadius = spec.innerRadius * (1 + this.innerRadiusOffset) * this.radiusScale;
-        const baseOuterRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset) * this.radiusScale;
+        const innerRadiusOffset = this.transitionBundle ? 0 : this.pulse.innerRadiusOffset;
+        const outerRadiusOffset = this.transitionBundle ? 0 : this.pulse.outerRadiusOffset;
+        const tipAngleOffset = this.transitionBundle ? 0 : this.pulse.tipAngleOffset;
 
-        if (this.innerCircle && fieldSize > 0) {
-            const c = this.toNormalized(this.centerX, this.centerY);
+        const innerRadius = spec.innerRadius * (1 + innerRadiusOffset) * this.radiusScale;
+        const baseOuterRadius = STAR_OUTER_RADIUS * (1 + outerRadiusOffset) * this.radiusScale;
+
+        if (this.innerCircle && this.coordinateConverter && fieldSize > 0) {
+            const c = this.coordinateConverter.toNormalized(this.centerX, this.centerY);
             const r = innerRadius / fieldSize;
             if (isFinite(c.x) && isFinite(c.y) && isFinite(r)) {
                 this.innerCircle.setAttribute('cx', String(c.x));
@@ -652,34 +495,36 @@ export class AnimatedStar {
             }
 
             let outerRadius = baseOuterRadius;
-            if (this.armCount === 6 && this.pulseTarget === 'outer') {
+            if (!this.transitionBundle && this.armCount === 6 && this.pulse.getTarget() === 'outer') {
                 const altSign = i % 2 === 0 ? 1 : -1;
-                outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset * altSign) * this.radiusScale;
+                outerRadius = STAR_OUTER_RADIUS * (1 + outerRadiusOffset * altSign) * this.radiusScale;
             }
 
             const baseCenterAngle = armSpec.tipAngle;
             let tipAngle = baseCenterAngle;
-            if (this.tipAngleOffset !== 0) {
-                tipAngle += this.tipAngleOffset;
+            if (tipAngleOffset !== 0) {
+                tipAngle += tipAngleOffset;
             }
 
             const base1Angle = baseCenterAngle - armSpec.halfStep;
             const base2Angle = baseCenterAngle + armSpec.halfStep;
 
+            if (!this.coordinateConverter) continue;
+
             const tipAbs = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
             const base1Abs = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
             const base2Abs = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
 
-            const tip = this.toNormalized(tipAbs.x, tipAbs.y);
-            const base1 = this.toNormalized(base1Abs.x, base1Abs.y);
-            const base2 = this.toNormalized(base2Abs.x, base2Abs.y);
+            const tip = this.coordinateConverter.toNormalized(tipAbs.x, tipAbs.y);
+            const base1 = this.coordinateConverter.toNormalized(base1Abs.x, base1Abs.y);
+            const base2 = this.coordinateConverter.toNormalized(base2Abs.x, base2Abs.y);
 
-            if (this.tipAngleOffset !== 0) {
+            if (tipAngleOffset !== 0) {
                 const straightTipAbs = {
                     x: this.centerX + outerRadius * Math.cos(baseCenterAngle),
                     y: this.centerY + outerRadius * Math.sin(baseCenterAngle)
                 };
-                const straightTip = this.toNormalized(straightTipAbs.x, straightTipAbs.y);
+                const straightTip = this.coordinateConverter.toNormalized(straightTipAbs.x, straightTipAbs.y);
                 const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
                 const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
                 arm.setAttribute('d',
@@ -700,10 +545,10 @@ export class AnimatedStar {
     }
 
     private updateTransitionElements(spec: ReturnType<typeof getRenderSpec>): void {
-        if (!this.transitionBundle) return;
+        if (!this.transitionBundle || !this.coordinateConverter) return;
 
-        const outerScale = (1 + this.outerRadiusOffset) * this.radiusScale;
-        const innerScale = (1 + this.innerRadiusOffset) * this.radiusScale;
+        const outerScale = this.radiusScale;
+        const innerScale = this.radiusScale;
 
         const scaleTip = (p: { x: number; y: number }) => ({
             x: this.centerX + (p.x - this.centerX) * outerScale,
@@ -714,22 +559,24 @@ export class AnimatedStar {
             y: this.centerY + (p.y - this.centerY) * innerScale,
         });
 
-        if (this.transitionElement && spec.firstTransitionArm) {
+        const firstElement = this.transitionElements?.getFirst();
+        if (firstElement && spec.firstTransitionArm) {
             const { tip, b1, b2 } = spec.firstTransitionArm;
-            const t = this.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
-            const b1n = this.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
-            const b2n = this.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
-            this.transitionElement.setAttribute('points',
+            const t = this.coordinateConverter.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
+            const b1n = this.coordinateConverter.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
+            const b2n = this.coordinateConverter.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
+            firstElement.setAttribute('points',
                 `${t.x.toFixed(4)},${t.y.toFixed(4)} ${b1n.x.toFixed(4)},${b1n.y.toFixed(4)} ${b2n.x.toFixed(4)},${b2n.y.toFixed(4)}`
             );
         }
 
-        if (this.secondTransitionElement && spec.secondTransitionArm) {
+        const secondElement = this.transitionElements?.getSecond();
+        if (secondElement && spec.secondTransitionArm) {
             const { tip, b1, b2 } = spec.secondTransitionArm;
-            const t = this.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
-            const b1n = this.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
-            const b2n = this.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
-            this.secondTransitionElement.setAttribute('points',
+            const t = this.coordinateConverter.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
+            const b1n = this.coordinateConverter.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
+            const b2n = this.coordinateConverter.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
+            secondElement.setAttribute('points',
                 `${t.x.toFixed(4)},${t.y.toFixed(4)} ${b1n.x.toFixed(4)},${b1n.y.toFixed(4)} ${b2n.x.toFixed(4)},${b2n.y.toFixed(4)}`
             );
         }
@@ -738,6 +585,7 @@ export class AnimatedStar {
     setPosition(centerX: number, centerY: number): void {
         this.centerX = centerX;
         this.centerY = centerY;
+        this.coordinateConverter?.updateCenter(centerX, centerY);
         if (this.foreignObject && this.fillField) {
             const fieldSize = this.fillField.getSize();
             this.foreignObject.setAttribute('x', String(centerX - fieldSize / 2));
@@ -746,10 +594,7 @@ export class AnimatedStar {
     }
 
     private clearTransitionBundle(): void {
-        this.transitionElement?.remove();
-        this.transitionElement = null;
-        this.secondTransitionElement?.remove();
-        this.secondTransitionElement = null;
+        this.transitionElements?.removeAll();
         this.transitionBundle = null;
     }
 
@@ -776,7 +621,7 @@ export class AnimatedStar {
 
         console.log(`Star testTransition: ${type}ing arm, ${armCount}→${type === 'adding' ? armCount + 1 : armCount - 1} arms, sourceIdx=${sourceArmIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}`);
 
-        this.createTransitionElement();
+        this.transitionElements?.createFirst();
     }
 
     testOverlappingTransition(
@@ -823,7 +668,7 @@ export class AnimatedStar {
             pendingSecondSourceIndex: secondSourceIndex,
             firstCompleted: false,
         };
-        this.createTransitionElement();
+        this.transitionElements?.createFirst();
 
         console.log(`Star testOverlappingTransition: ${type}ing arm, ${startArmCount}→${intermediateCount}→${finalCount} arms`);
         console.log(`  First: sourceIdx=${firstSourceIndex}, Second: sourceIdx=${secondSourceIndex} (at ${(overlapProgress * 100).toFixed(0)}% overlap)`);
@@ -854,7 +699,7 @@ export class AnimatedStar {
             startArmCount,
         }, false, startArmCount);
 
-        this.createTransitionElement();
+        this.transitionElements?.createFirst();
 
         console.log(`Star testSingleTransition: ${type}ing arm, ${startArmCount}→${targetCount} arms, sourceIdx=${sourceIndex}, dir=${direction > 0 ? 'CW' : 'CCW'}`);
     }
