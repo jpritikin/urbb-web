@@ -228,24 +228,6 @@ function runRenderSpecTests() {
             `innerRadius=${spec.innerRadius}`);
     }
 
-    // Test 10: Expansion factor peaks at mid-transition
-    {
-        const bundleStart = createSingleTransition('adding', 5, 0, 0);
-        const bundleMid = createSingleTransition('adding', 5, 0, 0.5);
-        const bundleEnd = createSingleTransition('adding', 5, 0, 1);
-
-        const specStart = getRenderSpec(createParams(bundleStart, 5));
-        const specMid = getRenderSpec(createParams(bundleMid, 5));
-        const specEnd = getRenderSpec(createParams(bundleEnd, 5));
-
-        test('Expansion factor: start < mid',
-            specStart.expansionFactor < specMid.expansionFactor,
-            `start=${specStart.expansionFactor.toFixed(3)}, mid=${specMid.expansionFactor.toFixed(3)}`);
-
-        test('Expansion factor: end < mid',
-            specEnd.expansionFactor < specMid.expansionFactor,
-            `end=${specEnd.expansionFactor.toFixed(3)}, mid=${specMid.expansionFactor.toFixed(3)}`);
-    }
 
     // Test 11: Static arm positions are continuous across firstCompleted boundary
     // This is the bug: when firstCompleted changes from false to true, static arm

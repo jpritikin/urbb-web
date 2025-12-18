@@ -26,7 +26,6 @@ const PULSE_DECAY_DURATION = 0.6;
 const ARM_CHANGE_MIN_INTERVAL = 1.0;
 const ARM_CHANGE_MAX_INTERVAL = 5.0;
 const ARM_TRANSITION_DURATION = 8;
-const ARM_EXPANSION_FACTOR = 0.15;
 
 const VALID_ARM_COUNTS = new Set([3, 5, 6, 7]);
 
@@ -140,7 +139,6 @@ export class AnimatedStar {
     private armChangeTimer: number = 0;
     private nextArmChange: number;
     private transitionBundle: TransitionBundle | null = null;
-    private expansionFactor: number = 0;
 
     private fillField: StarFillField | null = null;
     private fillHue: number;
@@ -628,13 +626,10 @@ export class AnimatedStar {
             centerX: this.centerX,
             centerY: this.centerY,
             outerRadius: STAR_OUTER_RADIUS,
-            expansionMagnitude: ARM_EXPANSION_FACTOR,
         });
 
-        this.expansionFactor = spec.expansionFactor;
-
         const innerRadius = spec.innerRadius * (1 + this.innerRadiusOffset) * this.radiusScale;
-        const baseOuterRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset + spec.expansionFactor) * this.radiusScale;
+        const baseOuterRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset) * this.radiusScale;
 
         if (this.innerCircle && fieldSize > 0) {
             const c = this.toNormalized(this.centerX, this.centerY);
@@ -659,7 +654,7 @@ export class AnimatedStar {
             let outerRadius = baseOuterRadius;
             if (this.armCount === 6 && this.pulseTarget === 'outer') {
                 const altSign = i % 2 === 0 ? 1 : -1;
-                outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset * altSign + this.expansionFactor) * this.radiusScale;
+                outerRadius = STAR_OUTER_RADIUS * (1 + this.outerRadiusOffset * altSign) * this.radiusScale;
             }
 
             const baseCenterAngle = armSpec.tipAngle;
@@ -707,7 +702,7 @@ export class AnimatedStar {
     private updateTransitionElements(spec: ReturnType<typeof getRenderSpec>): void {
         if (!this.transitionBundle) return;
 
-        const outerScale = (1 + this.outerRadiusOffset + spec.expansionFactor) * this.radiusScale;
+        const outerScale = (1 + this.outerRadiusOffset) * this.radiusScale;
         const innerScale = (1 + this.innerRadiusOffset) * this.radiusScale;
 
         const scaleTip = (p: { x: number; y: number }) => ({
@@ -756,7 +751,6 @@ export class AnimatedStar {
         this.secondTransitionElement?.remove();
         this.secondTransitionElement = null;
         this.transitionBundle = null;
-        this.expansionFactor = 0;
     }
 
     testTransition(type: 'adding' | 'removing', armCount: number, sourceArmIndex: number, direction: TransitionDirection = 1): void {

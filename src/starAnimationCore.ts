@@ -825,29 +825,6 @@ export function computeOverlappingInnerRadius(state: OverlappingTransitionState)
     return lerp(startRatio, endRatio, combinedProgress) * STAR_OUTER_RADIUS;
 }
 
-export function computeAdditiveExpansionFactor(
-    firstProgress: number | null,
-    secondProgress: number | null,
-    expansionMagnitude: number
-): number {
-    let expansion = 0;
-
-    if (firstProgress !== null) {
-        const ep1 = firstProgress < 0.5
-            ? firstProgress * 2
-            : 2 - firstProgress * 2;
-        expansion += expansionMagnitude * ep1;
-    }
-
-    if (secondProgress !== null) {
-        const ep2 = secondProgress < 0.5
-            ? secondProgress * 2
-            : 2 - secondProgress * 2;
-        expansion += expansionMagnitude * ep2;
-    }
-
-    return expansion;
-}
 
 export interface ArmRedistributionResult {
     tipAngle: number;
@@ -1067,7 +1044,6 @@ export interface TransitionRenderSpec {
     firstTransitionArm: TransitionArmRenderSpec | null;
     secondTransitionArm: TransitionArmRenderSpec | null;
     innerRadius: number;
-    expansionFactor: number;
 }
 
 export interface SingleTransitionState {
@@ -1092,7 +1068,6 @@ export interface RenderSpecParams {
     centerX: number;
     centerY: number;
     outerRadius: number;
-    expansionMagnitude: number;
 }
 
 function computeHiddenIndices(
@@ -1136,23 +1111,6 @@ function computeHiddenIndices(
     }
 
     return hidden;
-}
-
-function computeExpansionFactor(bundle: PlannedTransitionBundle | null, magnitude: number): number {
-    if (!bundle) return 0;
-
-    let expansion = 0;
-    const p1 = bundle.first.progress;
-    const ep1 = p1 < 0.5 ? p1 * 2 : 2 - p1 * 2;
-    expansion += magnitude * ep1;
-
-    if (bundle.second) {
-        const p2 = bundle.second.progress;
-        const ep2 = p2 < 0.5 ? p2 * 2 : 2 - p2 * 2;
-        expansion += magnitude * ep2;
-    }
-
-    return expansion;
 }
 
 function computeBundleInnerRadius(bundle: PlannedTransitionBundle): number {
@@ -1336,17 +1294,15 @@ function computeSecondTransitionArm(
 }
 
 export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
-    const { bundle, armCount, rotation, centerX, centerY, outerRadius, expansionMagnitude } = params;
+    const { bundle, armCount, rotation, centerX, centerY, outerRadius } = params;
 
     const staticArms = new Map<number, ArmRenderSpec>();
     let innerRadius: number;
-    let expansionFactor: number;
     let firstTransitionArm: TransitionArmRenderSpec | null = null;
     let secondTransitionArm: TransitionArmRenderSpec | null = null;
 
     if (!bundle) {
         innerRadius = getInnerRadiusForArmCount(armCount);
-        expansionFactor = 0;
         const baseAngleStep = (2 * Math.PI) / armCount;
         for (let i = 0; i < armCount; i++) {
             staticArms.set(i, {
@@ -1356,7 +1312,6 @@ export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
         }
     } else {
         innerRadius = computeBundleInnerRadius(bundle);
-        expansionFactor = computeExpansionFactor(bundle, expansionMagnitude);
         const hidden = computeHiddenIndices(bundle, armCount);
 
         for (let i = 0; i < armCount; i++) {
@@ -1378,6 +1333,5 @@ export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
         firstTransitionArm,
         secondTransitionArm,
         innerRadius,
-        expansionFactor,
     };
 }
