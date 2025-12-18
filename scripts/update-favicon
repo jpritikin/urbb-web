@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Export favicon.svg to various bitmap formats using Inkscape
+
+inkscape static/favicon.svg --export-filename=static/favicon-16x16.png --export-width=16 --export-height=16
+inkscape static/favicon.svg --export-filename=static/favicon-32x32.png --export-width=32 --export-height=32
+inkscape static/favicon.svg --export-filename=static/favicon-48x48.png --export-width=48 --export-height=48
+inkscape static/favicon.svg --export-filename=static/apple-touch-icon.png --export-width=180 --export-height=180
+inkscape static/favicon.svg --export-filename=static/android-chrome-192x192.png --export-width=192 --export-height=192
+inkscape static/favicon.svg --export-filename=static/android-chrome-512x512.png --export-width=512 --export-height=512
+
+# Create favicon.ico from the 16x16, 32x32, and 48x48 PNGs
+convert static/favicon-16x16.png static/favicon-32x32.png static/favicon-48x48.png static/favicon.ico
+
+echo "Favicon bitmaps updated successfully"
