@@ -1,4 +1,4 @@
-type PulseTarget = 'inner' | 'outer' | 'tipAngle' | 'none';
+type PulseTarget = 'inner' | 'outer' | 'tipAngle' | 'outerAlternating' | 'none';
 type PulseDirection = 'expand' | 'contract';
 type PulsePhase = 'attack' | 'decay' | 'idle';
 
@@ -25,9 +25,11 @@ export class PulseAnimation {
     private timer: number = 0;
     private nextPulse: number;
     private armCount: number = 5;
+    private parity: number = 1;
 
     innerRadiusOffset: number = 0;
     outerRadiusOffset: number = 0;
+    outerAlternatingRadiusOffsets: number[] = [];
     tipAngleOffset: number = 0;
 
     constructor() {
@@ -63,6 +65,7 @@ export class PulseAnimation {
                 this.target = 'none';
                 this.innerRadiusOffset = 0;
                 this.outerRadiusOffset = 0;
+                this.outerAlternatingRadiusOffsets = [];
                 this.tipAngleOffset = 0;
             } else {
                 this.applyPulseOffset(easeOut(this.progress));
@@ -79,6 +82,9 @@ export class PulseAnimation {
         this.progress = 0;
         if (this.armCount === 3 && Math.random() < 0.33) {
             this.target = 'tipAngle';
+        } else if (this.armCount === 6 && Math.random() < 0.5) {
+            this.target = 'outerAlternating';
+            this.parity = Math.random() < 0.5 ? 1 : -1;
         } else {
             this.target = Math.random() < 0.5 ? 'inner' : 'outer';
         }
@@ -91,9 +97,21 @@ export class PulseAnimation {
             this.tipAngleOffset = t * PULSE_TIP_ANGLE_MAGNITUDE * sign;
             this.innerRadiusOffset = 0;
             this.outerRadiusOffset = 0;
+            this.outerAlternatingRadiusOffsets = [];
+        } else if (this.target === 'outerAlternating') {
+            const baseOffset = t * PULSE_MAGNITUDE * sign;
+            this.outerAlternatingRadiusOffsets = [];
+            for (let i = 0; i < this.armCount; i++) {
+                const altSign = i % 2 === 0 ? 1 : -1;
+                this.outerAlternatingRadiusOffsets[i] = this.parity * baseOffset * altSign;
+            }
+            this.tipAngleOffset = 0;
+            this.innerRadiusOffset = 0;
+            this.outerRadiusOffset = 0;
         } else {
             const offset = t * PULSE_MAGNITUDE * sign;
             this.tipAngleOffset = 0;
+            this.outerAlternatingRadiusOffsets = [];
             if (this.target === 'inner') {
                 this.innerRadiusOffset = offset;
                 this.outerRadiusOffset = 0;
@@ -106,5 +124,28 @@ export class PulseAnimation {
 
     getTarget(): PulseTarget {
         return this.target;
+    }
+
+    triggerPulse(target?: PulseTarget, direction?: PulseDirection): void {
+        this.phase = 'attack';
+        this.progress = 0;
+
+        if (target) {
+            this.target = target;
+        } else {
+            if (this.armCount === 3 && Math.random() < 0.33) {
+                this.target = 'tipAngle';
+            } else if (this.armCount === 6 && Math.random() < 0.5) {
+                this.target = 'outerAlternating';
+            } else {
+                this.target = Math.random() < 0.5 ? 'inner' : 'outer';
+            }
+        }
+
+        if (this.target === 'outerAlternating') {
+            this.parity = Math.random() < 0.5 ? 1 : -1;
+        }
+
+        this.direction = direction || (Math.random() < 0.5 ? 'expand' : 'contract');
     }
 }
