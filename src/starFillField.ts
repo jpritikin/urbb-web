@@ -5,7 +5,9 @@ const DOT_GROUPS = 10;
 const FIELD_SIZE = 400;
 const CURL_NOISE_SCALE = 0.02;
 const CURL_TIME_SCALE = 1.0;
-const SPEED_NOISE_RATE = 0.25;
+const BASE_SPEED_NOISE_RATE = 0.2;
+const SPEED_NOISE_RATE_AMPLITUDE = 0.1;
+const SPEED_NOISE_RATE_PERIOD = 5 * 60 * 1000; // 5 minutes in milliseconds
 const DOT_TRAIL_LENGTH = 8;
 const TRAIL_UPDATE_PERIOD = 1;
 const TRAIL_POINTS_PER_SEGMENT = 4;
@@ -33,6 +35,7 @@ export class StarFillField {
     private fillLightness: number;
     private currentBlobUrl: string | null = null;
     private blobUrlDirty: boolean = true;
+    private totalTime: number = 0;
 
     constructor(fillHue: number, fillSaturation: number, fillLightness: number) {
         this.fillHue = fillHue;
@@ -122,6 +125,10 @@ export class StarFillField {
 
     update(deltaTime: number): void {
         this.noiseTime += deltaTime * CURL_TIME_SCALE;
+        this.totalTime += deltaTime;
+
+        const animatedSpeedNoiseRate = BASE_SPEED_NOISE_RATE +
+            SPEED_NOISE_RATE_AMPLITUDE * Math.sin(2 * Math.PI * this.totalTime / SPEED_NOISE_RATE_PERIOD);
 
         const dotsPerGroup = Math.ceil(DOT_COUNT / DOT_GROUPS);
         const startIdx = this.currentDotGroup * dotsPerGroup;
@@ -148,7 +155,7 @@ export class StarFillField {
                 this.noiseTime
             );
 
-            const speedNoise = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * SPEED_NOISE_RATE);
+            const speedNoise = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * animatedSpeedNoiseRate);
             const speed = 1 + speedNoise * 5
 
             dot.x += vx * speed;
