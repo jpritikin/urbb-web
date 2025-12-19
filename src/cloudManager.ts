@@ -105,6 +105,7 @@ export class CloudManager {
     private messageIdCounter: number = 0;
     private messageCooldownTimers: Map<string, number> = new Map();
     private blendStartTimers: Map<string, number> = new Map();
+    private pendingGrievanceTargets: Map<string, string> = new Map();
     private readonly BLEND_MESSAGE_DELAY = 3;
     private compassionBubbleTargetId: string | null = null;
 
@@ -1759,12 +1760,7 @@ export class CloudManager {
             this.hidePieMenu();
             this.hideThoughtBubble();
 
-            const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
-            const targetGrievanceId = grievanceTargets.size > 0
-                ? Array.from(grievanceTargets)[Math.floor(Math.random() * grievanceTargets.size)]
-                : undefined;
-
-            this.model.partDemandsAttention(cloud.id, targetGrievanceId);
+            this.model.partDemandsAttention(cloud.id);
             this.model.setNeedAttention(cloud.id, 0.95);
             this.view.setMode('foreground');
             this.updateUIForMode();
@@ -1866,7 +1862,7 @@ export class CloudManager {
             const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
             if (this.carpetRenderer && !transitioningToForeground) {
                 const carpetStates = this.view.getCarpetStates();
-                const seats = this.view.getSeatInfo(this.model);
+                const seats = this.view.createSeatInfo(this.model);
                 this.carpetRenderer.update(carpetStates, seats, deltaTime);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
@@ -2123,7 +2119,7 @@ export class CloudManager {
             if (this.resolvingClouds.has(cloudId)) continue;
             if (this.model.getBlendReason(cloudId) !== 'spontaneous') continue;
 
-            if (this.model.getNeedAttention(cloudId) < 0.5) {
+            if (this.model.getNeedAttention(cloudId) < 0.25) {
                 this.finishUnblending(cloudId);
             }
         }
@@ -2197,24 +2193,44 @@ export class CloudManager {
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
 
             const grievanceTargets = this.relationships.getGrievanceTargets(blendedId);
+            if (grievanceTargets.size === 0) continue;
 
-            for (const grievanceTargetId of grievanceTargets) {
-                if (!targetIds.has(grievanceTargetId)) continue;
+            // Single cooldown timer per blended part
+            const timeSinceSent = this.messageCooldownTimers.get(blendedId) ?? 10;
+            if (timeSinceSent < 3) continue;
 
-                // Don't send messages to parts that haven't visually arrived yet
-                if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
+            // Check if there's a pending target from a previous summon
+            let grievanceTargetId = this.pendingGrievanceTargets.get(blendedId);
 
-                const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
-                if (dialogues.length === 0) continue;
-
-                const cooldownKey = `${blendedId}->${grievanceTargetId}`;
-                const timeSinceSent = this.messageCooldownTimers.get(cooldownKey) ?? 10;
+            if (!grievanceTargetId) {
                 if (timeSinceSent < 10) continue;
-
-                const text = dialogues[Math.floor(Math.random() * dialogues.length)];
-                this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
-                this.messageCooldownTimers.set(cooldownKey, 0);
+                // Pick a random target from all grievance targets
+                const grievanceTargetArray = Array.from(grievanceTargets);
+                grievanceTargetId = grievanceTargetArray[Math.floor(Math.random() * grievanceTargetArray.length)];
             }
+
+            const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
+            if (dialogues.length === 0) continue;
+
+            // If target is not in conference yet, summon them (unless it's a self-grievance)
+            if (!targetIds.has(grievanceTargetId) && grievanceTargetId !== blendedId) {
+                const oldModel = this.model.clone();
+                this.model.addTargetCloud(grievanceTargetId);
+                this.syncViewWithModel(oldModel);
+                // Store the target for next time and reset cooldown to queue the message with delay
+                this.pendingGrievanceTargets.set(blendedId, grievanceTargetId);
+                this.messageCooldownTimers.set(blendedId, 0);
+                continue;
+            }
+
+            // Don't send messages to parts that haven't visually arrived yet
+            if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
+
+            const text = dialogues[Math.floor(Math.random() * dialogues.length)];
+            this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
+            this.messageCooldownTimers.set(blendedId, 0);
+            // Clear the pending target since we just sent the message
+            this.pendingGrievanceTargets.delete(blendedId);
         }
     }
 }

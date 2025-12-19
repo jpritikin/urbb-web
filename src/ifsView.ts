@@ -16,6 +16,8 @@ import { STAR_OUTER_RADIUS } from './starAnimation.js';
 export { STAR_OUTER_RADIUS };
 
 const BLENDED_OPACITY = 0.7;
+const SEAT_REARRANGEMENT_SPEED = 0.005;
+const SEAT_COUNT_ANIMATION_SPEED = 0.001; // seats per second (affects radius growth/shrink)
 
 // Semantic position targets - resolved to x/y each frame
 export type PositionTarget =
@@ -86,11 +88,11 @@ export class SimulatorView {
     private starTargetX: number = 0;
     private starTargetY: number = 0;
     private blendedOffsets: Map<string, { x: number; y: number }> = new Map();
-    private cachedStarPosition: { x: number; y: number } | null = null;
 
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceRotationSpeed: number = 0.05; // radians per second
     private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
+    private seatInfoMap: Map<number, SeatInfo> = new Map(); // Persisted seat angle data
     private carpetStates: Map<string, CarpetState> = new Map();
     private previousSeatCount: number = 0;
     private currentSeatCount: number = 0;
@@ -227,20 +229,16 @@ export class SimulatorView {
     }
 
     private getSeatPosition(seatIndex: number, totalSeats: number): { x: number; y: number } {
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-        const animatedSeats = this.currentSeatCount > 0 ? this.currentSeatCount : totalSeats;
-        const radius = this.getConferenceTableRadius(animatedSeats);
-        const angleStep = (2 * Math.PI) / animatedSeats;
-        const angle = this.conferencePhaseShift + angleStep * seatIndex;
-        return {
-            x: centerX + radius * Math.cos(angle),
-            y: centerY + radius * Math.sin(angle)
-        };
+        const seatInfo = this.seatInfoMap.get(seatIndex);
+        if (!seatInfo) {
+            throw new Error(`getSeatPosition: seatInfo not found for index ${seatIndex}`);
+        }
+        return { x: seatInfo.x, y: seatInfo.y };
     }
 
     getStarPosition(): { x: number; y: number } {
-        return this.cachedStarPosition ?? { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
+        const starSeat = this.seatInfoMap.get(0);
+        return starSeat ? { x: starSeat.x, y: starSeat.y } : { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
     }
 
     resolvePositionTarget(
@@ -352,37 +350,10 @@ export class SimulatorView {
             }
         }
 
-        // If seat count changed, we need to redistribute
-        if (totalSeats !== this.previousSeatCount && this.previousSeatCount > 0) {
-            // Keep existing relative positions by scaling seat indices
-            const oldAssignments = new Map(this.conferenceSeatAssignments);
-            this.conferenceSeatAssignments.clear();
-
-            const usedInRedistribution = new Set<number>([0]); // 0 is star
-            for (const [cloudId, oldSeat] of oldAssignments) {
-                if (allSeatedIds.includes(cloudId)) {
-                    // Scale the seat position proportionally
-                    let newSeat = Math.round((oldSeat / this.previousSeatCount) * totalSeats);
-                    newSeat = newSeat % totalSeats || 1;
-                    // Resolve collisions by finding next available seat
-                    while (usedInRedistribution.has(newSeat)) {
-                        newSeat = (newSeat % (totalSeats - 1)) + 1;
-                    }
-                    this.conferenceSeatAssignments.set(cloudId, newSeat);
-                    usedInRedistribution.add(newSeat);
-                }
-            }
-        }
-
-        // Assign seats to new parts at random available positions
+        // Assign seats to new parts at available positions
         const usedSeats = new Set<number>([0]); // 0 is always the star
         for (const seat of this.conferenceSeatAssignments.values()) {
             usedSeats.add(seat);
-        }
-
-        let enteringCount = 0;
-        for (const carpet of this.carpetStates.values()) {
-            if (carpet.entering) enteringCount++;
         }
 
         for (const cloudId of allSeatedIds) {
@@ -403,12 +374,6 @@ export class SimulatorView {
                 }
                 this.conferenceSeatAssignments.set(cloudId, seatIndex);
                 usedSeats.add(seatIndex);
-
-                // Create carpet for new seat
-                if (!this.carpetStates.has(cloudId)) {
-                    this.createCarpet(cloudId, seatIndex, totalSeats, enteringCount);
-                    enteringCount++;
-                }
             }
         }
 
@@ -418,20 +383,38 @@ export class SimulatorView {
             this.currentSeatCount = totalSeats;
         }
 
-        // Update cached star position using current animated seat count
-        this.cachedStarPosition = this.getSeatPosition(0, totalSeats);
+        // Create carpets for new parts
+        let enteringCount = 0;
+        for (const carpet of this.carpetStates.values()) {
+            if (carpet.entering) enteringCount++;
+        }
+
+        for (const cloudId of allSeatedIds) {
+            if (!this.carpetStates.has(cloudId)) {
+                const seatIndex = this.conferenceSeatAssignments.get(cloudId);
+                if (seatIndex !== undefined) {
+                    this.createCarpet(cloudId, seatIndex, totalSeats, enteringCount);
+                    enteringCount++;
+                }
+            }
+        }
+
+        // Update seat angles at the END
+        this.updateSeatAngles(model);
     }
 
     private createCarpet(cloudId: string, seatIndex: number, totalSeats: number, enteringCount: number): void {
-        const targetPos = this.getSeatPosition(seatIndex, totalSeats);
-        const startPos = getOffscreenPosition(targetPos.x, targetPos.y, this.canvasWidth, this.canvasHeight);
+        // Use placeholder position - will be updated by CarpetRenderer based on SeatInfo
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const startPos = getOffscreenPosition(centerX, centerY, this.canvasWidth, this.canvasHeight);
 
         this.carpetStates.set(cloudId, {
             cloudId,
             currentX: startPos.x,
             currentY: startPos.y,
-            targetX: targetPos.x,
-            targetY: targetPos.y,
+            targetX: centerX,
+            targetY: centerY,
             startX: startPos.x,
             startY: startPos.y,
             currentScale: CARPET_START_SCALE,
@@ -1190,9 +1173,8 @@ export class SimulatorView {
     private animateSeatCount(deltaTime: number): void {
         if (this.targetSeatCount === 0 || this.currentSeatCount === this.targetSeatCount) return;
 
-        const speed = 0.2; // seats per second (linear)
         const diff = this.targetSeatCount - this.currentSeatCount;
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), speed * deltaTime);
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), SEAT_COUNT_ANIMATION_SPEED * deltaTime);
         this.currentSeatCount += step;
 
         if (Math.abs(this.currentSeatCount - this.targetSeatCount) < 0.01) {
@@ -1215,13 +1197,11 @@ export class SimulatorView {
     updateForegroundPositions(model: SimulatorModel, instances: CloudInstance[]): void {
         if (this.mode !== 'foreground') return;
 
-        // Update cached star position for conference rotation
-        this.cachedStarPosition = this.getSeatPosition(0, this.targetSeatCount);
-
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
-        this.starTargetX = this.cachedStarPosition.x - centerX;
-        this.starTargetY = this.cachedStarPosition.y - centerY;
+        const starPos = this.getStarPosition();
+        this.starTargetX = starPos.x - centerX;
+        this.starTargetY = starPos.y - centerY;
     }
 
     private animateStar(deltaTime: number): void {
@@ -1567,7 +1547,7 @@ export class SimulatorView {
         return 1.0;
     }
 
-    getSeatInfo(model: SimulatorModel): SeatInfo[] {
+    private updateSeatAngles(model: SimulatorModel): void {
         const targetIds = Array.from(model.getTargetCloudIds());
         const blendedIds = model.getBlendedParts();
         const totalSeats = targetIds.length + blendedIds.length + 1;
@@ -1582,17 +1562,105 @@ export class SimulatorView {
             if (seat !== undefined) seatToCloudId.set(seat, cloudId);
         }
 
-        const seats: SeatInfo[] = [];
+        const angleStep = (2 * Math.PI) / totalSeats;
+
+        // Initialize angles for new seats
         for (let i = 0; i < totalSeats; i++) {
-            const pos = this.getSeatPosition(i, totalSeats);
+            if (!this.seatInfoMap.has(i)) {
+                // Find all existing seats (including star at index 0) to determine initial angle
+                const existingSeats = Array.from(this.seatInfoMap.values())
+                    .sort((a, b) => a.angle - b.angle);
+
+                let initialAngle = 0;
+                if (existingSeats.length > 0) {
+                    // Find the largest angular gap between existing seats
+                    let largestGap = 0;
+                    let bestAngle = 0;
+
+                    for (let j = 0; j < existingSeats.length; j++) {
+                        const current = existingSeats[j].angle;
+                        const next = existingSeats[(j + 1) % existingSeats.length].angle;
+                        const gap = next > current
+                            ? next - current
+                            : (2 * Math.PI - current) + next;
+
+                        if (gap > largestGap) {
+                            largestGap = gap;
+                            bestAngle = current + gap / 2;
+                            if (bestAngle >= 2 * Math.PI) bestAngle -= 2 * Math.PI;
+                        }
+                    }
+                    initialAngle = bestAngle;
+                }
+
+                this.seatInfoMap.set(i, {
+                    index: i,
+                    angle: initialAngle,
+                    targetAngle: initialAngle,
+                    x: 0,
+                    y: 0,
+                    occupied: false,
+                    cloudId: undefined
+                });
+            }
+        }
+
+        // Remove seats that no longer exist
+        for (const index of this.seatInfoMap.keys()) {
+            if (index >= totalSeats) {
+                this.seatInfoMap.delete(index);
+            }
+        }
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const radius = this.getConferenceTableRadius(totalSeats);
+
+        // Get all seats and sort by current angle
+        const sortedSeats = Array.from({ length: totalSeats }, (_, i) => i)
+            .map(i => this.seatInfoMap.get(i)!)
+            .sort((a, b) => a.angle - b.angle);
+
+        // Find optimal phase shift that minimizes total angular displacement
+        // Try aligning the phase shift with the first sorted seat's angle
+        const optimalPhaseShift = sortedSeats.length > 0 ? sortedSeats[0].angle : this.conferencePhaseShift;
+
+        // Assign equally spaced target angles to sorted seats
+        sortedSeats.forEach((seatInfo, sortedIndex) => {
+            seatInfo.targetAngle = optimalPhaseShift + angleStep * sortedIndex;
+        });
+
+        // Animate each seat toward its target
+        for (let i = 0; i < totalSeats; i++) {
+            const seatInfo = this.seatInfoMap.get(i)!;
             const cloudId = seatToCloudId.get(i);
-            seats.push({
-                index: i,
-                x: pos.x,
-                y: pos.y,
-                occupied: cloudId !== undefined,
-                cloudId
-            });
+
+            // Animate current angle toward target
+            const angleDiff = seatInfo.targetAngle - seatInfo.angle;
+            const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+            seatInfo.angle += normalizedDiff * SEAT_REARRANGEMENT_SPEED;
+
+            // Normalize angle to [0, 2π)
+            if (seatInfo.angle < 0) seatInfo.angle += 2 * Math.PI;
+            if (seatInfo.angle >= 2 * Math.PI) seatInfo.angle -= 2 * Math.PI;
+
+            // Calculate position from current angle
+            const x = centerX + radius * Math.cos(seatInfo.angle);
+            const y = centerY + radius * Math.sin(seatInfo.angle);
+
+            seatInfo.occupied = cloudId !== undefined;
+            seatInfo.cloudId = cloudId;
+            seatInfo.x = x;
+            seatInfo.y = y;
+        }
+    }
+
+    createSeatInfo(model: SimulatorModel): Map<number, SeatInfo> {
+        this.updateSeatAngles(model);
+
+        const seats = new Map<number, SeatInfo>();
+        for (const [index, seatInfo] of this.seatInfoMap) {
+            seats.set(index, { ...seatInfo });
         }
         return seats;
     }

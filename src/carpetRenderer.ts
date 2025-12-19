@@ -116,6 +116,8 @@ class WindField {
 
 export interface SeatInfo {
     index: number;
+    angle: number; // Current angular position in radians
+    targetAngle: number; // Target angular position (for smooth transitions)
     x: number;
     y: number;
     occupied: boolean;
@@ -148,10 +150,14 @@ export class CarpetRenderer {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    update(carpetStates: Map<string, CarpetState>, seats: SeatInfo[], deltaTime: number): void {
+    update(carpetStates: Map<string, CarpetState>, seats: Map<number, SeatInfo>, deltaTime: number): void {
         this.windField.update(deltaTime);
 
-        const occupiedCloudIds = new Set(seats.filter(s => s.occupied && s.cloudId).map(s => s.cloudId!));
+        const occupiedCloudIds = new Set(
+            Array.from(seats.values())
+                .filter(s => s.occupied && s.cloudId)
+                .map(s => s.cloudId!)
+        );
 
         for (const [cloudId, carpet] of carpetStates) {
             carpet.progress += deltaTime;
@@ -168,7 +174,7 @@ export class CarpetRenderer {
                 continue;
             }
 
-            const seat = seats.find(s => s.cloudId === cloudId);
+            const seat = Array.from(seats.values()).find(s => s.cloudId === cloudId);
             if (seat) {
                 carpet.targetX = seat.x;
                 carpet.targetY = seat.y;

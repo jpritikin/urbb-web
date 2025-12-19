@@ -216,19 +216,16 @@ export class SimulatorModel {
         this.record({ type: 'stepBack', cloudId, data: { wasTarget, wasBlended } });
     }
 
-    partDemandsAttention(demandingCloudId: string, grievanceTargetId?: string): void {
+    partDemandsAttention(demandingCloudId: string): void {
         const currentTargets = Array.from(this.targetCloudIds);
         const currentBlended = this.getBlendedParts();
 
-        // Mark current foreground parts as displaced, EXCEPT the grievance target which will stay
         for (const targetId of currentTargets) {
-            if (targetId !== grievanceTargetId) {
-                this.displacedParts.add(targetId);
-            }
+            this.displacedParts.add(targetId);
             this.stepBackPart(targetId);
         }
         for (const blendedId of currentBlended) {
-            if (!currentTargets.includes(blendedId) && blendedId !== grievanceTargetId) {
+            if (!currentTargets.includes(blendedId)) {
                 this.displacedParts.add(blendedId);
                 this.stepBackPart(blendedId);
             }
@@ -238,13 +235,9 @@ export class SimulatorModel {
         this.clearBlendedParts();
         this.clearSupportingParts();
 
-        // Set up the new focus
-        if (grievanceTargetId) {
-            this.setTargetCloud(grievanceTargetId);
-        }
         this.addBlendedPart(demandingCloudId, 'spontaneous');
 
-        this.record({ type: 'partDemandsAttention', cloudId: demandingCloudId, data: { grievanceTargetId } });
+        this.record({ type: 'partDemandsAttention', cloudId: demandingCloudId, data: {} });
     }
 
     getDisplacedParts(): Set<string> {
