@@ -557,156 +557,122 @@ export class AnimatedStar {
         baseOuterRadius: number,
         tipAngleOffset: number
     ): void {
-        // Update static star outline by extracting paths from rendered arms and connecting with arcs
+        // Update static star outline by tracing arms in angular order with arcs between them
         if (this.staticStarOutline && this.coordinateConverter) {
-            const pathParts: string[] = [];
-
+            // Collect visible arm indices (arms that exist in staticArms)
+            const visibleIndices: number[] = [];
             for (let i = 0; i < this.armCount; i++) {
-                const arm = this.armElements[i];
-                const armSpec = spec.staticArms.get(i);
-                if (!arm || !armSpec) continue;
+                if (spec.staticArms.has(i)) visibleIndices.push(i);
+            }
 
-                // Extract the arm's path data (already has correct curves/straight lines)
-                const armPath = arm.getAttribute('d') || '';
-                if (!armPath) continue;
+            if (visibleIndices.length === 0) {
+                this.staticStarOutline.setAttribute('d', '');
+            } else {
+                const pathParts: string[] = [];
 
-                // Parse the arm path to get coordinates in normalized space
-                // Arm path format: "M base1 Q/L ... tip Q/L ... base2 Z"
-                // We need to convert to absolute coordinates and extract tip and base2
+                for (let vi = 0; vi < visibleIndices.length; vi++) {
+                    const i = visibleIndices[vi];
+                    const armSpec = spec.staticArms.get(i)!;
 
-                const base1Angle = armSpec.tipAngle - armSpec.halfStep;
-                const base2Angle = armSpec.tipAngle + armSpec.halfStep;
-                const base1X = this.centerX + innerRadius * Math.cos(base1Angle);
-                const base1Y = this.centerY + innerRadius * Math.sin(base1Angle);
-                const base2X = this.centerX + innerRadius * Math.cos(base2Angle);
-                const base2Y = this.centerY + innerRadius * Math.sin(base2Angle);
+                    const base1Angle = armSpec.tipAngle - armSpec.halfStep;
+                    const base2Angle = armSpec.tipAngle + armSpec.halfStep;
+                    const base1X = this.centerX + innerRadius * Math.cos(base1Angle);
+                    const base1Y = this.centerY + innerRadius * Math.sin(base1Angle);
+                    const base2X = this.centerX + innerRadius * Math.cos(base2Angle);
+                    const base2Y = this.centerY + innerRadius * Math.sin(base2Angle);
 
-                const alternatingOffset = this.transitionBundle ? 0 : (this.pulse.outerAlternatingRadiusOffsets[i] || 0);
-                const outerRadius = alternatingOffset !== 0
-                    ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-                    : baseOuterRadius;
-                const tipAngle = tipAngleOffset !== 0 ? armSpec.tipAngle + tipAngleOffset : armSpec.tipAngle;
-                const tipX = this.centerX + outerRadius * Math.cos(tipAngle);
-                const tipY = this.centerY + outerRadius * Math.sin(tipAngle);
+                    const alternatingOffset = this.transitionBundle ? 0 : (this.pulse.outerAlternatingRadiusOffsets[i] || 0);
+                    const outerRadius = alternatingOffset !== 0
+                        ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
+                        : baseOuterRadius;
+                    const tipAngle = tipAngleOffset !== 0 ? armSpec.tipAngle + tipAngleOffset : armSpec.tipAngle;
+                    const tipX = this.centerX + outerRadius * Math.cos(tipAngle);
+                    const tipY = this.centerY + outerRadius * Math.sin(tipAngle);
 
-                // Build outline path: tip -> base2 -> arc -> next base1 -> next tip
-                // We need to trace the outer edge, connecting tips via the bases
+                    if (vi === 0) {
+                        pathParts.push(`M ${base1X.toFixed(2)},${base1Y.toFixed(2)}`);
+                    }
 
-                if (i === 0) {
-                    // Start from base1 of first arm
-                    pathParts.push(`M ${base1X.toFixed(2)},${base1Y.toFixed(2)}`);
-                }
+                    if (tipAngleOffset !== 0) {
+                        const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
+                        const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
+                        const ctrl1X = (base1X + straightTipX) / 2;
+                        const ctrl1Y = (base1Y + straightTipY) / 2;
+                        pathParts.push(`Q ${ctrl1X.toFixed(2)},${ctrl1Y.toFixed(2)} ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
+                    } else {
+                        pathParts.push(`L ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
+                    }
 
-                // Path from base1 to tip (curved if tipAngleOffset, straight otherwise)
-                if (tipAngleOffset !== 0) {
-                    const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
-                    const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
-                    const ctrl1X = (base1X + straightTipX) / 2;
-                    const ctrl1Y = (base1Y + straightTipY) / 2;
-                    pathParts.push(`Q ${ctrl1X.toFixed(2)},${ctrl1Y.toFixed(2)} ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
-                } else {
-                    pathParts.push(`L ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
-                }
+                    if (tipAngleOffset !== 0) {
+                        const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
+                        const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
+                        const ctrl2X = (base2X + straightTipX) / 2;
+                        const ctrl2Y = (base2Y + straightTipY) / 2;
+                        pathParts.push(`Q ${ctrl2X.toFixed(2)},${ctrl2Y.toFixed(2)} ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
+                    } else {
+                        pathParts.push(`L ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
+                    }
 
-                // Path from tip to base2 (curved if tipAngleOffset, straight otherwise)
-                if (tipAngleOffset !== 0) {
-                    const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
-                    const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
-                    const ctrl2X = (base2X + straightTipX) / 2;
-                    const ctrl2Y = (base2Y + straightTipY) / 2;
-                    pathParts.push(`Q ${ctrl2X.toFixed(2)},${ctrl2Y.toFixed(2)} ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
-                } else {
-                    pathParts.push(`L ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
-                }
-
-                // Arc along inner circle to next arm's base1
-                const nextArmIndex = (i + 1) % this.armCount;
-                const nextArmSpec = spec.staticArms.get(nextArmIndex);
-                if (nextArmSpec) {
+                    // Arc to the next visible arm's base1
+                    const nextVi = (vi + 1) % visibleIndices.length;
+                    const nextArmSpec = spec.staticArms.get(visibleIndices[nextVi])!;
                     const nextBase1Angle = nextArmSpec.tipAngle - nextArmSpec.halfStep;
                     const nextBase1X = this.centerX + innerRadius * Math.cos(nextBase1Angle);
                     const nextBase1Y = this.centerY + innerRadius * Math.sin(nextBase1Angle);
                     pathParts.push(`A ${innerRadius.toFixed(2)},${innerRadius.toFixed(2)} 0 0 1 ${nextBase1X.toFixed(2)},${nextBase1Y.toFixed(2)}`);
                 }
-            }
-            pathParts.push('Z');
+                pathParts.push('Z');
 
-            this.staticStarOutline.setAttribute('d', pathParts.join(' '));
+                this.staticStarOutline.setAttribute('d', pathParts.join(' '));
+            }
         }
 
-        // Update transition arm outlines
-        const neededOutlines = (spec.firstTransitionArm ? 1 : 0) + (spec.secondTransitionArm ? 1 : 0);
+        // Collect which transition arms need outlines
+        const armsToRender: Array<{ tip: { x: number; y: number }; b1: { x: number; y: number }; b2: { x: number; y: number } }> = [];
+        if (spec.firstTransitionArm) armsToRender.push(spec.firstTransitionArm);
+        if (spec.secondTransitionArm) armsToRender.push(spec.secondTransitionArm);
 
         // Remove excess outlines
-        while (this.transitionOutlines.length > neededOutlines) {
+        while (this.transitionOutlines.length > armsToRender.length) {
             const outline = this.transitionOutlines.pop();
             outline?.remove();
         }
 
-        // Create missing outlines - insert before clipped group so they're layered correctly
-        // Order: defs, [transition outlines here], clipped group, static outline
-        while (this.transitionOutlines.length < neededOutlines) {
+        // Create missing outlines
+        while (this.transitionOutlines.length < armsToRender.length) {
             const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             outline.setAttribute('fill', 'none');
             outline.setAttribute('stroke', '#f400d7');
             outline.setAttribute('stroke-width', '1');
             outline.setAttribute('stroke-dasharray', '2,2');
 
-            // Insert before clipped group (above transition fills, below static star fill and outline)
             if (this.wrapperGroup) {
-                const clippedGroup = this.wrapperGroup.children[1]; // defs is [0], clipped group is [1]
+                const clippedGroup = this.wrapperGroup.children[1];
                 this.wrapperGroup.insertBefore(outline, clippedGroup);
             }
             this.transitionOutlines.push(outline);
         }
 
-        // Update first transition outline
-        if (spec.firstTransitionArm && this.transitionOutlines[0]) {
-            const { tip, b1, b2 } = spec.firstTransitionArm;
-            const outerScale = this.radiusScale;
-            const innerScale = this.radiusScale;
+        // Update each outline with its corresponding arm
+        for (let i = 0; i < armsToRender.length; i++) {
+            const arm = armsToRender[i];
+            const outline = this.transitionOutlines[i];
+            if (!outline) continue;
 
             const scaledTip = {
-                x: this.centerX + (tip.x - this.centerX) * outerScale,
-                y: this.centerY + (tip.y - this.centerY) * outerScale
+                x: this.centerX + (arm.tip.x - this.centerX) * this.radiusScale,
+                y: this.centerY + (arm.tip.y - this.centerY) * this.radiusScale
             };
             const scaledB1 = {
-                x: this.centerX + (b1.x - this.centerX) * innerScale,
-                y: this.centerY + (b1.y - this.centerY) * innerScale
+                x: this.centerX + (arm.b1.x - this.centerX) * this.radiusScale,
+                y: this.centerY + (arm.b1.y - this.centerY) * this.radiusScale
             };
             const scaledB2 = {
-                x: this.centerX + (b2.x - this.centerX) * innerScale,
-                y: this.centerY + (b2.y - this.centerY) * innerScale
+                x: this.centerX + (arm.b2.x - this.centerX) * this.radiusScale,
+                y: this.centerY + (arm.b2.y - this.centerY) * this.radiusScale
             };
 
-            this.transitionOutlines[0].setAttribute('d',
-                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
-                `L ${scaledB1.x.toFixed(2)},${scaledB1.y.toFixed(2)} ` +
-                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
-                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)}`
-            );
-        }
-
-        // Update second transition outline
-        if (spec.secondTransitionArm && this.transitionOutlines[1]) {
-            const { tip, b1, b2 } = spec.secondTransitionArm;
-            const outerScale = this.radiusScale;
-            const innerScale = this.radiusScale;
-
-            const scaledTip = {
-                x: this.centerX + (tip.x - this.centerX) * outerScale,
-                y: this.centerY + (tip.y - this.centerY) * outerScale
-            };
-            const scaledB1 = {
-                x: this.centerX + (b1.x - this.centerX) * innerScale,
-                y: this.centerY + (b1.y - this.centerY) * innerScale
-            };
-            const scaledB2 = {
-                x: this.centerX + (b2.x - this.centerX) * innerScale,
-                y: this.centerY + (b2.y - this.centerY) * innerScale
-            };
-
-            this.transitionOutlines[1].setAttribute('d',
+            outline.setAttribute('d',
                 `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
                 `L ${scaledB1.x.toFixed(2)},${scaledB1.y.toFixed(2)} ` +
                 `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +

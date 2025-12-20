@@ -10,7 +10,7 @@ const SPEED_NOISE_RATE_PERIOD = 5 * 60 * 1000; // 5 minutes in milliseconds
 const DOT_TRAIL_LENGTH = 8;
 const TRAIL_UPDATE_PERIOD = 1;
 const TRAIL_POINTS_PER_SEGMENT = 4;
-const RENDER_INTERVAL_MS = 32; // ~30 fps
+const RENDER_INTERVAL_MS = 1000 / 40;
 
 interface Dot {
     x: number;
