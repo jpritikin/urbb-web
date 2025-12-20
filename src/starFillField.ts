@@ -1,7 +1,6 @@
 import { PerlinNoise } from './perlinNoise.js';
 
 const DOT_COUNT = 400;
-const DOT_GROUPS = 10;
 const FIELD_SIZE = 400;
 const CURL_NOISE_SCALE = 0.02;
 const CURL_TIME_SCALE = 1.0;
@@ -11,6 +10,7 @@ const SPEED_NOISE_RATE_PERIOD = 5 * 60 * 1000; // 5 minutes in milliseconds
 const DOT_TRAIL_LENGTH = 8;
 const TRAIL_UPDATE_PERIOD = 1;
 const TRAIL_POINTS_PER_SEGMENT = 4;
+const RENDER_INTERVAL_MS = 32; // ~30 fps
 
 interface Dot {
     x: number;
@@ -28,7 +28,6 @@ export class StarFillField {
     private ctx: CanvasRenderingContext2D;
     private dots: Dot[] = [];
     private noiseTime: number = 0;
-    private currentDotGroup: number = 0;
     private perlinNoise: PerlinNoise;
     private fillHue: number;
     private fillSaturation: number;
@@ -36,12 +35,15 @@ export class StarFillField {
     private currentBlobUrl: string | null = null;
     private blobUrlDirty: boolean = true;
     private totalTime: number = 0;
+    private timeSinceLastRender: number = 0;
+    private speedNoisePhaseOffset: number;
 
     constructor(fillHue: number, fillSaturation: number, fillLightness: number) {
         this.fillHue = fillHue;
         this.fillSaturation = fillSaturation;
         this.fillLightness = fillLightness;
         this.perlinNoise = new PerlinNoise();
+        this.speedNoisePhaseOffset = Math.random() * 2 * Math.PI;
 
         this.canvas = document.createElement('canvas');
         this.canvas.width = FIELD_SIZE;
@@ -128,16 +130,9 @@ export class StarFillField {
         this.totalTime += deltaTime;
 
         const animatedSpeedNoiseRate = BASE_SPEED_NOISE_RATE +
-            SPEED_NOISE_RATE_AMPLITUDE * Math.sin(2 * Math.PI * this.totalTime / SPEED_NOISE_RATE_PERIOD);
+            SPEED_NOISE_RATE_AMPLITUDE * Math.sin(2 * Math.PI * this.totalTime / SPEED_NOISE_RATE_PERIOD + this.speedNoisePhaseOffset);
 
-        const dotsPerGroup = Math.ceil(DOT_COUNT / DOT_GROUPS);
-        const startIdx = this.currentDotGroup * dotsPerGroup;
-        const endIdx = Math.min(startIdx + dotsPerGroup, this.dots.length);
-        this.currentDotGroup = (this.currentDotGroup + 1) % DOT_GROUPS;
-
-        for (let i = startIdx; i < endIdx; i++) {
-            const dot = this.dots[i];
-
+        for (const dot of this.dots) {
             dot.updateCount++;
             if (dot.updateCount >= TRAIL_UPDATE_PERIOD) {
                 dot.updateCount = 0;
@@ -167,8 +162,12 @@ export class StarFillField {
             else if (dot.y > FIELD_SIZE) dot.y = 2 * FIELD_SIZE - dot.y;
         }
 
-        this.render();
-        this.blobUrlDirty = true;
+        this.timeSinceLastRender += deltaTime * 1000;
+        if (this.timeSinceLastRender >= RENDER_INTERVAL_MS) {
+            this.timeSinceLastRender = 0;
+            this.render();
+            this.blobUrlDirty = true;
+        }
     }
 
     private render(): void {
@@ -210,11 +209,6 @@ export class StarFillField {
                 prevY = endPoint.y;
             }
             ctx.globalAlpha = 1;
-
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
         }
     }
 }
