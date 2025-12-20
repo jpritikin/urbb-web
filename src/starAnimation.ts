@@ -682,7 +682,8 @@ export class AnimatedStar {
             this.transitionOutlines[0].setAttribute('d',
                 `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
                 `L ${scaledB1.x.toFixed(2)},${scaledB1.y.toFixed(2)} ` +
-                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)} Z`
+                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
+                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)}`
             );
         }
 
@@ -708,7 +709,8 @@ export class AnimatedStar {
             this.transitionOutlines[1].setAttribute('d',
                 `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
                 `L ${scaledB1.x.toFixed(2)},${scaledB1.y.toFixed(2)} ` +
-                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)} Z`
+                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
+                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)}`
             );
         }
     }
