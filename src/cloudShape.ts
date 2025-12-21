@@ -324,7 +324,7 @@ export class Cloud {
 
             anim.targetTimer += deltaTime;
             if (anim.targetTimer >= anim.targetInterval) {
-                const targets = this.generateFluffinessTargets();
+                const targets = this.generateFluffinessTargets(anim);
                 const cp1Target = (mode === 'cp2-only') ? 0 : targets.cp1;
                 const cp2Target = (mode === 'cp1-only') ? 0 : targets.cp2;
                 anim.setNewTargets(cp1Target, cp2Target);
@@ -345,24 +345,32 @@ export class Cloud {
         }
     }
 
-    private generateFluffinessTargets(): { cp1: number; cp2: number } {
-        const rp: number = 0.6;
-        const cp1 = FLUFFINESS_VARIATION * (1 - rp) + Math.random() * FLUFFINESS_VARIATION * rp;
-        const cp2 = FLUFFINESS_VARIATION * (1 - rp) + Math.random() * FLUFFINESS_VARIATION * rp;
+    private generateFluffinessTargets(anim: AnimatedFluffiness): { cp1: number; cp2: number } {
+        const rp = 0.85;
+        const min = FLUFFINESS_VARIATION * (1 - rp);
+        const halfRange = FLUFFINESS_VARIATION * rp / 2;
+        const mid = min + halfRange;
+        const base = anim.highHalf ? mid : min;
+        anim.highHalf = !anim.highHalf;
+        const cp1 = base + Math.random() * halfRange;
+        const cp2 = base + Math.random() * halfRange;
         return { cp1, cp2 };
     }
 
     private initializeFluffinessAnimations(baseSegments: BezierSegment[]): void {
         for (let i = 0; i < baseSegments.length; i++) {
             const mode = this.getFluffinessMode(i);
-            if (mode === 'none') {
-                this.fluffinessAnimations.push(new AnimatedFluffiness(0, 0));
-            } else {
-                const targets = this.generateFluffinessTargets();
+            const anim = new AnimatedFluffiness(0, 0);
+            if (mode !== 'none') {
+                const targets = this.generateFluffinessTargets(anim);
                 const cp1 = (mode === 'cp2-only') ? 0 : targets.cp1;
                 const cp2 = (mode === 'cp1-only') ? 0 : targets.cp2;
-                this.fluffinessAnimations.push(new AnimatedFluffiness(cp1, cp2));
+                anim.cp1Factor = cp1;
+                anim.cp2Factor = cp2;
+                anim.cp1TargetFactor = cp1;
+                anim.cp2TargetFactor = cp2;
             }
+            this.fluffinessAnimations.push(anim);
         }
     }
 

@@ -4,19 +4,17 @@ const DOT_COUNT = 400;
 const FIELD_SIZE = 400;
 const CURL_NOISE_SCALE = 0.02;
 const CURL_TIME_SCALE = 1.0;
-const BASE_SPEED_NOISE_RATE = 0.2;
-const SPEED_NOISE_RATE_AMPLITUDE = 0.1;
+const BASE_SPEED_NOISE_RATE = 2;
+const SPEED_NOISE_RATE_AMPLITUDE = 1;
 const SPEED_NOISE_RATE_PERIOD = 5 * 60 * 1000; // 5 minutes in milliseconds
-const DOT_TRAIL_LENGTH = 8;
-const TRAIL_UPDATE_PERIOD = 1;
-const TRAIL_POINTS_PER_SEGMENT = 4;
+const DOT_TRAIL_LENGTH = 64;
+const TRAIL_POINTS_PER_SEGMENT = 8;
 const RENDER_INTERVAL_MS = 1000 / 40;
 
 interface Dot {
     x: number;
     y: number;
     trail: { x: number; y: number }[];
-    updateCount: number;
     noiseOffset: number;
     hue: number;
     saturation: number;
@@ -63,7 +61,7 @@ export class StarFillField {
             const saturation = isWhite ? 0 : fillSaturation * 1;
             const lightness = isWhite ? 100 : 85;
 
-            this.dots.push({ x, y, trail, updateCount: 0, noiseOffset: Math.random() * 1000, hue, saturation, lightness });
+            this.dots.push({ x, y, trail, noiseOffset: Math.random() * 1000, hue, saturation, lightness });
         }
     }
 
@@ -133,16 +131,12 @@ export class StarFillField {
             SPEED_NOISE_RATE_AMPLITUDE * Math.sin(2 * Math.PI * this.totalTime / SPEED_NOISE_RATE_PERIOD + this.speedNoisePhaseOffset);
 
         for (const dot of this.dots) {
-            dot.updateCount++;
-            if (dot.updateCount >= TRAIL_UPDATE_PERIOD) {
-                dot.updateCount = 0;
-                for (let t = DOT_TRAIL_LENGTH - 1; t > 0; t--) {
-                    dot.trail[t].x = dot.trail[t - 1].x;
-                    dot.trail[t].y = dot.trail[t - 1].y;
-                }
-                dot.trail[0].x = dot.x;
-                dot.trail[0].y = dot.y;
+            for (let t = DOT_TRAIL_LENGTH - 1; t > 0; t--) {
+                dot.trail[t].x = dot.trail[t - 1].x;
+                dot.trail[t].y = dot.trail[t - 1].y;
             }
+            dot.trail[0].x = dot.x;
+            dot.trail[0].y = dot.y;
 
             const { vx, vy } = this.curlNoise(
                 dot.x * CURL_NOISE_SCALE,
@@ -150,8 +144,7 @@ export class StarFillField {
                 this.noiseTime
             );
 
-            const speedNoise = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * animatedSpeedNoiseRate);
-            const speed = 1 + speedNoise * 5
+            const speed = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * animatedSpeedNoiseRate);
 
             dot.x += vx * speed;
             dot.y += vy * speed;
