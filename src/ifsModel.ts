@@ -18,9 +18,17 @@ export interface BlendedPartState {
     reason: BlendReason;
 }
 
+export type SelfRayAspect = 'curiosity' | 'compassion' | 'gratitude';
+
+export interface SelfRayState {
+    targetCloudId: string;
+    aspect: SelfRayAspect;
+}
+
 export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
+    private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
     private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
@@ -57,6 +65,9 @@ export class SimulatorModel {
 
     removeTargetCloud(cloudId: string): void {
         this.targetCloudIds.delete(cloudId);
+        if (this.selfRay?.targetCloudId === cloudId) {
+            this.clearSelfRay();
+        }
         this.record({ type: 'removeTarget', cloudId });
     }
 
@@ -70,6 +81,7 @@ export class SimulatorModel {
 
     clearTargets(): void {
         this.targetCloudIds.clear();
+        this.clearSelfRay();
         this.record({ type: 'clearTargets' });
     }
 
@@ -103,6 +115,7 @@ export class SimulatorModel {
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
+            this.clearSelfRay();
             this.record({ type: 'addBlended', cloudId, data: { degree, reason } });
         }
     }
@@ -167,6 +180,27 @@ export class SimulatorModel {
         this.record({ type: 'clearBlendedParts' });
     }
 
+    setSelfRay(targetCloudId: string, aspect: SelfRayAspect): void {
+        this.selfRay = { targetCloudId, aspect };
+        this.record({ type: 'setSelfRay', cloudId: targetCloudId, data: { aspect } });
+    }
+
+    clearSelfRay(): void {
+        if (this.selfRay) {
+            const oldTarget = this.selfRay.targetCloudId;
+            this.selfRay = null;
+            this.record({ type: 'clearSelfRay', cloudId: oldTarget });
+        }
+    }
+
+    getSelfRay(): SelfRayState | null {
+        return this.selfRay;
+    }
+
+    hasSelfRay(): boolean {
+        return this.selfRay !== null;
+    }
+
     selectCloud(cloudId: string | null): void {
         if (this.selectedCloudId === cloudId) {
             return;
@@ -197,6 +231,9 @@ export class SimulatorModel {
         const wasBlended = this.blendedParts.has(cloudId);
 
         this.targetCloudIds.delete(cloudId);
+        if (this.selfRay?.targetCloudId === cloudId) {
+            this.clearSelfRay();
+        }
 
         for (const targetId of this.targetCloudIds) {
             const supportingIds = this.supportingParts.get(targetId);

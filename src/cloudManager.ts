@@ -91,6 +91,7 @@ export class CloudManager {
     private regionLabelsGroup: SVGGElement | null = null;
     private modeToggleContainer: HTMLElement | null = null;
     private pieMenu: PieMenu | null = null;
+    private pieMenuOverlay: SVGGElement | null = null;
     private pieMenuOpen: boolean = false;
     private selectedCloudId: string | null = null;
     private hoveredCloudId: string | null = null;
@@ -145,7 +146,18 @@ export class CloudManager {
         this.counterZoomGroup.setAttribute('id', 'counter-zoom-group');
         this.svgElement.appendChild(this.counterZoomGroup);
 
+        const rayContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        rayContainer.setAttribute('id', 'ray-container');
+        this.counterZoomGroup.insertBefore(rayContainer, this.counterZoomGroup.firstChild);
+        this.view.setRayContainer(rayContainer);
+
+        this.pieMenuOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.pieMenuOverlay.setAttribute('id', 'pie-menu-overlay');
+        this.counterZoomGroup.appendChild(this.pieMenuOverlay);
+        this.view.setPieMenuOverlay(this.pieMenuOverlay);
+
         this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.counterZoomGroup);
+        this.view.setOnRayFieldSelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
 
         this.createSelfStar();
         this.createModeToggle();
@@ -334,6 +346,9 @@ export class CloudManager {
         if (!this.counterZoomGroup) return;
 
         this.pieMenu = new PieMenu(this.counterZoomGroup);
+        if (this.pieMenuOverlay) {
+            this.pieMenu.setOverlayContainer(this.pieMenuOverlay);
+        }
 
         this.pieMenu.setOnSelect((item: PieMenuItem, cloudId: string) => {
             const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
@@ -590,7 +605,7 @@ export class CloudManager {
                 } else {
                     const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
                     if (unrevealed.length > 0) {
-                        this.showThoughtBubble(`Feel toward ${partDesc}?\ncuriosity`, { label: 'Let the part know', targetCloudId: cloud.id });
+                        this.createSelfRay(cloud.id, 'curiosity', unrevealed);
                     } else {
                         const selfAspects = ['compassion', 'gratitude'];
                         const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
@@ -971,6 +986,48 @@ export class CloudManager {
             if (targetIds.has(proxyId)) return proxyId;
         }
         return null;
+    }
+
+    private createSelfRay(cloudId: string, aspectType: 'curiosity' | 'compassion' | 'gratitude', _unrevealedFields: ('age' | 'identity' | 'job')[]): void {
+        this.model.setSelfRay(cloudId, aspectType);
+        this.syncViewWithModel();
+    }
+
+    private handleRayFieldSelect(field: 'age' | 'identity' | 'job', cloudId: string): void {
+        const cloud = this.getCloudById(cloudId);
+        const partState = this.model.getPartState(cloudId);
+        if (!cloud || !partState) return;
+
+        let response: string;
+        switch (field) {
+            case 'age':
+                this.model.revealAge(cloudId);
+                const age = partState.biography.partAge;
+                if (typeof age === 'number') {
+                    response = `I'm ${age} years old.`;
+                } else if (typeof age === 'string') {
+                    response = `I'm a ${age}.`;
+                } else {
+                    response = "I'm not sure how old I am.";
+                }
+                break;
+            case 'identity':
+                this.model.revealIdentity(cloudId);
+                response = `I'm the ${cloud.text}.`;
+                break;
+            case 'job':
+                this.model.revealJob(cloudId);
+                response = partState.dialogues.unburdenedJob ?? "I help in my own way.";
+                break;
+            default:
+                response = "...";
+        }
+
+        this.showThoughtBubble(response);
+        this.model.adjustTrust(cloudId, 1.1, 'received curiosity');
+        this.model.clearSelfRay();
+        this.syncViewWithModel();
+        this.updateBiographyPanel();
     }
 
     private updateThoughtBubble(deltaTime: number): void {
@@ -1854,6 +1911,7 @@ export class CloudManager {
 
         if (mode === 'foreground') {
             this.updateThoughtBubble(deltaTime);
+            this.view.updateSelfRayPosition();
             this.view.animateStretchEffects(deltaTime);
             this.view.animateSpiralExits();
             this.view.animateFlyOutExits();
@@ -1908,7 +1966,7 @@ export class CloudManager {
                     group.setAttribute('transform',
                         `translate(${cloudState.x}, ${cloudState.y}) scale(${cloudState.scale})`);
                     group.setAttribute('opacity', String(cloudState.opacity));
-                    const enablePointerEvents = cloudState.targetOpacity > 0 && !this.pieMenuOpen;
+                    const enablePointerEvents = cloudState.opacity > 0.1 && !this.pieMenuOpen;
                     group.setAttribute('pointer-events', enablePointerEvents ? 'auto' : 'none');
                 }
             }
@@ -1920,13 +1978,25 @@ export class CloudManager {
             this.checkHighAttentionParts();
             this.depthSort();
         } else {
-            // Move star to counterZoomGroup and ensure it's behind all clouds in foreground mode
-            const starElement = this.animatedStar?.getElement();
-            if (starElement && this.counterZoomGroup) {
-                if (starElement.parentNode !== this.counterZoomGroup) {
-                    this.counterZoomGroup.insertBefore(starElement, this.counterZoomGroup.firstChild);
-                } else if (starElement !== this.counterZoomGroup.firstChild) {
-                    this.counterZoomGroup.insertBefore(starElement, this.counterZoomGroup.firstChild);
+            // Ensure correct layering: ray (bottom), carpet, star, clouds (top)
+            if (this.counterZoomGroup) {
+                const rayContainer = this.counterZoomGroup.querySelector('#ray-container');
+                const carpetGroup = this.counterZoomGroup.querySelector('#carpet-group');
+                const starElement = this.animatedStar?.getElement();
+
+                // Ensure ray is first child
+                if (rayContainer && rayContainer !== this.counterZoomGroup.firstChild) {
+                    this.counterZoomGroup.insertBefore(rayContainer, this.counterZoomGroup.firstChild);
+                }
+
+                // Ensure carpet is right after ray
+                if (carpetGroup && rayContainer && carpetGroup.previousSibling !== rayContainer) {
+                    this.counterZoomGroup.insertBefore(carpetGroup, rayContainer.nextSibling);
+                }
+
+                // Ensure star is right after carpet
+                if (starElement && carpetGroup && starElement.previousSibling !== carpetGroup) {
+                    this.counterZoomGroup.insertBefore(starElement, carpetGroup.nextSibling);
                 }
             }
             if (!this.pieMenuOpen) {

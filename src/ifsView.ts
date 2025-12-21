@@ -1,4 +1,5 @@
-import { SimulatorModel } from './ifsModel.js';
+import { SimulatorModel, SelfRayState } from './ifsModel.js';
+import { SelfRay } from './selfRay.js';
 import { Cloud } from './cloudShape.js';
 import {
     SeatInfo,
@@ -89,6 +90,11 @@ export class SimulatorView {
     private starTargetY: number = 0;
     private blendedOffsets: Map<string, { x: number; y: number }> = new Map();
 
+    private selfRay: SelfRay | null = null;
+    private rayContainer: SVGGElement | null = null;
+    private pieMenuOverlay: SVGGElement | null = null;
+    private onRayFieldSelect: ((field: 'age' | 'identity' | 'job', cloudId: string) => void) | null = null;
+
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceRotationSpeed: number = 0.05; // radians per second
     private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
@@ -172,6 +178,18 @@ export class SimulatorView {
 
     setStarElement(element: SVGElement): void {
         this.starElement = element;
+    }
+
+    setRayContainer(container: SVGGElement): void {
+        this.rayContainer = container;
+    }
+
+    setPieMenuOverlay(overlay: SVGGElement): void {
+        this.pieMenuOverlay = overlay;
+    }
+
+    setOnRayFieldSelect(callback: (field: 'age' | 'identity' | 'job', cloudId: string) => void): void {
+        this.onRayFieldSelect = callback;
     }
 
     getMode(): 'panorama' | 'foreground' {
@@ -519,10 +537,65 @@ export class SimulatorView {
         this.updateSeatAssignments(newModel);
         this.updateStarPosition(newModel);
         this.updateCloudStateTargets(newModel, instances);
+        this.syncSelfRay(newModel);
 
         const currentTargetIds = newModel.getTargetCloudIds();
         if (this.transitionDirection !== 'reverse' || this.transitionProgress >= 1) {
             this.previousTargetIds = new Set(currentTargetIds);
+        }
+    }
+
+    private syncSelfRay(model: SimulatorModel): void {
+        const modelRay = model.getSelfRay();
+
+        if (!modelRay || this.mode !== 'foreground') {
+            if (this.selfRay) {
+                this.selfRay.remove();
+                this.selfRay = null;
+            }
+            return;
+        }
+
+        if (this.selfRay && this.selfRay.getTargetCloudId() !== modelRay.targetCloudId) {
+            this.selfRay.remove();
+            this.selfRay = null;
+        }
+
+        if (!this.selfRay && this.rayContainer) {
+            const cloudState = this.cloudStates.get(modelRay.targetCloudId);
+            if (!cloudState) return;
+
+            const starPos = this.getStarPosition();
+
+            this.selfRay = new SelfRay(this.rayContainer, {
+                startX: starPos.x,
+                startY: starPos.y,
+                endX: cloudState.x,
+                endY: cloudState.y,
+                targetCloudId: modelRay.targetCloudId,
+                aspectType: modelRay.aspect
+            });
+
+            if (this.pieMenuOverlay) {
+                this.selfRay.setPieMenuOverlay(this.pieMenuOverlay);
+            }
+
+            this.selfRay.setOnSelect((field, targetCloudId) => {
+                this.onRayFieldSelect?.(field, targetCloudId);
+            });
+
+            const rayElement = this.selfRay.create();
+            this.rayContainer.appendChild(rayElement);
+        }
+    }
+
+    updateSelfRayPosition(): void {
+        if (!this.selfRay) return;
+
+        const cloudState = this.cloudStates.get(this.selfRay.getTargetCloudId());
+        if (cloudState) {
+            const starPos = this.getStarPosition();
+            this.selfRay.updatePosition(starPos.x, starPos.y, cloudState.x, cloudState.y);
         }
     }
 
@@ -1107,7 +1180,7 @@ export class SimulatorView {
             }
 
             // Detect when blending completes (degree reaches ~0)
-            if (prevDegree > 0.01 && state.blendingDegree <= 0.01 && state.targetBlendingDegree <= 0) {
+            if (prevDegree > 0.01 && state.blendingDegree <= 0.01 && state.targetBlendingDegree <= 0.01) {
                 completedUnblendings.push(cloudId);
             }
         }

@@ -23,8 +23,13 @@ export class PieMenu {
     private onClose: (() => void) | null = null;
     private tooltipElement: SVGGElement | null = null;
     private hoverIndex: number = -1;
+    private overlayContainer: SVGGElement | null = null;
 
     constructor(private container: SVGGElement) {}
+
+    setOverlayContainer(overlay: SVGGElement): void {
+        this.overlayContainer = overlay;
+    }
 
     setItems(items: PieMenuItem[]): void {
         this.items = items;
@@ -126,7 +131,7 @@ export class PieMenu {
         closeX.textContent = '✕';
         this.group.appendChild(closeX);
 
-        this.container.appendChild(this.group);
+        (this.overlayContainer ?? this.container).appendChild(this.group);
     }
 
     private createLabelItem(item: PieMenuItem, angle: number): SVGGElement {
