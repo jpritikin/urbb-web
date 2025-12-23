@@ -424,16 +424,3 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-@keyframes stroke-blink {
-  0%, 100% {
-    stroke: #000000;
-  }
-  50% {
-    stroke: #888888;
-  }
-}
-
-.cloud-selected {
-  stroke-width: 3 !important;
-  animation: stroke-blink 2s ease-in-out infinite;
-}

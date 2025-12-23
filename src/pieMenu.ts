@@ -14,6 +14,11 @@ export interface PieMenuConfig {
 
 export class PieMenu {
     private static activeMenu: PieMenu | null = null;
+    private static globalVisibilityCallback: ((visible: boolean) => void) | null = null;
+
+    static setGlobalVisibilityCallback(callback: (visible: boolean) => void): void {
+        PieMenu.globalVisibilityCallback = callback;
+    }
 
     private group: SVGGElement | null = null;
     private visible: boolean = false;
@@ -73,6 +78,7 @@ export class PieMenu {
         this.visible = true;
         this.hoverIndex = -1;
         this.createMenuElements(x, y);
+        PieMenu.globalVisibilityCallback?.(true);
     }
 
     hide(): void {
@@ -85,6 +91,7 @@ export class PieMenu {
         if (PieMenu.activeMenu === this) {
             PieMenu.activeMenu = null;
         }
+        PieMenu.globalVisibilityCallback?.(false);
         this.onClose?.();
     }
 

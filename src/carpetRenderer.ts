@@ -10,7 +10,6 @@ export interface CarpetVertex {
 }
 
 export interface CarpetState {
-    cloudId: string;
     currentX: number;
     currentY: number;
     targetX: number;
@@ -115,13 +114,11 @@ class WindField {
 }
 
 export interface SeatInfo {
-    index: number;
-    angle: number; // Current angular position in radians
-    targetAngle: number; // Target angular position (for smooth transitions)
+    seatId: string;
+    angle: number;
+    targetAngle: number;
     x: number;
     y: number;
-    occupied: boolean;
-    cloudId?: string;
 }
 
 export class CarpetRenderer {
@@ -131,6 +128,7 @@ export class CarpetRenderer {
 
     private carpetGroup: SVGGElement;
     private carpetElements: SVGGElement[] = [];
+    private carpetStates: Map<number, CarpetState> = new Map();
 
     private readonly CARPET_OCCUPIED_DROP = 35;
     private readonly CARPET_DAMPING = 0.92;
@@ -150,16 +148,10 @@ export class CarpetRenderer {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    update(carpetStates: Map<string, CarpetState>, seats: Map<number, SeatInfo>, deltaTime: number): void {
+    update(carpetStates: Map<string, CarpetState>, seats: SeatInfo[], deltaTime: number): void {
         this.windField.update(deltaTime);
 
-        const occupiedCloudIds = new Set(
-            Array.from(seats.values())
-                .filter(s => s.occupied && s.cloudId)
-                .map(s => s.cloudId!)
-        );
-
-        for (const [cloudId, carpet] of carpetStates) {
+        for (const [seatId, carpet] of carpetStates) {
             carpet.progress += deltaTime;
 
             if (carpet.exiting) {
@@ -169,12 +161,12 @@ export class CarpetRenderer {
                 carpet.currentY = carpet.targetY + (carpet.startY - carpet.targetY) * eased;
                 carpet.currentScale = CARPET_SCALE + (CARPET_START_SCALE - CARPET_SCALE) * eased;
                 if (t >= 1) {
-                    carpetStates.delete(cloudId);
+                    carpetStates.delete(seatId);
                 }
                 continue;
             }
 
-            const seat = Array.from(seats.values()).find(s => s.cloudId === cloudId);
+            const seat = seats.find(s => s.seatId === seatId);
             if (seat) {
                 carpet.targetX = seat.x;
                 carpet.targetY = seat.y;
@@ -199,9 +191,8 @@ export class CarpetRenderer {
                 carpet.currentY += (carpet.targetY - carpet.currentY) * factor;
             }
 
-            const isNowOccupied = occupiedCloudIds.has(cloudId);
-            carpet.isOccupied = isNowOccupied;
-            const targetOffset = isNowOccupied ? this.CARPET_OCCUPIED_DROP : 0;
+            carpet.isOccupied = seat !== undefined;
+            const targetOffset = carpet.isOccupied ? this.CARPET_OCCUPIED_DROP : 0;
             const offsetSmoothing = 4;
             const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
             carpet.occupiedOffset += (targetOffset - carpet.occupiedOffset) * offsetFactor;

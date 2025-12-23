@@ -1086,7 +1086,7 @@ export class Cloud {
         return this.groupElement;
     }
 
-    updateSVGElements(debug: boolean, state?: PartState, selected?: boolean, hovered?: boolean): void {
+    updateSVGElements(debug: boolean, state?: PartState, hovered?: boolean): void {
         if (!this.groupElement || !this.pathElement || !this.textElement) return;
 
         const identityRevealed = state?.biography.identityRevealed ?? false;
@@ -1095,12 +1095,6 @@ export class Cloud {
         this.pathElement.setAttribute('d', outlinePath);
         this.updateStyles(this.pathElement, this.textElement, debug, hovered ?? false);
         this.renderText(this.textElement, identityRevealed);
-
-        if (selected) {
-            this.pathElement.classList.add('cloud-selected');
-        } else {
-            this.pathElement.classList.remove('cloud-selected');
-        }
 
         if (debug) {
             while (this.groupElement.childNodes.length > 2) {

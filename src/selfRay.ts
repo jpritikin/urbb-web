@@ -304,7 +304,7 @@ export class SelfRay {
         switch (field) {
             case 'age': return 'How old are you?';
             case 'identity': return 'Who are you?';
-            case 'job': return 'What do you do?';
+            case 'job': return 'What is your job?';
         }
     }
 
@@ -312,7 +312,7 @@ export class SelfRay {
         switch (field) {
             case 'age': return 'Age';
             case 'identity': return 'Identity';
-            case 'job': return 'Role';
+            case 'job': return 'Job';
         }
     }
 

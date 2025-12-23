@@ -9,7 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cloudManager = new CloudManager();
     (window as any).cloudManager = cloudManager;
-    console.log('[Debug] cloudManager.setCarpetDebug(true) to show wind field');
+    console.log('[IFS] debugHelp() for console debug commands');
+    (window as any).debugHelp = () => {
+        console.log('IFS Simulator Debug Commands:');
+        console.log('  cloudManager.setCarpetDebug(true)   - Show wind field visualization');
+        console.log('  cloudManager.setDebug(true)         - Show cloud debug info');
+        console.log('  star.testPulse(target?, dir?)       - Trigger pulse (target: inner|outer|tipAngle|outerAlternating)');
+        console.log('  star.testTransition(type, armCount, sourceIdx, dir?)');
+        console.log('                                      - Test arm transition (type: adding|removing)');
+        console.log('  star.testSingleTransition(type, armCount, sourceIdx, dir?)');
+        console.log('  star.testOverlappingTransition(type, armCount, src1, src2, delay, dir?)');
+    };
     cloudManager.init('cloud-container');
 
     const innerCritic = cloudManager.addCloud('Inner Critic', {

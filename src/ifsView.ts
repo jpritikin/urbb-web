@@ -1,71 +1,46 @@
 import { SimulatorModel, SelfRayState } from './ifsModel.js';
 import { SelfRay } from './selfRay.js';
 import { Cloud } from './cloudShape.js';
-import {
-    SeatInfo,
-    CarpetState,
-    createCarpetVertices,
-    getOffscreenPosition,
-    CARPET_START_SCALE,
-    CARPET_SCALE,
-    CARPET_FLY_DURATION,
-    CARPET_ENTRY_STAGGER
-} from './carpetRenderer.js';
+import { SeatInfo, CarpetState, CARPET_OFFSCREEN_DISTANCE, CARPET_FLY_DURATION, CARPET_START_SCALE, CARPET_SCALE } from './carpetRenderer.js';
+
+function getOffscreenPosition(fromX: number, fromY: number, canvasWidth: number, canvasHeight: number): { x: number; y: number } {
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+    const dx = fromX - centerX;
+    const dy = fromY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) {
+        return { x: centerX, y: centerY - CARPET_OFFSCREEN_DISTANCE };
+    }
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+    return {
+        x: centerX + dirX * CARPET_OFFSCREEN_DISTANCE,
+        y: centerY + dirY * CARPET_OFFSCREEN_DISTANCE
+    };
+}
 import { Vec3, CloudInstance } from './types.js';
 import { STAR_OUTER_RADIUS } from './starAnimation.js';
+import { ViewEventEmitter, ViewEventMap } from './ifsView/ViewEvents.js';
+import { SeatManager } from './ifsView/SeatManager.js';
+import { StretchAnimator } from './ifsView/StretchAnimator.js';
+import {
+    PositionTarget,
+    SmoothingConfig,
+    CloudAnimatedState,
+    DEFAULT_SMOOTHING
+} from './ifsView/types.js';
 
 export { STAR_OUTER_RADIUS };
+export type { PositionTarget, SmoothingConfig, CloudAnimatedState };
+export { DEFAULT_SMOOTHING };
 
 const BLENDED_OPACITY = 0.7;
-const SEAT_REARRANGEMENT_SPEED = 0.005;
-const SEAT_COUNT_ANIMATION_SPEED = 0.001; // seats per second (affects radius growth/shrink)
-
-// Semantic position targets - resolved to x/y each frame
-export type PositionTarget =
-    | { type: 'panorama' }
-    | { type: 'seat'; seatIndex: number }
-    | { type: 'star'; offsetX?: number; offsetY?: number }
-    | { type: 'supporting'; targetId: string; index: number }
-    | { type: 'blended'; seatIndex: number; offsetX: number; offsetY: number }
-    | { type: 'absolute'; x: number; y: number };
-
-// Smoothing configuration - higher = faster approach, 0 = instant
-export interface SmoothingConfig {
-    position: number;      // default 8
-    scale: number;         // default 8
-    opacity: number;       // default 8
-    blendingDegree: number; // default 4 (slower for visual effect)
-}
-
-export const DEFAULT_SMOOTHING: SmoothingConfig = {
-    position: 8,
-    scale: 8,
-    opacity: 8,
-    blendingDegree: 4
-};
-
-// Unified animation state per cloud
-export interface CloudAnimatedState {
-    cloudId: string;
-
-    // Current animated values
-    x: number;
-    y: number;
-    scale: number;
-    opacity: number;
-    blendingDegree: number;
-
-    // Semantic target (resolved to x/y each frame)
-    positionTarget: PositionTarget;
-    targetScale: number;
-    targetOpacity: number;
-    targetBlendingDegree: number;
-
-    // Smoothing factors
-    smoothing: SmoothingConfig;
-}
 
 export class SimulatorView {
+    private events: ViewEventEmitter = new ViewEventEmitter();
+    private seatManager: SeatManager;
+
     private cloudStates: Map<string, CloudAnimatedState> = new Map();
     private mode: 'panorama' | 'foreground' = 'panorama';
     private previousMode: 'panorama' | 'foreground' = 'panorama';
@@ -91,19 +66,6 @@ export class SimulatorView {
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
     private onRayFieldSelect: ((field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void) | null = null;
-    private onModeChange: ((mode: 'panorama' | 'foreground') => void) | null = null;
-
-    private conferencePhaseShift: number = Math.random() * Math.PI * 2;
-    private conferenceRotationSpeed: number = 0.05; // radians per second
-    private conferenceSeatAssignments: Map<string, number> = new Map(); // cloudId -> seat index (0 = star)
-    private seatInfoMap: Map<number, SeatInfo> = new Map(); // Persisted seat angle data
-    private carpetStates: Map<string, CarpetState> = new Map();
-    private previousSeatCount: number = 0;
-    private currentSeatCount: number = 0;
-    private targetSeatCount: number = 0;
-
-    private committedBlendingDegrees: Map<string, number> = new Map();
-    private readonly DEGREE_STEP_THRESHOLD = 0.06; // trigger overshoot every ~6% unblending
 
     // Spiral exit animation state for parts forced out by spontaneous blends
     private spiralExits: Map<string, {
@@ -113,7 +75,7 @@ export class SimulatorView {
         duration: number;
         spiralRadius: number;
         rotations: number;
-        exitAngle: number; // angle toward edge of screen
+        exitAngle: number;
     }> = new Map();
 
     // Fly-out exit animation (carpet-style) for stepping back
@@ -130,48 +92,21 @@ export class SimulatorView {
     // Delayed arrivals for parts that should appear after displaced parts exit
     private delayedArrivals: Map<string, { arrivalTime: number }> = new Map();
 
-    // Unified stretch animation state (handles both user-triggered overshoot and idle grip loss)
-    private stretchAnim: Map<string, {
-        phase: 'holding' | 'contracting' | 'contracted_hold' | 'ratcheting' | 'yanking' | 'settling';
-        stretchFactor: number;    // multiplier for grip loss contraction (1 = normal, <1 = contracted)
-        targetFactor: number;     // target factor to animate toward during contraction
-        stretchOffset: number;    // absolute overshoot distance (0 = normal, >0 = overshooting)
-        holdEndTime: number;      // when to start next phase
-        phaseDuration: number;    // duration for current animation phase
-        angleOffset: number;      // target angle offset in radians
-        currentAngle: number;     // current angle offset (animates toward angleOffset then back to 0)
-        yankCount: number;        // number of yanks remaining
-        yankTarget: number;       // current yank target angle
-        yankHolding: boolean;     // true if in hold portion of yank
-        yankHoldEnd: number;      // timestamp when yank hold ends
-        contractPaused: boolean;  // true if in a micro-pause during contraction
-        contractPauseEnd: number; // timestamp when micro-pause ends
-        nextPauseTime: number;    // timestamp for next potential micro-pause
-    }> = new Map();
-
-    // Overshoot distance: approx 75% of conference table radius (what a 75% unblended part would travel)
-    private getOvershootDistance(): number {
-        return this.getConferenceTableRadius() * 0.75;
-    }
-    private readonly OVERSHOOT_ANGLE_RANGE = Math.PI / 6; // +/- 30 degrees
-    private readonly RATCHET_DURATION = 0.35;       // snap to overshoot speed
-    private readonly YANK_DURATION = 0.30;          // total time per yank (half snap, half hold)
-    private readonly YANK_ANGLE_THRESHOLD = Math.PI / 12; // trigger yanks if angleOffset > 15 degrees
-    private readonly SETTLE_DURATION = 0.25;        // ease from overshoot to normal
-
-    // Grip loss (idle contraction) constants
-    private readonly GRIP_LOSS_MIN_DURATION = 1.5;
-    private readonly GRIP_LOSS_MAX_DURATION = 4.0;
-    private readonly GRIP_LOSS_HOLD_MIN = 0.3;
-    private readonly GRIP_LOSS_HOLD_MAX = 1.2;
-    private readonly GRIP_LOSS_MIN_CONTRACTION = 0.6;
-    private readonly GRIP_LOSS_MAX_CONTRACTION = 0.6;
-    private readonly GRIP_LOSS_POST_SETTLE_DELAY_MIN = 1.0;
-    private readonly GRIP_LOSS_POST_SETTLE_DELAY_MAX = 3.0;
+    // Stretch animators for blended clouds
+    private stretchAnimators: Map<string, StretchAnimator> = new Map();
 
     constructor(canvasWidth: number, canvasHeight: number) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
+        this.seatManager = new SeatManager(canvasWidth, canvasHeight);
+    }
+
+    on<K extends keyof ViewEventMap>(event: K, listener: (data: ViewEventMap[K]) => void): void {
+        this.events.on(event, listener);
+    }
+
+    off<K extends keyof ViewEventMap>(event: K, listener: (data: ViewEventMap[K]) => void): void {
+        this.events.off(event, listener);
     }
 
     setStarElement(element: SVGElement): void {
@@ -191,7 +126,7 @@ export class SimulatorView {
     }
 
     setOnModeChange(callback: (mode: 'panorama' | 'foreground') => void): void {
-        this.onModeChange = callback;
+        this.events.on('mode-changed', (data) => callback(data.mode));
     }
 
     getMode(): 'panorama' | 'foreground' {
@@ -224,7 +159,8 @@ export class SimulatorView {
                 state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
             }
 
-            this.onModeChange?.(mode);
+            this.events.emit('mode-changed', { mode });
+            this.events.emit('transition-started', { direction: this.transitionDirection });
         }
     }
 
@@ -253,24 +189,23 @@ export class SimulatorView {
     }
 
     private getConferenceTableRadius(seatCount?: number): number {
-        const baseRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.3;
-        const seats = seatCount ?? this.currentSeatCount;
-        if (seats <= 2) return baseRadius * 0.5;
-        if (seats >= 7) return baseRadius;
-        return baseRadius * (0.5 + 0.5 * (seats - 2) / 5);
+        return this.seatManager.getConferenceTableRadius(seatCount);
     }
 
-    private getSeatPosition(seatIndex: number, totalSeats: number): { x: number; y: number } {
-        const seatInfo = this.seatInfoMap.get(seatIndex);
-        if (!seatInfo) {
-            throw new Error(`getSeatPosition: seatInfo not found for index ${seatIndex}`);
-        }
-        return { x: seatInfo.x, y: seatInfo.y };
+    getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
+        return this.seatManager.getCloudPosition(cloudId);
     }
 
     getStarPosition(): { x: number; y: number } {
-        const starSeat = this.seatInfoMap.get(0);
-        return starSeat ? { x: starSeat.x, y: starSeat.y } : { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
+        return this.seatManager.getStarPosition();
+    }
+
+    getUnblendedSeatPosition(): { x: number; y: number } | undefined {
+        return this.seatManager.getUnblendedSeatPosition();
+    }
+
+    isSeated(cloudId: string): boolean {
+        return this.seatManager.isSeated(cloudId);
     }
 
     resolvePositionTarget(
@@ -280,8 +215,7 @@ export class SimulatorView {
         model: SimulatorModel
     ): { x: number; y: number; scale: number } {
         const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedParts = model.getBlendedParts();
-        const totalSeats = targetIds.length + blendedParts.length + 1;
+        const totalSeats = targetIds.length + 1; // star + targets (blended parts sit on star)
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
 
@@ -294,7 +228,7 @@ export class SimulatorView {
             }
 
             case 'seat': {
-                const pos = this.getSeatPosition(target.seatIndex, totalSeats);
+                const pos = this.getCloudPosition(target.cloudId) ?? { x: centerX, y: centerY };
                 return { x: pos.x, y: pos.y, scale: 1 };
             }
 
@@ -308,9 +242,7 @@ export class SimulatorView {
             }
 
             case 'supporting': {
-                const targetPos = this.conferenceSeatAssignments.has(target.targetId)
-                    ? this.getSeatPosition(this.conferenceSeatAssignments.get(target.targetId)!, totalSeats)
-                    : { x: centerX, y: centerY };
+                const targetPos = this.getCloudPosition(target.targetId) ?? { x: centerX, y: centerY };
                 const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
                 const distance = 80 + target.index * 50;
                 return {
@@ -323,7 +255,7 @@ export class SimulatorView {
             case 'blended': {
                 // Position cloud so anchor edge stays at star's far side
                 // The lattice stretch moves the far edge toward the seat
-                const seatPos = this.getSeatPosition(target.seatIndex, totalSeats);
+                const seatPos = this.getUnblendedSeatPosition() ?? { x: centerX, y: centerY };
                 const starPos = this.getStarPosition();
                 const starX = starPos.x + target.offsetX;
                 const starY = starPos.y + target.offsetY;
@@ -357,133 +289,24 @@ export class SimulatorView {
         }
     }
 
-    private updateSeatAssignments(model: SimulatorModel): void {
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedIds = model.getBlendedParts();
-        const allSeatedIds = [...targetIds, ...blendedIds];
-        const totalSeats = allSeatedIds.length + 1; // +1 for star
-
-        // Remove assignments for parts no longer at the table
-        for (const cloudId of this.conferenceSeatAssignments.keys()) {
-            if (!allSeatedIds.includes(cloudId)) {
-                this.conferenceSeatAssignments.delete(cloudId);
-                this.markCarpetForExit(cloudId);
-            }
-        }
-
-        // Assign seats to new parts at available positions
-        const usedSeats = new Set<number>([0]); // 0 is always the star
-        for (const seat of this.conferenceSeatAssignments.values()) {
-            usedSeats.add(seat);
-        }
-
-        for (const cloudId of allSeatedIds) {
-            if (!this.conferenceSeatAssignments.has(cloudId)) {
-                // Find available seats
-                const availableSeats: number[] = [];
-                for (let i = 1; i < totalSeats; i++) {
-                    if (!usedSeats.has(i)) {
-                        availableSeats.push(i);
-                    }
-                }
-
-                let seatIndex: number;
-                if (availableSeats.length > 0) {
-                    seatIndex = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-                } else {
-                    seatIndex = usedSeats.size;
-                }
-                this.conferenceSeatAssignments.set(cloudId, seatIndex);
-                usedSeats.add(seatIndex);
-            }
-        }
-
-        this.previousSeatCount = totalSeats;
-        this.targetSeatCount = totalSeats;
-        if (this.currentSeatCount === 0) {
-            this.currentSeatCount = totalSeats;
-        }
-
-        // Create carpets for new parts
-        let enteringCount = 0;
-        for (const carpet of this.carpetStates.values()) {
-            if (carpet.entering) enteringCount++;
-        }
-
-        for (const cloudId of allSeatedIds) {
-            if (!this.carpetStates.has(cloudId)) {
-                const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-                if (seatIndex !== undefined) {
-                    this.createCarpet(cloudId, seatIndex, totalSeats, enteringCount);
-                    enteringCount++;
-                }
-            }
-        }
-
-        // Update seat angles at the END
-        this.updateSeatAngles(model);
-    }
-
-    private createCarpet(cloudId: string, seatIndex: number, totalSeats: number, enteringCount: number): void {
-        // Use placeholder position - will be updated by CarpetRenderer based on SeatInfo
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-        const startPos = getOffscreenPosition(centerX, centerY, this.canvasWidth, this.canvasHeight);
-
-        this.carpetStates.set(cloudId, {
-            cloudId,
-            currentX: startPos.x,
-            currentY: startPos.y,
-            targetX: centerX,
-            targetY: centerY,
-            startX: startPos.x,
-            startY: startPos.y,
-            currentScale: CARPET_START_SCALE,
-            isOccupied: false,
-            occupiedOffset: 0,
-            entering: true,
-            exiting: false,
-            progress: -enteringCount * CARPET_ENTRY_STAGGER,
-            vertices: createCarpetVertices()
-        });
-    }
-
-    private markCarpetForExit(cloudId: string): void {
-        const carpet = this.carpetStates.get(cloudId);
-        if (carpet && !carpet.exiting) {
-            // Use current visual position, not target, so carpet leaves immediately
-            const exitPos = getOffscreenPosition(carpet.currentX, carpet.currentY, this.canvasWidth, this.canvasHeight);
-            carpet.exiting = true;
-            carpet.entering = false;
-            carpet.progress = 0;
-            carpet.targetX = carpet.currentX;
-            carpet.targetY = carpet.currentY;
-            carpet.startX = exitPos.x;
-            carpet.startY = exitPos.y;
-        }
+    private updateSeatAssignments(oldModel: SimulatorModel | null, newModel: SimulatorModel): void {
+        this.seatManager.updateSeatAssignments(oldModel, newModel);
     }
 
     getCarpetStates(): Map<string, CarpetState> {
-        return this.carpetStates;
+        return this.seatManager.getCarpets();
     }
 
-    clearCarpetStates(): void {
-        this.carpetStates.clear();
+    getSeats(): SeatInfo[] {
+        return this.seatManager.getSeats();
     }
 
     private calculateConferenceRoomPositions(model: SimulatorModel, targetInstances: CloudInstance[]): { clouds: Map<string, { x: number; y: number }>, starX: number, starY: number } {
-        this.updateSeatAssignments(model);
-
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedIds = model.getBlendedParts();
-        const totalSeats = targetIds.length + blendedIds.length + 1;
-
         const clouds = new Map<string, { x: number; y: number }>();
 
         for (const instance of targetInstances) {
-            const seatIndex = this.conferenceSeatAssignments.get(instance.cloud.id);
-            if (seatIndex !== undefined) {
-                const pos = this.getSeatPosition(seatIndex, totalSeats);
+            const pos = this.getCloudPosition(instance.cloud.id);
+            if (pos) {
                 clouds.set(instance.cloud.id, pos);
             }
         }
@@ -542,7 +365,7 @@ export class SimulatorView {
             }
         }
 
-        this.updateSeatAssignments(newModel);
+        this.updateSeatAssignments(oldModel, newModel);
         this.updateStarPosition(newModel);
         this.updateCloudStateTargets(newModel, instances);
         this.syncSelfRay(newModel);
@@ -658,7 +481,6 @@ export class SimulatorView {
                         positionTarget = { type: 'star' };
                     } else {
                         // Therapist-initiated blends interpolate between star and seat
-                        const seatIndex = this.conferenceSeatAssignments.get(cloudId);
                         // Get or create blended offset
                         if (!this.blendedOffsets.has(cloudId)) {
                             const angle = Math.random() * 2 * Math.PI;
@@ -671,7 +493,7 @@ export class SimulatorView {
                         const offset = this.blendedOffsets.get(cloudId)!;
                         positionTarget = {
                             type: 'blended',
-                            seatIndex: seatIndex ?? 1,
+                            cloudId,
                             offsetX: offset.x,
                             offsetY: offset.y
                         };
@@ -685,8 +507,7 @@ export class SimulatorView {
                     positionTarget = { type: 'star' };
                     targetOpacity = BLENDED_OPACITY;
                 } else if (isTarget) {
-                    const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-                    positionTarget = { type: 'seat', seatIndex: seatIndex ?? 1 };
+                    positionTarget = { type: 'seat', cloudId };
                 } else if (isSupporting) {
                     const info = supportingInfo.get(cloudId)!;
                     positionTarget = {
@@ -746,260 +567,45 @@ export class SimulatorView {
                 cloud.setBlendedStretch(stretchInfo.stretchX, stretchInfo.stretchY, stretchInfo.anchorSide);
             } else {
                 cloud.clearBlendedStretch();
-                this.committedBlendingDegrees.delete(cloud.id);
-                this.stretchAnim.delete(cloud.id);
+                this.stretchAnimators.delete(cloud.id);
             }
         }
     }
 
     animateStretchEffects(deltaTime: number): void {
-        const now = performance.now();
-
-        for (const [cloudId, state] of this.stretchAnim) {
-            switch (state.phase) {
-                case 'holding':
-                    if (now >= state.holdEndTime) {
-                        // Transition to contracting (idle grip loss)
-                        state.phase = 'contracting';
-                        state.targetFactor = 1 - (this.GRIP_LOSS_MIN_CONTRACTION + Math.random() * (this.GRIP_LOSS_MAX_CONTRACTION - this.GRIP_LOSS_MIN_CONTRACTION));
-                        state.phaseDuration = this.GRIP_LOSS_MIN_DURATION +
-                            Math.random() * (this.GRIP_LOSS_MAX_DURATION - this.GRIP_LOSS_MIN_DURATION);
-                    }
-                    break;
-
-                case 'contracting':
-                    // Check if in a micro-pause
-                    if (state.contractPaused) {
-                        if (now >= state.contractPauseEnd) {
-                            state.contractPaused = false;
-                            // Schedule next possible pause
-                            state.nextPauseTime = now + (500 + Math.random() * 2000);
-                        }
-                        break;
-                    }
-
-                    // Gradually lose grip
-                    const contractSpeed = (1 - state.targetFactor) / state.phaseDuration;
-                    state.stretchFactor -= contractSpeed * deltaTime;
-
-                    // Time-based micro-pause: ~1 pause every 1-3 seconds
-                    if (now >= state.nextPauseTime) {
-                        state.contractPaused = true;
-                        state.contractPauseEnd = now + (100 + Math.random() * 300);
-                    }
-
-                    if (state.stretchFactor <= state.targetFactor) {
-                        state.stretchFactor = state.targetFactor;
-                        state.phase = 'contracted_hold';
-                        const holdDuration = this.GRIP_LOSS_HOLD_MIN +
-                            Math.random() * (this.GRIP_LOSS_HOLD_MAX - this.GRIP_LOSS_HOLD_MIN);
-                        state.holdEndTime = now + holdDuration * 1000;
-                    }
-                    break;
-
-                case 'contracted_hold':
-                    if (now >= state.holdEndTime) {
-                        this.startRatcheting(state);
-                    }
-                    break;
-
-                case 'ratcheting':
-                    this.animateRatcheting(state, deltaTime);
-                    break;
-
-                case 'yanking':
-                    this.animateYanking(state, deltaTime);
-                    break;
-
-                case 'settling':
-                    this.animateSettling(state, deltaTime, now);
-                    break;
-            }
-        }
-    }
-
-    private startRatcheting(state: { phase: string; angleOffset: number; targetFactor: number }): void {
-        state.phase = 'ratcheting';
-        state.angleOffset = (Math.random() * 2 - 1) * this.OVERSHOOT_ANGLE_RANGE;
-    }
-
-    private animateRatcheting(state: {
-        phase: string;
-        stretchFactor: number;
-        targetFactor: number;
-        stretchOffset: number;
-        angleOffset: number;
-        currentAngle: number;
-        yankCount: number;
-        yankTarget: number;
-    }, deltaTime: number): void {
-        const overshootDistance = this.getOvershootDistance();
-
-        // Animate stretchFactor back to 1 (if contracted)
-        if (state.stretchFactor < 1) {
-            const factorSpeed = (1 - state.targetFactor) / this.RATCHET_DURATION;
-            state.stretchFactor = Math.min(1, state.stretchFactor + factorSpeed * deltaTime);
-        }
-
-        // Animate stretchOffset toward overshoot distance
-        const offsetSpeed = overshootDistance / this.RATCHET_DURATION;
-        state.stretchOffset += offsetSpeed * deltaTime;
-
-        // Animate angle toward target
-        const angleSpeed = Math.abs(state.angleOffset) / this.RATCHET_DURATION;
-        if (state.currentAngle < state.angleOffset) {
-            state.currentAngle = Math.min(state.angleOffset, state.currentAngle + angleSpeed * deltaTime);
-        } else {
-            state.currentAngle = Math.max(state.angleOffset, state.currentAngle - angleSpeed * deltaTime);
-        }
-
-        if (state.stretchOffset >= overshootDistance) {
-            state.stretchFactor = 1;
-            state.stretchOffset = overshootDistance;
-            state.currentAngle = state.angleOffset;
-
-            // If large angle offset, do alternating yanks before settling
-            if (Math.abs(state.angleOffset) >= this.YANK_ANGLE_THRESHOLD) {
-                const yankCount = Math.abs(state.angleOffset) >= this.OVERSHOOT_ANGLE_RANGE * 0.8 ? 3 : 2;
-                state.phase = 'yanking';
-                state.yankCount = yankCount;
-                state.yankTarget = -state.angleOffset; // first yank goes to opposite side
-            } else {
-                state.phase = 'settling';
-            }
-        }
-    }
-
-    private animateYanking(state: {
-        phase: string;
-        currentAngle: number;
-        angleOffset: number;
-        yankCount: number;
-        yankTarget: number;
-        yankHolding: boolean;
-        yankHoldEnd: number;
-    }, deltaTime: number): void {
-        const now = performance.now();
-
-        if (state.yankHolding) {
-            if (now >= state.yankHoldEnd) {
-                state.yankHolding = false;
-                state.yankCount--;
-
-                if (state.yankCount <= 0) {
-                    state.phase = 'settling';
-                } else {
-                    state.yankTarget = -state.yankTarget;
-                }
-            }
-            return;
-        }
-
-        // Snap portion: move in half the yank duration
-        const angleSpeed = Math.abs(state.angleOffset) * 2 / (this.YANK_DURATION / 2);
-
-        if (state.currentAngle < state.yankTarget) {
-            state.currentAngle = Math.min(state.yankTarget, state.currentAngle + angleSpeed * deltaTime);
-        } else {
-            state.currentAngle = Math.max(state.yankTarget, state.currentAngle - angleSpeed * deltaTime);
-        }
-
-        // Reached target - start hold
-        if (Math.abs(state.currentAngle - state.yankTarget) < 0.01) {
-            state.currentAngle = state.yankTarget;
-            state.yankHolding = true;
-            const holdDuration = (this.YANK_DURATION / 2) * (5 * Math.random());
-            state.yankHoldEnd = now + holdDuration * 1000;
-        }
-    }
-
-    private animateSettling(state: {
-        phase: string;
-        stretchOffset: number;
-        angleOffset: number;
-        currentAngle: number;
-        holdEndTime: number;
-    }, deltaTime: number, now: number): void {
-        const overshootDistance = this.getOvershootDistance();
-
-        // Ease stretchOffset back to 0
-        const settleSpeed = overshootDistance / this.SETTLE_DURATION;
-        state.stretchOffset -= settleSpeed * deltaTime;
-
-        // Ease angle back to 0
-        const angleSettleSpeed = Math.abs(state.angleOffset) / this.SETTLE_DURATION;
-        if (state.currentAngle > 0) {
-            state.currentAngle = Math.max(0, state.currentAngle - angleSettleSpeed * deltaTime);
-        } else {
-            state.currentAngle = Math.min(0, state.currentAngle + angleSettleSpeed * deltaTime);
-        }
-
-        if (state.stretchOffset <= 0) {
-            state.stretchOffset = 0;
-            state.currentAngle = 0;
-            state.phase = 'holding';
-            const nextDelay = this.GRIP_LOSS_POST_SETTLE_DELAY_MIN +
-                Math.random() * (this.GRIP_LOSS_POST_SETTLE_DELAY_MAX - this.GRIP_LOSS_POST_SETTLE_DELAY_MIN);
-            state.holdEndTime = now + nextDelay * 1000;
+        for (const animator of this.stretchAnimators.values()) {
+            animator.animate(deltaTime);
         }
     }
 
     triggerOvershoot(cloudId: string): void {
-        const state = this.stretchAnim.get(cloudId);
-        if (!state) return;
-
-        // User-triggered unblend: just reset to holding without overshoot animation
-        state.phase = 'holding';
-        state.stretchFactor = 1;
-        state.stretchOffset = 0;
-        state.currentAngle = 0;
-        state.yankCount = 0;
-        state.yankTarget = 0;
-        state.yankHolding = false;
-        state.yankHoldEnd = 0;
-        state.contractPaused = false;
-        state.contractPauseEnd = 0;
-        state.nextPauseTime = performance.now() + (500 + Math.random() * 2000);
-        const nextDelay = this.GRIP_LOSS_POST_SETTLE_DELAY_MIN +
-            Math.random() * (this.GRIP_LOSS_POST_SETTLE_DELAY_MAX - this.GRIP_LOSS_POST_SETTLE_DELAY_MIN);
-        state.holdEndTime = performance.now() + nextDelay * 1000;
+        const animator = this.stretchAnimators.get(cloudId);
+        if (animator) {
+            animator.triggerOvershoot();
+        }
     }
 
     private getStretchFactor(cloudId: string): number {
-        const state = this.stretchAnim.get(cloudId);
-        return state?.stretchFactor ?? 1;
+        return this.stretchAnimators.get(cloudId)?.getStretchFactor() ?? 1;
     }
 
     private getStretchOffset(cloudId: string): number {
-        const state = this.stretchAnim.get(cloudId);
-        return state?.stretchOffset ?? 0;
+        return this.stretchAnimators.get(cloudId)?.getStretchOffset() ?? 0;
     }
 
     private getStretchAngle(cloudId: string): number {
-        const state = this.stretchAnim.get(cloudId);
-        return state?.currentAngle ?? 0;
+        return this.stretchAnimators.get(cloudId)?.getStretchAngle() ?? 0;
     }
 
-    private initializeStretchAnim(cloudId: string): void {
-        if (this.stretchAnim.has(cloudId)) return;
-
-        this.stretchAnim.set(cloudId, {
-            phase: 'holding',
-            stretchFactor: 1,
-            targetFactor: 1,
-            stretchOffset: 0,
-            holdEndTime: performance.now() + (1 + Math.random() * 2) * 1000,
-            phaseDuration: 0,
-            angleOffset: 0,
-            currentAngle: 0,
-            yankCount: 0,
-            yankTarget: 0,
-            yankHolding: false,
-            yankHoldEnd: 0,
-            contractPaused: false,
-            contractPauseEnd: 0,
-            nextPauseTime: performance.now() + (500 + Math.random() * 2000)
-        });
+    private getOrCreateStretchAnimator(cloudId: string): StretchAnimator {
+        let animator = this.stretchAnimators.get(cloudId);
+        if (!animator) {
+            animator = new StretchAnimator(cloudId, {
+                getConferenceTableRadius: () => this.getConferenceTableRadius()
+            });
+            this.stretchAnimators.set(cloudId, animator);
+        }
+        return animator;
     }
 
     private findTargetForSupporting(model: SimulatorModel, supportingId: string): string | null {
@@ -1010,93 +616,6 @@ export class SimulatorView {
             }
         }
         return null;
-    }
-
-    private calculateForegroundPositions(
-        model: SimulatorModel,
-        instances: CloudInstance[]
-    ): Map<string, { x: number; y: number; scale: number }> {
-        const positions = new Map<string, { x: number; y: number; scale: number }>();
-
-        const targetInstances = Array.from(model.getTargetCloudIds())
-            .map(id => instances.find(inst => inst.cloud.id === id))
-            .filter(inst => inst !== undefined) as CloudInstance[];
-
-        if (targetInstances.length === 0) return positions;
-
-        const conferencePositions = this.calculateConferenceRoomPositions(model, targetInstances);
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-
-        // Position target parts at their conference seats
-        for (const [cloudId, pos] of conferencePositions.clouds) {
-            positions.set(cloudId, { x: pos.x, y: pos.y, scale: 1 });
-        }
-
-        // Position supporting parts behind their targets
-        for (const targetId of model.getTargetCloudIds()) {
-            const supportingIds = model.getSupportingParts(targetId);
-            const targetPos = conferencePositions.clouds.get(targetId);
-            if (!targetPos) continue;
-
-            const supportingArray = Array.from(supportingIds);
-            supportingArray.forEach((supportingId, index) => {
-                const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
-                const distance = 80 + index * 50;
-                positions.set(supportingId, {
-                    x: targetPos.x + Math.cos(angle) * distance,
-                    y: targetPos.y + Math.sin(angle) * distance,
-                    scale: 1
-                });
-            });
-        }
-
-        // Position blended parts: interpolate between star and their assigned seat based on degree
-        const blendedParts = model.getBlendedParts();
-        const blendedDegrees = model.getBlendedPartsWithDegrees();
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const totalSeats = targetIds.length + blendedParts.length + 1;
-
-        blendedParts.forEach((cloudId) => {
-            if (!this.blendedOffsets.has(cloudId)) {
-                const angle = Math.random() * 2 * Math.PI;
-                const radius = Math.random() * 15;
-                this.blendedOffsets.set(cloudId, {
-                    x: radius * Math.cos(angle),
-                    y: radius * Math.sin(angle)
-                });
-            }
-
-            const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-            const seatPos = seatIndex !== undefined
-                ? this.getSeatPosition(seatIndex, totalSeats)
-                : this.getStarPosition();
-
-            const offset = this.blendedOffsets.get(cloudId)!;
-            const degree = blendedDegrees.get(cloudId) ?? 1;
-            const starPos = this.getStarPosition();
-
-            // degree=1 means fully blended (at star), degree->0 means separating (moving to seat)
-            const starX = starPos.x + offset.x;
-            const starY = starPos.y + offset.y;
-            const interpolatedX = seatPos.x + degree * (starX - seatPos.x);
-            const interpolatedY = seatPos.y + degree * (starY - seatPos.y);
-
-            positions.set(cloudId, {
-                x: interpolatedX,
-                y: interpolatedY,
-                scale: 1
-            });
-        });
-
-        // Clean up offsets for parts no longer blended
-        for (const cloudId of this.blendedOffsets.keys()) {
-            if (!blendedParts.includes(cloudId)) {
-                this.blendedOffsets.delete(cloudId);
-            }
-        }
-
-        return positions;
     }
 
     private setsEqual(a: Set<string>, b: Set<string>): boolean {
@@ -1112,14 +631,11 @@ export class SimulatorView {
             this.transitionProgress = Math.min(1, this.transitionProgress + deltaTime / this.transitionDuration);
             if (this.transitionProgress >= 1) {
                 this.transitionDirection = 'none';
+                this.events.emit('transition-completed', {});
             }
         }
 
-        if (this.mode === 'foreground') {
-            this.conferencePhaseShift += this.conferenceRotationSpeed * deltaTime;
-        }
-
-        this.animateSeatCount(deltaTime);
+        this.seatManager.animate(deltaTime, this.mode);
         this.animateStar(deltaTime);
     }
 
@@ -1253,28 +769,16 @@ export class SimulatorView {
         });
     }
 
-    private animateSeatCount(deltaTime: number): void {
-        if (this.targetSeatCount === 0 || this.currentSeatCount === this.targetSeatCount) return;
-
-        const diff = this.targetSeatCount - this.currentSeatCount;
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), SEAT_COUNT_ANIMATION_SPEED * deltaTime);
-        this.currentSeatCount += step;
-
-        if (Math.abs(this.currentSeatCount - this.targetSeatCount) < 0.01) {
-            this.currentSeatCount = this.targetSeatCount;
-        }
-    }
-
     isSeatCountAnimating(): boolean {
-        return this.targetSeatCount > 0 && Math.abs(this.currentSeatCount - this.targetSeatCount) > 0.01;
+        return this.seatManager.isSeatCountAnimating();
     }
 
     isConferenceRotating(): boolean {
-        return this.mode === 'foreground' && this.conferenceRotationSpeed !== 0;
+        return this.mode === 'foreground' && this.seatManager.isConferenceRotating();
     }
 
     setConferenceRotationPaused(paused: boolean): void {
-        this.conferenceRotationSpeed = paused ? 0 : 0.05;
+        this.seatManager.setConferenceRotationPaused(paused);
     }
 
     updateForegroundPositions(model: SimulatorModel, instances: CloudInstance[]): void {
@@ -1332,13 +836,7 @@ export class SimulatorView {
         if (!model.isBlended(cloudId)) return null;
         if (cloud.animatedBlendingDegree >= 1) return null;
 
-        const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-        if (seatIndex === undefined) return null;
-
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedParts = model.getBlendedParts();
-        const totalSeats = targetIds.length + blendedParts.length + 1;
-        return this.getSeatPosition(seatIndex, totalSeats);
+        return this.getCloudPosition(cloudId) ?? null;
     }
 
     getBlendedLatticeStretch(cloud: Cloud, model: SimulatorModel): { stretchX: number; stretchY: number; anchorSide: 'left' | 'right' | 'top' | 'bottom'; anchorOffsetX: number; anchorOffsetY: number } | null {
@@ -1351,13 +849,8 @@ export class SimulatorView {
         const degree = cloud.animatedBlendingDegree;
         if (degree >= 1) return null;
 
-        const seatIndex = this.conferenceSeatAssignments.get(cloudId);
-        if (seatIndex === undefined) return null;
-
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedParts = model.getBlendedParts();
-        const totalSeats = targetIds.length + blendedParts.length + 1;
-        const seatPos = this.getSeatPosition(seatIndex, totalSeats);
+        const seatPos = this.getUnblendedSeatPosition();
+        if (!seatPos) return null;
 
         const offset = this.blendedOffsets.get(cloudId);
         const starPos = this.getStarPosition();
@@ -1370,32 +863,16 @@ export class SimulatorView {
 
         if (qLength < 1) return null;
 
-        // Track committed degree - the level we've "settled" to after overshoots
-        let committedDegree = this.committedBlendingDegrees.get(cloudId);
-        if (committedDegree === undefined) {
-            committedDegree = degree;
-            this.committedBlendingDegrees.set(cloudId, degree);
-        }
-
-        // Initialize stretch animation state
-        this.initializeStretchAnim(cloudId);
+        // Get or create stretch animator for this cloud
+        const animator = this.getOrCreateStretchAnimator(cloudId);
 
         // Check if user has actively unblended (degree decreased significantly)
-        const isAboutToFullyUnblend = degree < 0.15;
-        const state = this.stretchAnim.get(cloudId)!;
-        const isCurrentlyOvershooting = state.phase === 'ratcheting' || state.phase === 'settling';
+        animator.checkDegreeChange(degree);
 
-        if (!isCurrentlyOvershooting && !isAboutToFullyUnblend && degree < committedDegree - this.DEGREE_STEP_THRESHOLD) {
-            // Degree has decreased by a step - trigger overshoot
-            this.committedBlendingDegrees.set(cloudId, degree);
-            committedDegree = degree;
-            this.triggerOvershoot(cloudId);
-        }
-
-        // Get stretch factor, offset, and angle from unified animation state
-        const stretchFactor = this.getStretchFactor(cloudId);
-        const stretchOffset = this.getStretchOffset(cloudId);
-        const stretchAngle = this.getStretchAngle(cloudId);
+        // Get stretch factor, offset, and angle from animator
+        const stretchFactor = animator.getStretchFactor();
+        const stretchOffset = animator.getStretchOffset();
+        const stretchAngle = animator.getStretchAngle();
 
         // Cloud center is offset from star (anchor edge at star's far side)
         // Stretch only needs to move far edge from its current position to seat
@@ -1444,15 +921,14 @@ export class SimulatorView {
             startX: state.x,
             startY: state.y,
             startTime: performance.now(),
-            duration: 10.0,
+            duration: 8,
             spiralRadius: startRadius,
-            rotations: 1.5,
+            rotations: 2.5,
             exitAngle: startAngle
         });
 
-        // Set target opacity to fade out during spiral
         state.targetOpacity = 0;
-        state.smoothing.opacity = 0.25; // Very slow fade to match spiral duration
+        state.smoothing.opacity = 0; // Opacity handled manually in animateSpiralExits
     }
 
     isSpiralExiting(cloudId: string): boolean {
@@ -1472,7 +948,7 @@ export class SimulatorView {
         const toRemove: string[] = [];
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
-        const maxRadius = Math.max(this.canvasWidth, this.canvasHeight) * 1.05;
+        const maxRadius = Math.max(this.canvasWidth, this.canvasHeight) * 1.1;
 
         for (const [cloudId, spiral] of this.spiralExits) {
             const state = this.cloudStates.get(cloudId);
@@ -1501,8 +977,8 @@ export class SimulatorView {
 
             state.x = centerX + Math.cos(currentAngle) * currentRadius;
             state.y = centerY + Math.sin(currentAngle) * currentRadius;
+            state.opacity = 1 - eased;
 
-            // Override position target to prevent smoothing from interfering
             state.positionTarget = { type: 'absolute', x: state.x, y: state.y };
         }
 
@@ -1629,124 +1105,6 @@ export class SimulatorView {
             return maxZoomFactor;
         }
         return 1.0;
-    }
-
-    private updateSeatAngles(model: SimulatorModel): void {
-        const targetIds = Array.from(model.getTargetCloudIds());
-        const blendedIds = model.getBlendedParts();
-        const totalSeats = targetIds.length + blendedIds.length + 1;
-
-        const seatToCloudId = new Map<number, string>();
-        for (const cloudId of targetIds) {
-            const seat = this.conferenceSeatAssignments.get(cloudId);
-            if (seat !== undefined) seatToCloudId.set(seat, cloudId);
-        }
-        for (const cloudId of blendedIds) {
-            const seat = this.conferenceSeatAssignments.get(cloudId);
-            if (seat !== undefined) seatToCloudId.set(seat, cloudId);
-        }
-
-        const angleStep = (2 * Math.PI) / totalSeats;
-
-        // Initialize angles for new seats
-        for (let i = 0; i < totalSeats; i++) {
-            if (!this.seatInfoMap.has(i)) {
-                // Find all existing seats (including star at index 0) to determine initial angle
-                const existingSeats = Array.from(this.seatInfoMap.values())
-                    .sort((a, b) => a.angle - b.angle);
-
-                let initialAngle = 0;
-                if (existingSeats.length > 0) {
-                    // Find the largest angular gap between existing seats
-                    let largestGap = 0;
-                    let bestAngle = 0;
-
-                    for (let j = 0; j < existingSeats.length; j++) {
-                        const current = existingSeats[j].angle;
-                        const next = existingSeats[(j + 1) % existingSeats.length].angle;
-                        const gap = next > current
-                            ? next - current
-                            : (2 * Math.PI - current) + next;
-
-                        if (gap > largestGap) {
-                            largestGap = gap;
-                            bestAngle = current + gap / 2;
-                            if (bestAngle >= 2 * Math.PI) bestAngle -= 2 * Math.PI;
-                        }
-                    }
-                    initialAngle = bestAngle;
-                }
-
-                this.seatInfoMap.set(i, {
-                    index: i,
-                    angle: initialAngle,
-                    targetAngle: initialAngle,
-                    x: 0,
-                    y: 0,
-                    occupied: false,
-                    cloudId: undefined
-                });
-            }
-        }
-
-        // Remove seats that no longer exist
-        for (const index of this.seatInfoMap.keys()) {
-            if (index >= totalSeats) {
-                this.seatInfoMap.delete(index);
-            }
-        }
-
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-        const radius = this.getConferenceTableRadius(totalSeats);
-
-        // Get all seats and sort by current angle
-        const sortedSeats = Array.from({ length: totalSeats }, (_, i) => i)
-            .map(i => this.seatInfoMap.get(i)!)
-            .sort((a, b) => a.angle - b.angle);
-
-        // Find optimal phase shift that minimizes total angular displacement
-        // Try aligning the phase shift with the first sorted seat's angle
-        const optimalPhaseShift = sortedSeats.length > 0 ? sortedSeats[0].angle : this.conferencePhaseShift;
-
-        // Assign equally spaced target angles to sorted seats
-        sortedSeats.forEach((seatInfo, sortedIndex) => {
-            seatInfo.targetAngle = optimalPhaseShift + angleStep * sortedIndex;
-        });
-
-        // Animate each seat toward its target
-        for (let i = 0; i < totalSeats; i++) {
-            const seatInfo = this.seatInfoMap.get(i)!;
-            const cloudId = seatToCloudId.get(i);
-
-            // Animate current angle toward target
-            const angleDiff = seatInfo.targetAngle - seatInfo.angle;
-            const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-            seatInfo.angle += normalizedDiff * SEAT_REARRANGEMENT_SPEED;
-
-            // Normalize angle to [0, 2π)
-            if (seatInfo.angle < 0) seatInfo.angle += 2 * Math.PI;
-            if (seatInfo.angle >= 2 * Math.PI) seatInfo.angle -= 2 * Math.PI;
-
-            // Calculate position from current angle
-            const x = centerX + radius * Math.cos(seatInfo.angle);
-            const y = centerY + radius * Math.sin(seatInfo.angle);
-
-            seatInfo.occupied = cloudId !== undefined;
-            seatInfo.cloudId = cloudId;
-            seatInfo.x = x;
-            seatInfo.y = y;
-        }
-    }
-
-    createSeatInfo(model: SimulatorModel): Map<number, SeatInfo> {
-        this.updateSeatAngles(model);
-
-        const seats = new Map<number, SeatInfo>();
-        for (const [index, seatInfo] of this.seatInfoMap) {
-            seats.set(index, { ...seatInfo });
-        }
-        return seats;
     }
 
     getForegroundCloudIds(): Set<string> {

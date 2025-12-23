@@ -29,7 +29,6 @@ export class SimulatorModel {
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
     private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
-    private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
     private parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
@@ -50,12 +49,14 @@ export class SimulatorModel {
     }
 
     setTargetCloud(cloudId: string): void {
+        this.blendedParts.delete(cloudId);
         this.targetCloudIds.clear();
         this.targetCloudIds.add(cloudId);
         this.record({ type: 'setTarget', cloudId });
     }
 
     addTargetCloud(cloudId: string): void {
+        this.blendedParts.delete(cloudId);
         this.targetCloudIds.add(cloudId);
         for (const [targetId, supportingIds] of this.supportingParts) {
             supportingIds.delete(cloudId);
@@ -113,6 +114,7 @@ export class SimulatorModel {
     }
 
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
+        if (this.targetCloudIds.has(cloudId)) return;
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
             this.clearSelfRay();
@@ -233,32 +235,6 @@ export class SimulatorModel {
         return this.selfRay !== null;
     }
 
-    selectCloud(cloudId: string | null): void {
-        if (this.selectedCloudId === cloudId) {
-            return;
-        }
-        const oldId = this.selectedCloudId;
-        this.selectedCloudId = cloudId;
-        this.record({ type: 'selectCloud', cloudId: cloudId ?? undefined, data: { previousId: oldId } });
-    }
-
-    deselectCloud(): void {
-        if (this.selectedCloudId !== null) {
-            const oldId = this.selectedCloudId;
-            this.selectedCloudId = null;
-            this.clearSelfRay();
-            this.record({ type: 'deselectCloud', data: { previousId: oldId } });
-        }
-    }
-
-    getSelectedCloudId(): string | null {
-        return this.selectedCloudId;
-    }
-
-    isSelected(cloudId: string): boolean {
-        return this.selectedCloudId === cloudId;
-    }
-
     stepBackPart(cloudId: string): void {
         const wasTarget = this.targetCloudIds.has(cloudId);
         const wasBlended = this.blendedParts.has(cloudId);
@@ -279,9 +255,6 @@ export class SimulatorModel {
         }
 
         this.blendedParts.delete(cloudId);
-        if (this.selectedCloudId === cloudId) {
-            this.selectedCloudId = null;
-        }
 
         this.record({ type: 'stepBack', cloudId, data: { wasTarget, wasBlended } });
     }
@@ -459,10 +432,6 @@ export class SimulatorModel {
                 return `Remove from conference: ${getName(cloudId!)}`;
             case 'clearTargets':
                 return 'Clear all targets';
-            case 'selectCloud':
-                return cloudId ? `Select: ${getName(cloudId)}` : 'Clear selection';
-            case 'deselectCloud':
-                return `Deselect: ${data?.previousId ? getName(data.previousId as string) : 'cloud'}`;
             case 'addBlended':
                 return `Blend: ${getName(cloudId!)} (${((data?.degree as number) * 100).toFixed(0)}%)`;
             case 'removeBlended':
@@ -513,7 +482,6 @@ export class SimulatorModel {
             cloned.blendedParts.set(id, { ...state });
         }
         cloned.pendingBlends = this.pendingBlends.map(p => ({ ...p }));
-        cloned.selectedCloudId = this.selectedCloudId;
         cloned.parts = this.parts.clone();
         cloned.parts.setChangeListener((change: PartStateChange) => {
             cloned.record({ type: change.type, cloudId: change.cloudId, data: change.data });
