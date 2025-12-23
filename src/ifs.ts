@@ -1,4 +1,4 @@
-import { CloudManager } from './cloudAnimation.js';
+import { CloudManager } from './cloudManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';

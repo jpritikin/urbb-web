@@ -202,6 +202,11 @@ export class AnimatedStar {
         this.targetRadiusScale = scale;
     }
 
+    setRadiusScale(scale: number): void {
+        this.radiusScale = scale;
+        this.targetRadiusScale = scale;
+    }
+
     getRadiusScale(): number {
         return this.radiusScale;
     }

@@ -6,11 +6,10 @@ export interface SelfRayConfig {
     endX: number;
     endY: number;
     targetCloudId: string;
-    aspectType: 'curiosity' | 'compassion' | 'gratitude';
 }
 
 export interface BiographyMenuItem extends PieMenuItem {
-    field: 'age' | 'identity' | 'job';
+    field: 'age' | 'identity' | 'job' | 'gratitude';
 }
 
 interface RayLayer {
@@ -37,7 +36,7 @@ export class SelfRay {
     private animationFrameId: number | null = null;
     private hovered: boolean = false;
     private config: SelfRayConfig;
-    private onSelect: ((field: 'age' | 'identity' | 'job', cloudId: string) => void) | null = null;
+    private onSelect: ((field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void) | null = null;
     private pieMenu: PieMenu | null = null;
     private pieMenuVisible: boolean = false;
     private pieMenuOverlay: SVGGElement | null = null;
@@ -53,7 +52,7 @@ export class SelfRay {
         this.pieMenuOverlay = overlay;
     }
 
-    setOnSelect(callback: (field: 'age' | 'identity' | 'job', cloudId: string) => void): void {
+    setOnSelect(callback: (field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void): void {
         this.onSelect = callback;
     }
 
@@ -125,7 +124,6 @@ export class SelfRay {
     }
 
     private getAspectColors(): { outer: string; middle: string; inner: string; stroke: string } {
-        // Colors from wintery-sunburst.svg
         return { outer: '#fff280', middle: '#ffc699', inner: '#ffa899', stroke: '#d4a017' };
     }
 
@@ -263,23 +261,33 @@ export class SelfRay {
         if (!this.group) return;
 
         const fields = unrevealedFields ?? ['age', 'identity', 'job'];
-        if (fields.length === 0) return;
 
         this.pieMenu = new PieMenu(this.container);
         if (this.pieMenuOverlay) {
             this.pieMenu.setOverlayContainer(this.pieMenuOverlay);
         }
 
-        const items: PieMenuItem[] = fields.map(field => ({
-            id: field,
-            label: this.getFieldLabel(field),
-            shortName: this.getFieldShortName(field),
-            category: 'discovery'
-        }));
+        const items: PieMenuItem[] = [];
+
+        for (const field of fields) {
+            items.push({
+                id: field,
+                label: this.getFieldLabel(field),
+                shortName: this.getFieldShortName(field),
+                category: 'curiosity'
+            });
+        }
+
+        items.push({
+            id: 'gratitude',
+            label: 'Thank you for being here',
+            shortName: 'Gratitude',
+            category: 'gratitude'
+        });
 
         this.pieMenu.setItems(items);
         this.pieMenu.setOnSelect((item) => {
-            const field = item.id as 'age' | 'identity' | 'job';
+            const field = item.id as 'age' | 'identity' | 'job' | 'gratitude';
             this.onSelect?.(field, this.config.targetCloudId);
             this.pieMenuVisible = false;
         });
@@ -329,7 +337,7 @@ export class SelfRay {
         }
         this.sparkles = [];
 
-        const sparkleCount = 40;
+        const sparkleCount = 60;
         for (let i = 0; i < sparkleCount; i++) {
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('r', '2');
@@ -422,10 +430,6 @@ export class SelfRay {
 
     getTargetCloudId(): string {
         return this.config.targetCloudId;
-    }
-
-    getAspectType(): string {
-        return this.config.aspectType;
     }
 
     isPieMenuVisible(): boolean {

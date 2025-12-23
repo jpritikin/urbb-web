@@ -14,6 +14,7 @@ export interface PartDialogues {
     burdenedJobAppraisal?: string[];
     burdenedJobImpact?: string[];
     unburdenedJob?: string;
+    gratitudeResponse?: string;
 }
 
 export interface PartState {

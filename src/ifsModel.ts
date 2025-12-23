@@ -1,4 +1,5 @@
 import { PartStateManager, PartState, PartBiography, PartDialogues, PartStateChange } from './partStateManager.js';
+import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 
 export interface StateAction {
     type: string;
@@ -18,11 +19,8 @@ export interface BlendedPartState {
     reason: BlendReason;
 }
 
-export type SelfRayAspect = 'curiosity' | 'compassion' | 'gratitude';
-
 export interface SelfRayState {
     targetCloudId: string;
-    aspect: SelfRayAspect;
 }
 
 export class SimulatorModel {
@@ -30,10 +28,12 @@ export class SimulatorModel {
     private supportingParts: Map<string, Set<string>> = new Map();
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
+    private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
     private selectedCloudId: string | null = null;
     private history: HistoryEntry[] = [];
     private parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
+    private pendingAttentionDemand: string | null = null;
 
     constructor() {
         this.parts.setChangeListener((change: PartStateChange) => {
@@ -180,9 +180,41 @@ export class SimulatorModel {
         this.record({ type: 'clearBlendedParts' });
     }
 
-    setSelfRay(targetCloudId: string, aspect: SelfRayAspect): void {
-        this.selfRay = { targetCloudId, aspect };
-        this.record({ type: 'setSelfRay', cloudId: targetCloudId, data: { aspect } });
+    enqueuePendingBlend(cloudId: string, reason: BlendReason): void {
+        if (!this.pendingBlends.some(p => p.cloudId === cloudId)) {
+            this.pendingBlends.push({ cloudId, reason });
+            this.record({ type: 'enqueuePendingBlend', cloudId, data: { reason } });
+        }
+    }
+
+    dequeuePendingBlend(): { cloudId: string; reason: BlendReason } | null {
+        const item = this.pendingBlends.shift() ?? null;
+        if (item) {
+            this.record({ type: 'dequeuePendingBlend', cloudId: item.cloudId });
+        }
+        return item;
+    }
+
+    peekPendingBlend(): { cloudId: string; reason: BlendReason } | null {
+        return this.pendingBlends[0] ?? null;
+    }
+
+    getPendingBlends(): { cloudId: string; reason: BlendReason }[] {
+        return [...this.pendingBlends];
+    }
+
+    isPendingBlend(cloudId: string): boolean {
+        return this.pendingBlends.some(p => p.cloudId === cloudId);
+    }
+
+    clearPendingBlends(): void {
+        this.pendingBlends = [];
+        this.record({ type: 'clearPendingBlends' });
+    }
+
+    setSelfRay(targetCloudId: string): void {
+        this.selfRay = { targetCloudId };
+        this.record({ type: 'setSelfRay', cloudId: targetCloudId });
     }
 
     clearSelfRay(): void {
@@ -214,6 +246,7 @@ export class SimulatorModel {
         if (this.selectedCloudId !== null) {
             const oldId = this.selectedCloudId;
             this.selectedCloudId = null;
+            this.clearSelfRay();
             this.record({ type: 'deselectCloud', data: { previousId: oldId } });
         }
     }
@@ -479,12 +512,44 @@ export class SimulatorModel {
         for (const [id, state] of this.blendedParts) {
             cloned.blendedParts.set(id, { ...state });
         }
+        cloned.pendingBlends = this.pendingBlends.map(p => ({ ...p }));
         cloned.selectedCloudId = this.selectedCloudId;
         cloned.parts = this.parts.clone();
         cloned.parts.setChangeListener((change: PartStateChange) => {
             cloned.record({ type: change.type, cloudId: change.cloudId, data: change.data });
         });
         return cloned;
+    }
+
+    checkAttentionDemands(relationships: CloudRelationshipManager): void {
+        if (this.pendingAttentionDemand) return;
+
+        const allParts = this.parts.getAllPartStates();
+        const sorted = [...allParts.entries()].sort(
+            (a, b) => b[1].needAttention - a[1].needAttention
+        );
+
+        for (const [cloudId, state] of sorted) {
+            if (state.needAttention <= 1) break;
+
+            const protectors = relationships.getProtectedBy(cloudId);
+            if (protectors.size > 0) continue;
+
+            this.setNeedAttention(cloudId, 0.95);
+            this.partDemandsAttention(cloudId);
+            this.pendingAttentionDemand = cloudId;
+            break;
+        }
+    }
+
+    consumeAttentionDemand(): string | null {
+        const cloudId = this.pendingAttentionDemand;
+        this.pendingAttentionDemand = null;
+        return cloudId;
+    }
+
+    hasPendingAttentionDemand(): boolean {
+        return this.pendingAttentionDemand !== null;
     }
 }
 

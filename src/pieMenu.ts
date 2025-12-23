@@ -13,6 +13,8 @@ export interface PieMenuConfig {
 }
 
 export class PieMenu {
+    private static activeMenu: PieMenu | null = null;
+
     private group: SVGGElement | null = null;
     private visible: boolean = false;
     private targetCloudId: string | null = null;
@@ -62,6 +64,11 @@ export class PieMenu {
             this.hide();
         }
 
+        if (PieMenu.activeMenu && PieMenu.activeMenu !== this) {
+            PieMenu.activeMenu.hide();
+        }
+
+        PieMenu.activeMenu = this;
         this.targetCloudId = cloudId;
         this.visible = true;
         this.hoverIndex = -1;
@@ -75,6 +82,9 @@ export class PieMenu {
         this.group = null;
         this.visible = false;
         this.targetCloudId = null;
+        if (PieMenu.activeMenu === this) {
+            PieMenu.activeMenu = null;
+        }
         this.onClose?.();
     }
 
@@ -199,7 +209,9 @@ export class PieMenu {
             discovery: `rgba(52, 152, 219, ${opacity})`,
             history: `rgba(230, 126, 34, ${opacity})`,
             relationship: `rgba(231, 76, 60, ${opacity})`,
-            role: `rgba(46, 204, 113, ${opacity})`
+            role: `rgba(46, 204, 113, ${opacity})`,
+            curiosity: `rgba(52, 152, 219, ${opacity})`,
+            gratitude: `rgba(255, 182, 193, ${opacity})`
         };
         return colors[category ?? ''] ?? `rgba(155, 89, 182, ${opacity})`;
     }

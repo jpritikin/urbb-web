@@ -63,9 +63,6 @@ export interface CloudAnimatedState {
 
     // Smoothing factors
     smoothing: SmoothingConfig;
-
-    // Flags
-    inCounterZoomGroup: boolean;
 }
 
 export class SimulatorView {
@@ -93,7 +90,8 @@ export class SimulatorView {
     private selfRay: SelfRay | null = null;
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
-    private onRayFieldSelect: ((field: 'age' | 'identity' | 'job', cloudId: string) => void) | null = null;
+    private onRayFieldSelect: ((field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void) | null = null;
+    private onModeChange: ((mode: 'panorama' | 'foreground') => void) | null = null;
 
     private conferencePhaseShift: number = Math.random() * Math.PI * 2;
     private conferenceRotationSpeed: number = 0.05; // radians per second
@@ -188,8 +186,12 @@ export class SimulatorView {
         this.pieMenuOverlay = overlay;
     }
 
-    setOnRayFieldSelect(callback: (field: 'age' | 'identity' | 'job', cloudId: string) => void): void {
+    setOnRayFieldSelect(callback: (field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void): void {
         this.onRayFieldSelect = callback;
+    }
+
+    setOnModeChange(callback: (mode: 'panorama' | 'foreground') => void): void {
+        this.onModeChange = callback;
     }
 
     getMode(): 'panorama' | 'foreground' {
@@ -200,17 +202,29 @@ export class SimulatorView {
         if (mode !== this.mode) {
             this.previousMode = this.mode;
             this.mode = mode;
+
+            const wasTransitioning = this.transitionDirection !== 'none' && this.transitionProgress < 1;
+            const oldDirection = this.transitionDirection;
+
             if (mode === 'foreground') {
                 this.transitionDirection = 'forward';
             } else {
                 this.transitionDirection = 'reverse';
             }
-            this.transitionProgress = 0;
+
+            if (wasTransitioning && oldDirection !== this.transitionDirection) {
+                // Switching direction mid-transition: continue from current position
+                this.transitionProgress = 1 - this.transitionProgress;
+            } else {
+                this.transitionProgress = 0;
+            }
 
             // Reset opacity smoothing for all clouds to ensure consistent transition speed
             for (const state of this.cloudStates.values()) {
                 state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
             }
+
+            this.onModeChange?.(mode);
         }
     }
 
@@ -274,19 +288,8 @@ export class SimulatorView {
         switch (target.type) {
             case 'panorama': {
                 const pos = panoramaPositions.get(cloudId);
-                let x = pos?.x ?? centerX;
-                let y = pos?.y ?? centerY;
-
-                // If cloud is in counter-zoom group, convert world position to counter-zoom coords
-                // Exception: during reverse transition, use unscaled position so clouds animate
-                // directly to their final panorama positions
-                const state = this.cloudStates.get(cloudId);
-                if (state?.inCounterZoomGroup && this.transitionDirection !== 'reverse') {
-                    const zoomFactor = this.getCurrentZoomFactor();
-                    x = centerX + (x - centerX) * zoomFactor;
-                    y = centerY + (y - centerY) * zoomFactor;
-                }
-
+                const x = pos?.x ?? centerX;
+                const y = pos?.y ?? centerY;
                 return { x, y, scale: pos?.scale ?? 1 };
             }
 
@@ -495,6 +498,11 @@ export class SimulatorView {
         instances: CloudInstance[],
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>
     ): void {
+        if (newModel.hasPendingAttentionDemand()) {
+            newModel.consumeAttentionDemand();
+            this.setMode('foreground');
+        }
+
         // Check for displaced parts and start spiral exits
         const displacedParts = newModel.getDisplacedParts();
         const hasDisplacements = displacedParts.size > 0;
@@ -572,8 +580,7 @@ export class SimulatorView {
                 startY: starPos.y,
                 endX: cloudState.x,
                 endY: cloudState.y,
-                targetCloudId: modelRay.targetCloudId,
-                aspectType: modelRay.aspect
+                targetCloudId: modelRay.targetCloudId
             });
 
             if (this.pieMenuOverlay) {
@@ -602,6 +609,7 @@ export class SimulatorView {
     private updateCloudStateTargets(model: SimulatorModel, instances: CloudInstance[]): void {
         const targetIds = model.getTargetCloudIds();
         const blendedParts = model.getBlendedParts();
+        const pendingBlends = model.getPendingBlends();
         const blendedDegrees = model.getBlendedPartsWithDegrees();
         const allSupporting = model.getAllSupportingParts();
 
@@ -624,8 +632,9 @@ export class SimulatorView {
 
             const isTarget = targetIds.has(cloudId);
             const isBlended = blendedParts.includes(cloudId);
+            const isPendingBlend = pendingBlends.some(p => p.cloudId === cloudId);
             const isSupporting = allSupporting.has(cloudId);
-            const isInForeground = isTarget || isBlended || isSupporting;
+            const isInForeground = isTarget || isBlended || isPendingBlend || isSupporting;
 
             if (this.mode === 'foreground' && isInForeground) {
                 currentForegroundIds.add(cloudId);
@@ -633,18 +642,14 @@ export class SimulatorView {
 
             // Skip clouds that are currently fly-out exiting
             if (this.flyOutExits.has(cloudId)) {
-                state.inCounterZoomGroup = true;
                 continue;
             }
 
             // Determine position target based on role
             let positionTarget: PositionTarget;
             let targetOpacity = 1;
-            let inCounterZoomGroup = false;
 
             if (this.mode === 'foreground' && isInForeground) {
-                inCounterZoomGroup = true;
-
                 if (isBlended) {
                     const blendReason = model.getBlendReason(cloudId);
 
@@ -676,6 +681,9 @@ export class SimulatorView {
                         state.targetBlendingDegree = degree;
                     }
                     targetOpacity = BLENDED_OPACITY;
+                } else if (isPendingBlend) {
+                    positionTarget = { type: 'star' };
+                    targetOpacity = BLENDED_OPACITY;
                 } else if (isTarget) {
                     const seatIndex = this.conferenceSeatAssignments.get(cloudId);
                     positionTarget = { type: 'seat', seatIndex: seatIndex ?? 1 };
@@ -694,7 +702,6 @@ export class SimulatorView {
                 // Check if this part just left foreground - trigger fly-out exit
                 if (this.previousForegroundIds.has(cloudId) && !this.spiralExits.has(cloudId)) {
                     this.startFlyOutExit(cloudId);
-                    state.inCounterZoomGroup = true;
                     continue;
                 }
                 positionTarget = { type: 'panorama' };
@@ -702,13 +709,6 @@ export class SimulatorView {
             } else {
                 // Panorama mode
                 positionTarget = { type: 'panorama' };
-
-                // During reverse transition, keep former fg clouds in counter-zoom group
-                if (this.transitionDirection === 'reverse' && this.transitionProgress < 1) {
-                    if (state.inCounterZoomGroup) {
-                        inCounterZoomGroup = true;
-                    }
-                }
             }
 
             state.positionTarget = positionTarget;
@@ -717,8 +717,6 @@ export class SimulatorView {
                 state.targetOpacity = targetOpacity;
             }
             state.targetScale = 1;
-            // Keep spiral-exiting or fly-out-exiting clouds in counter-zoom group
-            state.inCounterZoomGroup = inCounterZoomGroup || this.spiralExits.has(cloudId) || this.flyOutExits.has(cloudId);
         }
 
         // Update previous foreground set for next frame
@@ -1129,8 +1127,11 @@ export class SimulatorView {
         deltaTime: number,
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
         model: SimulatorModel
-    ): { completedUnblendings: string[] } {
+    ): { completedUnblendings: string[]; completedPendingBlends: string[] } {
         const completedUnblendings: string[] = [];
+        const completedPendingBlends: string[] = [];
+        const pendingBlendIds = new Set(model.getPendingBlends().map(p => p.cloudId));
+        const starPos = this.getStarPosition();
 
         for (const [cloudId, state] of this.cloudStates) {
             // Resolve semantic position target to actual x/y
@@ -1183,9 +1184,19 @@ export class SimulatorView {
             if (prevDegree > 0.01 && state.blendingDegree <= 0.01 && state.targetBlendingDegree <= 0.01) {
                 completedUnblendings.push(cloudId);
             }
+
+            // Detect when pending blend reaches the star
+            if (pendingBlendIds.has(cloudId)) {
+                const dx = state.x - starPos.x;
+                const dy = state.y - starPos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 30) {
+                    completedPendingBlends.push(cloudId);
+                }
+            }
         }
 
-        return { completedUnblendings };
+        return { completedUnblendings, completedPendingBlends };
     }
 
     getCloudState(cloudId: string): CloudAnimatedState | undefined {
@@ -1238,8 +1249,7 @@ export class SimulatorView {
             targetScale: initialPosition.scale,
             targetOpacity: 1,
             targetBlendingDegree: 1,
-            smoothing: { ...DEFAULT_SMOOTHING },
-            inCounterZoomGroup: false
+            smoothing: { ...DEFAULT_SMOOTHING }
         });
     }
 
@@ -1299,10 +1309,11 @@ export class SimulatorView {
 
     private updateStarPosition(model: SimulatorModel): void {
         const targetIds = model.getTargetCloudIds();
+        const blendedParts = model.getBlendedParts();
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
 
-        if (this.mode === 'foreground' && targetIds.size > 0) {
+        if (this.mode === 'foreground' && (targetIds.size > 0 || blendedParts.length > 0)) {
             const starPos = this.getStarPosition();
             this.starTargetX = starPos.x - centerX;
             this.starTargetY = starPos.y - centerY;
@@ -1736,5 +1747,9 @@ export class SimulatorView {
             seats.set(index, { ...seatInfo });
         }
         return seats;
+    }
+
+    getForegroundCloudIds(): Set<string> {
+        return this.previousForegroundIds;
     }
 }

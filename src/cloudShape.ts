@@ -1053,7 +1053,6 @@ export class Cloud {
 
         this.pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         this.pathElement.style.strokeWidth = String(0.8);
-        this.pathElement.style.pointerEvents = 'all';
 
         this.textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         this.textElement.style.fontFamily = 'sans-serif';

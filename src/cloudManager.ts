@@ -1,13 +1,14 @@
 import { Cloud, CloudType } from './cloudShape.js';
 import { Point } from './geometry.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
-import { PhysicsEngine, PhysicsConfig } from './physicsEngine.js';
+import { PhysicsEngine } from './physicsEngine.js';
 import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { Vec3, CloudInstance } from './types.js';
 import { AnimatedStar, STAR_OUTER_RADIUS } from './starAnimation.js';
+import { PanoramaController } from './panoramaController.js';
 
 export { CloudType };
 
@@ -71,12 +72,14 @@ export class CloudManager {
     private partitionCount: number = 8;
     private currentPartition: number = 0;
     private animatedStar: AnimatedStar | null = null;
-    private counterZoomGroup: SVGGElement | null = null;
+    private zoomGroup: SVGGElement | null = null;
+    private uiGroup: SVGGElement | null = null;
 
     private uiContainer: HTMLElement | null = null;
     private debugBox: HTMLElement | null = null;
 
     private physicsEngine: PhysicsEngine;
+    private panoramaController: PanoramaController;
     private model: SimulatorModel;
     private view: SimulatorView;
 
@@ -108,7 +111,6 @@ export class CloudManager {
     private blendStartTimers: Map<string, number> = new Map();
     private pendingGrievanceTargets: Map<string, string> = new Map();
     private readonly BLEND_MESSAGE_DELAY = 3;
-    private compassionBubbleTargetId: string | null = null;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -120,6 +122,7 @@ export class CloudManager {
             surfaceRepulsionStrength: 20,
             angularAcceleration: 25
         });
+        this.panoramaController = new PanoramaController(this.physicsEngine);
 
         this.model = new SimulatorModel();
         this.view = new SimulatorView(800, 600);
@@ -142,22 +145,32 @@ export class CloudManager {
 
         this.container.appendChild(this.svgElement);
 
-        this.counterZoomGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        this.counterZoomGroup.setAttribute('id', 'counter-zoom-group');
-        this.svgElement.appendChild(this.counterZoomGroup);
+        // zoomGroup contains content that zooms (clouds, carpet, rays)
+        this.zoomGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.zoomGroup.setAttribute('id', 'zoom-group');
+        this.svgElement.appendChild(this.zoomGroup);
+
+        // uiGroup contains content that stays in screen coordinates (star, pie menu, toggle)
+        this.uiGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.uiGroup.setAttribute('id', 'ui-group');
+        this.svgElement.appendChild(this.uiGroup);
 
         const rayContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         rayContainer.setAttribute('id', 'ray-container');
-        this.counterZoomGroup.insertBefore(rayContainer, this.counterZoomGroup.firstChild);
+        this.zoomGroup.appendChild(rayContainer);
         this.view.setRayContainer(rayContainer);
 
         this.pieMenuOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.pieMenuOverlay.setAttribute('id', 'pie-menu-overlay');
-        this.counterZoomGroup.appendChild(this.pieMenuOverlay);
+        this.uiGroup.appendChild(this.pieMenuOverlay);
         this.view.setPieMenuOverlay(this.pieMenuOverlay);
 
-        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.counterZoomGroup);
+        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.zoomGroup);
         this.view.setOnRayFieldSelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
+        this.view.setOnModeChange(() => {
+            this.updateUIForMode();
+            this.updateModeToggle();
+        });
 
         this.createSelfStar();
         this.createModeToggle();
@@ -258,7 +271,7 @@ export class CloudManager {
     }
 
     private createSelfStar(): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.uiGroup) return;
 
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
@@ -266,7 +279,7 @@ export class CloudManager {
         this.animatedStar = new AnimatedStar(centerX, centerY);
         const starElement = this.animatedStar.createElement();
 
-        this.counterZoomGroup.appendChild(starElement);
+        this.uiGroup.appendChild(starElement);
         this.view.setStarElement(starElement);
 
         // Expose star for console testing: star.testTransition('removing', 6, 5)
@@ -296,7 +309,7 @@ export class CloudManager {
     }
 
     private createModeToggle(): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.uiGroup) return;
 
         const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
         foreignObject.setAttribute('x', String(this.canvasWidth - 42));
@@ -314,7 +327,7 @@ export class CloudManager {
         });
 
         foreignObject.appendChild(this.modeToggleContainer);
-        this.counterZoomGroup.appendChild(foreignObject);
+        this.uiGroup.appendChild(foreignObject);
     }
 
     private handleModeToggle(isForeground: boolean): void {
@@ -343,9 +356,9 @@ export class CloudManager {
     }
 
     private createPieMenu(): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.uiGroup) return;
 
-        this.pieMenu = new PieMenu(this.counterZoomGroup);
+        this.pieMenu = new PieMenu(this.uiGroup);
         if (this.pieMenuOverlay) {
             this.pieMenu.setOverlayContainer(this.pieMenuOverlay);
         }
@@ -399,6 +412,9 @@ export class CloudManager {
                 include = isTarget && proxies.size > 0;
             } else if (action.id === 'expand_calm') {
                 include = isSoleTargetWithRevealedProxy;
+            } else if (action.id === 'feel_toward') {
+                const selfRay = this.model.getSelfRay();
+                include = isTarget && selfRay?.targetCloudId !== cloudId;
             } else {
                 include = isTarget;
             }
@@ -408,7 +424,7 @@ export class CloudManager {
 
                 if (action.id === 'feel_toward' && proxyRevealed) {
                     label = "How do you feel toward this part that doesn't know you very well?";
-                } else if (action.id === 'who_do_you_see' && this.compassionBubbleTargetId === cloudId && proxyRevealed) {
+                } else if (action.id === 'who_do_you_see' && this.model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
                     const proxyCloud = this.getCloudById(proxyAsTargetId!);
                     const proxyName = proxyCloud?.text ?? 'the proxy';
                     label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
@@ -564,7 +580,6 @@ export class CloudManager {
 
         if (action.id === 'feel_toward') {
             const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
-            const proxyAsTargetId = this.getProxyAsTarget(cloud.id);
 
             const oldModel = this.model.clone();
 
@@ -582,36 +597,21 @@ export class CloudManager {
             }
 
             for (const grievanceId of grievanceTargets) {
-                if (!targetIds.has(grievanceId) && !alreadyBlended.includes(grievanceId)) {
+                const isPending = this.model.isPendingBlend(grievanceId);
+                if (!targetIds.has(grievanceId) && !alreadyBlended.includes(grievanceId) && !isPending) {
                     const grievanceCloud = this.getCloudById(grievanceId);
                     if (grievanceCloud && this.model.getTrust(grievanceId) < 0.5) {
-                        const response = this.getGrievanceResponse(grievanceId, cloud.id);
-                        if (response) {
-                            this.model.addBlendedPart(grievanceId, 'therapist');
-                            blendedResponses.push({ cloudId: grievanceId, response });
-                        }
+                        this.model.enqueuePendingBlend(grievanceId, 'therapist');
                     }
                 }
             }
 
             const blendedParts = this.model.getBlendedParts();
-            const partDesc = this.buildPartDescription(cloud.id);
+            const hasPendingBlends = this.model.peekPendingBlend() !== null;
 
-            this.compassionBubbleTargetId = null;
-            if (blendedParts.length === 0) {
-                if (proxyAsTargetId) {
-                    this.showThoughtBubble(`Feel toward ${partDesc}?\nCompassion`, { label: 'Let the part know', targetCloudId: cloud.id });
-                    this.compassionBubbleTargetId = cloud.id;
-                } else {
-                    const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
-                    if (unrevealed.length > 0) {
-                        this.createSelfRay(cloud.id, 'curiosity', unrevealed);
-                    } else {
-                        const selfAspects = ['compassion', 'gratitude'];
-                        const selfAspect = selfAspects[Math.floor(Math.random() * selfAspects.length)];
-                        this.showThoughtBubble(`Feel toward ${partDesc}?\n${selfAspect}`, { label: 'Let the part know', targetCloudId: cloud.id });
-                    }
-                }
+            if (blendedParts.length === 0 && !hasPendingBlends) {
+                const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
+                this.createSelfRay(cloud.id, unrevealed);
             } else if (blendedResponses.length > 0) {
                 this.showThoughtBubble(blendedResponses[0].response);
                 this.model.adjustTrust(cloud.id, 0.9, 'therapist invited attack');
@@ -685,7 +685,7 @@ export class CloudManager {
         const targetIds = this.model.getTargetCloudIds();
         const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
         if (availableProxies.length === 0) {
-            const successChance = this.compassionBubbleTargetId === cloud.id ? 0.6 : 0.2;
+            const successChance = this.model.getSelfRay()?.targetCloudId === cloud.id ? 0.6 : 0.2;
             if (Math.random() < successChance) {
                 this.relationships.clearProxies(cloud.id);
                 this.showThoughtBubble("I see you.");
@@ -767,7 +767,7 @@ export class CloudManager {
     }
 
     private showThoughtBubble(reaction: string, followUp?: { label: string; targetCloudId: string }): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.uiGroup) return;
 
         console.log(`[ThoughtBubble] Showing: "${reaction.substring(0, 30)}..."`);
         this.hideThoughtBubble();
@@ -794,6 +794,12 @@ export class CloudManager {
         bubble.setAttribute('stroke', '#333');
         bubble.setAttribute('stroke-width', '2');
         bubble.setAttribute('opacity', '0.95');
+        bubble.setAttribute('pointer-events', 'auto');
+        bubble.style.cursor = 'pointer';
+        bubble.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideThoughtBubble();
+        });
         this.thoughtBubbleGroup.appendChild(bubble);
 
         const smallCircle1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -804,6 +810,12 @@ export class CloudManager {
         smallCircle1.setAttribute('stroke', '#333');
         smallCircle1.setAttribute('stroke-width', '2');
         smallCircle1.setAttribute('opacity', '0.95');
+        smallCircle1.setAttribute('pointer-events', 'auto');
+        smallCircle1.style.cursor = 'pointer';
+        smallCircle1.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideThoughtBubble();
+        });
         this.thoughtBubbleGroup.appendChild(smallCircle1);
 
         const smallCircle2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -814,6 +826,12 @@ export class CloudManager {
         smallCircle2.setAttribute('stroke', '#333');
         smallCircle2.setAttribute('stroke-width', '2');
         smallCircle2.setAttribute('opacity', '0.95');
+        smallCircle2.setAttribute('pointer-events', 'auto');
+        smallCircle2.style.cursor = 'pointer';
+        smallCircle2.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideThoughtBubble();
+        });
         this.thoughtBubbleGroup.appendChild(smallCircle2);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -877,7 +895,7 @@ export class CloudManager {
             this.thoughtBubbleGroup.appendChild(buttonGroup);
         }
 
-        this.counterZoomGroup.appendChild(this.thoughtBubbleGroup);
+        this.uiGroup.appendChild(this.thoughtBubbleGroup);
         this.thoughtBubbleVisible = true;
         this.thoughtBubbleFadeTimer = 0;
     }
@@ -891,7 +909,6 @@ export class CloudManager {
         this.thoughtBubbleVisible = false;
         this.thoughtBubbleFadeTimer = 0;
         this.thoughtBubbleFollowUp = null;
-        this.compassionBubbleTargetId = null;
     }
 
     private handleThoughtBubbleFollowUp(): void {
@@ -988,12 +1005,12 @@ export class CloudManager {
         return null;
     }
 
-    private createSelfRay(cloudId: string, aspectType: 'curiosity' | 'compassion' | 'gratitude', _unrevealedFields: ('age' | 'identity' | 'job')[]): void {
-        this.model.setSelfRay(cloudId, aspectType);
+    private createSelfRay(cloudId: string, _unrevealedFields: ('age' | 'identity' | 'job')[]): void {
+        this.model.setSelfRay(cloudId);
         this.syncViewWithModel();
     }
 
-    private handleRayFieldSelect(field: 'age' | 'identity' | 'job', cloudId: string): void {
+    private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string): void {
         const cloud = this.getCloudById(cloudId);
         const partState = this.model.getPartState(cloudId);
         if (!cloud || !partState) return;
@@ -1010,21 +1027,27 @@ export class CloudManager {
                 } else {
                     response = "I'm not sure how old I am.";
                 }
+                this.model.adjustTrust(cloudId, 1.1, 'received curiosity');
                 break;
             case 'identity':
                 this.model.revealIdentity(cloudId);
                 response = `I'm the ${cloud.text}.`;
+                this.model.adjustTrust(cloudId, 1.1, 'received curiosity');
                 break;
             case 'job':
                 this.model.revealJob(cloudId);
                 response = partState.dialogues.unburdenedJob ?? "I help in my own way.";
+                this.model.adjustTrust(cloudId, 1.1, 'received curiosity');
+                break;
+            case 'gratitude':
+                response = partState.dialogues.gratitudeResponse ?? "Thank you...";
+                this.model.adjustTrust(cloudId, 1.15, 'received gratitude');
                 break;
             default:
                 response = "...";
         }
 
         this.showThoughtBubble(response);
-        this.model.adjustTrust(cloudId, 1.1, 'received curiosity');
         this.model.clearSelfRay();
         this.syncViewWithModel();
         this.updateBiographyPanel();
@@ -1045,7 +1068,7 @@ export class CloudManager {
     }
 
     private showProtectors(targetCloud: Cloud): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.zoomGroup) return;
 
         const oldModel = this.model.clone();
 
@@ -1075,7 +1098,7 @@ export class CloudManager {
     private showRelatedClouds(): void {
         const targetIds = this.model.getTargetCloudIds();
         const primaryTargetId = Array.from(targetIds)[0];
-        if (!primaryTargetId || !this.counterZoomGroup) return;
+        if (!primaryTargetId || !this.zoomGroup) return;
 
         const oldModel = this.model.clone();
 
@@ -1116,7 +1139,7 @@ export class CloudManager {
     }
 
     private showRegionLabels(hasProtectors: boolean, hasGrievances: boolean): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.uiGroup) return;
 
         this.hideRegionLabels();
 
@@ -1149,7 +1172,7 @@ export class CloudManager {
             this.regionLabelsGroup.appendChild(grievanceLabel);
         }
 
-        this.counterZoomGroup.appendChild(this.regionLabelsGroup);
+        this.uiGroup.appendChild(this.regionLabelsGroup);
     }
 
     private hideRegionLabels(): void {
@@ -1160,7 +1183,7 @@ export class CloudManager {
     }
 
     private positionRelatedCloud(instance: CloudInstance, region: string, index: number, total: number): void {
-        if (!this.counterZoomGroup) return;
+        if (!this.zoomGroup) return;
 
         const regionPositions = {
             protector: { x: this.canvasWidth * 0.25, y: this.canvasHeight * 0.25 },
@@ -1172,8 +1195,8 @@ export class CloudManager {
 
         const group = instance.cloud.getGroupElement();
         if (group) {
-            if (group.parentNode !== this.counterZoomGroup) {
-                this.counterZoomGroup.appendChild(group);
+            if (group.parentNode !== this.zoomGroup) {
+                this.zoomGroup.appendChild(group);
             }
             group.setAttribute('transform', `translate(${basePos.x}, ${basePos.y + offsetY}) scale(1)`);
             group.setAttribute('opacity', '1');
@@ -1277,7 +1300,7 @@ export class CloudManager {
             onLongPressStart: () => this.startLongPress(cloud.id),
             onLongPressEnd: () => this.cancelLongPress(),
         });
-        this.svgElement.appendChild(group);
+        this.zoomGroup?.appendChild(group);
         cloud.updateSVGElements(this.debug, state, this.model.isSelected(cloud.id), false);
 
         const instance: CloudInstance = {
@@ -1360,26 +1383,8 @@ export class CloudManager {
     }
 
     private updateViewBox(): void {
-        const mode = this.view.getMode();
-        const isTransitioning = this.view.isTransitioning();
-        let centerX = this.panX;
-        let centerY = this.panY;
-
-        if (isTransitioning || mode === 'foreground') {
-            centerX = this.canvasWidth / 2;
-            centerY = this.canvasHeight / 2;
-        }
-
-        const zoomFactor = this.view.getCurrentZoomFactor();
-        const effectiveZoom = this.zoom * zoomFactor;
-
-        const scaledWidth = this.canvasWidth / effectiveZoom;
-        const scaledHeight = this.canvasHeight / effectiveZoom;
-        const viewBoxX = centerX - scaledWidth / 2;
-        const viewBoxY = centerY - scaledHeight / 2;
-
-        this.svgElement?.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${scaledWidth} ${scaledHeight}`);
-
+        // ViewBox stays fixed - zooming is done via zoomGroup transform
+        this.svgElement?.setAttribute('viewBox', `0 0 ${this.canvasWidth} ${this.canvasHeight}`);
     }
 
     clear(): void {
@@ -1606,6 +1611,31 @@ export class CloudManager {
         this.reduceBlending(cloudId, 0.3);
     }
 
+    private promotePendingBlend(cloudId: string): void {
+        if (!this.model.isPendingBlend(cloudId)) return;
+
+        const pending = this.model.getPendingBlends().find(p => p.cloudId === cloudId);
+        if (!pending) return;
+
+        // Remove from pending queue by dequeueing until we find it
+        // (In practice there should only be one pending at a time reaching the star)
+        const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
+        let item = this.model.dequeuePendingBlend();
+        while (item && item.cloudId !== cloudId) {
+            tempQueue.push(item);
+            item = this.model.dequeuePendingBlend();
+        }
+        // Re-enqueue any items we removed that weren't the target
+        for (const temp of tempQueue) {
+            this.model.enqueuePendingBlend(temp.cloudId, temp.reason);
+        }
+
+        if (item) {
+            this.model.addBlendedPart(cloudId, item.reason);
+            this.syncViewWithModel();
+        }
+    }
+
     private finishUnblending(cloudId: string): void {
         const cloud = this.getCloudById(cloudId);
         if (!cloud) return;
@@ -1798,68 +1828,6 @@ export class CloudManager {
         }
     }
 
-    private checkHighAttentionParts(): void {
-
-        const sorted = [...this.instances].sort(
-            (a, b) => this.model.getNeedAttention(b.cloud.id) - this.model.getNeedAttention(a.cloud.id)
-        );
-
-        for (const instance of sorted) {
-            const cloud = instance.cloud;
-            const needAttention = this.model.getNeedAttention(cloud.id);
-            if (needAttention <= 1) break;
-
-            const protectors = this.relationships.getProtectedBy(cloud.id);
-            if (protectors.size > 0) continue;
-
-            console.log(`[HighAttention] "${cloud.text}" demands attention (needAttention=${needAttention.toFixed(2)})`);
-
-            this.hidePieMenu();
-            this.hideThoughtBubble();
-
-            this.model.partDemandsAttention(cloud.id);
-            this.model.setNeedAttention(cloud.id, 0.95);
-            this.view.setMode('foreground');
-            this.updateUIForMode();
-            this.updateModeToggle();
-            this.syncViewWithModel();
-            break;
-        }
-    }
-
-    private depthSort(): void {
-        if (!this.svgElement) return;
-
-        const DEPTH_THRESHOLD = 15;
-        this.instances.sort((a, b) => {
-            const diff = a.position.z - b.position.z;
-            return Math.abs(diff) < DEPTH_THRESHOLD ? 0 : diff;
-        });
-
-        const starElement = this.animatedStar?.getElement();
-
-        // Move star to svgElement for proper depth sorting in panorama mode
-        if (starElement && starElement.parentNode !== this.svgElement) {
-            this.svgElement.appendChild(starElement);
-        }
-
-        let selfInserted = false;
-        for (const instance of this.instances) {
-            if (!selfInserted && instance.position.z >= 0 && starElement) {
-                this.svgElement.appendChild(starElement);
-                selfInserted = true;
-            }
-            const group = instance.cloud.getGroupElement();
-            if (group && group.parentNode === this.svgElement) {
-                this.svgElement.appendChild(group);
-            }
-        }
-
-        if (!selfInserted && starElement) {
-            this.svgElement.appendChild(starElement);
-        }
-    }
-
     private animate(): void {
         if (!this.animating) return;
 
@@ -1894,20 +1862,17 @@ export class CloudManager {
             const projected = this.view.projectToScreen(instance);
             panoramaPositions.set(instance.cloud.id, projected);
         }
-        const { completedUnblendings } = this.view.animateCloudStates(deltaTime, panoramaPositions, this.model);
+        const { completedUnblendings, completedPendingBlends } = this.view.animateCloudStates(deltaTime, panoramaPositions, this.model);
         for (const cloudId of completedUnblendings) {
             if (this.model.isBlended(cloudId)) {
                 this.finishUnblending(cloudId);
             }
         }
-
-        const currentZoomFactor = this.view.getCurrentZoomFactor();
-
-        this.updateCounterZoom(currentZoomFactor);
-
-        if (isTransitioning || mode === 'foreground') {
-            this.updateViewBox();
+        for (const cloudId of completedPendingBlends) {
+            this.promotePendingBlend(cloudId);
         }
+
+        this.updateZoomGroup();
 
         if (mode === 'foreground') {
             this.updateThoughtBubble(deltaTime);
@@ -1944,7 +1909,7 @@ export class CloudManager {
                 instance.cloud.animate(deltaTime * this.partitionCount);
 
                 if (this.view.getMode() === 'panorama' && !this.view.isTransitioning()) {
-                    this.applyPhysics(instance, deltaTime * this.partitionCount);
+                    this.panoramaController.applyPhysics(instance, this.instances, deltaTime * this.partitionCount);
                 }
                 const state = this.model.getPartState(instance.cloud.id);
                 const hovered = this.hoveredCloudId === instance.cloud.id;
@@ -1957,12 +1922,6 @@ export class CloudManager {
 
                 const group = instance.cloud.getGroupElement();
                 if (group) {
-                    if (cloudState.inCounterZoomGroup && group.parentNode !== this.counterZoomGroup) {
-                        this.counterZoomGroup?.appendChild(group);
-                    } else if (!cloudState.inCounterZoomGroup && group.parentNode !== this.svgElement) {
-                        this.svgElement?.appendChild(group);
-                    }
-
                     group.setAttribute('transform',
                         `translate(${cloudState.x}, ${cloudState.y}) scale(${cloudState.scale})`);
                     group.setAttribute('opacity', String(cloudState.opacity));
@@ -1974,33 +1933,27 @@ export class CloudManager {
 
         this.increaseGrievanceNeedAttention(deltaTime);
         this.updateDebugBox();
+
+        if (!this.pieMenuOpen) {
+            this.model.checkAttentionDemands(this.relationships);
+            this.syncViewWithModel();
+        }
+
         if (this.view.getMode() === 'panorama') {
-            this.checkHighAttentionParts();
-            this.depthSort();
+            this.panoramaController.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
         } else {
-            // Ensure correct layering: ray (bottom), carpet, star, clouds (top)
-            if (this.counterZoomGroup) {
-                const rayContainer = this.counterZoomGroup.querySelector('#ray-container');
-                const carpetGroup = this.counterZoomGroup.querySelector('#carpet-group');
-                const starElement = this.animatedStar?.getElement();
+            // Ensure correct layering in zoomGroup: ray (bottom), carpet, clouds (top)
+            if (this.zoomGroup) {
+                const rayContainer = this.zoomGroup.querySelector('#ray-container');
+                const carpetGroup = this.zoomGroup.querySelector('#carpet-group');
 
-                // Ensure ray is first child
-                if (rayContainer && rayContainer !== this.counterZoomGroup.firstChild) {
-                    this.counterZoomGroup.insertBefore(rayContainer, this.counterZoomGroup.firstChild);
+                if (rayContainer && rayContainer !== this.zoomGroup.firstChild) {
+                    this.zoomGroup.insertBefore(rayContainer, this.zoomGroup.firstChild);
                 }
 
-                // Ensure carpet is right after ray
                 if (carpetGroup && rayContainer && carpetGroup.previousSibling !== rayContainer) {
-                    this.counterZoomGroup.insertBefore(carpetGroup, rayContainer.nextSibling);
+                    this.zoomGroup.insertBefore(carpetGroup, rayContainer.nextSibling);
                 }
-
-                // Ensure star is right after carpet
-                if (starElement && carpetGroup && starElement.previousSibling !== carpetGroup) {
-                    this.counterZoomGroup.insertBefore(starElement, carpetGroup.nextSibling);
-                }
-            }
-            if (!this.pieMenuOpen) {
-                this.checkHighAttentionParts();
             }
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
@@ -2014,25 +1967,65 @@ export class CloudManager {
             const targetIds = this.model.getTargetCloudIds();
             const blendedParts = this.model.getBlendedParts();
             const totalParts = targetIds.size + blendedParts.length;
-            this.animatedStar.setTargetRadiusScale(5 / Math.sqrt(totalParts));
+            const scale = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
+            this.animatedStar.setTargetRadiusScale(scale);
         } else {
             this.animatedStar.setTargetRadiusScale(1.5);
         }
     }
 
-    private updateCounterZoom(currentZoomFactor: number): void {
-        if (!this.counterZoomGroup) return;
+    private updateZoomGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup) return;
 
-        const counterScale = 1 / currentZoomFactor;
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
+        const mode = this.view.getMode();
+        const isTransitioning = this.view.isTransitioning();
+        const starElement = this.animatedStar?.getElement();
+        const foregroundCloudIds = this.view.getForegroundCloudIds();
 
-        this.counterZoomGroup.setAttribute('transform',
-            `translate(${centerX}, ${centerY}) scale(${counterScale}) translate(${-centerX}, ${-centerY})`);
-    }
+        if (mode === 'foreground' && !isTransitioning) {
+            // In foreground mode, no zoom transform - clouds are at screen coords
+            this.zoomGroup.removeAttribute('transform');
 
-    private applyPhysics(instance: CloudInstance, deltaTime: number): void {
-        this.physicsEngine.applyPhysics(instance, this.instances, deltaTime);
+            // Move star to uiGroup first (it should be behind clouds)
+            if (starElement && starElement.parentNode !== this.uiGroup) {
+                // Insert star at beginning of uiGroup, before other elements
+                this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
+            }
+
+            // Move foreground clouds to uiGroup (after star, before pie menu overlay)
+            for (const cloudId of foregroundCloudIds) {
+                const cloud = this.getCloudById(cloudId);
+                const group = cloud?.getGroupElement();
+                if (group && group.parentNode !== this.uiGroup) {
+                    // Insert before pie menu overlay to keep overlay on top
+                    if (this.pieMenuOverlay) {
+                        this.uiGroup.insertBefore(group, this.pieMenuOverlay);
+                    } else {
+                        this.uiGroup.appendChild(group);
+                    }
+                }
+            }
+        } else {
+            // In panorama mode or during transition, apply zoom centered on canvas
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+            const scale = this.zoom;
+
+            this.zoomGroup.setAttribute('transform',
+                `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
+
+            // Move star to zoomGroup for depth-sorting with clouds
+            if (starElement && starElement.parentNode !== this.zoomGroup) {
+                this.zoomGroup.appendChild(starElement);
+            }
+            // Move all clouds back to zoomGroup for panorama mode
+            for (const instance of this.instances) {
+                const group = instance.cloud.getGroupElement();
+                if (group && group.parentNode !== this.zoomGroup) {
+                    this.zoomGroup.appendChild(group);
+                }
+            }
+        }
     }
 
     private sendMessage(senderId: string, targetId: string, text: string, type: 'grievance'): void {
@@ -2119,7 +2112,7 @@ export class CloudManager {
         group.appendChild(textEl);
 
         group.setAttribute('transform', `translate(${message.startX}, ${message.startY})`);
-        this.counterZoomGroup?.appendChild(group);
+        this.uiGroup?.appendChild(group);
 
         return group;
     }
