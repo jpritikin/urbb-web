@@ -1,5 +1,5 @@
 import { SimulatorModel, SelfRayState } from './ifsModel.js';
-import { SelfRay } from './selfRay.js';
+import { SelfRay, BiographyField } from './selfRay.js';
 import { Cloud } from './cloudShape.js';
 import { SeatInfo, CarpetState, CARPET_OFFSCREEN_DISTANCE, CARPET_FLY_DURATION, CARPET_START_SCALE, CARPET_SCALE } from './carpetRenderer.js';
 
@@ -65,7 +65,7 @@ export class SimulatorView {
     private selfRay: SelfRay | null = null;
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
-    private onRayFieldSelect: ((field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void) | null = null;
+    private onRayFieldSelect: ((field: BiographyField, cloudId: string) => void) | null = null;
 
     // Spiral exit animation state for parts forced out by spontaneous blends
     private spiralExits: Map<string, {
@@ -121,7 +121,7 @@ export class SimulatorView {
         this.pieMenuOverlay = overlay;
     }
 
-    setOnRayFieldSelect(callback: (field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void): void {
+    setOnRayFieldSelect(callback: (field: BiographyField, cloudId: string) => void): void {
         this.onRayFieldSelect = callback;
     }
 

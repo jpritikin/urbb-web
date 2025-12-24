@@ -119,8 +119,6 @@ export class PieMenuController {
                 include = isTarget || isBlended;
             } else if (action.id === 'who_do_you_see') {
                 include = isTarget && proxies.size > 0;
-            } else if (action.id === 'expand_calm') {
-                include = isSoleTargetWithRevealedProxy;
             } else if (action.id === 'feel_toward') {
                 const selfRay = model.getSelfRay();
                 include = isTarget && selfRay?.targetCloudId !== cloudId;

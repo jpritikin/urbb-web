@@ -375,12 +375,28 @@ export class SimulatorModel {
         this.parts.revealProtects(cloudId);
     }
 
-    revealJob(cloudId: string): void {
-        this.parts.revealJob(cloudId);
+    revealUnburdenedJob(cloudId: string): void {
+        this.parts.revealUnburdenedJob(cloudId);
     }
 
-    isJobRevealed(cloudId: string): boolean {
-        return this.parts.isJobRevealed(cloudId);
+    isUnburdenedJobRevealed(cloudId: string): boolean {
+        return this.parts.isUnburdenedJobRevealed(cloudId);
+    }
+
+    revealJobAppraisal(cloudId: string): void {
+        this.parts.revealJobAppraisal(cloudId);
+    }
+
+    isJobAppraisalRevealed(cloudId: string): boolean {
+        return this.parts.isJobAppraisalRevealed(cloudId);
+    }
+
+    revealJobImpact(cloudId: string): void {
+        this.parts.revealJobImpact(cloudId);
+    }
+
+    isJobImpactRevealed(cloudId: string): boolean {
+        return this.parts.isJobImpactRevealed(cloudId);
     }
 
     hasJob(cloudId: string): boolean {

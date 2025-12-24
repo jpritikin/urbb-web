@@ -7,7 +7,9 @@ export interface PartBiography {
     selfReaction: SelfReaction;
     relationshipsRevealed: boolean;
     identityRevealed: boolean;
-    jobRevealed: boolean;
+    unburdenedJobRevealed: boolean;
+    jobAppraisalRevealed: boolean;
+    jobImpactRevealed: boolean;
 }
 
 export interface PartDialogues {
@@ -15,6 +17,7 @@ export interface PartDialogues {
     burdenedJobImpact?: string[];
     unburdenedJob?: string;
     gratitudeResponse?: string;
+    genericBlendedDialogues?: string[];
 }
 
 export interface PartState {
@@ -50,7 +53,9 @@ export function createPartState(id: string, name: string, options?: {
             selfReaction: null,
             relationshipsRevealed: false,
             identityRevealed: false,
-            jobRevealed: false,
+            unburdenedJobRevealed: false,
+            jobAppraisalRevealed: false,
+            jobImpactRevealed: false,
         },
         dialogues: options?.dialogues ?? {},
     };

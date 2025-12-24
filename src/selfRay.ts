@@ -8,8 +8,10 @@ export interface SelfRayConfig {
     targetCloudId: string;
 }
 
+export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude';
+
 export interface BiographyMenuItem extends PieMenuItem {
-    field: 'age' | 'identity' | 'job' | 'gratitude';
+    field: BiographyField;
 }
 
 interface RayLayer {
@@ -36,7 +38,7 @@ export class SelfRay {
     private animationFrameId: number | null = null;
     private hovered: boolean = false;
     private config: SelfRayConfig;
-    private onSelect: ((field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void) | null = null;
+    private onSelect: ((field: BiographyField, cloudId: string) => void) | null = null;
     private pieMenu: PieMenu | null = null;
     private pieMenuVisible: boolean = false;
     private pieMenuOverlay: SVGGElement | null = null;
@@ -52,7 +54,7 @@ export class SelfRay {
         this.pieMenuOverlay = overlay;
     }
 
-    setOnSelect(callback: (field: 'age' | 'identity' | 'job' | 'gratitude', cloudId: string) => void): void {
+    setOnSelect(callback: (field: BiographyField, cloudId: string) => void): void {
         this.onSelect = callback;
     }
 
@@ -252,15 +254,13 @@ export class SelfRay {
         this.showBiographyPieMenu(startX, startY);
     }
 
-    showBiographyPieMenu(x: number, y: number, unrevealedFields?: ('age' | 'identity' | 'job')[]): void {
+    showBiographyPieMenu(x: number, y: number): void {
         if (this.pieMenuVisible) {
             this.hidePieMenu();
             return;
         }
 
         if (!this.group) return;
-
-        const fields = unrevealedFields ?? ['age', 'identity', 'job'];
 
         this.pieMenu = new PieMenu(this.container);
         if (this.pieMenuOverlay) {
@@ -269,7 +269,7 @@ export class SelfRay {
 
         const items: PieMenuItem[] = [];
 
-        for (const field of fields) {
+        for (const field of ['age', 'identity'] as const) {
             items.push({
                 id: field,
                 label: this.getFieldLabel(field),
@@ -277,6 +277,20 @@ export class SelfRay {
                 category: 'curiosity'
             });
         }
+
+        items.push({
+            id: 'jobAppraisal',
+            label: 'How do you like your job?',
+            shortName: 'Appraisal',
+            category: 'curiosity'
+        });
+
+        items.push({
+            id: 'jobImpact',
+            label: 'How do you understand the impact of your job?',
+            shortName: 'Impact',
+            category: 'curiosity'
+        });
 
         items.push({
             id: 'gratitude',
@@ -287,7 +301,7 @@ export class SelfRay {
 
         this.pieMenu.setItems(items);
         this.pieMenu.setOnSelect((item) => {
-            const field = item.id as 'age' | 'identity' | 'job' | 'gratitude';
+            const field = item.id as BiographyField;
             this.onSelect?.(field, this.config.targetCloudId);
             this.pieMenuVisible = false;
         });

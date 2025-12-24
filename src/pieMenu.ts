@@ -106,10 +106,7 @@ export class PieMenu {
         backdrop.setAttribute('r', String(this.radius + 30));
         backdrop.setAttribute('fill', 'rgba(0, 0, 0, 0.15)');
         backdrop.setAttribute('class', 'pie-menu-backdrop');
-        backdrop.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.hide();
-        });
+        backdrop.setAttribute('pointer-events', 'none');
         this.group.appendChild(backdrop);
 
         const itemCount = this.items.length;

@@ -37,11 +37,57 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     });
 
-    const criticized = cloudManager.addCloud('criticized', { partAge: 'child', trust: 0.2 });
-    const threeYearOld = cloudManager.addCloud('toddler', { partAge: 3 });
-    const tenYearOld = cloudManager.addCloud('child', { partAge: 10 });
-    const teenager = cloudManager.addCloud('teenager', { partAge: 14 });
-    const adult = cloudManager.addCloud('self-image', { partAge: 'adult' });
+    const criticized = cloudManager.addCloud('criticized', {
+        partAge: 'child',
+        trust: 0.2,
+        dialogues: {
+            genericBlendedDialogues: [
+                "Please don't look at me.",
+                "I'm trying to hide.",
+                "Is it safe?",
+            ],
+        },
+    });
+    const threeYearOld = cloudManager.addCloud('toddler', {
+        partAge: 3,
+        dialogues: {
+            genericBlendedDialogues: [
+                "Play with me!",
+                "I want attention!",
+                "Why?",
+            ],
+        },
+    });
+    const tenYearOld = cloudManager.addCloud('child', {
+        partAge: 10,
+        dialogues: {
+            genericBlendedDialogues: [
+                "That's not fair.",
+                "I can do it myself!",
+                "Nobody understands.",
+            ],
+        },
+    });
+    const teenager = cloudManager.addCloud('teenager', {
+        partAge: 14,
+        dialogues: {
+            genericBlendedDialogues: [
+                "Whatever.",
+                "You wouldn't understand.",
+                "Leave me alone.",
+            ],
+        },
+    });
+    const adult = cloudManager.addCloud('self-image', {
+        partAge: 'adult',
+        dialogues: {
+            genericBlendedDialogues: [
+                "I need to maintain appearances.",
+                "What will people think?",
+                "I should have it together by now.",
+            ],
+        },
+    });
 
     const relationships = cloudManager.getRelationships();
     relationships.addProtection(innerCritic.id, criticized.id);

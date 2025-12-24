@@ -131,16 +131,40 @@ export class PartStateManager {
         }
     }
 
-    revealJob(cloudId: string): void {
+    revealUnburdenedJob(cloudId: string): void {
         const state = this.partStates.get(cloudId);
-        if (state && !state.biography.jobRevealed) {
-            state.biography.jobRevealed = true;
-            this.notifyChange({ type: 'revealJob', cloudId });
+        if (state && !state.biography.unburdenedJobRevealed) {
+            state.biography.unburdenedJobRevealed = true;
+            this.notifyChange({ type: 'revealUnburdenedJob', cloudId });
         }
     }
 
-    isJobRevealed(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.biography.jobRevealed ?? false;
+    isUnburdenedJobRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.unburdenedJobRevealed ?? false;
+    }
+
+    revealJobAppraisal(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.jobAppraisalRevealed) {
+            state.biography.jobAppraisalRevealed = true;
+            this.notifyChange({ type: 'revealJobAppraisal', cloudId });
+        }
+    }
+
+    isJobAppraisalRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.jobAppraisalRevealed ?? false;
+    }
+
+    revealJobImpact(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.jobImpactRevealed) {
+            state.biography.jobImpactRevealed = true;
+            this.notifyChange({ type: 'revealJobImpact', cloudId });
+        }
+    }
+
+    isJobImpactRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.jobImpactRevealed ?? false;
     }
 
     hasJob(cloudId: string): boolean {
@@ -158,7 +182,7 @@ export class PartStateManager {
         if (!state.biography.identityRevealed) {
             unrevealed.push('identity');
         }
-        if (!state.biography.jobRevealed && state.dialogues.unburdenedJob) {
+        if (!state.biography.unburdenedJobRevealed && state.dialogues.unburdenedJob) {
             unrevealed.push('job');
         }
         return unrevealed;
