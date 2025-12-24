@@ -73,6 +73,16 @@ export class CloudRelationshipManager {
         return targets;
     }
 
+    getGrievanceSenders(targetId: string): Set<string> {
+        const senders = new Set<string>();
+        for (const g of this.grievances) {
+            if (g.targetIds.has(targetId)) {
+                senders.add(g.cloudId);
+            }
+        }
+        return senders;
+    }
+
     getGrievanceDialogues(cloudId: string, targetId?: string): string[] {
         if (targetId === undefined) {
             const all: string[] = [];

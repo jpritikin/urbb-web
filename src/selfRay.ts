@@ -8,7 +8,14 @@ export interface SelfRayConfig {
     targetCloudId: string;
 }
 
-export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude';
+export interface PartContext {
+    isProtector: boolean;
+    isIdentityRevealed: boolean;
+    isAttacked: boolean;
+    partName: string;
+}
+
+export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize';
 
 export interface BiographyMenuItem extends PieMenuItem {
     field: BiographyField;
@@ -42,6 +49,7 @@ export class SelfRay {
     private pieMenu: PieMenu | null = null;
     private pieMenuVisible: boolean = false;
     private pieMenuOverlay: SVGGElement | null = null;
+    private partContext: PartContext = { isProtector: false, isIdentityRevealed: false, isAttacked: false, partName: '' };
 
     constructor(
         private container: SVGGElement,
@@ -56,6 +64,10 @@ export class SelfRay {
 
     setOnSelect(callback: (field: BiographyField, cloudId: string) => void): void {
         this.onSelect = callback;
+    }
+
+    setPartContext(context: PartContext): void {
+        this.partContext = context;
     }
 
     create(): SVGGElement {
@@ -278,19 +290,29 @@ export class SelfRay {
             });
         }
 
-        items.push({
-            id: 'jobAppraisal',
-            label: 'How do you like your job?',
-            shortName: 'Appraisal',
-            category: 'curiosity'
-        });
+        const showJobQuestions = !this.partContext.isIdentityRevealed || this.partContext.isProtector;
+        if (showJobQuestions) {
+            items.push({
+                id: 'jobAppraisal',
+                label: 'How do you like your job?',
+                shortName: 'Appraisal',
+                category: 'curiosity'
+            });
 
-        items.push({
-            id: 'jobImpact',
-            label: 'How do you understand the impact of your job?',
-            shortName: 'Impact',
-            category: 'curiosity'
-        });
+            items.push({
+                id: 'jobImpact',
+                label: 'How do you understand the impact of your job?',
+                shortName: 'Impact',
+                category: 'curiosity'
+            });
+        } else {
+            items.push({
+                id: 'whatNeedToKnow',
+                label: 'What do you need me to know?',
+                shortName: 'Know?',
+                category: 'curiosity'
+            });
+        }
 
         items.push({
             id: 'gratitude',
@@ -298,6 +320,22 @@ export class SelfRay {
             shortName: 'Gratitude',
             category: 'gratitude'
         });
+
+        items.push({
+            id: 'compassion',
+            label: 'I care about you',
+            shortName: 'Compassion',
+            category: 'gratitude'
+        });
+
+        if (this.partContext.isAttacked) {
+            items.push({
+                id: 'apologize',
+                label: `Apologize to ${this.partContext.partName} for allowing other parts to attack it`,
+                shortName: 'Apologize',
+                category: 'gratitude'
+            });
+        }
 
         this.pieMenu.setItems(items);
         this.pieMenu.setOnSelect((item) => {

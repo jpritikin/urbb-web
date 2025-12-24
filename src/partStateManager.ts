@@ -1,22 +1,7 @@
 import { PartState, PartBiography, PartDialogues, createPartState } from './partState.js';
 
-export interface PartStateChange {
-    type: string;
-    cloudId: string;
-    data?: Record<string, unknown>;
-}
-
 export class PartStateManager {
     private partStates: Map<string, PartState> = new Map();
-    private onChange: ((change: PartStateChange) => void) | null = null;
-
-    setChangeListener(listener: (change: PartStateChange) => void): void {
-        this.onChange = listener;
-    }
-
-    private notifyChange(change: PartStateChange): void {
-        this.onChange?.(change);
-    }
 
     registerPart(id: string, name: string, options?: {
         trust?: number;
@@ -42,20 +27,27 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.trust ?? 0.5;
     }
 
-    setTrust(cloudId: string, trust: number, reason?: string): void {
-        const state = this.partStates.get(cloudId);
-        if (!state) return;
-        const oldTrust = state.trust;
-        state.trust = Math.max(0, Math.min(1, trust));
-        this.notifyChange({ type: 'setTrust', cloudId, data: { oldTrust, newTrust: state.trust, reason } });
+    private clampTrust(state: PartState, trust: number): number {
+        const maxTrust = state.attacked ? 0.8 : 1;
+        return Math.max(0, Math.min(maxTrust, trust));
     }
 
-    adjustTrust(cloudId: string, multiplier: number, reason?: string): void {
+    setTrust(cloudId: string, trust: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
-        const oldTrust = state.trust;
-        state.trust = Math.max(0, Math.min(1, state.trust * multiplier));
-        this.notifyChange({ type: 'adjustTrust', cloudId, data: { oldTrust, newTrust: state.trust, multiplier, reason } });
+        state.trust = this.clampTrust(state, trust);
+    }
+
+    adjustTrust(cloudId: string, multiplier: number): void {
+        const state = this.partStates.get(cloudId);
+        if (!state) return;
+        state.trust = this.clampTrust(state, state.trust * multiplier);
+    }
+
+    addTrust(cloudId: string, amount: number): void {
+        const state = this.partStates.get(cloudId);
+        if (!state) return;
+        state.trust = this.clampTrust(state, state.trust + amount);
     }
 
     getNeedAttention(cloudId: string): number {
@@ -87,6 +79,24 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.wasProxy ?? false;
     }
 
+    setAttacked(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.attacked = true;
+        }
+    }
+
+    clearAttacked(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.attacked = false;
+        }
+    }
+
+    isAttacked(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.attacked ?? false;
+    }
+
     getDialogues(cloudId: string): PartDialogues {
         return this.partStates.get(cloudId)?.dialogues ?? {};
     }
@@ -99,7 +109,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.identityRevealed) {
             state.biography.identityRevealed = true;
-            this.notifyChange({ type: 'revealIdentity', cloudId });
         }
     }
 
@@ -111,7 +120,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.ageRevealed) {
             state.biography.ageRevealed = true;
-            this.notifyChange({ type: 'revealAge', cloudId });
         }
     }
 
@@ -119,7 +127,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.relationshipsRevealed) {
             state.biography.relationshipsRevealed = true;
-            this.notifyChange({ type: 'revealRelationships', cloudId });
         }
     }
 
@@ -127,7 +134,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.protectsRevealed) {
             state.biography.protectsRevealed = true;
-            this.notifyChange({ type: 'revealProtects', cloudId });
         }
     }
 
@@ -135,7 +141,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.unburdenedJobRevealed) {
             state.biography.unburdenedJobRevealed = true;
-            this.notifyChange({ type: 'revealUnburdenedJob', cloudId });
         }
     }
 
@@ -147,7 +152,6 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.jobAppraisalRevealed) {
             state.biography.jobAppraisalRevealed = true;
-            this.notifyChange({ type: 'revealJobAppraisal', cloudId });
         }
     }
 
@@ -159,12 +163,22 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.jobImpactRevealed) {
             state.biography.jobImpactRevealed = true;
-            this.notifyChange({ type: 'revealJobImpact', cloudId });
         }
     }
 
     isJobImpactRevealed(cloudId: string): boolean {
         return this.partStates.get(cloudId)?.biography.jobImpactRevealed ?? false;
+    }
+
+    setConsentedToHelp(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.consentedToHelp) {
+            state.biography.consentedToHelp = true;
+        }
+    }
+
+    hasConsentedToHelp(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.consentedToHelp ?? false;
     }
 
     hasJob(cloudId: string): boolean {

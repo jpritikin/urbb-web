@@ -1,18 +1,8 @@
-import { PartStateManager, PartState, PartBiography, PartDialogues, PartStateChange } from './partStateManager.js';
+import { PartStateManager, PartState, PartBiography, PartDialogues } from './partStateManager.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 
-export interface StateAction {
-    type: string;
-    cloudId?: string;
-    targetId?: string;
-    data?: Record<string, unknown>;
-}
-
-export interface HistoryEntry {
-    action: StateAction;
-}
-
 export type BlendReason = 'spontaneous' | 'therapist';
+export type MessageType = 'grievance';
 
 export interface BlendedPartState {
     degree: number;
@@ -23,22 +13,25 @@ export interface SelfRayState {
     targetCloudId: string;
 }
 
+export interface PartMessage {
+    id: number;
+    type: MessageType;
+    senderId: string;
+    targetId: string;
+    text: string;
+}
+
 export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
     private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
-    private history: HistoryEntry[] = [];
     private parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
     private pendingAttentionDemand: string | null = null;
-
-    constructor() {
-        this.parts.setChangeListener((change: PartStateChange) => {
-            this.record({ type: change.type, cloudId: change.cloudId, data: change.data });
-        });
-    }
+    private messages: PartMessage[] = [];
+    private messageIdCounter: number = 0;
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -49,19 +42,19 @@ export class SimulatorModel {
     }
 
     setTargetCloud(cloudId: string): void {
-        this.blendedParts.delete(cloudId);
+        this.blendedParts.clear();
         this.targetCloudIds.clear();
         this.targetCloudIds.add(cloudId);
-        this.record({ type: 'setTarget', cloudId });
+        this.supportingParts.clear();
+        this.clearSelfRay();
     }
 
     addTargetCloud(cloudId: string): void {
         this.blendedParts.delete(cloudId);
         this.targetCloudIds.add(cloudId);
-        for (const [targetId, supportingIds] of this.supportingParts) {
+        for (const [, supportingIds] of this.supportingParts) {
             supportingIds.delete(cloudId);
         }
-        this.record({ type: 'addTarget', cloudId });
     }
 
     removeTargetCloud(cloudId: string): void {
@@ -69,7 +62,6 @@ export class SimulatorModel {
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
         }
-        this.record({ type: 'removeTarget', cloudId });
     }
 
     toggleTargetCloud(cloudId: string): void {
@@ -83,12 +75,20 @@ export class SimulatorModel {
     clearTargets(): void {
         this.targetCloudIds.clear();
         this.clearSelfRay();
-        this.record({ type: 'clearTargets' });
     }
 
     setSupportingParts(targetId: string, supportingIds: Set<string>): void {
         this.supportingParts.set(targetId, new Set(supportingIds));
-        this.record({ type: 'setSupportingParts', targetId, data: { supportingIds: Array.from(supportingIds) } });
+    }
+
+    summonSupportingPart(targetId: string, supportingId: string): boolean {
+        if (this.isTarget(supportingId) || this.isBlended(supportingId) || this.getAllSupportingParts().has(supportingId)) {
+            return false;
+        }
+        const existing = this.supportingParts.get(targetId) ?? new Set();
+        existing.add(supportingId);
+        this.supportingParts.set(targetId, existing);
+        return true;
     }
 
     getSupportingParts(targetId: string): Set<string> {
@@ -110,22 +110,28 @@ export class SimulatorModel {
 
     clearSupportingParts(): void {
         this.supportingParts.clear();
-        this.record({ type: 'clearSupportingParts' });
+    }
+
+    clearConferenceTable(): void {
+        this.targetCloudIds.clear();
+        this.clearSelfRay();
+        this.blendedParts.clear();
+        this.supportingParts.clear();
     }
 
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
-        if (this.targetCloudIds.has(cloudId)) return;
+        if (this.targetCloudIds.has(cloudId)) {
+            this.removeTargetCloud(cloudId);
+        }
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
             this.clearSelfRay();
-            this.record({ type: 'addBlended', cloudId, data: { degree, reason } });
         }
     }
 
     removeBlendedPart(cloudId: string): void {
         if (this.blendedParts.has(cloudId)) {
             this.blendedParts.delete(cloudId);
-            this.record({ type: 'removeBlended', cloudId });
         }
     }
 
@@ -134,7 +140,6 @@ export class SimulatorModel {
         if (existing) {
             const clampedDegree = Math.max(0, Math.min(1, degree));
             this.blendedParts.set(cloudId, { ...existing, degree: clampedDegree });
-            this.record({ type: 'setBlendingDegree', cloudId, data: { degree: clampedDegree } });
         }
     }
 
@@ -142,7 +147,6 @@ export class SimulatorModel {
         if (!this.blendedParts.has(cloudId)) return;
         this.blendedParts.delete(cloudId);
         this.targetCloudIds.add(cloudId);
-        this.record({ type: 'promoteToTarget', cloudId });
     }
 
     getBlendingDegree(cloudId: string): number {
@@ -157,7 +161,6 @@ export class SimulatorModel {
         const existing = this.blendedParts.get(cloudId);
         if (existing && existing.reason !== reason) {
             existing.reason = reason;
-            this.record({ type: 'setBlendReason', cloudId, data: { reason } });
         }
     }
 
@@ -179,22 +182,16 @@ export class SimulatorModel {
 
     clearBlendedParts(): void {
         this.blendedParts.clear();
-        this.record({ type: 'clearBlendedParts' });
     }
 
     enqueuePendingBlend(cloudId: string, reason: BlendReason): void {
         if (!this.pendingBlends.some(p => p.cloudId === cloudId)) {
             this.pendingBlends.push({ cloudId, reason });
-            this.record({ type: 'enqueuePendingBlend', cloudId, data: { reason } });
         }
     }
 
     dequeuePendingBlend(): { cloudId: string; reason: BlendReason } | null {
-        const item = this.pendingBlends.shift() ?? null;
-        if (item) {
-            this.record({ type: 'dequeuePendingBlend', cloudId: item.cloudId });
-        }
-        return item;
+        return this.pendingBlends.shift() ?? null;
     }
 
     peekPendingBlend(): { cloudId: string; reason: BlendReason } | null {
@@ -211,20 +208,14 @@ export class SimulatorModel {
 
     clearPendingBlends(): void {
         this.pendingBlends = [];
-        this.record({ type: 'clearPendingBlends' });
     }
 
     setSelfRay(targetCloudId: string): void {
         this.selfRay = { targetCloudId };
-        this.record({ type: 'setSelfRay', cloudId: targetCloudId });
     }
 
     clearSelfRay(): void {
-        if (this.selfRay) {
-            const oldTarget = this.selfRay.targetCloudId;
-            this.selfRay = null;
-            this.record({ type: 'clearSelfRay', cloudId: oldTarget });
-        }
+        this.selfRay = null;
     }
 
     getSelfRay(): SelfRayState | null {
@@ -236,9 +227,6 @@ export class SimulatorModel {
     }
 
     stepBackPart(cloudId: string): void {
-        const wasTarget = this.targetCloudIds.has(cloudId);
-        const wasBlended = this.blendedParts.has(cloudId);
-
         this.targetCloudIds.delete(cloudId);
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
@@ -255,8 +243,6 @@ export class SimulatorModel {
         }
 
         this.blendedParts.delete(cloudId);
-
-        this.record({ type: 'stepBack', cloudId, data: { wasTarget, wasBlended } });
     }
 
     partDemandsAttention(demandingCloudId: string): void {
@@ -274,13 +260,8 @@ export class SimulatorModel {
             }
         }
 
-        this.clearTargets();
-        this.clearBlendedParts();
-        this.clearSupportingParts();
-
+        this.clearConferenceTable();
         this.addBlendedPart(demandingCloudId, 'spontaneous');
-
-        this.record({ type: 'partDemandsAttention', cloudId: demandingCloudId, data: {} });
     }
 
     getDisplacedParts(): Set<string> {
@@ -289,10 +270,6 @@ export class SimulatorModel {
 
     clearDisplacedPart(cloudId: string): void {
         this.displacedParts.delete(cloudId);
-    }
-
-    private record(action: StateAction): void {
-        this.history.push({ action });
     }
 
     // PartState management (delegated to PartStateManager)
@@ -319,12 +296,16 @@ export class SimulatorModel {
         return this.parts.getTrust(cloudId);
     }
 
-    setTrust(cloudId: string, trust: number, reason?: string): void {
-        this.parts.setTrust(cloudId, trust, reason);
+    setTrust(cloudId: string, trust: number): void {
+        this.parts.setTrust(cloudId, trust);
     }
 
-    adjustTrust(cloudId: string, multiplier: number, reason?: string): void {
-        this.parts.adjustTrust(cloudId, multiplier, reason);
+    adjustTrust(cloudId: string, multiplier: number): void {
+        this.parts.adjustTrust(cloudId, multiplier);
+    }
+
+    addTrust(cloudId: string, amount: number): void {
+        this.parts.addTrust(cloudId, amount);
     }
 
     getNeedAttention(cloudId: string): number {
@@ -345,6 +326,18 @@ export class SimulatorModel {
 
     wasProxy(cloudId: string): boolean {
         return this.parts.wasProxy(cloudId);
+    }
+
+    setAttacked(cloudId: string): void {
+        this.parts.setAttacked(cloudId);
+    }
+
+    clearAttacked(cloudId: string): void {
+        this.parts.clearAttacked(cloudId);
+    }
+
+    isAttacked(cloudId: string): boolean {
+        return this.parts.isAttacked(cloudId);
     }
 
     getDialogues(cloudId: string): PartDialogues {
@@ -399,6 +392,14 @@ export class SimulatorModel {
         return this.parts.isJobImpactRevealed(cloudId);
     }
 
+    setConsentedToHelp(cloudId: string): void {
+        this.parts.setConsentedToHelp(cloudId);
+    }
+
+    hasConsentedToHelp(cloudId: string): boolean {
+        return this.parts.hasConsentedToHelp(cloudId);
+    }
+
     hasJob(cloudId: string): boolean {
         return this.parts.hasJob(cloudId);
     }
@@ -415,77 +416,6 @@ export class SimulatorModel {
         return this.parts.getPartName(cloudId);
     }
 
-    recordQuestion(cloudId: string, question: string): void {
-        this.record({ type: 'askQuestion', cloudId, data: { question } });
-    }
-
-    getHistory(): HistoryEntry[] {
-        return [...this.history];
-    }
-
-    formatTrace(cloudNames: Map<string, string>): string {
-        const lines: string[] = [];
-        const getName = (id: string) => cloudNames.get(id) ?? id;
-
-        for (let i = 0; i < this.history.length; i++) {
-            const entry = this.history[i];
-            const action = this.formatAction(entry.action, getName);
-            lines.push(`[${i}] ${action}`);
-        }
-
-        return lines.join('\n');
-    }
-
-    private formatAction(action: StateAction, getName: (id: string) => string): string {
-        const { type, cloudId, targetId, data } = action;
-
-        switch (type) {
-            case 'setTarget':
-                return `Set target: ${getName(cloudId!)}`;
-            case 'addTarget':
-                return `Add to conference: ${getName(cloudId!)}`;
-            case 'removeTarget':
-                return `Remove from conference: ${getName(cloudId!)}`;
-            case 'clearTargets':
-                return 'Clear all targets';
-            case 'addBlended':
-                return `Blend: ${getName(cloudId!)} (${((data?.degree as number) * 100).toFixed(0)}%)`;
-            case 'removeBlended':
-                return `Unblend: ${getName(cloudId!)}`;
-            case 'setBlendingDegree':
-                return `Set blending: ${getName(cloudId!)} to ${((data?.degree as number) * 100).toFixed(0)}%`;
-            case 'clearBlendedParts':
-                return 'Clear all blended parts';
-            case 'setSupportingParts':
-                const ids = (data?.supportingIds as string[]) ?? [];
-                return `Show supporters for ${getName(targetId!)}: ${ids.map(getName).join(', ')}`;
-            case 'clearSupportingParts':
-                return 'Clear supporting parts';
-            case 'stepBack':
-                return `Step back: ${getName(cloudId!)}`;
-            case 'askQuestion':
-                return `Ask "${data?.question}": ${getName(cloudId!)}`;
-            case 'promoteToTarget':
-                return `Separated and joined: ${getName(cloudId!)}`;
-            case 'revealIdentity':
-                return `Revealed identity: ${getName(cloudId!)}`;
-            case 'revealAge':
-                return `Revealed age: ${getName(cloudId!)}`;
-            case 'revealRelationships':
-                return `Revealed relationships: ${getName(cloudId!)}`;
-            case 'revealProtects':
-                return `Revealed protects: ${getName(cloudId!)}`;
-            case 'revealJob':
-                return `Revealed job: ${getName(cloudId!)}`;
-            case 'setTrust':
-                return `Set trust: ${getName(cloudId!)} ${((data?.oldTrust as number) * 100).toFixed(0)}% → ${((data?.newTrust as number) * 100).toFixed(0)}%${data?.reason ? ` (${data.reason})` : ''}`;
-            case 'adjustTrust':
-                return `Adjust trust: ${getName(cloudId!)} ×${data?.multiplier} (${((data?.oldTrust as number) * 100).toFixed(0)}% → ${((data?.newTrust as number) * 100).toFixed(0)}%)${data?.reason ? ` (${data.reason})` : ''}`;
-            default:
-                return type;
-        }
-    }
-
     clone(): SimulatorModel {
         const cloned = new SimulatorModel();
         cloned.targetCloudIds = new Set(this.targetCloudIds);
@@ -499,9 +429,8 @@ export class SimulatorModel {
         }
         cloned.pendingBlends = this.pendingBlends.map(p => ({ ...p }));
         cloned.parts = this.parts.clone();
-        cloned.parts.setChangeListener((change: PartStateChange) => {
-            cloned.record({ type: change.type, cloudId: change.cloudId, data: change.data });
-        });
+        cloned.messages = this.messages.map(m => ({ ...m }));
+        cloned.messageIdCounter = this.messageIdCounter;
         return cloned;
     }
 
@@ -534,6 +463,33 @@ export class SimulatorModel {
 
     hasPendingAttentionDemand(): boolean {
         return this.pendingAttentionDemand !== null;
+    }
+
+    sendMessage(senderId: string, targetId: string, text: string, type: MessageType): PartMessage {
+        const message: PartMessage = {
+            id: this.messageIdCounter++,
+            type,
+            senderId,
+            targetId,
+            text,
+        };
+        this.messages.push(message);
+        return message;
+    }
+
+    getMessages(): PartMessage[] {
+        return [...this.messages];
+    }
+
+    removeMessage(id: number): void {
+        const idx = this.messages.findIndex(m => m.id === id);
+        if (idx !== -1) {
+            this.messages.splice(idx, 1);
+        }
+    }
+
+    clearMessages(): void {
+        this.messages = [];
     }
 }
 

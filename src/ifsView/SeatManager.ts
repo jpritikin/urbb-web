@@ -1,7 +1,7 @@
 import { SimulatorModel } from '../ifsModel.js';
 import { CarpetState, SeatInfo, createCarpetVertices, CARPET_FLY_DURATION, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE, CARPET_SCALE } from '../carpetRenderer.js';
 
-const SEAT_REARRANGEMENT_SPEED = 0.005;
+const SEAT_REARRANGEMENT_SPEED = 0.001;
 const STAR_CLOUD_ID = '*';
 const UNBLENDED_SEAT_ID = '__unblended__';
 

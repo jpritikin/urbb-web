@@ -118,12 +118,21 @@ export class PieMenuController {
             } else if (action.id === 'job') {
                 include = isTarget || isBlended;
             } else if (action.id === 'who_do_you_see') {
-                include = isTarget && proxies.size > 0;
+                include = isTarget;
             } else if (action.id === 'feel_toward') {
                 const selfRay = model.getSelfRay();
                 include = isTarget && selfRay?.targetCloudId !== cloudId;
             } else if (action.id === 'blend') {
                 include = isTarget && !isBlended;
+            } else if (action.id === 'help_protected') {
+                const protectedIds = relationships.getProtecting(cloudId);
+                include = isTarget && protectedIds.size > 0 && model.isIdentityRevealed(cloudId);
+            } else if (action.id === 'notice_part') {
+                const protectedIds = relationships.getProtecting(cloudId);
+                const hasFullyTrustingProtectee = Array.from(protectedIds).some(
+                    protectedId => model.getTrust(protectedId) >= 1
+                );
+                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.isUnburdenedJobRevealed(cloudId);
             } else {
                 include = isTarget;
             }
@@ -139,6 +148,14 @@ export class PieMenuController {
                     label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
                 } else if (action.id === 'separate') {
                     label = "Can you make a little space for client?";
+                } else if (action.id === 'help_protected') {
+                    const protectedIds = relationships.getProtecting(cloudId);
+                    if (protectedIds.size > 0) {
+                        const protectedId = Array.from(protectedIds)[0];
+                        const protectedCloud = this.deps.getCloudById(protectedId);
+                        const protectedName = protectedCloud?.text ?? 'that';
+                        label = label.replace('$PART', protectedName);
+                    }
                 }
 
                 items.push({

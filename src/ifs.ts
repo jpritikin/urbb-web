@@ -106,8 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     relationships.addProxy(criticized.id, adult.id);
     relationships.addProxy(threeYearOld.id, adult.id);
     relationships.addProxy(tenYearOld.id, adult.id);
-    relationships.addProxy(teenager.id, adult.id);
-    relationships.addProxy(adult.id, adult.id);
 
     cloudManager.applyAssessedNeedAttention();
 

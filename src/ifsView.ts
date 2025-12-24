@@ -1,5 +1,8 @@
-import { SimulatorModel, SelfRayState } from './ifsModel.js';
-import { SelfRay, BiographyField } from './selfRay.js';
+import { SimulatorModel, SelfRayState, PartMessage } from './ifsModel.js';
+import { MessageRenderer } from './ifsView/MessageRenderer.js';
+import { VictoryBanner } from './ifsView/VictoryBanner.js';
+import { HelpPanel, HelpData } from './ifsView/HelpPanel.js';
+import { SelfRay, BiographyField, PartContext } from './selfRay.js';
 import { Cloud } from './cloudShape.js';
 import { SeatInfo, CarpetState, CARPET_OFFSCREEN_DISTANCE, CARPET_FLY_DURATION, CARPET_START_SCALE, CARPET_SCALE } from './carpetRenderer.js';
 
@@ -66,6 +69,7 @@ export class SimulatorView {
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
     private onRayFieldSelect: ((field: BiographyField, cloudId: string) => void) | null = null;
+    private getPartContext: ((cloudId: string) => PartContext) | null = null;
 
     // Spiral exit animation state for parts forced out by spontaneous blends
     private spiralExits: Map<string, {
@@ -92,8 +96,31 @@ export class SimulatorView {
     // Delayed arrivals for parts that should appear after displaced parts exit
     private delayedArrivals: Map<string, { arrivalTime: number }> = new Map();
 
+    // Fly-in entry animation for supporting parts (similar to carpet entry for targets)
+    private supportingEntries: Map<string, {
+        startX: number;
+        startY: number;
+        startTime: number;
+        duration: number;
+    }> = new Map();
+
     // Stretch animators for blended clouds
     private stretchAnimators: Map<string, StretchAnimator> = new Map();
+
+    // Trace history for semantic events
+    private traceHistory: string[] = [];
+    private cloudNames: Map<string, string> = new Map();
+    private pendingAction: string | null = null;
+
+    // Part-to-part messages
+    private messageRenderer: MessageRenderer | null = null;
+
+    // Victory banner
+    private victoryBanner: VictoryBanner = new VictoryBanner();
+    private htmlContainer: HTMLElement | null = null;
+
+    // Help panel
+    private helpPanel: HelpPanel = new HelpPanel();
 
     constructor(canvasWidth: number, canvasHeight: number) {
         this.canvasWidth = canvasWidth;
@@ -113,6 +140,16 @@ export class SimulatorView {
         this.starElement = element;
     }
 
+    setHtmlContainer(container: HTMLElement): void {
+        this.htmlContainer = container;
+        container.style.position = 'relative';
+        this.helpPanel.show(container);
+    }
+
+    updateHelpPanel(data: HelpData): void {
+        this.helpPanel.update(data);
+    }
+
     setRayContainer(container: SVGGElement): void {
         this.rayContainer = container;
     }
@@ -121,8 +158,32 @@ export class SimulatorView {
         this.pieMenuOverlay = overlay;
     }
 
+    setMessageContainer(container: SVGGElement): void {
+        this.messageRenderer = new MessageRenderer(container);
+    }
+
+    setOnMessageReceived(callback: (message: PartMessage) => void): void {
+        this.messageRenderer?.setOnMessageReceived(callback);
+    }
+
+    startMessage(message: PartMessage, startX: number, startY: number, endX: number, endY: number): void {
+        this.messageRenderer?.startMessage(message, startX, startY, endX, endY);
+    }
+
+    animateMessages(deltaTime: number): void {
+        this.messageRenderer?.animate(deltaTime);
+    }
+
+    clearMessages(): void {
+        this.messageRenderer?.clear();
+    }
+
     setOnRayFieldSelect(callback: (field: BiographyField, cloudId: string) => void): void {
         this.onRayFieldSelect = callback;
+    }
+
+    setGetPartContext(callback: (cloudId: string) => PartContext): void {
+        this.getPartContext = callback;
     }
 
     setOnModeChange(callback: (mode: 'panorama' | 'foreground') => void): void {
@@ -301,20 +362,6 @@ export class SimulatorView {
         return this.seatManager.getSeats();
     }
 
-    private calculateConferenceRoomPositions(model: SimulatorModel, targetInstances: CloudInstance[]): { clouds: Map<string, { x: number; y: number }>, starX: number, starY: number } {
-        const clouds = new Map<string, { x: number; y: number }>();
-
-        for (const instance of targetInstances) {
-            const pos = this.getCloudPosition(instance.cloud.id);
-            if (pos) {
-                clouds.set(instance.cloud.id, pos);
-            }
-        }
-
-        const starPos = this.getStarPosition();
-        return { clouds, starX: starPos.x, starY: starPos.y };
-    }
-
     syncWithModel(
         oldModel: SimulatorModel | null,
         newModel: SimulatorModel,
@@ -370,10 +417,27 @@ export class SimulatorView {
         this.updateCloudStateTargets(newModel, instances);
         this.syncSelfRay(newModel);
 
+        this.generateTraceEntries(oldModel, newModel);
+
         const currentTargetIds = newModel.getTargetCloudIds();
         if (this.transitionDirection !== 'reverse' || this.transitionProgress >= 1) {
             this.previousTargetIds = new Set(currentTargetIds);
         }
+
+        this.checkVictoryCondition(newModel);
+    }
+
+    private checkVictoryCondition(model: SimulatorModel): void {
+        if (this.victoryBanner.isShown() || !this.htmlContainer) return;
+
+        const allParts = model.getAllPartStates();
+        if (allParts.size === 0) return;
+
+        for (const [, state] of allParts) {
+            if (state.trust <= 0.9) return;
+        }
+
+        this.victoryBanner.show(this.htmlContainer);
     }
 
     private syncSelfRay(model: SimulatorModel): void {
@@ -413,6 +477,10 @@ export class SimulatorView {
             this.selfRay.setOnSelect((field, targetCloudId) => {
                 this.onRayFieldSelect?.(field, targetCloudId);
             });
+
+            if (this.getPartContext) {
+                this.selfRay.setPartContext(this.getPartContext(modelRay.targetCloudId));
+            }
 
             const rayElement = this.selfRay.create();
             this.rayContainer.appendChild(rayElement);
@@ -515,6 +583,10 @@ export class SimulatorView {
                         targetId: info.targetId,
                         index: info.index
                     };
+                    // Start fly-in animation for newly appearing supporting parts
+                    if (!this.previousForegroundIds.has(cloudId) && !this.supportingEntries.has(cloudId)) {
+                        this.startSupportingEntry(cloudId, info.targetId, info.index);
+                    }
                 } else {
                     positionTarget = { type: 'panorama' };
                 }
@@ -532,26 +604,19 @@ export class SimulatorView {
                 positionTarget = { type: 'panorama' };
             }
 
-            state.positionTarget = positionTarget;
-            // Don't override opacity for delayed arrivals - they should stay invisible until arrival time
-            if (!this.delayedArrivals.has(cloudId)) {
-                state.targetOpacity = targetOpacity;
+            // Don't override state for parts in entry animation (supporting entries handle their own state)
+            if (!this.supportingEntries.has(cloudId)) {
+                state.positionTarget = positionTarget;
+                // Don't override opacity for delayed arrivals - they should stay invisible until arrival time
+                if (!this.delayedArrivals.has(cloudId)) {
+                    state.targetOpacity = targetOpacity;
+                }
             }
             state.targetScale = 1;
         }
 
         // Update previous foreground set for next frame
         this.previousForegroundIds = currentForegroundIds;
-    }
-
-    private updateBlendedCloudStates(model: SimulatorModel, instances: CloudInstance[]): void {
-        const blendedParts = new Set(model.getBlendedParts());
-
-        for (const instance of instances) {
-            const cloud = instance.cloud;
-            const isBlended = blendedParts.has(cloud.id);
-            cloud.setBlended(isBlended);
-        }
     }
 
     updateBlendedLatticeDeformations(model: SimulatorModel, instances: CloudInstance[], resolvingClouds: Set<string> = new Set()): void {
@@ -1079,6 +1144,120 @@ export class SimulatorView {
         }
     }
 
+    private startSupportingEntry(cloudId: string, targetId: string, index: number): void {
+        const state = this.cloudStates.get(cloudId);
+        if (!state) return;
+
+        // Get the target position for this supporting part
+        const targetPos = this.getCloudPosition(targetId);
+        if (!targetPos) return;
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        // Calculate final position (same as resolvePositionTarget for supporting)
+        const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
+        const distance = 80 + index * 50;
+        const finalX = targetPos.x + Math.cos(angle) * distance;
+        const finalY = targetPos.y + Math.sin(angle) * distance;
+
+        // Start from offscreen in the direction of the final position
+        const startPos = getOffscreenPosition(finalX, finalY, this.canvasWidth, this.canvasHeight);
+
+        state.x = startPos.x;
+        state.y = startPos.y;
+        state.opacity = 0;
+        state.smoothing.opacity = 0; // We handle opacity manually
+        state.smoothing.position = 0; // We handle position manually
+        state.positionTarget = { type: 'supporting', targetId, index };
+
+        this.supportingEntries.set(cloudId, {
+            startX: startPos.x,
+            startY: startPos.y,
+            startTime: performance.now(),
+            duration: CARPET_FLY_DURATION
+        });
+    }
+
+    isSupportingEntering(cloudId: string): boolean {
+        return this.supportingEntries.has(cloudId);
+    }
+
+    animateSupportingEntries(model: SimulatorModel): void {
+        const now = performance.now();
+        const toRemove: string[] = [];
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        for (const [cloudId, entry] of this.supportingEntries) {
+            const state = this.cloudStates.get(cloudId);
+            if (!state) {
+                toRemove.push(cloudId);
+                continue;
+            }
+
+            const elapsed = (now - entry.startTime) / 1000;
+            const progress = Math.min(1, elapsed / entry.duration);
+
+            if (progress >= 1) {
+                toRemove.push(cloudId);
+                state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+                state.smoothing.position = DEFAULT_SMOOTHING.position;
+                state.opacity = 1;
+                continue;
+            }
+
+            const eased = this.easeInOutCubic(progress);
+
+            // Get current target position (may have changed due to seat rotation)
+            const posTarget = state.positionTarget;
+            let targetX = entry.startX;
+            let targetY = entry.startY;
+
+            if (posTarget.type === 'supporting') {
+                const seatPos = this.getCloudPosition(posTarget.targetId);
+                if (seatPos) {
+                    const angle = Math.atan2(seatPos.y - centerY, seatPos.x - centerX);
+                    const distance = 80 + posTarget.index * 50;
+                    targetX = seatPos.x + Math.cos(angle) * distance;
+                    targetY = seatPos.y + Math.sin(angle) * distance;
+                }
+            }
+
+            // Animate from start position to target position
+            state.x = entry.startX + (targetX - entry.startX) * eased;
+            state.y = entry.startY + (targetY - entry.startY) * eased;
+
+            // Fade in
+            state.opacity = eased;
+        }
+
+        for (const cloudId of toRemove) {
+            this.supportingEntries.delete(cloudId);
+            // Restore the proper position target after entry animation completes
+            const state = this.cloudStates.get(cloudId);
+            if (state) {
+                // Find what supporting role this part has
+                const allParts = model.getAllSupportingParts();
+                if (allParts.has(cloudId)) {
+                    for (const targetId of model.getTargetCloudIds()) {
+                        const supportingIds = model.getSupportingParts(targetId);
+                        const supportArray = Array.from(supportingIds);
+                        const index = supportArray.indexOf(cloudId);
+                        if (index !== -1) {
+                            state.positionTarget = {
+                                type: 'supporting',
+                                targetId,
+                                index
+                            };
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     isTransitioning(): boolean {
         return this.transitionDirection !== 'none' && this.transitionProgress < 1;
     }
@@ -1109,5 +1288,144 @@ export class SimulatorView {
 
     getForegroundCloudIds(): Set<string> {
         return this.previousForegroundIds;
+    }
+
+    setCloudNames(names: Map<string, string>): void {
+        this.cloudNames = names;
+    }
+
+    getTrace(): string {
+        return this.traceHistory.map((entry, i) => `[${i}] ${entry}`).join('\n');
+    }
+
+    setAction(action: string): void {
+        this.pendingAction = action;
+    }
+
+    private addTraceEntry(action: string, effects: string[]): void {
+        if (effects.length === 0) return;
+        this.traceHistory.push(`${action} → ${effects.join(', ')}`);
+    }
+
+    private getName(cloudId: string): string {
+        return this.cloudNames.get(cloudId) ?? cloudId;
+    }
+
+    private generateTraceEntries(oldModel: SimulatorModel | null, newModel: SimulatorModel): void {
+        if (!oldModel) return;
+
+        const effects: string[] = [];
+        const oldTargets = oldModel.getTargetCloudIds();
+        const newTargets = newModel.getTargetCloudIds();
+        const oldBlended = new Set(oldModel.getBlendedParts());
+        const newBlended = new Set(newModel.getBlendedParts());
+
+        // Detect "demands attention" pattern: conference cleared + new spontaneous blend
+        const wasOccupied = oldTargets.size > 0 || oldBlended.size > 0;
+        const conferenceCleared = wasOccupied && newTargets.size === 0 && newBlended.size === 1;
+        if (conferenceCleared) {
+            const newBlendedId = Array.from(newBlended)[0];
+            const isNewBlend = !oldBlended.has(newBlendedId);
+            const reason = newModel.getBlendReason(newBlendedId);
+            if (isNewBlend && reason === 'spontaneous') {
+                const displaced = oldTargets.size + oldBlended.size;
+                const action = `${this.getName(newBlendedId)} demands attention`;
+                this.addTraceEntry(action, [`${displaced} displaced`]);
+                this.pendingAction = null;
+                return;
+            }
+        }
+
+        // Detect conference table clear (all empty now, wasn't before)
+        const nowEmpty = newTargets.size === 0 && newBlended.size === 0;
+        if (wasOccupied && nowEmpty) {
+            const action = this.pendingAction ?? 'Clear';
+            this.addTraceEntry(action, ['conference cleared']);
+            this.pendingAction = null;
+            return;
+        }
+
+        // Track conference membership changes
+        for (const id of newTargets) {
+            if (!oldTargets.has(id) && !oldBlended.has(id)) {
+                effects.push(`${this.getName(id)} joins`);
+            }
+        }
+
+        for (const id of oldTargets) {
+            if (!newTargets.has(id) && !newBlended.has(id)) {
+                effects.push(`${this.getName(id)} leaves`);
+            }
+        }
+
+        // Track blending changes
+        for (const id of newBlended) {
+            if (!oldBlended.has(id)) {
+                effects.push(`${this.getName(id)} blends`);
+            }
+        }
+
+        let actionDescribesEffect = false;
+        for (const id of oldBlended) {
+            if (!newBlended.has(id)) {
+                const effect = newTargets.has(id) ? `${this.getName(id)} separates` : `${this.getName(id)} unblends`;
+                if (this.pendingAction === effect) {
+                    actionDescribesEffect = true;
+                } else {
+                    effects.push(effect);
+                }
+            }
+        }
+
+        // Track biography reveals
+        this.collectBiographyEffects(oldModel, newModel, effects);
+
+        // Track trust changes
+        this.collectTrustEffects(oldModel, newModel, effects);
+
+        // Check for new messages (action label already describes the message)
+        const hasMessages = this.hasNewMessages(oldModel, newModel);
+
+        if (effects.length > 0) {
+            const action = this.pendingAction ?? 'Update';
+            this.addTraceEntry(action, effects);
+        } else if (this.pendingAction && (hasMessages || actionDescribesEffect)) {
+            this.traceHistory.push(this.pendingAction);
+        }
+        this.pendingAction = null;
+    }
+
+    private collectBiographyEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
+        for (const [cloudId] of this.cloudNames) {
+            const oldBio = oldModel.getBiography(cloudId);
+            const newBio = newModel.getBiography(cloudId);
+            if (!oldBio || !newBio) continue;
+
+            if (!oldBio.identityRevealed && newBio.identityRevealed) {
+                effects.push(`${this.getName(cloudId)} revealed`);
+            }
+            if (!oldBio.ageRevealed && newBio.ageRevealed) {
+                effects.push(`${this.getName(cloudId)} age revealed`);
+            }
+        }
+    }
+
+    private collectTrustEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
+        for (const [cloudId] of this.cloudNames) {
+            const oldTrust = oldModel.getTrust(cloudId);
+            const newTrust = newModel.getTrust(cloudId);
+            const diff = newTrust - oldTrust;
+            if (Math.abs(diff) > 0.01) {
+                const oldPct = Math.round(oldTrust * 100);
+                const newPct = Math.round(newTrust * 100);
+                const direction = diff > 0 ? '↑' : '↓';
+                effects.push(`${this.getName(cloudId)} trust ${oldPct}%${direction}${newPct}%`);
+            }
+        }
+    }
+
+    private hasNewMessages(oldModel: SimulatorModel, newModel: SimulatorModel): boolean {
+        const oldMessages = new Set(oldModel.getMessages().map(m => m.id));
+        return newModel.getMessages().some(m => !oldMessages.has(m.id));
     }
 }
