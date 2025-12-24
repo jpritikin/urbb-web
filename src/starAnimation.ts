@@ -90,6 +90,7 @@ export class AnimatedStar {
     private fillLightness: number;
     private clipPathGroup: SVGClipPathElement | null = null;
     private foreignObject: SVGForeignObjectElement | null = null;
+    private clippedGroup: SVGGElement | null = null;
     private transitionElements: TransitionElements | null = null;
     private coordinateConverter: CoordinateConverter | null = null;
 
@@ -120,7 +121,7 @@ export class AnimatedStar {
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
         clipPath.setAttribute('id', 'starClip');
-        clipPath.setAttribute('clipPathUnits', 'objectBoundingBox');
+        clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
         this.innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         clipPath.appendChild(this.innerCircle);
         this.clipPathGroup = clipPath;
@@ -145,10 +146,10 @@ export class AnimatedStar {
         // 3. Static star fill (clipped group with foreignObject)
         // 4. Static star outline
 
-        const clippedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        clippedGroup.setAttribute('clip-path', 'url(#starClip)');
-        clippedGroup.appendChild(this.foreignObject);
-        this.wrapperGroup.appendChild(clippedGroup);
+        this.clippedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.clippedGroup.setAttribute('clip-path', 'url(#starClip)');
+        this.clippedGroup.appendChild(this.foreignObject);
+        this.wrapperGroup.appendChild(this.clippedGroup);
 
         this.staticStarOutline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         this.staticStarOutline.setAttribute('fill', 'none');
@@ -486,14 +487,10 @@ export class AnimatedStar {
         const innerRadius = spec.innerRadius * (1 + innerRadiusOffset) * this.radiusScale;
         const baseOuterRadius = STAR_OUTER_RADIUS * (1 + outerRadiusOffset) * this.radiusScale;
 
-        if (this.innerCircle && this.coordinateConverter && fieldSize > 0) {
-            const c = this.coordinateConverter.toNormalized(this.centerX, this.centerY);
-            const r = innerRadius / fieldSize;
-            if (isFinite(c.x) && isFinite(c.y) && isFinite(r)) {
-                this.innerCircle.setAttribute('cx', String(c.x));
-                this.innerCircle.setAttribute('cy', String(c.y));
-                this.innerCircle.setAttribute('r', String(r));
-            }
+        if (this.innerCircle) {
+            this.innerCircle.setAttribute('cx', String(this.centerX));
+            this.innerCircle.setAttribute('cy', String(this.centerY));
+            this.innerCircle.setAttribute('r', String(innerRadius));
         }
 
         for (let i = 0; i < this.armCount; i++) {
@@ -520,34 +517,27 @@ export class AnimatedStar {
             const base1Angle = baseCenterAngle - armSpec.halfStep;
             const base2Angle = baseCenterAngle + armSpec.halfStep;
 
-            if (!this.coordinateConverter) continue;
-
-            const tipAbs = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
-            const base1Abs = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
-            const base2Abs = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
-
-            const tip = this.coordinateConverter.toNormalized(tipAbs.x, tipAbs.y);
-            const base1 = this.coordinateConverter.toNormalized(base1Abs.x, base1Abs.y);
-            const base2 = this.coordinateConverter.toNormalized(base2Abs.x, base2Abs.y);
+            const tip = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
+            const base1 = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
+            const base2 = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
 
             if (tipAngleOffset !== 0) {
-                const straightTipAbs = {
+                const straightTip = {
                     x: this.centerX + outerRadius * Math.cos(baseCenterAngle),
                     y: this.centerY + outerRadius * Math.sin(baseCenterAngle)
                 };
-                const straightTip = this.coordinateConverter.toNormalized(straightTipAbs.x, straightTipAbs.y);
                 const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
                 const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
                 arm.setAttribute('d',
-                    `M ${base1.x.toFixed(4)},${base1.y.toFixed(4)} ` +
-                    `Q ${ctrl1.x.toFixed(4)},${ctrl1.y.toFixed(4)} ${tip.x.toFixed(4)},${tip.y.toFixed(4)} ` +
-                    `Q ${ctrl2.x.toFixed(4)},${ctrl2.y.toFixed(4)} ${base2.x.toFixed(4)},${base2.y.toFixed(4)} Z`
+                    `M ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
+                    `Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
+                    `Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
                 );
             } else {
                 arm.setAttribute('d',
-                    `M ${tip.x.toFixed(4)},${tip.y.toFixed(4)} ` +
-                    `L ${base1.x.toFixed(4)},${base1.y.toFixed(4)} ` +
-                    `L ${base2.x.toFixed(4)},${base2.y.toFixed(4)} Z`
+                    `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
+                    `L ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
+                    `L ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
                 );
             }
         }
@@ -687,7 +677,7 @@ export class AnimatedStar {
     }
 
     private updateTransitionElements(spec: ReturnType<typeof getRenderSpec>): void {
-        if (!this.transitionBundle || !this.coordinateConverter) return;
+        if (!this.transitionBundle) return;
 
         const outerScale = this.radiusScale;
         const innerScale = this.radiusScale;
@@ -704,22 +694,22 @@ export class AnimatedStar {
         const firstElement = this.transitionElements?.getFirst();
         if (firstElement && spec.firstTransitionArm) {
             const { tip, b1, b2 } = spec.firstTransitionArm;
-            const t = this.coordinateConverter.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
-            const b1n = this.coordinateConverter.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
-            const b2n = this.coordinateConverter.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
+            const t = scaleTip(tip);
+            const b1s = scaleBase(b1);
+            const b2s = scaleBase(b2);
             firstElement.setAttribute('points',
-                `${t.x.toFixed(4)},${t.y.toFixed(4)} ${b1n.x.toFixed(4)},${b1n.y.toFixed(4)} ${b2n.x.toFixed(4)},${b2n.y.toFixed(4)}`
+                `${t.x.toFixed(2)},${t.y.toFixed(2)} ${b1s.x.toFixed(2)},${b1s.y.toFixed(2)} ${b2s.x.toFixed(2)},${b2s.y.toFixed(2)}`
             );
         }
 
         const secondElement = this.transitionElements?.getSecond();
         if (secondElement && spec.secondTransitionArm) {
             const { tip, b1, b2 } = spec.secondTransitionArm;
-            const t = this.coordinateConverter.toNormalized(scaleTip(tip).x, scaleTip(tip).y);
-            const b1n = this.coordinateConverter.toNormalized(scaleBase(b1).x, scaleBase(b1).y);
-            const b2n = this.coordinateConverter.toNormalized(scaleBase(b2).x, scaleBase(b2).y);
+            const t = scaleTip(tip);
+            const b1s = scaleBase(b1);
+            const b2s = scaleBase(b2);
             secondElement.setAttribute('points',
-                `${t.x.toFixed(4)},${t.y.toFixed(4)} ${b1n.x.toFixed(4)},${b1n.y.toFixed(4)} ${b2n.x.toFixed(4)},${b2n.y.toFixed(4)}`
+                `${t.x.toFixed(2)},${t.y.toFixed(2)} ${b1s.x.toFixed(2)},${b1s.y.toFixed(2)} ${b2s.x.toFixed(2)},${b2s.y.toFixed(2)}`
             );
         }
     }
@@ -733,6 +723,18 @@ export class AnimatedStar {
             this.foreignObject.setAttribute('x', String(centerX - fieldSize / 2));
             this.foreignObject.setAttribute('y', String(centerY - fieldSize / 2));
         }
+        this.updateArms();
+        this.refreshClipPath();
+    }
+
+    private refreshClipPath(): void {
+        if (!this.clippedGroup) return;
+        // Force browser to re-evaluate clip path by toggling it
+        this.clippedGroup.removeAttribute('clip-path');
+        // Use requestAnimationFrame to ensure the removal is processed
+        requestAnimationFrame(() => {
+            this.clippedGroup?.setAttribute('clip-path', 'url(#starClip)');
+        });
     }
 
     private clearTransitionBundle(): void {

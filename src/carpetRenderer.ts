@@ -454,6 +454,11 @@ export class CarpetRenderer {
         this.carpetElements = [];
     }
 
+    setDimensions(width: number, height: number): void {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+    }
+
     setDebugMode(enabled: boolean): void {
         this.windField.debugEnabled = enabled;
         if (!enabled) {

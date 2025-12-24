@@ -1,6 +1,120 @@
 #cloud-container {
   margin-bottom: 2rem;
   display: inline-block;
+  position: relative;
+}
+
+#cloud-container.fullscreen-active {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  z-index: 9999;
+  background: #e5fdff;
+}
+
+.dark #cloud-container.fullscreen-active {
+  background: #1a1a2e;
+}
+
+body.ifs-fullscreen {
+  overflow: hidden;
+}
+
+body.ifs-fullscreen nav,
+body.ifs-fullscreen footer,
+body.ifs-fullscreen main > *:not(#cloud-container) {
+  display: none !important;
+}
+
+body.ifs-fullscreen main {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+.mobile-fullscreen-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+  padding: 0.5rem;
+  pointer-events: none;
+}
+
+.banner-content {
+  background: linear-gradient(135deg, #2d1f4e 0%, #1a1a2e 100%);
+  border: 2px solid #7b68ee;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 16px rgba(123, 104, 238, 0.4);
+  pointer-events: auto;
+}
+
+.rotation-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+
+.rotation-icon {
+  font-size: 1.5rem;
+  animation: rotate-phone 2s ease-in-out infinite;
+}
+
+@keyframes rotate-phone {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(90deg); }
+}
+
+.rotation-check {
+  color: #2ecc71;
+  font-weight: bold;
+  display: none;
+}
+
+.enter-fullscreen-btn {
+  background: linear-gradient(135deg, #7b68ee 0%, #9b59b6 100%);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(123, 104, 238, 0.4);
+}
+
+.enter-fullscreen-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(123, 104, 238, 0.5);
+}
+
+.enter-fullscreen-btn:active {
+  transform: translateY(0);
+}
+
+.enter-fullscreen-btn:disabled {
+  background: linear-gradient(135deg, #888 0%, #666 100%);
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.enter-fullscreen-btn:disabled:hover {
+  transform: none;
 }
 
 .zoom-toggle-btn {
@@ -384,6 +498,15 @@
 
 .dark .trace-content {
   color: #d0d0d0;
+}
+
+@media (max-height: 600px) {
+  .trace-panel {
+    max-height: 50vh;
+  }
+  .trace-content {
+    max-height: calc(50vh - 60px);
+  }
 }
 
 .pie-menu {

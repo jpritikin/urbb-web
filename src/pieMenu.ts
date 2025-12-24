@@ -31,6 +31,13 @@ export class PieMenu {
     private tooltipElement: SVGGElement | null = null;
     private hoverIndex: number = -1;
     private overlayContainer: SVGGElement | null = null;
+    private menuCenterX: number = 0;
+    private menuCenterY: number = 0;
+    private itemSlices: { group: SVGGElement; highlight: () => void; unhighlight: () => void; select: () => void }[] = [];
+    private activeSliceIndex: number = -1;
+    private touchDragMode: boolean = false;
+    private boundTouchMove: ((e: TouchEvent) => void) | null = null;
+    private boundTouchEnd: ((e: TouchEvent) => void) | null = null;
 
     constructor(private container: SVGGElement) {}
 
@@ -65,6 +72,19 @@ export class PieMenu {
     }
 
     show(x: number, y: number, cloudId: string): void {
+        this.showInternal(x, y, cloudId, false);
+    }
+
+    showWithTouch(x: number, y: number, cloudId: string, touchClientX: number, touchClientY: number): void {
+        this.showInternal(x, y, cloudId, true);
+        const sliceIndex = this.getSliceIndexFromPoint(touchClientX, touchClientY);
+        if (sliceIndex >= 0 && sliceIndex < this.itemSlices.length) {
+            this.activeSliceIndex = sliceIndex;
+            this.itemSlices[sliceIndex].highlight();
+        }
+    }
+
+    private showInternal(x: number, y: number, cloudId: string, touchMode: boolean): void {
         if (this.visible) {
             this.hide();
         }
@@ -77,11 +97,36 @@ export class PieMenu {
         this.targetCloudId = cloudId;
         this.visible = true;
         this.hoverIndex = -1;
+        this.menuCenterX = x;
+        this.menuCenterY = y;
+        this.itemSlices = [];
+        this.activeSliceIndex = -1;
+        this.touchDragMode = touchMode;
         this.createMenuElements(x, y);
+
+        if (touchMode) {
+            this.boundTouchMove = this.handleTouchMove.bind(this);
+            this.boundTouchEnd = this.handleTouchEnd.bind(this);
+            document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+            document.addEventListener('touchend', this.boundTouchEnd, { passive: false });
+        }
+
         PieMenu.globalVisibilityCallback?.(true);
     }
 
     hide(): void {
+        if (this.boundTouchMove) {
+            document.removeEventListener('touchmove', this.boundTouchMove);
+            this.boundTouchMove = null;
+        }
+        if (this.boundTouchEnd) {
+            document.removeEventListener('touchend', this.boundTouchEnd);
+            this.boundTouchEnd = null;
+        }
+        this.touchDragMode = false;
+
+        this.hideTooltip();
+
         if (this.group && this.group.parentNode) {
             this.group.parentNode.removeChild(this.group);
         }
@@ -103,8 +148,8 @@ export class PieMenu {
         const backdrop = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         backdrop.setAttribute('cx', '0');
         backdrop.setAttribute('cy', '0');
-        backdrop.setAttribute('r', String(this.radius + 30));
-        backdrop.setAttribute('fill', 'rgba(0, 0, 0, 0.15)');
+        backdrop.setAttribute('r', String(this.radius + 20));
+        backdrop.setAttribute('fill', 'rgba(0, 0, 0, 0.08)');
         backdrop.setAttribute('class', 'pie-menu-backdrop');
         backdrop.setAttribute('pointer-events', 'none');
         this.group.appendChild(backdrop);
@@ -116,7 +161,7 @@ export class PieMenu {
         for (let i = 0; i < itemCount; i++) {
             const item = this.items[i];
             const angle = startAngle + i * angleStep;
-            const labelGroup = this.createLabelItem(item, angle);
+            const labelGroup = this.createLabelItem(item, angle, i);
             this.group.appendChild(labelGroup);
         }
 
@@ -138,7 +183,7 @@ export class PieMenu {
         closeX.setAttribute('x', '0');
         closeX.setAttribute('y', '4');
         closeX.setAttribute('text-anchor', 'middle');
-        closeX.setAttribute('font-size', '14');
+        closeX.setAttribute('font-size', '16');
         closeX.setAttribute('fill', '#7b68ee');
         closeX.setAttribute('font-weight', 'bold');
         closeX.setAttribute('pointer-events', 'none');
@@ -148,62 +193,172 @@ export class PieMenu {
         (this.overlayContainer ?? this.container).appendChild(this.group);
     }
 
-    private createLabelItem(item: PieMenuItem, angle: number): SVGGElement {
+    private getSliceIndexFromPoint(clientX: number, clientY: number): number {
+        const svg = this.group?.ownerSVGElement;
+        if (!svg) return -1;
+
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return -1;
+
+        const pt = svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const svgPt = pt.matrixTransform(ctm.inverse());
+
+        const dx = svgPt.x - this.menuCenterX;
+        const dy = svgPt.y - this.menuCenterY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < this.innerRadius || dist > this.radius + 15) {
+            return -1;
+        }
+
+        let angle = Math.atan2(dy, dx);
+        const startAngle = -Math.PI / 2;
+        const itemCount = this.items.length;
+        const angleStep = (2 * Math.PI) / itemCount;
+
+        let normalizedAngle = angle - startAngle + angleStep / 2;
+        while (normalizedAngle < 0) normalizedAngle += 2 * Math.PI;
+        while (normalizedAngle >= 2 * Math.PI) normalizedAngle -= 2 * Math.PI;
+
+        return Math.floor(normalizedAngle / angleStep) % itemCount;
+    }
+
+    private handleTouchMove(e: TouchEvent): void {
+        if (!this.touchDragMode) return;
+        if (e.touches.length === 0) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const sliceIndex = this.getSliceIndexFromPoint(touch.clientX, touch.clientY);
+
+        if (sliceIndex !== this.activeSliceIndex) {
+            if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
+                this.itemSlices[this.activeSliceIndex].unhighlight();
+            }
+            this.activeSliceIndex = sliceIndex;
+            if (sliceIndex >= 0 && sliceIndex < this.itemSlices.length) {
+                this.itemSlices[sliceIndex].highlight();
+            }
+        }
+    }
+
+    private handleTouchEnd(e: TouchEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
+            this.itemSlices[this.activeSliceIndex].select();
+        } else {
+            this.hide();
+        }
+    }
+
+    private createSlicePath(startAngle: number, endAngle: number, innerR: number, outerR: number): string {
+        const startInnerX = innerR * Math.cos(startAngle);
+        const startInnerY = innerR * Math.sin(startAngle);
+        const endInnerX = innerR * Math.cos(endAngle);
+        const endInnerY = innerR * Math.sin(endAngle);
+        const startOuterX = outerR * Math.cos(startAngle);
+        const startOuterY = outerR * Math.sin(startAngle);
+        const endOuterX = outerR * Math.cos(endAngle);
+        const endOuterY = outerR * Math.sin(endAngle);
+
+        const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+
+        return `M ${startInnerX} ${startInnerY}
+                L ${startOuterX} ${startOuterY}
+                A ${outerR} ${outerR} 0 ${largeArc} 1 ${endOuterX} ${endOuterY}
+                L ${endInnerX} ${endInnerY}
+                A ${innerR} ${innerR} 0 ${largeArc} 0 ${startInnerX} ${startInnerY} Z`;
+    }
+
+    private createLabelItem(item: PieMenuItem, angle: number, index: number): SVGGElement {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'pie-menu-item');
         group.setAttribute('cursor', 'pointer');
 
-        const x = this.radius * Math.cos(angle);
-        const y = this.radius * Math.sin(angle);
+        const itemCount = this.items.length;
+        const angleStep = (2 * Math.PI) / itemCount;
+        const startAngle = angle - angleStep / 2;
+        const endAngle = angle + angleStep / 2;
+        const sliceGap = 0.02;
 
-        const rectWidth = 70;
-        const rectHeight = 24;
+        const slicePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        slicePath.setAttribute('d', this.createSlicePath(
+            startAngle + sliceGap,
+            endAngle - sliceGap,
+            this.innerRadius + 4,
+            this.radius + 15
+        ));
+        slicePath.setAttribute('fill', '#fff');
+        slicePath.setAttribute('stroke', this.getCategoryColor(item.category, 0.6));
+        slicePath.setAttribute('stroke-width', '1.5');
+        slicePath.setAttribute('class', 'pie-menu-item-bg');
+        group.appendChild(slicePath);
 
-        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        bgRect.setAttribute('x', String(x - rectWidth / 2));
-        bgRect.setAttribute('y', String(y - rectHeight / 2));
-        bgRect.setAttribute('width', String(rectWidth));
-        bgRect.setAttribute('height', String(rectHeight));
+        const textRadius = (this.innerRadius + this.radius + 15) / 2 + 5;
+        const textX = textRadius * Math.cos(angle);
+        const textY = textRadius * Math.sin(angle);
+
+        // Convert angle to degrees and adjust for text readability
+        let rotationDeg = (angle * 180) / Math.PI;
+        // Flip text on the left side so it reads left-to-right
+        if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+            rotationDeg += 180;
+        }
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', String(x));
-        text.setAttribute('y', String(y + 4));
+        text.setAttribute('x', String(textX));
+        text.setAttribute('y', String(textY));
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-size', '12');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', '13');
         text.setAttribute('font-weight', '500');
         text.setAttribute('fill', '#333');
         text.setAttribute('class', 'pie-menu-label');
+        text.setAttribute('transform', `rotate(${rotationDeg}, ${textX}, ${textY})`);
         text.textContent = item.shortName;
-        bgRect.setAttribute('rx', '4');
-        bgRect.setAttribute('fill', '#fff');
-        bgRect.setAttribute('stroke', this.getCategoryColor(item.category, 0.6));
-        bgRect.setAttribute('stroke-width', '1.5');
-        bgRect.setAttribute('class', 'pie-menu-item-bg');
-        group.appendChild(bgRect);
-
         group.appendChild(text);
 
-        group.addEventListener('mouseenter', () => {
-            bgRect.setAttribute('fill', this.getCategoryColor(item.category, 0.15));
-            bgRect.setAttribute('stroke', this.getCategoryColor(item.category, 1));
-            bgRect.setAttribute('stroke-width', '2');
+        const highlight = () => {
+            slicePath.setAttribute('fill', this.getCategoryColor(item.category, 0.2));
+            slicePath.setAttribute('stroke', this.getCategoryColor(item.category, 1));
+            slicePath.setAttribute('stroke-width', '2');
             this.showTooltip(item.label);
-        });
+        };
 
-        group.addEventListener('mouseleave', () => {
-            bgRect.setAttribute('fill', '#fff');
-            bgRect.setAttribute('stroke', this.getCategoryColor(item.category, 0.6));
-            bgRect.setAttribute('stroke-width', '1.5');
+        const unhighlight = () => {
+            slicePath.setAttribute('fill', '#fff');
+            slicePath.setAttribute('stroke', this.getCategoryColor(item.category, 0.6));
+            slicePath.setAttribute('stroke-width', '1.5');
             this.hideTooltip();
-        });
+        };
 
-        group.addEventListener('click', (e) => {
-            e.stopPropagation();
+        const selectItem = () => {
             if (this.onSelect && this.targetCloudId) {
                 this.onSelect(item, this.targetCloudId);
             }
             this.hide();
+        };
+
+        this.itemSlices.push({ group, highlight, unhighlight, select: selectItem });
+
+        // Desktop: hover shows tooltip, click selects
+        group.addEventListener('mouseenter', highlight);
+        group.addEventListener('mouseleave', unhighlight);
+        group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectItem();
         });
+
+        // Mobile: touchstart highlights the initially touched slice
+        group.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.activeSliceIndex = index;
+            highlight();
+        }, { passive: false });
 
         return group;
     }
@@ -229,11 +384,21 @@ export class PieMenu {
         this.tooltipElement.setAttribute('class', 'pie-menu-tooltip');
 
         const padding = 10;
-        const fontSize = 13;
+        const fontSize = 15;
         const lineHeight = fontSize + 4;
-        const tooltipY = this.radius + 15;
-
         const lines = text.split('\n');
+        const estimatedHeight = lines.length * lineHeight + padding * 2;
+
+        const svg = this.group.ownerSVGElement;
+        const viewBox = svg?.viewBox.baseVal;
+        const canvasHeight = viewBox?.height ?? 600;
+
+        const spaceBelow = canvasHeight - this.menuCenterY - this.radius - 15;
+        const showAbove = spaceBelow < estimatedHeight + 10;
+
+        const tooltipY = showAbove
+            ? -(this.radius + 15 + estimatedHeight)
+            : this.radius + 15;
 
         const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         textEl.setAttribute('x', '0');
@@ -251,7 +416,11 @@ export class PieMenu {
         }
 
         this.tooltipElement.appendChild(textEl);
-        this.group.appendChild(this.tooltipElement);
+        // Add to overlay container (after menu group) for max z-order
+        const targetContainer = this.overlayContainer ?? this.group;
+        targetContainer.appendChild(this.tooltipElement);
+        // Position relative to menu center since tooltip is now in overlay, not menu group
+        this.tooltipElement.setAttribute('transform', `translate(${this.menuCenterX}, ${this.menuCenterY})`);
 
         const bbox = textEl.getBBox();
         const rectWidth = bbox.width + padding * 2;

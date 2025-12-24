@@ -40,9 +40,9 @@ export class SeatManager {
     getConferenceTableRadius(seatCount?: number): number {
         const count = seatCount ?? this.seats.length;
         const baseRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.3;
-        if (count <= 2) return baseRadius * 0.5;
+        if (count <= 2) return baseRadius * 0.6;
         if (count >= 7) return baseRadius;
-        return baseRadius * (0.5 + 0.5 * (count - 2) / 5);
+        return baseRadius * (0.6 + 0.4 * (count - 2) / 5);
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
@@ -311,5 +311,10 @@ export class SeatManager {
 
     setConferenceRotationPaused(paused: boolean): void {
         this.conferenceRotationSpeed = paused ? 0 : 0.05;
+    }
+
+    setDimensions(width: number, height: number): void {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
     }
 }

@@ -40,7 +40,6 @@ export class CloudManager {
     private animating: boolean = false;
     private animationFrameId: number | null = null;
     private lastFrameTime: number = 0;
-    private selectedCloud: Cloud | null = null;
     private partitionCount: number = 8;
     private currentPartition: number = 0;
     private animatedStar: AnimatedStar | null = null;
@@ -64,11 +63,16 @@ export class CloudManager {
     private pieMenuController: PieMenuController | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
     private hoveredCloudId: string | null = null;
+    private touchOpenedPieMenu: boolean = false;
     private longPressTimer: number | null = null;
     private longPressStartTime: number = 0;
     private readonly LONG_PRESS_DURATION = 500;
     private tracePanel: HTMLElement | null = null;
     private traceVisible: boolean = false;
+    private isFullscreen: boolean = false;
+    private mobileBanner: HTMLElement | null = null;
+    private originalCanvasWidth: number = 800;
+    private originalCanvasHeight: number = 600;
     private resolvingClouds: Set<string> = new Set();
     private carpetRenderer: CarpetRenderer | null = null;
     private messageContainer: SVGGElement | null = null;
@@ -149,15 +153,23 @@ export class CloudManager {
             relationships: this.relationships,
         });
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
-
-        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.zoomGroup);
-        this.view.setOnRayFieldSelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
-        this.view.setGetPartContext((cloudId) => ({
+        this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
+        this.pieMenuController.setGetPartContext((cloudId) => ({
             isProtector: this.relationships.getProtecting(cloudId).size > 0,
             isIdentityRevealed: this.model.isIdentityRevealed(cloudId),
             isAttacked: this.model.isAttacked(cloudId),
             partName: this.model.getPartName(cloudId),
         }));
+        this.pieMenuController.setOnClose(() => {
+            this.hoveredCloudId = null;
+            this.updateAllCloudStyles();
+        });
+
+        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.zoomGroup);
+        this.view.setOnSelfRayClick((cloudId, x, y, event) => {
+            const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
+            this.pieMenuController?.toggleSelfRay(cloudId, x, y, touchEvent);
+        });
         this.view.setOnModeChange((mode) => {
             if (mode === 'panorama') {
                 this.model.clearSelfRay();
@@ -169,6 +181,7 @@ export class CloudManager {
 
         this.createSelfStar();
         this.createModeToggle();
+        this.createFullscreenButton();
         this.createUIContainer();
         this.createTraceButton();
         this.createTracePanel();
@@ -177,6 +190,7 @@ export class CloudManager {
         this.updateViewBox();
         this.setupVisibilityHandling();
         this.setupClickDiagnostics();
+        this.setupFullscreenHandling();
     }
 
     private setupClickDiagnostics(): void {
@@ -255,6 +269,7 @@ export class CloudManager {
         if (!this.uiGroup) return;
 
         const foreignObject = createForeignObject(this.canvasWidth - 42, 10, 32, 32);
+        foreignObject.classList.add('mode-toggle-fo');
 
         this.modeToggleContainer = document.createElement('button');
         this.modeToggleContainer.className = 'zoom-toggle-btn';
@@ -276,6 +291,257 @@ export class CloudManager {
             this.updateUIForMode();
             this.updateModeToggle();
         });
+    }
+
+    private createFullscreenButton(): void {
+        if (!this.container || !this.uiGroup) return;
+
+        this.createMobileBanner();
+        this.createFullscreenToggleButton();
+    }
+
+    private isMobileDevice(): boolean {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || (window.innerWidth <= 800 && 'ontouchstart' in window);
+    }
+
+    private createMobileBanner(): void {
+        if (!this.container || !this.isMobileDevice()) return;
+
+        this.mobileBanner = document.createElement('div');
+        this.mobileBanner.className = 'mobile-fullscreen-banner';
+        this.mobileBanner.innerHTML = `
+            <div class="banner-content">
+                <div class="rotation-prompt">
+                    <span class="rotation-icon">📱</span>
+                    <span class="rotation-text">Rotate to landscape</span>
+                    <span class="rotation-check">✓</span>
+                </div>
+                <button class="enter-fullscreen-btn">Enter Fullscreen</button>
+            </div>
+        `;
+
+        const enterBtn = this.mobileBanner.querySelector('.enter-fullscreen-btn');
+        enterBtn?.addEventListener('click', () => this.enterFullscreen());
+
+        this.container.appendChild(this.mobileBanner);
+        this.updateOrientationIndicator();
+
+        window.addEventListener('orientationchange', () => this.updateOrientationIndicator());
+        window.addEventListener('resize', () => this.updateOrientationIndicator());
+    }
+
+    private createFullscreenToggleButton(): void {
+        if (!this.uiGroup) return;
+
+        const foreignObject = createForeignObject(this.canvasWidth - 84, 10, 32, 32);
+        foreignObject.classList.add('fullscreen-toggle-fo');
+
+        const btn = document.createElement('button');
+        btn.className = 'zoom-toggle-btn';
+        btn.innerHTML = '⛶';
+        btn.title = 'Toggle fullscreen';
+        btn.addEventListener('click', () => this.toggleFullscreen());
+
+        foreignObject.appendChild(btn);
+        this.uiGroup.appendChild(foreignObject);
+    }
+
+    private updateOrientationIndicator(): void {
+        if (!this.mobileBanner) return;
+
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const check = this.mobileBanner.querySelector('.rotation-check') as HTMLElement;
+        const text = this.mobileBanner.querySelector('.rotation-text') as HTMLElement;
+        const btn = this.mobileBanner.querySelector('.enter-fullscreen-btn') as HTMLButtonElement;
+
+        if (check && text) {
+            if (isLandscape) {
+                check.style.display = 'inline';
+                text.textContent = 'Landscape ';
+            } else {
+                check.style.display = 'none';
+                text.textContent = 'Rotate to landscape';
+            }
+        }
+
+        if (btn) {
+            btn.disabled = !isLandscape;
+        }
+    }
+
+    private setupFullscreenHandling(): void {
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                this.exitFullscreenMode();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (this.isFullscreen) {
+                const isLandscape = window.innerWidth > window.innerHeight;
+                if (!isLandscape && this.isMobileDevice()) {
+                    console.log('[IFS] Exiting fullscreen due to portrait orientation');
+                    this.exitFullscreen();
+                    return;
+                }
+                this.resizeCanvasToViewport();
+            }
+        });
+    }
+
+    private async toggleFullscreen(): Promise<void> {
+        if (this.isFullscreen) {
+            await this.exitFullscreen();
+        } else {
+            await this.enterFullscreen();
+        }
+    }
+
+    private async enterFullscreen(): Promise<void> {
+        if (!this.container) return;
+
+        const isLandscape = window.innerWidth > window.innerHeight;
+        if (!isLandscape && this.isMobileDevice()) {
+            console.log('[IFS] Please rotate to landscape before entering fullscreen');
+            return;
+        }
+
+        try {
+            await this.container.requestFullscreen();
+            this.enterFullscreenMode();
+        } catch (err) {
+            console.log('[IFS] Fullscreen not available, using pseudo-fullscreen');
+            this.enterFullscreenMode();
+        }
+    }
+
+    private enterFullscreenMode(): void {
+        this.isFullscreen = true;
+        document.body.classList.add('ifs-fullscreen');
+        this.container?.classList.add('fullscreen-active');
+
+        if (this.mobileBanner) {
+            this.mobileBanner.style.display = 'none';
+        }
+
+        this.requestLandscapeOrientation();
+        this.resizeCanvasToViewport();
+    }
+
+    private async exitFullscreen(): Promise<void> {
+        if (document.fullscreenElement) {
+            await document.exitFullscreen();
+        } else {
+            this.exitFullscreenMode();
+        }
+    }
+
+    private exitFullscreenMode(): void {
+        this.isFullscreen = false;
+        document.body.classList.remove('ifs-fullscreen');
+        this.container?.classList.remove('fullscreen-active');
+
+        if (this.mobileBanner) {
+            this.mobileBanner.style.display = 'flex';
+        }
+
+        this.unlockOrientation();
+        this.restoreCanvasSize();
+    }
+
+    private requestLandscapeOrientation(): void {
+        const screen = window.screen as Screen & {
+            orientation?: {
+                lock?: (orientation: string) => Promise<void>;
+                unlock?: () => void;
+            };
+        };
+
+        if (screen.orientation?.lock) {
+            screen.orientation.lock('landscape').catch(() => {
+                // Orientation lock not supported or not in fullscreen
+            });
+        }
+    }
+
+    private unlockOrientation(): void {
+        const screen = window.screen as Screen & {
+            orientation?: {
+                unlock?: () => void;
+            };
+        };
+
+        if (screen.orientation?.unlock) {
+            try {
+                screen.orientation.unlock();
+            } catch {
+                // Ignore unlock errors
+            }
+        }
+    }
+
+    private resizeCanvasToViewport(): void {
+        if (!this.svgElement || !this.container) return;
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+
+        this.svgElement.setAttribute('width', String(width));
+        this.svgElement.setAttribute('height', String(height));
+        this.svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+        this.view.setDimensions(width, height);
+        this.panX = width / 2;
+        this.panY = height / 2;
+
+        if (this.animatedStar) {
+            this.animatedStar.setPosition(width / 2, height / 2);
+        }
+
+        this.carpetRenderer?.setDimensions(width, height);
+        this.updateModeTogglePosition();
+        this.updateViewBox();
+    }
+
+    private restoreCanvasSize(): void {
+        if (!this.svgElement) return;
+
+        this.canvasWidth = this.originalCanvasWidth;
+        this.canvasHeight = this.originalCanvasHeight;
+
+        this.svgElement.setAttribute('width', String(this.originalCanvasWidth));
+        this.svgElement.setAttribute('height', String(this.originalCanvasHeight));
+        this.svgElement.setAttribute('viewBox', `0 0 ${this.originalCanvasWidth} ${this.originalCanvasHeight}`);
+
+        this.view.setDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
+        this.panX = this.originalCanvasWidth / 2;
+        this.panY = this.originalCanvasHeight / 2;
+
+        if (this.animatedStar) {
+            this.animatedStar.setPosition(this.originalCanvasWidth / 2, this.originalCanvasHeight / 2);
+        }
+
+        this.carpetRenderer?.setDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
+        this.updateModeTogglePosition();
+        this.updateViewBox();
+    }
+
+    private updateModeTogglePosition(): void {
+        if (!this.uiGroup) return;
+
+        const modeToggleFo = this.uiGroup.querySelector('.mode-toggle-fo');
+        if (modeToggleFo) {
+            modeToggleFo.setAttribute('x', String(this.canvasWidth - 42));
+        }
+
+        const fullscreenFo = this.uiGroup.querySelector('.fullscreen-toggle-fo');
+        if (fullscreenFo) {
+            fullscreenFo.setAttribute('x', String(this.canvasWidth - 84));
+        }
     }
 
     private createUIContainer(): void {
@@ -679,7 +945,7 @@ export class CloudManager {
         this.thoughtBubbleGroup = createGroup({ class: 'thought-bubble', 'pointer-events': 'none' });
 
         const padding = 12;
-        const fontSize = 14;
+        const fontSize = 16;
         const maxWidth = 200;
         const lines = this.wrapText(reaction, maxWidth, fontSize);
         const lineHeight = fontSize + 4;
@@ -1038,6 +1304,8 @@ export class CloudManager {
             },
             onLongPressStart: () => this.startLongPress(cloud.id),
             onLongPressEnd: () => this.cancelLongPress(),
+            onTouchStart: (e) => this.handleCloudTouchStart(cloud, e),
+            onTouchEnd: () => this.handleCloudTouchEnd(cloud),
         });
         this.zoomGroup?.appendChild(group);
         cloud.updateSVGElements(this.debug, state, false);
@@ -1099,10 +1367,14 @@ export class CloudManager {
 
     setDebug(enabled: boolean): void {
         this.debug = enabled;
+        this.updateAllCloudStyles();
+    }
+
+    private updateAllCloudStyles(): void {
         for (const instance of this.instances) {
             const state = this.model.getPartState(instance.cloud.id);
             const hovered = this.hoveredCloudId === instance.cloud.id;
-            instance.cloud.updateSVGElements(enabled, state, hovered);
+            instance.cloud.updateSVGElements(this.debug, state, hovered);
         }
     }
 
@@ -1215,13 +1487,39 @@ export class CloudManager {
     }
 
     private handleCloudClick(cloud: Cloud): void {
+        if (this.touchOpenedPieMenu) {
+            this.touchOpenedPieMenu = false;
+            return;
+        }
         this.hoveredCloudId = null;
         this.selectCloud(cloud);
     }
 
-    selectCloud(cloud: Cloud): void {
-        this.selectedCloud = cloud;
+    private handleCloudTouchStart(cloud: Cloud, e: TouchEvent): void {
+        this.hoveredCloudId = null;
+        this.updateAllCloudStyles();
 
+        if (this.view.getMode() !== 'foreground') return;
+        if (this.pendingTargetAction) return;
+
+        const cloudState = this.view.getCloudState(cloud.id);
+        if (cloudState && cloudState.opacity > 0) {
+            this.touchOpenedPieMenu = true;
+            this.pieMenuController?.toggle(cloud.id, cloudState.x, cloudState.y, e);
+        }
+    }
+
+    private handleCloudTouchEnd(cloud: Cloud): void {
+        if (!this.pendingTargetAction) return;
+        if (this.view.getMode() !== 'foreground') return;
+
+        const cloudState = this.view.getCloudState(cloud.id);
+        if (cloudState && cloudState.opacity > 0) {
+            this.completePendingTargetAction(cloud.id);
+        }
+    }
+
+    selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
         if (this.view.getMode() === 'panorama') {
             this.act(`Click: ${cloud.text}`, () => {
                 this.model.setTargetCloud(cloud.id);
@@ -1236,7 +1534,7 @@ export class CloudManager {
             }
             const cloudState = this.view.getCloudState(cloud.id);
             if (cloudState && cloudState.opacity > 0) {
-                this.pieMenuController?.toggle(cloud.id, cloudState.x, cloudState.y);
+                this.pieMenuController?.toggle(cloud.id, cloudState.x, cloudState.y, touchEvent);
             }
         }
     }

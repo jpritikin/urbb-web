@@ -9,7 +9,7 @@ export enum CloudType {
     CUMULUS = 'cumulus'
 }
 
-const FONT_SIZE = 12;
+const FONT_SIZE = 14;
 const MAX_TOP_GAP = 45;
 const KNOT_MARGIN = 9;
 const BOTTOM_INSET = 0;
@@ -1046,6 +1046,8 @@ export class Cloud {
         onHover: (hovered: boolean) => void;
         onLongPressStart: () => void;
         onLongPressEnd: () => void;
+        onTouchStart?: (e: TouchEvent) => void;
+        onTouchEnd?: () => void;
     }): SVGGElement {
         this.groupElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.groupElement.setAttribute('transform', `translate(${this.x}, ${this.y})`);
@@ -1074,9 +1076,13 @@ export class Cloud {
 
         this.groupElement.addEventListener('touchstart', (e: TouchEvent) => {
             callbacks.onLongPressStart();
+            callbacks.onTouchStart?.(e);
         }, { passive: true });
 
-        this.groupElement.addEventListener('touchend', () => callbacks.onLongPressEnd());
+        this.groupElement.addEventListener('touchend', () => {
+            callbacks.onLongPressEnd();
+            callbacks.onTouchEnd?.();
+        });
         this.groupElement.addEventListener('touchcancel', () => callbacks.onLongPressEnd());
 
         return this.groupElement;

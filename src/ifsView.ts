@@ -68,8 +68,7 @@ export class SimulatorView {
     private selfRay: SelfRay | null = null;
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
-    private onRayFieldSelect: ((field: BiographyField, cloudId: string) => void) | null = null;
-    private getPartContext: ((cloudId: string) => PartContext) | null = null;
+    private onSelfRayClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
 
     // Spiral exit animation state for parts forced out by spontaneous blends
     private spiralExits: Map<string, {
@@ -178,16 +177,18 @@ export class SimulatorView {
         this.messageRenderer?.clear();
     }
 
-    setOnRayFieldSelect(callback: (field: BiographyField, cloudId: string) => void): void {
-        this.onRayFieldSelect = callback;
-    }
-
-    setGetPartContext(callback: (cloudId: string) => PartContext): void {
-        this.getPartContext = callback;
+    setOnSelfRayClick(callback: (cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
+        this.onSelfRayClick = callback;
     }
 
     setOnModeChange(callback: (mode: 'panorama' | 'foreground') => void): void {
         this.events.on('mode-changed', (data) => callback(data.mode));
+    }
+
+    setDimensions(width: number, height: number): void {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+        this.seatManager.setDimensions(width, height);
     }
 
     getMode(): 'panorama' | 'foreground' {
@@ -470,17 +471,9 @@ export class SimulatorView {
                 targetCloudId: modelRay.targetCloudId
             });
 
-            if (this.pieMenuOverlay) {
-                this.selfRay.setPieMenuOverlay(this.pieMenuOverlay);
-            }
-
-            this.selfRay.setOnSelect((field, targetCloudId) => {
-                this.onRayFieldSelect?.(field, targetCloudId);
+            this.selfRay.setOnClick((cloudId, x, y, event) => {
+                this.onSelfRayClick?.(cloudId, x, y, event);
             });
-
-            if (this.getPartContext) {
-                this.selfRay.setPartContext(this.getPartContext(modelRay.targetCloudId));
-            }
 
             const rayElement = this.selfRay.create();
             this.rayContainer.appendChild(rayElement);

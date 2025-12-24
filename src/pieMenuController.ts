@@ -4,6 +4,7 @@ import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView } from './ifsView.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
+import { BiographyField, PartContext } from './selfRay.js';
 
 export interface PieMenuDependencies {
     getCloudById: (id: string) => Cloud | null;
@@ -12,11 +13,17 @@ export interface PieMenuDependencies {
     relationships: CloudRelationshipManager;
 }
 
+type MenuMode = 'cloud' | 'selfRay';
+
 export class PieMenuController {
     private pieMenu: PieMenu | null = null;
     private pieMenuOpen = false;
     private selectedCloudId: string | null = null;
+    private menuMode: MenuMode = 'cloud';
     private onActionSelect: ((action: TherapistAction, cloud: Cloud) => void) | null = null;
+    private onBiographySelect: ((field: BiographyField, cloudId: string) => void) | null = null;
+    private onClose: (() => void) | null = null;
+    private getPartContext: ((cloudId: string) => PartContext) | null = null;
 
     constructor(
         private uiGroup: SVGGElement,
@@ -31,11 +38,16 @@ export class PieMenuController {
         this.pieMenu.setOverlayContainer(this.pieMenuOverlay);
 
         this.pieMenu.setOnSelect((item: PieMenuItem, cloudId: string) => {
-            const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
-            if (action) {
-                const cloud = this.deps.getCloudById(cloudId);
-                if (cloud && this.onActionSelect) {
-                    this.onActionSelect(action, cloud);
+            if (this.menuMode === 'selfRay') {
+                const field = item.id as BiographyField;
+                this.onBiographySelect?.(field, cloudId);
+            } else {
+                const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
+                if (action) {
+                    const cloud = this.deps.getCloudById(cloudId);
+                    if (cloud && this.onActionSelect) {
+                        this.onActionSelect(action, cloud);
+                    }
                 }
             }
         });
@@ -43,11 +55,25 @@ export class PieMenuController {
         this.pieMenu.setOnClose(() => {
             this.pieMenuOpen = false;
             this.selectedCloudId = null;
+            this.menuMode = 'cloud';
+            this.onClose?.();
         });
     }
 
     setOnActionSelect(handler: (action: TherapistAction, cloud: Cloud) => void): void {
         this.onActionSelect = handler;
+    }
+
+    setOnBiographySelect(handler: (field: BiographyField, cloudId: string) => void): void {
+        this.onBiographySelect = handler;
+    }
+
+    setGetPartContext(callback: (cloudId: string) => PartContext): void {
+        this.getPartContext = callback;
+    }
+
+    setOnClose(handler: () => void): void {
+        this.onClose = handler;
     }
 
     isOpen(): boolean {
@@ -58,10 +84,10 @@ export class PieMenuController {
         return this.selectedCloudId;
     }
 
-    toggle(cloudId: string, x: number, y: number): void {
+    toggle(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
         if (!this.pieMenu) return;
 
-        if (this.pieMenuOpen && this.selectedCloudId === cloudId) {
+        if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === 'cloud') {
             this.pieMenu.hide();
             return;
         }
@@ -70,13 +96,48 @@ export class PieMenuController {
             this.pieMenu.hide();
         }
 
+        this.menuMode = 'cloud';
         const items = this.getItemsForCloud(cloudId);
         if (items.length === 0) {
             return;
         }
 
         this.pieMenu.setItems(items);
-        this.pieMenu.show(x, y, cloudId);
+        if (touchEvent && touchEvent.touches.length > 0) {
+            const touch = touchEvent.touches[0];
+            this.pieMenu.showWithTouch(x, y, cloudId, touch.clientX, touch.clientY);
+        } else {
+            this.pieMenu.show(x, y, cloudId);
+        }
+        this.pieMenuOpen = true;
+        this.selectedCloudId = cloudId;
+    }
+
+    toggleSelfRay(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
+        if (!this.pieMenu) return;
+
+        if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === 'selfRay') {
+            this.pieMenu.hide();
+            return;
+        }
+
+        if (this.pieMenuOpen) {
+            this.pieMenu.hide();
+        }
+
+        this.menuMode = 'selfRay';
+        const items = this.getItemsForSelfRay(cloudId);
+        if (items.length === 0) {
+            return;
+        }
+
+        this.pieMenu.setItems(items);
+        if (touchEvent && touchEvent.touches.length > 0) {
+            const touch = touchEvent.touches[0];
+            this.pieMenu.showWithTouch(x, y, cloudId, touch.clientX, touch.clientY);
+        } else {
+            this.pieMenu.show(x, y, cloudId);
+        }
         this.pieMenuOpen = true;
         this.selectedCloudId = cloudId;
     }
@@ -165,6 +226,80 @@ export class PieMenuController {
                     category: action.category
                 });
             }
+        }
+
+        return items;
+    }
+
+    private getItemsForSelfRay(cloudId: string): PieMenuItem[] {
+        const context = this.getPartContext?.(cloudId) ?? {
+            isProtector: false,
+            isIdentityRevealed: false,
+            isAttacked: false,
+            partName: ''
+        };
+
+        const items: PieMenuItem[] = [];
+
+        items.push({
+            id: 'age',
+            label: 'How old are you?',
+            shortName: 'Age',
+            category: 'curiosity'
+        });
+
+        items.push({
+            id: 'identity',
+            label: 'Who are you?',
+            shortName: 'Identity',
+            category: 'curiosity'
+        });
+
+        const showJobQuestions = !context.isIdentityRevealed || context.isProtector;
+        if (showJobQuestions) {
+            items.push({
+                id: 'jobAppraisal',
+                label: 'How do you like your job?',
+                shortName: 'Appraisal',
+                category: 'curiosity'
+            });
+
+            items.push({
+                id: 'jobImpact',
+                label: 'How do you understand the impact of your job?',
+                shortName: 'Impact',
+                category: 'curiosity'
+            });
+        } else {
+            items.push({
+                id: 'whatNeedToKnow',
+                label: 'What do you need me to know?',
+                shortName: 'Know?',
+                category: 'curiosity'
+            });
+        }
+
+        items.push({
+            id: 'gratitude',
+            label: 'Thank you for being here',
+            shortName: 'Gratitude',
+            category: 'gratitude'
+        });
+
+        items.push({
+            id: 'compassion',
+            label: 'I care about you',
+            shortName: 'Compassion',
+            category: 'gratitude'
+        });
+
+        if (context.isAttacked) {
+            items.push({
+                id: 'apologize',
+                label: `Apologize to ${context.partName} for allowing other parts to attack it`,
+                shortName: 'Apologize',
+                category: 'gratitude'
+            });
         }
 
         return items;

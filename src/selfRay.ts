@@ -1,5 +1,3 @@
-import { PieMenu, PieMenuItem } from './pieMenu.js';
-
 export interface SelfRayConfig {
     startX: number;
     startY: number;
@@ -16,10 +14,6 @@ export interface PartContext {
 }
 
 export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize';
-
-export interface BiographyMenuItem extends PieMenuItem {
-    field: BiographyField;
-}
 
 interface RayLayer {
     path: SVGPathElement;
@@ -45,11 +39,7 @@ export class SelfRay {
     private animationFrameId: number | null = null;
     private hovered: boolean = false;
     private config: SelfRayConfig;
-    private onSelect: ((field: BiographyField, cloudId: string) => void) | null = null;
-    private pieMenu: PieMenu | null = null;
-    private pieMenuVisible: boolean = false;
-    private pieMenuOverlay: SVGGElement | null = null;
-    private partContext: PartContext = { isProtector: false, isIdentityRevealed: false, isAttacked: false, partName: '' };
+    private onClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
 
     constructor(
         private container: SVGGElement,
@@ -58,16 +48,8 @@ export class SelfRay {
         this.config = config;
     }
 
-    setPieMenuOverlay(overlay: SVGGElement): void {
-        this.pieMenuOverlay = overlay;
-    }
-
-    setOnSelect(callback: (field: BiographyField, cloudId: string) => void): void {
-        this.onSelect = callback;
-    }
-
-    setPartContext(context: PartContext): void {
-        this.partContext = context;
+    setOnClick(callback: (cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
+        this.onClick = callback;
     }
 
     create(): SVGGElement {
@@ -129,6 +111,7 @@ export class SelfRay {
         this.hitArea.addEventListener('mouseenter', () => this.handleMouseEnter());
         this.hitArea.addEventListener('mouseleave', () => this.handleMouseLeave());
         this.hitArea.addEventListener('click', (e) => this.handleClick(e));
+        this.hitArea.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
 
         this.group.appendChild(this.hitArea);
 
@@ -255,7 +238,7 @@ export class SelfRay {
 
     private handleMouseLeave(): void {
         this.hovered = false;
-        if (this.hoverOverlay && !this.pieMenuVisible) {
+        if (this.hoverOverlay) {
             this.hoverOverlay.setAttribute('opacity', '0');
         }
     }
@@ -263,114 +246,14 @@ export class SelfRay {
     private handleClick(e: MouseEvent): void {
         e.stopPropagation();
         const { startX, startY } = this.config;
-        this.showBiographyPieMenu(startX, startY);
+        this.onClick?.(this.config.targetCloudId, startX, startY, e);
     }
 
-    showBiographyPieMenu(x: number, y: number): void {
-        if (this.pieMenuVisible) {
-            this.hidePieMenu();
-            return;
-        }
-
-        if (!this.group) return;
-
-        this.pieMenu = new PieMenu(this.container);
-        if (this.pieMenuOverlay) {
-            this.pieMenu.setOverlayContainer(this.pieMenuOverlay);
-        }
-
-        const items: PieMenuItem[] = [];
-
-        for (const field of ['age', 'identity'] as const) {
-            items.push({
-                id: field,
-                label: this.getFieldLabel(field),
-                shortName: this.getFieldShortName(field),
-                category: 'curiosity'
-            });
-        }
-
-        const showJobQuestions = !this.partContext.isIdentityRevealed || this.partContext.isProtector;
-        if (showJobQuestions) {
-            items.push({
-                id: 'jobAppraisal',
-                label: 'How do you like your job?',
-                shortName: 'Appraisal',
-                category: 'curiosity'
-            });
-
-            items.push({
-                id: 'jobImpact',
-                label: 'How do you understand the impact of your job?',
-                shortName: 'Impact',
-                category: 'curiosity'
-            });
-        } else {
-            items.push({
-                id: 'whatNeedToKnow',
-                label: 'What do you need me to know?',
-                shortName: 'Know?',
-                category: 'curiosity'
-            });
-        }
-
-        items.push({
-            id: 'gratitude',
-            label: 'Thank you for being here',
-            shortName: 'Gratitude',
-            category: 'gratitude'
-        });
-
-        items.push({
-            id: 'compassion',
-            label: 'I care about you',
-            shortName: 'Compassion',
-            category: 'gratitude'
-        });
-
-        if (this.partContext.isAttacked) {
-            items.push({
-                id: 'apologize',
-                label: `Apologize to ${this.partContext.partName} for allowing other parts to attack it`,
-                shortName: 'Apologize',
-                category: 'gratitude'
-            });
-        }
-
-        this.pieMenu.setItems(items);
-        this.pieMenu.setOnSelect((item) => {
-            const field = item.id as BiographyField;
-            this.onSelect?.(field, this.config.targetCloudId);
-            this.pieMenuVisible = false;
-        });
-        this.pieMenu.setOnClose(() => {
-            this.pieMenuVisible = false;
-            this.handleMouseLeave();
-        });
-
-        this.pieMenu.show(x, y, this.config.targetCloudId);
-        this.pieMenuVisible = true;
-    }
-
-    private getFieldLabel(field: 'age' | 'identity' | 'job'): string {
-        switch (field) {
-            case 'age': return 'How old are you?';
-            case 'identity': return 'Who are you?';
-            case 'job': return 'What is your job?';
-        }
-    }
-
-    private getFieldShortName(field: 'age' | 'identity' | 'job'): string {
-        switch (field) {
-            case 'age': return 'Age';
-            case 'identity': return 'Identity';
-            case 'job': return 'Job';
-        }
-    }
-
-    hidePieMenu(): void {
-        this.pieMenu?.hide();
-        this.pieMenuVisible = false;
+    private handleTouchStart(e: TouchEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+        const { startX, startY } = this.config;
+        this.onClick?.(this.config.targetCloudId, startX, startY, e);
     }
 
     updatePosition(startX: number, startY: number, endX: number, endY: number): void {
@@ -465,7 +348,6 @@ export class SelfRay {
 
     remove(): void {
         this.stopSparkleAnimation();
-        this.hidePieMenu();
         if (this.group && this.group.parentNode) {
             this.group.style.transition = 'opacity 0.3s ease-out';
             this.group.style.opacity = '0';
@@ -482,9 +364,5 @@ export class SelfRay {
 
     getTargetCloudId(): string {
         return this.config.targetCloudId;
-    }
-
-    isPieMenuVisible(): boolean {
-        return this.pieMenuVisible;
     }
 }

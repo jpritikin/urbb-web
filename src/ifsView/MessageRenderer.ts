@@ -117,7 +117,7 @@ export class MessageRenderer {
         const group = createGroup({ class: 'message-bubble' });
 
         const padding = 8;
-        const fontSize = 11;
+        const fontSize = 13;
         const maxWidth = 120;
 
         const lines = this.wrapText(message.text, maxWidth, fontSize);
