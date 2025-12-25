@@ -8,4 +8,5 @@ static/js/*.d.ts
 static/js/*.js.map
 static/js/*.d.ts.map
 static/js/ifsView/
+static/js/testability/
 static/css/output.css

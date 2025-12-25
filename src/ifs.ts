@@ -1,4 +1,41 @@
 import { CloudManager } from './cloudManager.js';
+import { sessionToJSON } from './testability/recorder.js';
+
+function downloadSession(cloudManager: CloudManager): void {
+    const session = cloudManager.stopRecording();
+    if (!session) {
+        console.warn('[IFS] No recording in progress');
+        return;
+    }
+    const json = sessionToJSON(session);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ifs-session-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('[IFS] Recording saved:', a.download);
+}
+
+function setupRecordingShortcuts(cloudManager: CloudManager): void {
+    let isRecording = false;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === ' ') {
+            e.preventDefault();
+            if (isRecording) {
+                downloadSession(cloudManager);
+                isRecording = false;
+                console.log('[IFS] Recording stopped and downloaded');
+            } else {
+                cloudManager.startRecording();
+                isRecording = true;
+                console.log('[IFS] Recording started (Ctrl+Space to stop and download)');
+            }
+        }
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
@@ -111,4 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
+
+    setupRecordingShortcuts(cloudManager);
 });

@@ -1,3 +1,5 @@
+import type { SerializedRelationships } from './testability/types.js';
+
 interface ProtectionRelation {
     protectorId: string;
     protectedId: string;
@@ -179,5 +181,31 @@ export class CloudRelationshipManager {
             return 0.1;
         }
         return 0.3;
+    }
+
+    toJSON(): SerializedRelationships {
+        return {
+            protections: [...this.protections],
+            grievances: this.grievances.map(g => ({
+                cloudId: g.cloudId,
+                targetIds: Array.from(g.targetIds),
+                dialogues: [...g.dialogues],
+            })),
+            proxies: [...this.proxies],
+        };
+    }
+
+    static fromJSON(json: SerializedRelationships): CloudRelationshipManager {
+        const manager = new CloudRelationshipManager();
+        for (const p of json.protections) {
+            manager.addProtection(p.protectorId, p.protectedId);
+        }
+        for (const g of json.grievances) {
+            manager.setGrievance(g.cloudId, g.targetIds, g.dialogues);
+        }
+        for (const p of json.proxies) {
+            manager.addProxy(p.cloudId, p.proxyId);
+        }
+        return manager;
     }
 }

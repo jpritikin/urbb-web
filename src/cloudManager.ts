@@ -15,6 +15,11 @@ import {
     createGroup, createCircle, createRect, createText,
     createForeignObject, setClickHandler, TextLine
 } from './svgHelpers.js';
+import { RNG, DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
+import { ActionRecorder } from './testability/recorder.js';
+import type { RecordedSession, RecordedAction, ControllerActionResult } from './testability/types.js';
+import { SimulatorController } from './simulatorController.js';
+import { formatActionLabel } from './actionFormatter.js';
 
 export { CloudType };
 export { TherapistAction, THERAPIST_ACTIONS };
@@ -84,6 +89,9 @@ export class CloudManager {
     private readonly BLEND_MESSAGE_DELAY = 3;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
     private pendingTargetAction: { action: TherapistAction; sourceCloudId: string } | null = null;
+    private rng: DualRNG = createDualRNG();
+    private recorder: ActionRecorder = new ActionRecorder();
+    private controller: SimulatorController | null = null;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -102,6 +110,83 @@ export class CloudManager {
         PieMenu.setGlobalVisibilityCallback((visible) => {
             this.view.setConferenceRotationPaused(visible);
         });
+        this.initController();
+    }
+
+    private initController(): void {
+        this.controller = new SimulatorController({
+            model: this.model,
+            relationships: this.relationships,
+            rng: this.rng,
+            getPartName: (id) => this.getCloudById(id)?.text ?? id
+        });
+    }
+
+    setRNG(rng: DualRNG): void {
+        this.rng = rng;
+        this.initController();
+    }
+
+    getRNG(): DualRNG {
+        return this.rng;
+    }
+
+    private recordingOverlay: SVGGElement | null = null;
+
+    startRecording(): void {
+        // Ensure we have a seeded RNG for deterministic replay
+        if (!(this.rng.model instanceof SeededRNG)) {
+            const seed = Math.floor(Math.random() * 2147483647);
+            this.setRNG(createDualRNG(seed));
+        }
+        this.recorder.start(
+            this.model.toJSON(),
+            this.relationships.toJSON(),
+            this.rng.model as SeededRNG
+        );
+        this.showRecordingOverlay();
+    }
+
+    stopRecording(): RecordedSession | null {
+        const session = this.recorder.getSession(
+            this.model.toJSON(),
+            this.relationships.toJSON()
+        );
+        this.recorder.clear();
+        this.hideRecordingOverlay();
+        return session;
+    }
+
+    private showRecordingOverlay(): void {
+        if (!this.svgElement || this.recordingOverlay) return;
+
+        this.recordingOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.recordingOverlay.setAttribute('pointer-events', 'none');
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', String(this.canvasWidth / 2));
+        text.setAttribute('y', String(this.canvasHeight / 2));
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', '48');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fill', 'rgba(255, 0, 0, 0.15)');
+        text.setAttribute('transform', `rotate(-15, ${this.canvasWidth / 2}, ${this.canvasHeight / 2})`);
+        text.textContent = 'RECORDING SESSION';
+
+        this.recordingOverlay.appendChild(text);
+        this.svgElement.insertBefore(this.recordingOverlay, this.svgElement.firstChild);
+    }
+
+    private hideRecordingOverlay(): void {
+        if (this.recordingOverlay) {
+            this.recordingOverlay.remove();
+            this.recordingOverlay = null;
+        }
+    }
+
+    isRecording(): boolean {
+        return this.recorder.isRecording();
     }
 
     init(containerId: string): void {
@@ -640,54 +725,16 @@ export class CloudManager {
     private handleActionClick(action: TherapistAction, targetCloud?: Cloud): void {
         const selectedId = this.pieMenuController?.getSelectedCloudId();
         const cloud = targetCloud ?? (selectedId ? this.getCloudById(selectedId) : null);
-        if (!cloud) return;
+        if (!cloud || !this.controller) return;
 
         this.selectedAction = action;
-        const actionLabel = `${action.shortName}: ${cloud.text}`;
 
         if (this.model.getBlendReason(cloud.id) === 'spontaneous') {
             this.model.setBlendReason(cloud.id, 'therapist');
         }
 
-        if (action.id === 'join_conference') {
-            this.showThoughtBubble("Joining the conference...", cloud.id);
-            this.act(actionLabel, () => this.model.addTargetCloud(cloud.id));
-            return;
-        }
-
-        if (action.id === 'step_back') {
-            this.act(actionLabel, () => this.doStepBack(cloud.id));
-            return;
-        }
-
-        if (action.id === 'separate') {
-            if (this.model.isBlended(cloud.id)) {
-                this.act(actionLabel, () => this.startUnblendingBlendedPart(cloud.id));
-            }
-            return;
-        }
-
-        if (action.id === 'blend') {
-            this.act(actionLabel, () => this.blendTargetPart(cloud.id));
-            return;
-        }
-
+        const rec: RecordedAction = { action: action.id, cloudId: cloud.id };
         const isBlended = this.model.isBlended(cloud.id);
-
-        if (action.id === 'job') {
-            this.act(actionLabel, () => this.handleJobQuestion(cloud, isBlended));
-            return;
-        }
-
-        if (action.id === 'who_do_you_see') {
-            this.act(actionLabel, () => this.handleWhoDoYouSee(cloud));
-            return;
-        }
-
-        if (action.id === 'help_protected') {
-            this.act(actionLabel, () => this.handleHelpProtected(cloud));
-            return;
-        }
 
         if (action.id === 'notice_part') {
             this.pendingTargetAction = { action, sourceCloudId: cloud.id };
@@ -695,53 +742,35 @@ export class CloudManager {
             return;
         }
 
-        if (action.id === 'feel_toward') {
-            this.act(actionLabel, () => {
-                const grievanceTargets = this.relationships.getGrievanceTargets(cloud.id);
-                const targetIds = this.model.getTargetCloudIds();
-                const blendedParts = this.model.getBlendedParts();
-                const blendedResponses: { cloudId: string; response: string }[] = [];
-
-                for (const blendedId of blendedParts) {
-                    if (this.relationships.hasGrievance(blendedId, cloud.id)) {
-                        const response = this.getGrievanceResponse(blendedId, cloud.id);
-                        if (response) {
-                            blendedResponses.push({ cloudId: blendedId, response });
-                        }
-                    } else {
-                        const dialogues = this.model.getDialogues(blendedId).genericBlendedDialogues;
-                        if (dialogues && dialogues.length > 0) {
-                            blendedResponses.push({ cloudId: blendedId, response: dialogues[Math.floor(Math.random() * dialogues.length)] });
-                        }
-                    }
-                }
-
-                for (const grievanceId of grievanceTargets) {
-                    const isPending = this.model.isPendingBlend(grievanceId);
-                    if (!targetIds.has(grievanceId) && !blendedParts.includes(grievanceId) && !isPending) {
-                        const grievanceCloud = this.getCloudById(grievanceId);
-                        if (grievanceCloud && this.model.getTrust(grievanceId) < 0.5) {
-                            this.model.enqueuePendingBlend(grievanceId, 'therapist');
-                        }
-                    }
-                }
-
-                const hasPendingBlends = this.model.peekPendingBlend() !== null;
-
-                if (blendedParts.length === 0 && !hasPendingBlends) {
-                    const unrevealed = this.model.getUnrevealedBiographyFields(cloud.id);
-                    this.createSelfRay(cloud.id, unrevealed);
-                } else if (blendedResponses.length > 0) {
-                    this.showThoughtBubble(blendedResponses[0].response, blendedResponses[0].cloudId);
-                    this.model.adjustTrust(cloud.id, 0.9);
-                }
-
-                this.model.revealRelationships(cloud.id);
-            });
-        }
+        this.act(rec, () => {
+            const result = this.controller!.executeAction(action.id, cloud.id, { isBlended });
+            this.applyActionResult(result, cloud.id);
+        });
 
         if (this.onActionSelect) {
             this.onActionSelect(action, cloud);
+        }
+    }
+
+    private applyActionResult(result: ControllerActionResult, cloudId: string): void {
+        if (result.uiFeedback?.thoughtBubble) {
+            this.showThoughtBubble(
+                result.uiFeedback.thoughtBubble.text,
+                result.uiFeedback.thoughtBubble.cloudId
+            );
+        }
+        if (result.uiFeedback?.actionLabel) {
+            this.view.setAction(result.uiFeedback.actionLabel);
+        }
+        if (result.reduceBlending) {
+            this.reduceBlending(result.reduceBlending.cloudId, result.reduceBlending.amount);
+        }
+        if (result.triggerBacklash) {
+            this.triggerBacklash(result.triggerBacklash.protectorId, result.triggerBacklash.protecteeId);
+        }
+        if (result.createSelfRay) {
+            const unrevealed = this.model.getUnrevealedBiographyFields(result.createSelfRay.cloudId);
+            this.createSelfRay(result.createSelfRay.cloudId, unrevealed);
         }
     }
 
@@ -809,10 +838,10 @@ export class CloudManager {
         if (protectedIds.size === 0) return;
 
         const trust = this.model.getTrust(cloud.id);
-        const willing = trust >= Math.random();
+        const willing = trust >= this.rng.model.random();
 
         if (!willing) {
-            const response = this.UNWILLING_RESPONSES[Math.floor(Math.random() * this.UNWILLING_RESPONSES.length)];
+            const response = this.rng.cosmetic.pickRandom(this.UNWILLING_RESPONSES);
             this.showThoughtBubble(response, cloud.id);
             this.view.setAction(`Help? ${cloud.text}: refused`);
             return;
@@ -829,7 +858,7 @@ export class CloudManager {
             ? ["I feel your gratitude.", "I feel your concern."]
             : ["I feel your compassion.", "I feel your warmth."];
         const responses = [...specific, "I see a brilliant star."];
-        return responses[Math.floor(Math.random() * responses.length)];
+        return this.rng.cosmetic.pickRandom(responses);
     }
 
     private handleWhoDoYouSee(cloud: Cloud): void {
@@ -860,20 +889,20 @@ export class CloudManager {
         const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
         if (availableProxies.length === 0) {
             const successChance = this.model.getSelfRay()?.targetCloudId === cloud.id ? 0.95 : 0.2;
-            if (Math.random() < successChance) {
+            if (this.rng.model.random() < successChance) {
                 this.relationships.clearProxies(cloud.id);
                 this.showThoughtBubble(this.getSelfRecognitionResponse(cloud.id), cloud.id);
                 return;
             }
             const proxyIds = Array.from(proxies);
-            const proxyId = proxyIds[Math.floor(Math.random() * proxyIds.length)];
+            const proxyId = this.rng.cosmetic.pickRandom(proxyIds);
             const proxyCloud = this.getCloudById(proxyId);
             const proxyName = proxyCloud?.text ?? 'someone';
             this.showThoughtBubble(`I see the ${proxyName}.`, cloud.id);
             return;
         }
 
-        const proxyId = availableProxies[Math.floor(Math.random() * availableProxies.length)];
+        const proxyId = this.rng.cosmetic.pickRandom(availableProxies);
         const proxyCloud = this.getCloudById(proxyId);
         const proxyName = proxyCloud?.text ?? 'someone';
 
@@ -902,7 +931,7 @@ export class CloudManager {
     private getGrievanceResponse(cloudId: string, targetId: string): string | null {
         const dialogues = this.relationships.getGrievanceDialogues(cloudId, targetId);
         if (dialogues.length > 0) {
-            return dialogues[Math.floor(Math.random() * dialogues.length)];
+            return this.rng.cosmetic.pickRandom(dialogues);
         }
         return null;
     }
@@ -1048,82 +1077,11 @@ export class CloudManager {
 
     private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize', cloudId: string): void {
         this.pendingTargetAction = null;
+        if (!this.controller) return;
 
-        const partState = this.model.getPartState(cloudId);
-        if (!partState) return;
-
-        const cloudName = this.getCloudById(cloudId)?.text ?? cloudId;
-
-        const proxies = this.relationships.getProxies(cloudId);
-        if (proxies.size > 0 && Math.random() < 0.95) {
-            const deflections = [
-                "I don't trust you.",
-                "Why should I tell you?",
-                "You wouldn't understand.",
-                "I'm not talking to you.",
-                "Leave me alone."
-            ];
-            this.showThoughtBubble(deflections[Math.floor(Math.random() * deflections.length)], cloudId);
-            return;
-        }
-
-        this.act(`Ask ${field}: ${cloudName}`, () => {
-            const trustGainingFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
-            if (this.model.isAttacked(cloudId) && this.model.isTrustAtCeiling(cloudId) && trustGainingFields.includes(field)) {
-                this.showThoughtBubble("Aren't you going to apologize?", cloudId);
-                return;
-            }
-
-            let response: string | null;
-            if (field === 'whatNeedToKnow') {
-                response = this.handleWhatNeedToKnow(cloudId);
-                if (response === null) return;
-            } else if (field === 'gratitude') {
-                const protectedIds = this.relationships.getProtecting(cloudId);
-                if (protectedIds.size > 0) {
-                    const gratitudeResponses = [
-                        "I'm not used to being appreciated. Thank you.",
-                        "This is unfamiliar. No one ever thanks me.",
-                        "You're grateful? That's new.",
-                        "I've been working so hard for so long. Thank you for noticing.",
-                    ];
-                    response = gratitudeResponses[Math.floor(Math.random() * gratitudeResponses.length)];
-                    this.model.addTrust(cloudId, 0.25);
-                } else {
-                    response = "Gratitude? For what?";
-                    this.model.adjustTrust(cloudId, 0.95);
-                }
-            } else if (field === 'job') {
-                if (this.model.isIdentityRevealed(cloudId)) {
-                    response = "I told you already.";
-                } else {
-                    response = this.getJobResponse(cloudId);
-                    this.model.addTrust(cloudId, 0.25);
-                }
-            } else if (field === 'jobAppraisal') {
-                response = this.handleJobAppraisalQuestion(cloudId);
-            } else if (field === 'jobImpact') {
-                response = this.handleJobImpactQuestion(cloudId);
-            } else if (field === 'compassion') {
-                const isProtector = this.relationships.getProtecting(cloudId).size > 0;
-                if (isProtector) {
-                    response = partState.dialogues.compassionResponse ?? "That means a lot to me.";
-                    this.model.addTrust(cloudId, 0.25);
-                } else {
-                    response = this.handleWhatNeedToKnow(cloudId);
-                    if (response === null) return;
-                }
-            } else if (field === 'apologize') {
-                response = this.handleApologize(cloudId);
-            } else {
-                response = this.revealBiographyField(field, cloudId);
-                this.model.addTrust(cloudId, 0.25);
-            }
-
-            this.showThoughtBubble(response, cloudId);
-            if (Math.random() < 0.25) {
-                this.model.clearSelfRay();
-            }
+        this.act({ action: 'ray_field_select', cloudId, field }, () => {
+            const result = this.controller!.executeAction('ray_field_select', cloudId, { field });
+            this.applyActionResult(result, cloudId);
         });
     }
 
@@ -1139,7 +1097,7 @@ export class CloudManager {
 
         if (!this.model.isIdentityRevealed(cloudId)) {
             this.model.adjustTrust(cloudId, 0.95);
-            return this.NO_JOB_RESPONSES[Math.floor(Math.random() * this.NO_JOB_RESPONSES.length)];
+            return this.rng.cosmetic.pickRandom(this.NO_JOB_RESPONSES);
         }
 
         if (this.model.isJobAppraisalRevealed(cloudId)) {
@@ -1150,12 +1108,12 @@ export class CloudManager {
         const dialogues = partState.dialogues.burdenedJobAppraisal;
         if (!dialogues || dialogues.length === 0) {
             this.model.adjustTrust(cloudId, 0.95);
-            return this.NO_JOB_RESPONSES[Math.floor(Math.random() * this.NO_JOB_RESPONSES.length)];
+            return this.rng.cosmetic.pickRandom(this.NO_JOB_RESPONSES);
         }
 
         this.model.revealJobAppraisal(cloudId);
         this.model.addTrust(cloudId, 0.25);
-        return dialogues[Math.floor(Math.random() * dialogues.length)];
+        return this.rng.cosmetic.pickRandom(dialogues);
     }
 
     private handleJobImpactQuestion(cloudId: string): string {
@@ -1164,7 +1122,7 @@ export class CloudManager {
 
         if (!this.model.isIdentityRevealed(cloudId)) {
             this.model.adjustTrust(cloudId, 0.95);
-            return this.NO_JOB_RESPONSES[Math.floor(Math.random() * this.NO_JOB_RESPONSES.length)];
+            return this.rng.cosmetic.pickRandom(this.NO_JOB_RESPONSES);
         }
 
         if (this.model.isJobImpactRevealed(cloudId)) {
@@ -1175,12 +1133,12 @@ export class CloudManager {
         const dialogues = partState.dialogues.burdenedJobImpact;
         if (!dialogues || dialogues.length === 0) {
             this.model.adjustTrust(cloudId, 0.95);
-            return this.NO_JOB_RESPONSES[Math.floor(Math.random() * this.NO_JOB_RESPONSES.length)];
+            return this.rng.cosmetic.pickRandom(this.NO_JOB_RESPONSES);
         }
 
         this.model.revealJobImpact(cloudId);
         this.model.addTrust(cloudId, 0.25);
-        return dialogues[Math.floor(Math.random() * dialogues.length)];
+        return this.rng.cosmetic.pickRandom(dialogues);
     }
 
     private handleApologize(cloudId: string): string {
@@ -1198,14 +1156,14 @@ export class CloudManager {
         }
 
         const trust = this.model.getTrust(cloudId);
-        if (trust < 0.5 || Math.random() > trust) {
+        if (trust < 0.5 || this.rng.model.random() > trust) {
             this.model.adjustTrust(cloudId, 0.9);
             const rejections = [
                 "It's going to take more than that.",
                 "Words are easy. Show me you mean it.",
                 "I'm not ready to forgive yet.",
             ];
-            return rejections[Math.floor(Math.random() * rejections.length)];
+            return this.rng.cosmetic.pickRandom(rejections);
         }
 
         this.model.clearAttacked(cloudId);
@@ -1215,17 +1173,17 @@ export class CloudManager {
             "I can tell you mean it. Thank you.",
             "That means a lot to me.",
         ];
-        return acceptances[Math.floor(Math.random() * acceptances.length)];
+        return this.rng.cosmetic.pickRandom(acceptances);
     }
 
     private handleWhatNeedToKnow(cloudId: string): string | null {
-        const trustGain = 0.05 + Math.random() * 0.2;
+        const trustGain = this.rng.model.randomInRange(0.05, 0.25);
         const protectorIds = this.relationships.getProtectedBy(cloudId);
         for (const protectorId of protectorIds) {
             if (!this.model.hasConsentedToHelp(protectorId)) {
                 const protectorTrust = this.model.getTrust(protectorId);
                 const newProtectorTrust = protectorTrust - trustGain;
-                if (newProtectorTrust < Math.random()) {
+                if (newProtectorTrust < this.rng.model.random()) {
                     this.model.setTrust(protectorId, 0);
                     this.triggerBacklash(protectorId, cloudId);
                     return null;
@@ -1246,8 +1204,7 @@ export class CloudManager {
     }
 
     private triggerBacklash(protectorId: string, protecteeId: string): void {
-        const protectorName = this.getCloudById(protectorId)?.text ?? protectorId;
-        this.act(`Backlash: ${protectorName}`, () => {
+        this.act({ action: 'backlash', cloudId: protectorId, targetCloudId: protecteeId }, () => {
             this.model.adjustTrust(protecteeId, 0.5);
             const currentNeedAttention = this.model.getNeedAttention(protectorId);
             this.model.setNeedAttention(protectorId, currentNeedAttention + 1);
@@ -1545,7 +1502,7 @@ export class CloudManager {
 
     selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
         if (this.view.getMode() === 'panorama') {
-            this.act(`Click: ${cloud.text}`, () => {
+            this.act({ action: 'join_conference', cloudId: cloud.id }, () => {
                 this.model.setTargetCloud(cloud.id);
                 this.view.setMode('foreground');
                 this.updateUIForMode();
@@ -1575,32 +1532,11 @@ export class CloudManager {
     }
 
     private handleNoticePart(protectorId: string, targetCloudId: string): void {
-        const protectedIds = this.relationships.getProtecting(protectorId);
-        if (!protectedIds.has(targetCloudId)) {
-            this.showThoughtBubble("That's not a part I protect.", protectorId);
-            return;
-        }
+        if (!this.controller) return;
 
-        const targetTrust = this.model.getTrust(targetCloudId);
-        if (targetTrust < 1) {
-            this.showThoughtBubble("I don't see anything different.", protectorId);
-            return;
-        }
-
-        const protectorCloud = this.getCloudById(protectorId);
-        const targetCloud = this.getCloudById(targetCloudId);
-        const protectorName = protectorCloud?.text ?? protectorId;
-        const targetName = targetCloud?.text ?? targetCloudId;
-
-        this.act(`Notice: ${protectorName} notices ${targetName}`, () => {
-            this.model.revealUnburdenedJob(protectorId);
-            this.model.setNeedAttention(protectorId, 0);
-            const unburdenedJob = this.model.getDialogues(protectorId)?.unburdenedJob;
-            if (unburdenedJob) {
-                this.showThoughtBubble(`I see that ${targetName} is okay now. ${unburdenedJob}`, protectorId);
-            } else {
-                this.showThoughtBubble(`I see that ${targetName} is okay now. I don't need to protect them anymore.`, protectorId);
-            }
+        this.act({ action: 'notice_part', cloudId: protectorId, targetCloudId }, () => {
+            const result = this.controller!.executeAction('notice_part', protectorId, { targetCloudId });
+            this.applyActionResult(result, protectorId);
         });
     }
 
@@ -1814,8 +1750,16 @@ export class CloudManager {
         this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions);
     }
 
-    private act(action: string, fn: () => void): void {
-        this.view.setAction(action);
+    private act(action: string | RecordedAction, fn: () => void): void {
+        const recordedAction = typeof action === 'string' ? undefined : action;
+        const label = typeof action === 'string'
+            ? action
+            : formatActionLabel(action, (id) => this.getCloudById(id)?.text ?? id);
+
+        this.view.setAction(label);
+        if (recordedAction && this.recorder.isRecording()) {
+            this.recorder.record(recordedAction);
+        }
         const oldModel = this.model.clone();
         fn();
         this.syncViewWithModel(oldModel);
@@ -1949,9 +1893,10 @@ export class CloudManager {
         this.updateHelpPanel();
 
         if (!this.isPieMenuOpen()) {
-            this.act('Attention check', () => {
-                this.model.checkAttentionDemands(this.relationships);
-            });
+            const demandingCloudId = this.model.checkAttentionDemands(this.relationships);
+            if (demandingCloudId) {
+                this.act({ action: 'spontaneous_blend', cloudId: demandingCloudId }, () => {});
+            }
         }
 
         if (this.view.getMode() === 'panorama') {
@@ -2106,17 +2051,7 @@ export class CloudManager {
     }
 
     private increaseGrievanceNeedAttention(deltaTime: number): void {
-        for (const instance of this.instances) {
-            const cloudId = instance.cloud.id;
-            const hasGrievances = this.relationships.getGrievanceTargets(cloudId).size > 0;
-            if (!hasGrievances) continue;
-
-            if (this.model.isUnburdenedJobRevealed(cloudId)) continue;
-            if (this.model.isBlended(cloudId) || this.model.isTarget(cloudId)) continue;
-
-            const current = this.model.getNeedAttention(cloudId);
-            this.model.setNeedAttention(cloudId, current + deltaTime * 0.05);
-        }
+        this.model.increaseGrievanceNeedAttention(this.relationships, deltaTime);
     }
 
     private updateMessageTimers(deltaTime: number): void {
@@ -2176,7 +2111,7 @@ export class CloudManager {
                 if (timeSinceSent < 10) continue;
                 // Pick a random target from all grievance targets
                 const grievanceTargetArray = Array.from(grievanceTargets);
-                grievanceTargetId = grievanceTargetArray[Math.floor(Math.random() * grievanceTargetArray.length)];
+                grievanceTargetId = this.rng.cosmetic.pickRandom(grievanceTargetArray);
             }
 
             const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
@@ -2197,7 +2132,7 @@ export class CloudManager {
             // Don't send messages to parts that haven't visually arrived yet
             if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
 
-            const text = dialogues[Math.floor(Math.random() * dialogues.length)];
+            const text = this.rng.cosmetic.pickRandom(dialogues);
             this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
             this.messageCooldownTimers.set(blendedId, 0);
             // Clear the pending target since we just sent the message
@@ -2234,7 +2169,7 @@ export class CloudManager {
             this.genericDialogueCooldowns.set(blendedId, newCooldown);
 
             if (newCooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
-                const text = dialogues[Math.floor(Math.random() * dialogues.length)];
+                const text = this.rng.cosmetic.pickRandom(dialogues);
                 this.showThoughtBubble(text, blendedId);
                 this.genericDialogueCooldowns.set(blendedId, 0);
                 break;

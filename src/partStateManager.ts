@@ -1,6 +1,30 @@
 import { PartState, PartBiography, PartDialogues, createPartState } from './partState.js';
 
 export class PartStateManager {
+    toJSON(): Record<string, PartState> {
+        const result: Record<string, PartState> = {};
+        for (const [id, state] of this.partStates) {
+            result[id] = {
+                ...state,
+                biography: { ...state.biography },
+                dialogues: { ...state.dialogues },
+            };
+        }
+        return result;
+    }
+
+    static fromJSON(json: Record<string, PartState>): PartStateManager {
+        const manager = new PartStateManager();
+        for (const [id, state] of Object.entries(json)) {
+            manager.partStates.set(id, {
+                ...state,
+                biography: { ...state.biography },
+                dialogues: { ...state.dialogues },
+            });
+        }
+        return manager;
+    }
+
     private partStates: Map<string, PartState> = new Map();
 
     registerPart(id: string, name: string, options?: {

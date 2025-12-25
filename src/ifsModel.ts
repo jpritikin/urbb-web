@@ -1,5 +1,6 @@
 import { PartStateManager, PartState, PartBiography, PartDialogues } from './partStateManager.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
+import type { SerializedModel } from './testability/types.js';
 
 export type BlendReason = 'spontaneous' | 'therapist';
 export type MessageType = 'grievance';
@@ -438,8 +439,8 @@ export class SimulatorModel {
         return cloned;
     }
 
-    checkAttentionDemands(relationships: CloudRelationshipManager): void {
-        if (this.pendingAttentionDemand) return;
+    checkAttentionDemands(relationships: CloudRelationshipManager): string | null {
+        if (this.pendingAttentionDemand) return null;
 
         const allParts = this.parts.getAllPartStates();
         const sorted = [...allParts.entries()].sort(
@@ -455,7 +456,22 @@ export class SimulatorModel {
             this.setNeedAttention(cloudId, 0.95);
             this.partDemandsAttention(cloudId);
             this.pendingAttentionDemand = cloudId;
-            break;
+            return cloudId;
+        }
+        return null;
+    }
+
+    increaseGrievanceNeedAttention(relationships: CloudRelationshipManager, deltaTime: number): void {
+        const allParts = this.parts.getAllPartStates();
+        for (const [cloudId] of allParts) {
+            const hasGrievances = relationships.getGrievanceTargets(cloudId).size > 0;
+            if (!hasGrievances) continue;
+
+            if (this.isUnburdenedJobRevealed(cloudId)) continue;
+            if (this.isBlended(cloudId) || this.isTarget(cloudId)) continue;
+
+            const current = this.getNeedAttention(cloudId);
+            this.setNeedAttention(cloudId, current + deltaTime * 0.05);
         }
     }
 
@@ -494,6 +510,48 @@ export class SimulatorModel {
 
     clearMessages(): void {
         this.messages = [];
+    }
+
+    toJSON(): SerializedModel {
+        const supportingParts: Record<string, string[]> = {};
+        for (const [k, v] of this.supportingParts) {
+            supportingParts[k] = Array.from(v);
+        }
+        const blendedParts: Record<string, { degree: number; reason: BlendReason }> = {};
+        for (const [k, v] of this.blendedParts) {
+            blendedParts[k] = { ...v };
+        }
+        return {
+            targetCloudIds: Array.from(this.targetCloudIds),
+            supportingParts,
+            blendedParts,
+            pendingBlends: this.pendingBlends.map(p => ({ ...p })),
+            selfRay: this.selfRay ? { ...this.selfRay } : null,
+            displacedParts: Array.from(this.displacedParts),
+            pendingAttentionDemand: this.pendingAttentionDemand,
+            messages: this.messages.map(m => ({ ...m })),
+            messageIdCounter: this.messageIdCounter,
+            partStates: this.parts.toJSON(),
+        };
+    }
+
+    static fromJSON(json: SerializedModel): SimulatorModel {
+        const model = new SimulatorModel();
+        model.targetCloudIds = new Set(json.targetCloudIds);
+        for (const [k, v] of Object.entries(json.supportingParts)) {
+            model.supportingParts.set(k, new Set(v));
+        }
+        for (const [k, v] of Object.entries(json.blendedParts)) {
+            model.blendedParts.set(k, { ...v });
+        }
+        model.pendingBlends = json.pendingBlends.map(p => ({ ...p }));
+        model.selfRay = json.selfRay ? { ...json.selfRay } : null;
+        model.displacedParts = new Set(json.displacedParts);
+        model.pendingAttentionDemand = json.pendingAttentionDemand;
+        model.messages = json.messages.map(m => ({ ...m }));
+        model.messageIdCounter = json.messageIdCounter;
+        model.parts = PartStateManager.fromJSON(json.partStates);
+        return model;
     }
 }
 
