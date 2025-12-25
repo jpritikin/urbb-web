@@ -1,6 +1,6 @@
 ---
 title: "IFS Simulator"
-version: "v3.35.0"
+version: "v3.36.0"
 ---
 
 <link rel="stylesheet" href="/css/animations.css">

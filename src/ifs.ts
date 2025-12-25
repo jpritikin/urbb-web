@@ -1,5 +1,6 @@
 import { CloudManager } from './cloudManager.js';
 import { sessionToJSON } from './testability/recorder.js';
+import { SCENARIOS, Scenario } from './scenarios.js';
 
 function downloadSession(cloudManager: CloudManager): void {
     const session = cloudManager.stopRecording();
@@ -37,10 +38,36 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
-    console.log('[IFS Simulator] Page version:', pageVersion);
+function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Scenario) => void): void {
+    const selector = document.createElement('div');
+    selector.className = 'scenario-selector';
+    selector.innerHTML = `
+        <h2>🌟 Choose Your Journey</h2>
+        <p>Select a scenario to begin the IFS simulation</p>
+        <div class="scenario-cards"></div>
+    `;
 
+    const cardsContainer = selector.querySelector('.scenario-cards')!;
+
+    for (const scenario of SCENARIOS) {
+        const card = document.createElement('div');
+        card.className = 'scenario-card';
+        card.innerHTML = `
+            <span class="scenario-difficulty ${scenario.difficulty.toLowerCase()}">${scenario.difficulty}</span>
+            <h3>${scenario.name}</h3>
+            <p class="scenario-description">${scenario.description}</p>
+        `;
+        card.addEventListener('click', () => {
+            selector.remove();
+            onSelect(scenario);
+        });
+        cardsContainer.appendChild(card);
+    }
+
+    container.appendChild(selector);
+}
+
+function startSimulation(scenario: Scenario): void {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
@@ -59,95 +86,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     cloudManager.init('cloud-container');
 
-    const innerCritic = cloudManager.addCloud('Inner Critic', {
-        trust: 0.3,
-        partAge: 8,
-        dialogues: {
-            burdenedJobAppraisal: [
-                "I'm exhausted with my job.",
-                "I don't want to criticize, but I have to.",
-            ],
-            burdenedJobImpact: [
-                "I am harsh, but I help avoid critiques from outside.",
-            ],
-            unburdenedJob: "I help you foresee risks.",
-        },
-    });
-
-    const criticized = cloudManager.addCloud('criticized', {
-        partAge: 'child',
-        trust: 0.2,
-        dialogues: {
-            genericBlendedDialogues: [
-                "Please don't look at me.",
-                "I'm trying to hide.",
-                "Is it safe?",
-            ],
-        },
-    });
-    const threeYearOld = cloudManager.addCloud('toddler', {
-        partAge: 3,
-        dialogues: {
-            genericBlendedDialogues: [
-                "Play with me!",
-                "I want attention!",
-                "Why?",
-            ],
-        },
-    });
-    const tenYearOld = cloudManager.addCloud('child', {
-        partAge: 10,
-        dialogues: {
-            genericBlendedDialogues: [
-                "That's not fair.",
-                "I can do it myself!",
-                "Nobody understands.",
-            ],
-        },
-    });
-    const teenager = cloudManager.addCloud('teenager', {
-        partAge: 14,
-        dialogues: {
-            genericBlendedDialogues: [
-                "Whatever.",
-                "You wouldn't understand.",
-                "Leave me alone.",
-            ],
-        },
-    });
-    const adult = cloudManager.addCloud('self-image', {
-        partAge: 'adult',
-        dialogues: {
-            genericBlendedDialogues: [
-                "I need to maintain appearances.",
-                "What will people think?",
-                "I should have it together by now.",
-            ],
-        },
-    });
-
-    const relationships = cloudManager.getRelationships();
-    relationships.addProtection(innerCritic.id, criticized.id);
-    relationships.setGrievance(innerCritic.id, [threeYearOld.id, tenYearOld.id, teenager.id], [
-        "You got us criticized.",
-        "You always make mistakes.",
-        "Don't do anything risky.",
-        "Be careful or you'll embarrass yourself.",
-    ]);
-    relationships.setGrievance(innerCritic.id, [innerCritic.id], [
-        "I'm a terrible person.",
-        "I hate myself."
-    ]);
-
-    relationships.addProxy(innerCritic.id, adult.id);
-    relationships.addProxy(criticized.id, adult.id);
-    relationships.addProxy(threeYearOld.id, adult.id);
-    relationships.addProxy(tenYearOld.id, adult.id);
+    console.log(`[IFS] Starting scenario: ${scenario.name} (${scenario.difficulty})`);
+    scenario.setup(cloudManager);
 
     cloudManager.applyAssessedNeedAttention();
-
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
 
     setupRecordingShortcuts(cloudManager);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
+    console.log('[IFS Simulator] Page version:', pageVersion);
+
+    const cloudContainer = document.getElementById('cloud-container');
+    if (!cloudContainer) return;
+
+    createScenarioSelector(cloudContainer, startSimulation);
 });

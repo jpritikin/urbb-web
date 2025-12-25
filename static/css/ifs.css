@@ -820,3 +820,134 @@ body.ifs-fullscreen main {
   color: #b0b0b0;
 }
 
+.scenario-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 300px;
+  background: linear-gradient(135deg, #e5fdff 0%, #f5f0ff 100%);
+  border: 3px dotted #9b59b6;
+  border-radius: 12px;
+}
+
+.dark .scenario-selector {
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%);
+  border-color: #b388d4;
+}
+
+.scenario-selector h2 {
+  margin: 0 0 0.5rem 0;
+  color: #6b4c8a;
+  font-size: 1.5rem;
+}
+
+.dark .scenario-selector h2 {
+  color: #d4a8e8;
+}
+
+.scenario-selector p {
+  margin: 0 0 1.5rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.dark .scenario-selector p {
+  color: #aaa;
+}
+
+.scenario-cards {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.scenario-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 200px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.dark .scenario-card {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #555;
+}
+
+.scenario-card:hover {
+  transform: translateY(-4px);
+  border-color: #9b59b6;
+  box-shadow: 0 8px 24px rgba(155, 89, 182, 0.3);
+}
+
+.dark .scenario-card:hover {
+  border-color: #b388d4;
+  box-shadow: 0 8px 24px rgba(179, 136, 212, 0.3);
+}
+
+.scenario-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.dark .scenario-card h3 {
+  color: #e0e0e0;
+}
+
+.scenario-difficulty {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.scenario-difficulty.easy {
+  background: #d4edda;
+  color: #155724;
+}
+
+.dark .scenario-difficulty.easy {
+  background: #1e4620;
+  color: #7ddf8a;
+}
+
+.scenario-difficulty.medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.dark .scenario-difficulty.medium {
+  background: #4a3f1e;
+  color: #ffd93d;
+}
+
+.scenario-difficulty.hard {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.dark .scenario-difficulty.hard {
+  background: #4a1e22;
+  color: #ff8a8a;
+}
+
+.scenario-description {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.dark .scenario-description {
+  color: #aaa;
+}
+
