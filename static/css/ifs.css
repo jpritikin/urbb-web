@@ -1,3 +1,77 @@
+.tutorial-expander {
+  margin: 1rem 0 1rem 0;
+  background: linear-gradient(135deg, #f5f0ff 0%, #fff5f0 100%);
+  border: 3px dotted #9b59b6;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.dark .tutorial-expander {
+  background: linear-gradient(135deg, #2d1f3d 0%, #3d2d2d 100%);
+  border-color: #b388d4;
+}
+
+.tutorial-expander summary {
+  padding: 0.75rem 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #6b4c8a;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.15) 0%, rgba(255, 140, 0, 0.1) 100%);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.tutorial-expander summary::-webkit-details-marker {
+  display: none;
+}
+
+.tutorial-expander summary::before {
+  content: '▶';
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.tutorial-expander[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.tutorial-expander summary:hover {
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.25) 0%, rgba(255, 140, 0, 0.15) 100%);
+}
+
+.dark .tutorial-expander summary {
+  color: #d4a8e8;
+}
+
+.dark .tutorial-expander summary:hover {
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.3) 0%, rgba(255, 140, 0, 0.2) 100%);
+}
+
+.tutorial-expander > :not(summary) {
+  padding: 0 1.25rem 1rem;
+}
+
+.tutorial-expander p,
+.tutorial-expander ul,
+.tutorial-expander ol {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.tutorial-expander ul {
+  padding-left: 1.25rem;
+}
+
+.tutorial-expander li {
+  margin: 0.25rem 0;
+}
+
 #cloud-container {
   margin-bottom: 2rem;
   display: inline-block;
