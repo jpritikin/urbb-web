@@ -10,6 +10,7 @@ import { PanoramaController } from './panoramaController.js';
 import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
+import { BiographyField } from './selfRay.js';
 import {
     createGroup, createCircle, createRect, createText,
     createForeignObject, setClickHandler, TextLine
@@ -1050,6 +1051,12 @@ export class CloudManager {
         }
 
         this.act(`Ask ${field}: ${cloudName}`, () => {
+            const trustGainingFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
+            if (this.model.isAttacked(cloudId) && this.model.isTrustAtCeiling(cloudId) && trustGainingFields.includes(field)) {
+                this.showThoughtBubble("Aren't you going to apologize?", cloudId);
+                return;
+            }
+
             let response: string | null;
             if (field === 'whatNeedToKnow') {
                 response = this.handleWhatNeedToKnow(cloudId);

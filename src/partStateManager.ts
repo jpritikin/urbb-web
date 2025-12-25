@@ -97,6 +97,13 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.attacked ?? false;
     }
 
+    isTrustAtCeiling(cloudId: string): boolean {
+        const state = this.partStates.get(cloudId);
+        if (!state) return false;
+        const maxTrust = state.attacked ? 0.8 : 1;
+        return state.trust >= maxTrust;
+    }
+
     getDialogues(cloudId: string): PartDialogues {
         return this.partStates.get(cloudId)?.dialogues ?? {};
     }

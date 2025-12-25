@@ -340,6 +340,10 @@ export class SimulatorModel {
         return this.parts.isAttacked(cloudId);
     }
 
+    isTrustAtCeiling(cloudId: string): boolean {
+        return this.parts.isTrustAtCeiling(cloudId);
+    }
+
     getDialogues(cloudId: string): PartDialogues {
         return this.parts.getDialogues(cloudId);
     }
