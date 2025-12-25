@@ -114,7 +114,7 @@ export class MessageRenderer {
     }
 
     private createMessageElement(message: PartMessage): SVGGElement {
-        const group = createGroup({ class: 'message-bubble' });
+        const group = createGroup({ class: 'message-bubble', 'pointer-events': 'none' });
 
         const padding = 8;
         const fontSize = 13;
