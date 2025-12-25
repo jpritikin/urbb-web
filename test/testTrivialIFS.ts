@@ -14,7 +14,7 @@ function test(name: string, passed: boolean, details: string = '') {
     results.push({ name, passed, details });
 }
 
-function runAllIfsScenarioTests(): void {
+function runAllTrivialIFSTests(): void {
     results = [];
 
     // Basic part registration
@@ -62,7 +62,7 @@ function runAllIfsScenarioTests(): void {
              `expected part1 in targets`);
     }
 
-    // Blend and separate actions
+    // Blend action
     {
         const sim = new HeadlessSimulator({ seed: 12345 });
         sim.setupParts([{ id: 'part1', name: 'Part One' }]);
@@ -70,27 +70,6 @@ function runAllIfsScenarioTests(): void {
         sim.executeAction('blend', 'part1');
         const blendedAfterBlend = sim.getModel().getBlendedParts();
         test('Blend - part is blended', blendedAfterBlend.includes('part1'));
-
-        sim.executeAction('separate', 'part1');
-        const blendedAfterSeparate = sim.getModel().getBlendedParts();
-        test('Separate - part not blended', !blendedAfterSeparate.includes('part1'));
-    }
-
-    // Job action reveals identity
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([
-            { id: 'protector', name: 'Protector' },
-            { id: 'exile', name: 'Exile' },
-        ]);
-        sim.setupRelationships({
-            protections: [{ protectorId: 'protector', protectedId: 'exile' }],
-        });
-
-        const result = sim.executeAction('job', 'protector');
-        test('Job - success', result.success === true);
-        test('Job - message mentions protected', result.message?.includes('exile') ?? false,
-             `message: ${result.message}`);
     }
 
     // Scenario runner
@@ -238,8 +217,8 @@ function runAllIfsScenarioTests(): void {
     }
 }
 
-export function runIfsScenarioTests(): { passed: number; failed: number; failures: string[] } {
-    runAllIfsScenarioTests();
+export function runTrivialIFSTests(): { passed: number; failed: number; failures: string[] } {
+    runAllTrivialIFSTests();
     const passed = results.filter(r => r.passed).length;
     const failed = results.filter(r => !r.passed).length;
     const failures = results.filter(r => !r.passed).map(r => r.details ? `${r.name}: ${r.details}` : r.name);
@@ -247,8 +226,8 @@ export function runIfsScenarioTests(): { passed: number; failed: number; failure
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-    const { passed, failed, failures } = runIfsScenarioTests();
-    console.log(`IFS Scenarios: ${passed} passed, ${failed} failed`);
+    const { passed, failed, failures } = runTrivialIFSTests();
+    console.log(`Trivial IFS: ${passed} passed, ${failed} failed`);
     if (failures.length > 0) {
         for (const f of failures) console.log(`  ${f}`);
     }

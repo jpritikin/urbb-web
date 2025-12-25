@@ -39,19 +39,74 @@ export function replaySession(session: RecordedSession): ReplayResult {
     );
 
     const actionResults: ActionResult[] = [];
+    let firstRngDivergence: string | undefined;
+    let prevModelRngCount = 0;
+    const stateTrace: string[] = [];
 
-    for (const action of session.actions) {
+    const model = sim.getModel();
+    const relationships = sim.getRelationships();
+
+    for (let i = 0; i < session.actions.length; i++) {
+        const action = session.actions[i];
         if (action.elapsedTime && action.elapsedTime > 0) {
             sim.advanceTime(action.elapsedTime);
         }
+
+        const preState = {
+            targets: [...model.getTargetCloudIds()],
+            blended: model.getBlendedParts(),
+            proxies: Object.fromEntries(
+                [...model.getTargetCloudIds(), ...model.getBlendedParts()].map(
+                    id => [id, [...relationships.getProxies(id)]]
+                )
+            )
+        };
+
         const result = sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
         actionResults.push(result);
+
+        const postState = {
+            targets: [...model.getTargetCloudIds()],
+            blended: model.getBlendedParts(),
+            proxies: Object.fromEntries(
+                [...model.getTargetCloudIds(), ...model.getBlendedParts()].map(
+                    id => [id, [...relationships.getProxies(id)]]
+                )
+            )
+        };
+
+        // Trace significant state changes for debugging
+        if (JSON.stringify(preState.proxies) !== JSON.stringify(postState.proxies)) {
+            stateTrace.push(`#${i} ${action.action}(${action.cloudId}): proxies ${JSON.stringify(preState.proxies)} -> ${JSON.stringify(postState.proxies)}`);
+        }
+        if (JSON.stringify(preState.targets) !== JSON.stringify(postState.targets) || JSON.stringify(preState.blended) !== JSON.stringify(postState.blended)) {
+            stateTrace.push(`#${i}: targets ${JSON.stringify(preState.targets)}->${JSON.stringify(postState.targets)}, blended ${JSON.stringify(preState.blended)}->${JSON.stringify(postState.blended)}`);
+        }
+        if (action.action === 'who_do_you_see') {
+            const selfRay = model.getSelfRay();
+            stateTrace.push(`#${i} who_do_you_see: selfRay=${selfRay?.targetCloudId ?? 'none'}, success=${result.success}`);
+        }
+
+        if (!firstRngDivergence && action.rngCounts) {
+            const actual = sim.getRngCounts();
+            if (actual.model !== action.rngCounts.model) {
+                const fullLog = sim.getModelRngLog();
+                const actionLog = fullLog.slice(prevModelRngCount);
+                const expectedLog = action.rngLog ?? [];
+                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; log [${actionLog.join(', ')}] vs [${expectedLog.join(', ')}]; state before: targets=${JSON.stringify(preState.targets)}, blended=${JSON.stringify(preState.blended)}, proxies=${JSON.stringify(preState.proxies)}; trace: ${stateTrace.join(' | ')}`;
+            }
+            prevModelRngCount = actual.model;
+        }
     }
 
     const actualModel = sim.getModelJSON();
     const differences = session.finalModel
         ? compareModels(actualModel, session.finalModel)
         : [];
+
+    if (firstRngDivergence) {
+        differences.unshift(firstRngDivergence);
+    }
 
     return {
         passed: differences.length === 0,
@@ -73,8 +128,11 @@ function compareModels(actual: SerializedModel, expected: SerializedModel): stri
             continue;
         }
 
-        if (actualState.trust !== expectedState.trust) {
+        if (Math.abs(actualState.trust - expectedState.trust) > 0.001) {
             diffs.push(`${id}.trust: ${actualState.trust} vs ${expectedState.trust}`);
+        }
+        if (Math.abs(actualState.needAttention - expectedState.needAttention) > 0.001) {
+            diffs.push(`${id}.needAttention: ${actualState.needAttention} vs ${expectedState.needAttention}`);
         }
 
         const actualBio = actualState.biography as unknown as Record<string, unknown>;

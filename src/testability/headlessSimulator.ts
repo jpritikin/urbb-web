@@ -101,6 +101,10 @@ export class HeadlessSimulator {
             this.model.stepBackPart(protecteeId);
         }
 
+        if (result.createSelfRay) {
+            this.model.setSelfRay(result.createSelfRay.cloudId);
+        }
+
         return {
             success: result.success,
             message: result.message,
@@ -136,5 +140,16 @@ export class HeadlessSimulator {
     getModelRngSeed(): number | undefined {
         const rng = this.rng.model;
         return rng instanceof SeededRNG ? rng.getInitialSeed() : undefined;
+    }
+
+    getRngCounts(): { model: number; cosmetic: number } {
+        return {
+            model: this.rng.model.getCallCount(),
+            cosmetic: this.rng.cosmetic.getCallCount()
+        };
+    }
+
+    getModelRngLog(): string[] {
+        return this.rng.model.getCallLog();
     }
 }

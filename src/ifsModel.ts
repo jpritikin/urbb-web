@@ -22,6 +22,12 @@ export interface PartMessage {
     text: string;
 }
 
+export interface ThoughtBubble {
+    text: string;
+    cloudId: string;
+    expiresAt: number;  // timestamp when this bubble should disappear
+}
+
 export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
@@ -33,6 +39,7 @@ export class SimulatorModel {
     private pendingAttentionDemand: string | null = null;
     private messages: PartMessage[] = [];
     private messageIdCounter: number = 0;
+    private thoughtBubbles: ThoughtBubble[] = [];
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -140,7 +147,11 @@ export class SimulatorModel {
         const existing = this.blendedParts.get(cloudId);
         if (existing) {
             const clampedDegree = Math.max(0, Math.min(1, degree));
-            this.blendedParts.set(cloudId, { ...existing, degree: clampedDegree });
+            if (clampedDegree <= 0) {
+                this.promoteBlendedToTarget(cloudId);
+            } else {
+                this.blendedParts.set(cloudId, { ...existing, degree: clampedDegree });
+            }
         }
     }
 
@@ -244,6 +255,7 @@ export class SimulatorModel {
         }
 
         this.blendedParts.delete(cloudId);
+        this.removeThoughtBubblesForCloud(cloudId);
     }
 
     partDemandsAttention(demandingCloudId: string): void {
@@ -397,6 +409,10 @@ export class SimulatorModel {
         return this.parts.isJobImpactRevealed(cloudId);
     }
 
+    isFieldRevealed(cloudId: string, field: string): boolean {
+        return this.parts.isFieldRevealed(cloudId, field);
+    }
+
     setConsentedToHelp(cloudId: string): void {
         this.parts.setConsentedToHelp(cloudId);
     }
@@ -436,6 +452,7 @@ export class SimulatorModel {
         cloned.parts = this.parts.clone();
         cloned.messages = this.messages.map(m => ({ ...m }));
         cloned.messageIdCounter = this.messageIdCounter;
+        cloned.thoughtBubbles = this.thoughtBubbles.map(b => ({ ...b }));
         return cloned;
     }
 
@@ -453,8 +470,6 @@ export class SimulatorModel {
             const protectors = relationships.getProtectedBy(cloudId);
             if (protectors.size > 0) continue;
 
-            this.setNeedAttention(cloudId, 0.95);
-            this.partDemandsAttention(cloudId);
             this.pendingAttentionDemand = cloudId;
             return cloudId;
         }
@@ -512,6 +527,33 @@ export class SimulatorModel {
         this.messages = [];
     }
 
+    static readonly THOUGHT_BUBBLE_DURATION_MS = 10000;
+
+    addThoughtBubble(text: string, cloudId: string, now: number = Date.now()): void {
+        const expiresAt = now + SimulatorModel.THOUGHT_BUBBLE_DURATION_MS;
+        this.thoughtBubbles.unshift({ text, cloudId, expiresAt });
+    }
+
+    getThoughtBubbles(): ThoughtBubble[] {
+        return [...this.thoughtBubbles];
+    }
+
+    getCurrentThoughtBubble(): ThoughtBubble | null {
+        return this.thoughtBubbles[0] ?? null;
+    }
+
+    expireThoughtBubbles(now: number = Date.now()): void {
+        this.thoughtBubbles = this.thoughtBubbles.filter(b => b.expiresAt > now);
+    }
+
+    clearThoughtBubbles(): void {
+        this.thoughtBubbles = [];
+    }
+
+    removeThoughtBubblesForCloud(cloudId: string): void {
+        this.thoughtBubbles = this.thoughtBubbles.filter(b => b.cloudId !== cloudId);
+    }
+
     toJSON(): SerializedModel {
         const supportingParts: Record<string, string[]> = {};
         for (const [k, v] of this.supportingParts) {
@@ -532,6 +574,7 @@ export class SimulatorModel {
             messages: this.messages.map(m => ({ ...m })),
             messageIdCounter: this.messageIdCounter,
             partStates: this.parts.toJSON(),
+            thoughtBubbles: this.thoughtBubbles.map(b => ({ ...b })),
         };
     }
 
@@ -551,6 +594,7 @@ export class SimulatorModel {
         model.messages = json.messages.map(m => ({ ...m }));
         model.messageIdCounter = json.messageIdCounter;
         model.parts = PartStateManager.fromJSON(json.partStates);
+        model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({ ...b }));
         return model;
     }
 }

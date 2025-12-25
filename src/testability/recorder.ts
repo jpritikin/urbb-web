@@ -1,32 +1,51 @@
-import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships } from './types.js';
-import type { SeededRNG } from './rng.js';
+import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, ViewStateSnapshot } from './types.js';
+import type { DualRNG, SeededRNG } from './rng.js';
 
 export class ActionRecorder {
     private actions: RecordedAction[] = [];
     private initialModel: SerializedModel | null = null;
     private initialRelationships: SerializedRelationships | null = null;
     private modelSeed: number = 0;
+    private codeVersion: string = '';
     private startTimestamp: number = 0;
     private lastActionTime: number = 0;
+    private rng: DualRNG | null = null;
+    private lastRngCount: number = 0;
 
     start(
         initialModel: SerializedModel,
         initialRelationships: SerializedRelationships,
-        modelRng?: SeededRNG
+        codeVersion: string,
+        modelRng?: SeededRNG,
+        rng?: DualRNG
     ): void {
         this.actions = [];
         this.initialModel = initialModel;
         this.initialRelationships = initialRelationships;
+        this.codeVersion = codeVersion;
         this.modelSeed = modelRng?.getInitialSeed() ?? 0;
         this.startTimestamp = Date.now();
         this.lastActionTime = performance.now();
+        this.rng = rng ?? null;
     }
 
-    record(action: RecordedAction): void {
+    record(action: RecordedAction, viewState?: ViewStateSnapshot): void {
         const now = performance.now();
         const elapsedTime = (now - this.lastActionTime) / 1000;
         this.lastActionTime = now;
-        this.actions.push({ ...action, elapsedTime });
+        let rngCounts: { model: number; cosmetic: number } | undefined;
+        let rngLog: string[] | undefined;
+        if (this.rng) {
+            const currentCount = this.rng.model.getCallCount();
+            rngCounts = {
+                model: currentCount,
+                cosmetic: this.rng.cosmetic.getCallCount()
+            };
+            const fullLog = this.rng.model.getCallLog();
+            rngLog = fullLog.slice(this.lastRngCount);
+            this.lastRngCount = currentCount;
+        }
+        this.actions.push({ ...action, elapsedTime, viewState, rngCounts, rngLog });
     }
 
     getSession(
@@ -38,6 +57,7 @@ export class ActionRecorder {
         }
         return {
             version: 1,
+            codeVersion: this.codeVersion,
             modelSeed: this.modelSeed,
             timestamp: this.startTimestamp,
             initialModel: this.initialModel,
@@ -57,6 +77,7 @@ export class ActionRecorder {
         this.initialModel = null;
         this.initialRelationships = null;
         this.modelSeed = 0;
+        this.codeVersion = '';
         this.startTimestamp = 0;
     }
 

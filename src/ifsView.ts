@@ -1,5 +1,6 @@
 import { SimulatorModel, SelfRayState, PartMessage } from './ifsModel.js';
 import { MessageRenderer } from './ifsView/MessageRenderer.js';
+import { ThoughtBubbleRenderer } from './ifsView/ThoughtBubbleRenderer.js';
 import { VictoryBanner } from './ifsView/VictoryBanner.js';
 import { HelpPanel, HelpData } from './ifsView/HelpPanel.js';
 import { SelfRay, BiographyField, PartContext } from './selfRay.js';
@@ -114,6 +115,10 @@ export class SimulatorView {
     // Part-to-part messages
     private messageRenderer: MessageRenderer | null = null;
 
+    // Thought bubbles
+    private thoughtBubbleRenderer: ThoughtBubbleRenderer | null = null;
+    private onThoughtBubbleDismiss: (() => void) | null = null;
+
     // Victory banner
     private victoryBanner: VictoryBanner = new VictoryBanner();
     private htmlContainer: HTMLElement | null = null;
@@ -175,6 +180,34 @@ export class SimulatorView {
 
     clearMessages(): void {
         this.messageRenderer?.clear();
+    }
+
+    setThoughtBubbleContainer(container: SVGGElement): void {
+        this.thoughtBubbleRenderer = new ThoughtBubbleRenderer(
+            container,
+            (cloudId) => this.getCloudState(cloudId) ?? null
+        );
+        this.thoughtBubbleRenderer.setOnDismiss(() => {
+            this.onThoughtBubbleDismiss?.();
+        });
+    }
+
+    setOnThoughtBubbleDismiss(callback: () => void): void {
+        this.onThoughtBubbleDismiss = callback;
+    }
+
+    syncThoughtBubbles(model: SimulatorModel): void {
+        if (!this.thoughtBubbleRenderer) return;
+        if (this.mode !== 'foreground') {
+            this.thoughtBubbleRenderer.hide();
+            return;
+        }
+        const bubble = model.getCurrentThoughtBubble();
+        this.thoughtBubbleRenderer.sync(bubble);
+    }
+
+    hideThoughtBubbles(): void {
+        this.thoughtBubbleRenderer?.hide();
     }
 
     setOnSelfRayClick(callback: (cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
@@ -417,6 +450,7 @@ export class SimulatorView {
         this.updateStarPosition(newModel);
         this.updateCloudStateTargets(newModel, instances);
         this.syncSelfRay(newModel);
+        this.syncThoughtBubbles(newModel);
 
         this.generateTraceEntries(oldModel, newModel);
 
@@ -1160,6 +1194,7 @@ export class SimulatorView {
         state.x = startPos.x;
         state.y = startPos.y;
         state.opacity = 0;
+        state.targetOpacity = 1;
         state.smoothing.opacity = 0; // We handle opacity manually
         state.smoothing.position = 0; // We handle position manually
         state.positionTarget = { type: 'supporting', targetId, index };
@@ -1227,7 +1262,8 @@ export class SimulatorView {
 
         for (const cloudId of toRemove) {
             this.supportingEntries.delete(cloudId);
-            // Restore the proper position target after entry animation completes
+            // Add to previousForegroundIds to prevent re-triggering entry animation
+            this.previousForegroundIds.add(cloudId);
             const state = this.cloudStates.get(cloudId);
             if (state) {
                 // Find what supporting role this part has
@@ -1420,5 +1456,21 @@ export class SimulatorView {
     private hasNewMessages(oldModel: SimulatorModel, newModel: SimulatorModel): boolean {
         const oldMessages = new Set(oldModel.getMessages().map(m => m.id));
         return newModel.getMessages().some(m => !oldMessages.has(m.id));
+    }
+
+    getViewStateSnapshot(): { foregroundIds: string[]; supportingEntries: string[]; cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }> } {
+        const cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }> = {};
+        for (const [cloudId, state] of this.cloudStates) {
+            cloudStates[cloudId] = {
+                opacity: state.opacity,
+                targetOpacity: state.targetOpacity,
+                positionType: state.positionTarget.type
+            };
+        }
+        return {
+            foregroundIds: Array.from(this.previousForegroundIds),
+            supportingEntries: Array.from(this.supportingEntries.keys()),
+            cloudStates
+        };
     }
 }

@@ -201,6 +201,19 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.biography.jobImpactRevealed ?? false;
     }
 
+    isFieldRevealed(cloudId: string, field: string): boolean {
+        const bio = this.partStates.get(cloudId)?.biography;
+        if (!bio) return false;
+        switch (field) {
+            case 'age': return bio.ageRevealed;
+            case 'identity': return bio.identityRevealed;
+            case 'job': return bio.identityRevealed && !bio.unburdenedJobRevealed;
+            case 'jobAppraisal': return bio.jobAppraisalRevealed;
+            case 'jobImpact': return bio.jobImpactRevealed;
+            default: return false;
+        }
+    }
+
     setConsentedToHelp(cloudId: string): void {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.consentedToHelp) {

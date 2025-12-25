@@ -1,0 +1,2702 @@
+{
+  "version": 1,
+  "codeVersion": "v3.36.0",
+  "modelSeed": 1063746377,
+  "timestamp": 1766711185340,
+  "initialModel": {
+    "targetCloudIds": [],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": null,
+    "displacedParts": [],
+    "pendingAttentionDemand": null,
+    "messages": [],
+    "messageIdCounter": 0,
+    "partStates": {
+      "cloud_1": {
+        "id": "cloud_1",
+        "name": "Inner Critic",
+        "trust": 0.3,
+        "needAttention": 0.5211500000000002,
+        "agreedWaitUntil": 1766711194904,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job.",
+            "I don't want to criticize, but I have to."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "cloud_2": {
+        "id": "cloud_2",
+        "name": "criticized",
+        "trust": 0.2,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1766711194906,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide.",
+            "Is it safe?"
+          ]
+        }
+      },
+      "cloud_3": {
+        "id": "cloud_3",
+        "name": "toddler",
+        "trust": 0.5,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1766711194907,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "cloud_4": {
+        "id": "cloud_4",
+        "name": "self-image",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1766711194907,
+        "wasProxy": true,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?",
+            "I should have it together by now."
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": []
+  },
+  "initialRelationships": {
+    "protections": [
+      {
+        "protectorId": "cloud_1",
+        "protectedId": "cloud_2"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_1"
+        ],
+        "dialogues": [
+          "I'm a terrible person.",
+          "I hate myself."
+        ]
+      },
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_3"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "You always make mistakes.",
+          "Don't do anything risky.",
+          "Be careful or you'll embarrass yourself."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "cloud_1",
+        "proxyId": "cloud_4"
+      },
+      {
+        "cloudId": "cloud_2",
+        "proxyId": "cloud_4"
+      },
+      {
+        "cloudId": "cloud_3",
+        "proxyId": "cloud_4"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action": "select_a_target",
+      "cloudId": "cloud_1",
+      "elapsedTime": 0.805,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 0,
+        "cosmetic": 0
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.918,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 0,
+        "cosmetic": 0
+      },
+      "rngLog": []
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "identity",
+      "elapsedTime": 2.679,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 1,
+        "cosmetic": 1
+      },
+      "rngLog": [
+        "ray_field:deflect"
+      ]
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.941,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 1
+      },
+      "rngLog": [
+        "who_do_you_see:pick_proxy"
+      ]
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.473,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 1
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.507,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 2
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.777,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 2
+      },
+      "rngLog": []
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.317,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 3,
+        "cosmetic": 3
+      },
+      "rngLog": [
+        "who_do_you_see:clear_proxies"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "identity",
+      "elapsedTime": 2.156,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 4,
+        "cosmetic": 3
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "age",
+      "elapsedTime": 2.884,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 5,
+        "cosmetic": 3
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobAppraisal",
+      "elapsedTime": 1.603,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 6,
+        "cosmetic": 4
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobImpact",
+      "elapsedTime": 1.72,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 7,
+        "cosmetic": 5
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "compassion",
+      "elapsedTime": 1.965,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 8,
+        "cosmetic": 5
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.531,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [
+          "cloud_2"
+        ],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 1,
+            "positionType": "supporting"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 8,
+        "cosmetic": 5
+      },
+      "rngLog": []
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 3.248,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "supporting"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 9,
+        "cosmetic": 5
+      },
+      "rngLog": [
+        "help_protected:willing"
+      ]
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.136,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 9,
+        "cosmetic": 5
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 1.845,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 9,
+        "cosmetic": 5
+      },
+      "rngLog": []
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_2",
+      "elapsedTime": 1.553,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 10,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "who_do_you_see:clear_proxies"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "age",
+      "elapsedTime": 3.482,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 11,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.451,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 13,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "gratitude",
+      "elapsedTime": 1.397,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 14,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 2.833,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 16,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.331,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 18,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 1.314,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 20,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.306,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 22,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 1.518,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 24,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.254,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 26,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_4",
+      "elapsedTime": 3.519,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 26,
+        "cosmetic": 6
+      },
+      "rngLog": []
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "age",
+      "elapsedTime": 3.107,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 27,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 2.147,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 29,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.437,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 29,
+        "cosmetic": 6
+      },
+      "rngLog": []
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "compassion",
+      "elapsedTime": 1.891,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 31,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "compassion",
+      "elapsedTime": 1.7,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 33,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.458,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 35,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "select_a_target",
+      "cloudId": "cloud_3",
+      "elapsedTime": 6.4,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 35,
+        "cosmetic": 6
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2.424,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 35,
+        "cosmetic": 6
+      },
+      "rngLog": []
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_3",
+      "elapsedTime": 3.154,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 6
+      },
+      "rngLog": [
+        "who_do_you_see:pick_proxy"
+      ]
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.43,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 6
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 1.337,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "spontaneous_blend",
+      "cloudId": "cloud_1",
+      "elapsedTime": 0.021,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "star"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0.7443568633101365,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 6.724,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0.02568006249999999,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0.02568006249999999,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.816,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.598,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.572,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "supportingEntries": [
+          "cloud_2"
+        ],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0.7,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 1,
+            "positionType": "supporting"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "cloud_1",
+      "targetCloudId": "cloud_2",
+      "elapsedTime": 4.83,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "supporting"
+          },
+          "cloud_3": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "select_a_target",
+      "cloudId": "cloud_3",
+      "elapsedTime": 5.671,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2.634,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 36,
+        "cosmetic": 7
+      },
+      "rngLog": []
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "identity",
+      "elapsedTime": 2.738,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 37,
+        "cosmetic": 8
+      },
+      "rngLog": [
+        "ray_field:deflect"
+      ]
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2.959,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 38,
+        "cosmetic": 8
+      },
+      "rngLog": [
+        "who_do_you_see:pick_proxy"
+      ]
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.046,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 38,
+        "cosmetic": 9
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 1.385,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 0.7,
+            "positionType": "blended"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 38,
+        "cosmetic": 9
+      },
+      "rngLog": []
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 1.35,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 0.7,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 38,
+        "cosmetic": 10
+      },
+      "rngLog": []
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2.301,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 38,
+        "cosmetic": 10
+      },
+      "rngLog": []
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_3",
+      "elapsedTime": 1.925,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 39,
+        "cosmetic": 11
+      },
+      "rngLog": [
+        "who_do_you_see:clear_proxies"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "compassion",
+      "elapsedTime": 3.176,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 41,
+        "cosmetic": 11
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "identity",
+      "elapsedTime": 2.748,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 42,
+        "cosmetic": 11
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ]
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.803,
+      "viewState": {
+        "foregroundIds": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "supportingEntries": [],
+        "cloudStates": {
+          "cloud_1": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_2": {
+            "opacity": 0,
+            "targetOpacity": 0,
+            "positionType": "panorama"
+          },
+          "cloud_3": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          },
+          "cloud_4": {
+            "opacity": 1,
+            "targetOpacity": 1,
+            "positionType": "seat"
+          }
+        }
+      },
+      "rngCounts": {
+        "model": 44,
+        "cosmetic": 11
+      },
+      "rngLog": [
+        "whatNeedToKnow:trust_gain",
+        "ray_field:clear_ray"
+      ]
+    }
+  ],
+  "finalModel": {
+    "targetCloudIds": [
+      "cloud_3",
+      "cloud_4"
+    ],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": {
+      "targetCloudId": "cloud_3"
+    },
+    "displacedParts": [],
+    "pendingAttentionDemand": null,
+    "messages": [],
+    "messageIdCounter": 0,
+    "partStates": {
+      "cloud_1": {
+        "id": "cloud_1",
+        "name": "Inner Critic",
+        "trust": 1,
+        "needAttention": 0,
+        "agreedWaitUntil": 1766711194904,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdenedJobRevealed": true,
+          "jobAppraisalRevealed": true,
+          "jobImpactRevealed": true,
+          "consentedToHelp": true
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job.",
+            "I don't want to criticize, but I have to."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "cloud_2": {
+        "id": "cloud_2",
+        "name": "criticized",
+        "trust": 1,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1766711194906,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide.",
+            "Is it safe?"
+          ]
+        }
+      },
+      "cloud_3": {
+        "id": "cloud_3",
+        "name": "toddler",
+        "trust": 1,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1766711194907,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "cloud_4": {
+        "id": "cloud_4",
+        "name": "self-image",
+        "trust": 0.95,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1766711194907,
+        "wasProxy": true,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdenedJobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?",
+            "I should have it together by now."
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [
+      {
+        "text": "Blah blah blah.",
+        "cloudId": "cloud_3",
+        "expiresAt": 1766711331583
+      },
+      {
+        "text": "I'm the toddler.",
+        "cloudId": "cloud_3",
+        "expiresAt": 1766711329781
+      },
+      {
+        "text": "Blah blah blah.",
+        "cloudId": "cloud_3",
+        "expiresAt": 1766711327033
+      }
+    ]
+  },
+  "finalRelationships": {
+    "protections": [
+      {
+        "protectorId": "cloud_1",
+        "protectedId": "cloud_2"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_1"
+        ],
+        "dialogues": [
+          "I'm a terrible person.",
+          "I hate myself."
+        ]
+      },
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_3"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "You always make mistakes.",
+          "Don't do anything risky.",
+          "Be careful or you'll embarrass yourself."
+        ]
+      }
+    ],
+    "proxies": []
+  }
+}

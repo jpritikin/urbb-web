@@ -10,7 +10,7 @@ import { runOverlappingSmoothTests } from './testOverlappingSmooth.js';
 import { runRedistributionTests } from './testRedistribution.js';
 import { runRenderSpecTestSuite } from './testRenderSpec.js';
 import { runSortingSymmetryTests } from './testSortingSymmetry.js';
-import { runIfsScenarioTests } from './testIfsScenarios.js';
+import { runTrivialIFSTests } from './testTrivialIFS.js';
 import { runRecordedSessionTests } from './testRecordedSessions.js';
 
 interface TestResult {
@@ -37,7 +37,7 @@ function runAllTests(): void {
         { name: 'Redistribution', fn: runRedistributionTests },
         { name: 'Render Spec', fn: runRenderSpecTestSuite },
         { name: 'Sorting Symmetry', fn: runSortingSymmetryTests },
-        { name: 'IFS Scenarios', fn: runIfsScenarioTests },
+        { name: 'Trivial IFS', fn: runTrivialIFSTests },
         { name: 'Recorded Sessions', fn: runRecordedSessionTests },
     ];
 

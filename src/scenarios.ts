@@ -5,6 +5,7 @@ export interface Scenario {
     id: string;
     name: string;
     difficulty: 'Easy' | 'Medium' | 'Hard';
+    estimatedMinutes: number;
     description: string;
     setup: (cloudManager: CloudManager) => void;
 }
@@ -70,28 +71,6 @@ function setupMediumScenario(cloudManager: CloudManager): void {
         },
     });
 
-    const tenYearOld = cloudManager.addCloud('child', {
-        partAge: 10,
-        dialogues: {
-            genericBlendedDialogues: [
-                "That's not fair.",
-                "I can do it myself!",
-                "Nobody understands.",
-            ],
-        },
-    });
-
-    const teenager = cloudManager.addCloud('teenager', {
-        partAge: 14,
-        dialogues: {
-            genericBlendedDialogues: [
-                "Whatever.",
-                "You wouldn't understand.",
-                "Leave me alone.",
-            ],
-        },
-    });
-
     const adult = cloudManager.addCloud('self-image', {
         partAge: 'adult',
         dialogues: {
@@ -104,7 +83,7 @@ function setupMediumScenario(cloudManager: CloudManager): void {
     });
 
     const relationships = cloudManager.getRelationships();
-    relationships.setGrievance(innerCritic.id, [threeYearOld.id, tenYearOld.id, teenager.id], [
+    relationships.setGrievance(innerCritic.id, [threeYearOld.id], [
         "You got us criticized.",
         "You always make mistakes.",
         "Don't do anything risky.",
@@ -114,14 +93,14 @@ function setupMediumScenario(cloudManager: CloudManager): void {
     relationships.addProxy(innerCritic.id, adult.id);
     relationships.addProxy(criticized.id, adult.id);
     relationships.addProxy(threeYearOld.id, adult.id);
-    relationships.addProxy(tenYearOld.id, adult.id);
 }
 
 export const SCENARIOS: Scenario[] = [
     {
         id: 'easy',
-        name: 'Inner Critic & Exile',
+        name: 'Inner Critic',
         difficulty: 'Easy',
+        estimatedMinutes: 1,
         description: 'A protector-exile pair. Learn the basics of IFS.',
         setup: setupEasyScenario,
     },
@@ -129,6 +108,7 @@ export const SCENARIOS: Scenario[] = [
         id: 'medium',
         name: 'Self Proxies',
         difficulty: 'Medium',
+        estimatedMinutes: 3,
         description: 'Deal with proxy relationships while addressing the Inner Critic.',
         setup: setupMediumScenario,
     },

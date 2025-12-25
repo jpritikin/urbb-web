@@ -1,19 +1,25 @@
 export interface RNG {
-    random(): number;
-    pickRandom<T>(arr: readonly T[]): T;
-    randomInRange(min: number, max: number): number;
+    random(purpose?: string): number;
+    pickRandom<T>(arr: readonly T[], purpose?: string): T;
+    randomInRange(min: number, max: number, purpose?: string): number;
+    getCallCount(): number;
+    getCallLog(): string[];
 }
 
 export class SeededRNG implements RNG {
     private seed: number;
     private initialSeed: number;
+    private callCount: number = 0;
+    private callLog: string[] = [];
 
     constructor(seed: number) {
         this.initialSeed = seed >>> 0;
         this.seed = this.initialSeed;
     }
 
-    random(): number {
+    random(purpose?: string): number {
+        this.callCount++;
+        this.callLog.push(purpose ?? 'random');
         // Mulberry32 - fast, good distribution
         let t = this.seed += 0x6D2B79F5;
         t = Math.imul(t ^ t >>> 15, t | 1);
@@ -21,13 +27,21 @@ export class SeededRNG implements RNG {
         return ((t ^ t >>> 14) >>> 0) / 4294967296;
     }
 
-    pickRandom<T>(arr: readonly T[]): T {
-        if (arr.length === 0) throw new Error('Cannot pick from empty array');
-        return arr[Math.floor(this.random() * arr.length)];
+    getCallCount(): number {
+        return this.callCount;
     }
 
-    randomInRange(min: number, max: number): number {
-        return min + this.random() * (max - min);
+    getCallLog(): string[] {
+        return [...this.callLog];
+    }
+
+    pickRandom<T>(arr: readonly T[], purpose?: string): T {
+        if (arr.length === 0) throw new Error('Cannot pick from empty array');
+        return arr[Math.floor(this.random(purpose ?? 'pickRandom') * arr.length)];
+    }
+
+    randomInRange(min: number, max: number, purpose?: string): number {
+        return min + this.random(purpose ?? 'randomInRange') * (max - min);
     }
 
     getSeed(): number {
@@ -44,17 +58,30 @@ export class SeededRNG implements RNG {
 }
 
 export class SystemRNG implements RNG {
-    random(): number {
+    private callCount: number = 0;
+    private callLog: string[] = [];
+
+    random(purpose?: string): number {
+        this.callCount++;
+        this.callLog.push(purpose ?? 'random');
         return Math.random();
     }
 
-    pickRandom<T>(arr: readonly T[]): T {
+    pickRandom<T>(arr: readonly T[], purpose?: string): T {
         if (arr.length === 0) throw new Error('Cannot pick from empty array');
-        return arr[Math.floor(Math.random() * arr.length)];
+        return arr[Math.floor(this.random(purpose ?? 'pickRandom') * arr.length)];
     }
 
-    randomInRange(min: number, max: number): number {
-        return min + Math.random() * (max - min);
+    randomInRange(min: number, max: number, purpose?: string): number {
+        return min + this.random(purpose ?? 'randomInRange') * (max - min);
+    }
+
+    getCallCount(): number {
+        return this.callCount;
+    }
+
+    getCallLog(): string[] {
+        return [...this.callLog];
     }
 }
 

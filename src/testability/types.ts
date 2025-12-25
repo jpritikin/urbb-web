@@ -1,4 +1,4 @@
-import type { BlendReason, BlendedPartState, PartMessage, SelfRayState } from '../ifsModel.js';
+import type { BlendReason, BlendedPartState, PartMessage, SelfRayState, ThoughtBubble } from '../ifsModel.js';
 import type { PartState, PartBiography, PartDialogues } from '../partState.js';
 
 export interface SerializedModel {
@@ -12,6 +12,7 @@ export interface SerializedModel {
     messages: PartMessage[];
     messageIdCounter: number;
     partStates: Record<string, PartState>;
+    thoughtBubbles?: ThoughtBubble[];
 }
 
 export interface SerializedRelationships {
@@ -26,10 +27,21 @@ export interface RecordedAction {
     targetCloudId?: string;
     field?: string;
     elapsedTime?: number;  // Seconds since last action (for time-based state changes)
+    thoughtBubble?: { text: string; cloudId: string };
+    viewState?: ViewStateSnapshot;  // Debug info, not used for replay
+    rngCounts?: { model: number; cosmetic: number };
+    rngLog?: string[];  // Model RNG call purposes for this action
+}
+
+export interface ViewStateSnapshot {
+    foregroundIds: string[];
+    supportingEntries: string[];  // Cloud IDs with active entry animations
+    cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }>;
 }
 
 export interface RecordedSession {
     version: 1;
+    codeVersion: string;
     modelSeed: number;
     timestamp: number;
     initialModel: SerializedModel;

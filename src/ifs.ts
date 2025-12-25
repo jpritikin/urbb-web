@@ -19,6 +19,10 @@ function downloadSession(cloudManager: CloudManager): void {
     console.log('[IFS] Recording saved:', a.download);
 }
 
+function getPageVersion(): string {
+    return document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
+}
+
 function setupRecordingShortcuts(cloudManager: CloudManager): void {
     let isRecording = false;
 
@@ -30,7 +34,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
                 isRecording = false;
                 console.log('[IFS] Recording stopped and downloaded');
             } else {
-                cloudManager.startRecording();
+                cloudManager.startRecording(getPageVersion());
                 isRecording = true;
                 console.log('[IFS] Recording started (Ctrl+Space to stop and download)');
             }
@@ -53,7 +57,7 @@ function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Sce
         const card = document.createElement('div');
         card.className = 'scenario-card';
         card.innerHTML = `
-            <span class="scenario-difficulty ${scenario.difficulty.toLowerCase()}">${scenario.difficulty}</span>
+            <span class="scenario-difficulty ${scenario.difficulty.toLowerCase()}">${scenario.difficulty} (~${scenario.estimatedMinutes} min)</span>
             <h3>${scenario.name}</h3>
             <p class="scenario-description">${scenario.description}</p>
         `;
@@ -97,8 +101,7 @@ function startSimulation(scenario: Scenario): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
-    console.log('[IFS Simulator] Page version:', pageVersion);
+    console.log('[IFS Simulator] Page version:', getPageVersion());
 
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
