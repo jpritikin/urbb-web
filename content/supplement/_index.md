@@ -22,7 +22,7 @@ This psychological framework serves the book in two ways. Proactively, we need t
 
 Various apps exist to help IFS clients map their parts—tracking protectors, exiles, and their relationships in visual diagrams. 🗺️ These tools serve a real purpose. But we're doing something different here.
 
-This simulator opens a window into what it's like to *be* an IFS therapist. You'll practice the therapeutic stance: curious but not intrusive, present but not directive, holding space while parts reveal themselves at their own pace. The work isn't about cataloging your internal system. It's about experiencing the therapist's perspective—a mashup of [Oregon Trail](https://oregontrail.ws/games/the-oregon-trail/)-style gameplay and therapeutic choices.
+This simulator opens a window into what it's like to *be* an IFS therapist. You'll practice the therapeutic stance: curious but not intrusive, present but not directive, holding space while the client's simulated parts reveal themselves at their own pace. The work isn't about cataloging your internal system. It's about experiencing the therapist's perspective—a mashup of [Oregon Trail](https://oregontrail.ws/games/the-oregon-trail/)-style gameplay and therapeutic choices.
 
 Whether you're considering IFS therapy, already working with a therapist, or training to become one yourself, this simulator offers direct experience with the therapeutic process from the therapist's perspective.
 
