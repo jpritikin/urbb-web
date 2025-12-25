@@ -833,6 +833,23 @@ export class CloudManager {
     }
 
     private handleWhoDoYouSee(cloud: Cloud): void {
+        const blendedParts = this.model.getBlendedPartsWithDegrees();
+        if (blendedParts.size > 0) {
+            const topBlended = Array.from(blendedParts.entries())
+                .sort((a, b) => b[1] - a[1])[0];
+            const topBlendedId = topBlended[0];
+            const topBlendedCloud = this.getCloudById(topBlendedId);
+            const partName = topBlendedCloud?.text ?? 'a part';
+
+            if (!this.model.isIdentityRevealed(topBlendedId)) {
+                this.model.revealIdentity(topBlendedId);
+                this.showThoughtBubble(`I see the ${partName}.`, cloud.id);
+            } else {
+                this.showThoughtBubble(`I see the ${partName}, just like you do.`, cloud.id);
+            }
+            return;
+        }
+
         const proxies = this.relationships.getProxies(cloud.id);
         if (proxies.size === 0) {
             this.showThoughtBubble(this.getSelfRecognitionResponse(cloud.id), cloud.id);
