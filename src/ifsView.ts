@@ -135,15 +135,19 @@ export class SimulatorView {
     }
 
     setMessageContainer(container: SVGGElement): void {
-        this.messageRenderer = new MessageRenderer(container);
+        this.messageRenderer = new MessageRenderer(
+            container,
+            (cloudId) => this.getCloudState(cloudId) ?? null,
+            () => ({ width: this.canvasWidth, height: this.canvasHeight })
+        );
     }
 
     setOnMessageReceived(callback: (message: PartMessage) => void): void {
         this.messageRenderer?.setOnMessageReceived(callback);
     }
 
-    startMessage(message: PartMessage, startX: number, startY: number, endX: number, endY: number): void {
-        this.messageRenderer?.startMessage(message, startX, startY, endX, endY);
+    startMessage(message: PartMessage, senderCloudId: string, targetCloudId: string): void {
+        this.messageRenderer?.startMessage(message, senderCloudId, targetCloudId);
     }
 
     animateMessages(deltaTime: number): void {

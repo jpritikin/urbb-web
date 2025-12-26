@@ -1,25 +1,10 @@
 import { ThoughtBubble } from '../ifsModel.js';
 import { createGroup, createRect, createCircle, createText, setClickHandler, TextLine } from '../svgHelpers.js';
+import { BubbleLayout, THOUGHT_BUBBLE_CONFIG, computeBubbleLayout } from './bubblePlacement.js';
 
 interface CloudPosition { x: number; y: number }
 
-interface BubbleLayout {
-    bubbleX: number;
-    bubbleY: number;
-    bubbleWidth: number;
-    bubbleHeight: number;
-    tailDirX: number;
-    tailDirY: number;
-    textHeight: number;
-    lines: string[];
-}
-
-const PADDING = 12;
-const FONT_SIZE = 16;
-const MAX_WIDTH = 200;
-const LINE_HEIGHT = FONT_SIZE + 4;
-const TAIL_LENGTH = 50;
-const MARGIN = 10;
+const config = THOUGHT_BUBBLE_CONFIG;
 
 export class ThoughtBubbleRenderer {
     private container: SVGGElement;
@@ -66,36 +51,8 @@ export class ThoughtBubbleRenderer {
     private computeLayout(cloudId: string, text: string): BubbleLayout | null {
         const pos = this.getCloudPosition(cloudId);
         if (!pos) return null;
-
         const dims = this.getDimensions();
-        const centerX = dims.width / 2;
-        const centerY = dims.height / 2;
-
-        const lines = this.wrapText(text, MAX_WIDTH, FONT_SIZE);
-        const textHeight = lines.length * LINE_HEIGHT;
-        const textWidth = Math.min(MAX_WIDTH, Math.max(...lines.map(l => l.length * FONT_SIZE * 0.55)));
-        const bubbleWidth = textWidth + PADDING;
-        const bubbleHeight = textHeight + PADDING * 2;
-
-        const dx = pos.x - centerX;
-        const dy = pos.y - centerY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const dirX = dist > 0 ? dx / dist : 0;
-        const dirY = dist > 0 ? dy / dist : -1;
-
-        let bubbleX = pos.x + dirX * (TAIL_LENGTH + bubbleWidth / 2);
-        let bubbleY = pos.y + dirY * (TAIL_LENGTH + bubbleHeight / 2);
-
-        bubbleX = Math.max(MARGIN + bubbleWidth / 2, Math.min(dims.width - MARGIN - bubbleWidth / 2, bubbleX));
-        bubbleY = Math.max(MARGIN + bubbleHeight / 2, Math.min(dims.height - MARGIN - bubbleHeight / 2, bubbleY));
-
-        const tailDx = bubbleX - pos.x;
-        const tailDy = bubbleY - pos.y;
-        const tailDist = Math.sqrt(tailDx * tailDx + tailDy * tailDy);
-        const tailDirX = tailDist > 0 ? tailDx / tailDist : 0;
-        const tailDirY = tailDist > 0 ? tailDy / tailDist : -1;
-
-        return { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight, lines };
+        return computeBubbleLayout(pos.x, pos.y, text, dims.width, dims.height, config);
     }
 
     private show(bubble: ThoughtBubble, now: number): void {
@@ -116,28 +73,26 @@ export class ThoughtBubbleRenderer {
         setClickHandler(rect, dismiss);
         this.currentGroup.appendChild(rect);
 
-        const tailStyle = { fill: 'white', stroke: '#333', 'stroke-width': 1.5, 'pointer-events': 'auto' };
+        const tailStyle = { fill: 'white', stroke: '#333', 'stroke-width': 1.5, 'pointer-events': 'none' };
         const circle1Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 8;
         const circle2Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 18;
         const smallCircle1 = createCircle(bubbleX - tailDirX * circle1Dist, bubbleY - tailDirY * circle1Dist, 6, tailStyle);
-        setClickHandler(smallCircle1, dismiss);
         this.currentGroup.appendChild(smallCircle1);
 
         const smallCircle2 = createCircle(bubbleX - tailDirX * circle2Dist, bubbleY - tailDirY * circle2Dist, 4, tailStyle);
-        setClickHandler(smallCircle2, dismiss);
         this.currentGroup.appendChild(smallCircle2);
 
-        const textStartY = bubbleY - textHeight / 2 + FONT_SIZE;
+        const textStartY = bubbleY - textHeight / 2 + config.fontSize;
         const textLines: TextLine[] = lines.map(line => ({
             text: line,
-            fontSize: FONT_SIZE,
+            fontSize: config.fontSize,
             fontStyle: 'italic' as const,
         }));
         const text = createText(bubbleX, textStartY, textLines, {
             'font-family': 'sans-serif',
             'text-anchor': 'middle',
             fill: '#333',
-        });
+        }, config.lineHeight);
         this.currentGroup.appendChild(text);
 
         this.container.appendChild(this.currentGroup);
@@ -192,13 +147,13 @@ export class ThoughtBubbleRenderer {
 
         const text = this.currentGroup.querySelector('text');
         if (text) {
-            const textStartY = bubbleY - textHeight / 2 + FONT_SIZE;
+            const textStartY = bubbleY - textHeight / 2 + config.fontSize;
             text.setAttribute('x', String(bubbleX));
             text.setAttribute('y', String(textStartY));
             const tspans = text.querySelectorAll('tspan');
             tspans.forEach((tspan, i) => {
                 tspan.setAttribute('x', String(bubbleX));
-                tspan.setAttribute('y', String(textStartY + i * LINE_HEIGHT));
+                tspan.setAttribute('y', String(textStartY + i * config.lineHeight));
             });
         }
     }
@@ -209,22 +164,5 @@ export class ThoughtBubbleRenderer {
         }
         this.currentGroup = null;
         this.renderedBubble = null;
-    }
-
-    private wrapText(text: string, maxWidth: number, fontSize: number): string[] {
-        const words = text.split(' ');
-        const lines: string[] = [];
-        let currentLine = '';
-        for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            if (testLine.length * fontSize * 0.5 > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            } else {
-                currentLine = testLine;
-            }
-        }
-        if (currentLine) lines.push(currentLine);
-        return lines;
     }
 }

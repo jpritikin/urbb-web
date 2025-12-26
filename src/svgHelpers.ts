@@ -37,14 +37,14 @@ export function createText(
     x: number,
     y: number,
     content: string | TextLine[],
-    attrs: Record<string, string | number> = {}
+    attrs: Record<string, string | number> = {},
+    lineHeight: number = 20
 ): SVGTextElement {
     const text = createSvgElement('text', { x, y, ...attrs });
 
     if (typeof content === 'string') {
         text.textContent = content;
     } else {
-        const lineHeight = 20;
         content.forEach((line, i) => {
             const tspan = createSvgElement('tspan', {
                 x,

@@ -1,14 +1,17 @@
 import { PartMessage } from '../ifsModel.js';
 import { createGroup, createRect, createText, TextLine } from '../svgHelpers.js';
+import { MESSAGE_BUBBLE_CONFIG, computeBubbleSize, computeBubblePlacement, wrapText } from './bubblePlacement.js';
+
+const config = MESSAGE_BUBBLE_CONFIG;
+
+interface CloudPosition { x: number; y: number }
 
 interface MessageAnimatedState {
     message: PartMessage;
     progress: number;
     duration: number;
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
+    senderCloudId: string;
+    targetCloudId: string;
     element: SVGGElement;
     phase: 'traveling' | 'lingering' | 'fading';
     lingerTime: number;
@@ -19,9 +22,17 @@ export class MessageRenderer {
     private messageStates: Map<number, MessageAnimatedState> = new Map();
     private container: SVGGElement;
     private onMessageReceived: ((message: PartMessage) => void) | null = null;
+    private getCloudPosition: (cloudId: string) => CloudPosition | null;
+    private getDimensions: () => { width: number; height: number };
 
-    constructor(container: SVGGElement) {
+    constructor(
+        container: SVGGElement,
+        getCloudPosition: (cloudId: string) => CloudPosition | null,
+        getDimensions: () => { width: number; height: number }
+    ) {
         this.container = container;
+        this.getCloudPosition = getCloudPosition;
+        this.getDimensions = getDimensions;
     }
 
     setOnMessageReceived(callback: (message: PartMessage) => void): void {
@@ -30,23 +41,22 @@ export class MessageRenderer {
 
     startMessage(
         message: PartMessage,
-        startX: number,
-        startY: number,
-        endX: number,
-        endY: number
+        senderCloudId: string,
+        targetCloudId: string
     ): void {
+        const senderPos = this.getCloudPosition(senderCloudId);
+        if (!senderPos) return;
+
         const element = this.createMessageElement(message);
-        element.setAttribute('transform', `translate(${startX}, ${startY})`);
+        element.setAttribute('transform', `translate(${senderPos.x}, ${senderPos.y})`);
         this.container.appendChild(element);
 
         const state: MessageAnimatedState = {
             message,
             progress: 0,
             duration: 3.0,
-            startX,
-            startY,
-            endX,
-            endY,
+            senderCloudId,
+            targetCloudId,
             element,
             phase: 'traveling',
             lingerTime: 0,
@@ -57,6 +67,7 @@ export class MessageRenderer {
 
     animate(deltaTime: number): void {
         const toRemove: number[] = [];
+        const dims = this.getDimensions();
 
         for (const [id, state] of this.messageStates) {
             if (state.phase === 'traveling') {
@@ -68,15 +79,19 @@ export class MessageRenderer {
                     this.onMessageReceived?.(state.message);
                 }
 
-                const { x, y } = this.getMessagePosition(state);
+                const { x, y } = this.getMessagePosition(state, dims);
                 state.element.setAttribute('transform', `translate(${x}, ${y})`);
             } else if (state.phase === 'lingering') {
                 state.lingerTime += deltaTime;
+                const { x, y } = this.getLingeringPosition(state, dims);
+                state.element.setAttribute('transform', `translate(${x}, ${y})`);
                 if (state.lingerTime >= state.lingerDuration) {
                     state.phase = 'fading';
                 }
             } else if (state.phase === 'fading') {
                 state.lingerTime += deltaTime;
+                const { x, y } = this.getLingeringPosition(state, dims);
+                state.element.setAttribute('transform', `translate(${x}, ${y})`);
                 const fadeProgress = (state.lingerTime - state.lingerDuration) / 0.5;
                 if (fadeProgress >= 1) {
                     toRemove.push(id);
@@ -93,19 +108,43 @@ export class MessageRenderer {
         }
     }
 
-    private getMessagePosition(state: MessageAnimatedState): { x: number; y: number } {
-        if (state.message.senderId === state.message.targetId) {
+    private getMessagePosition(state: MessageAnimatedState, dims: { width: number; height: number }): { x: number; y: number } {
+        const senderPos = this.getCloudPosition(state.senderCloudId);
+        const targetPos = this.getCloudPosition(state.targetCloudId);
+        if (!senderPos || !targetPos) return { x: 0, y: 0 };
+
+        if (state.senderCloudId === state.targetCloudId) {
             const angle = state.progress * 2 * Math.PI;
             const radius = 40;
-            return {
-                x: state.startX + radius * Math.cos(angle),
-                y: state.startY + radius * Math.sin(angle),
-            };
+            return this.clampToCanvas(
+                senderPos.x + radius * Math.cos(angle),
+                senderPos.y + radius * Math.sin(angle),
+                state.message.text,
+                dims
+            );
         }
         const eased = this.easeInOutCubic(state.progress);
+        return this.clampToCanvas(
+            senderPos.x + (targetPos.x - senderPos.x) * eased,
+            senderPos.y + (targetPos.y - senderPos.y) * eased,
+            state.message.text,
+            dims
+        );
+    }
+
+    private getLingeringPosition(state: MessageAnimatedState, dims: { width: number; height: number }): { x: number; y: number } {
+        const targetPos = this.getCloudPosition(state.targetCloudId);
+        if (!targetPos) return { x: 0, y: 0 };
+        return this.clampToCanvas(targetPos.x, targetPos.y, state.message.text, dims);
+    }
+
+    private clampToCanvas(x: number, y: number, text: string, dims: { width: number; height: number }): { x: number; y: number } {
+        const size = computeBubbleSize(text, config);
+        const halfW = size.width / 2;
+        const halfH = size.height / 2;
         return {
-            x: state.startX + (state.endX - state.startX) * eased,
-            y: state.startY + (state.endY - state.startY) * eased,
+            x: Math.max(config.margin + halfW, Math.min(dims.width - config.margin - halfW, x)),
+            y: Math.max(config.margin + halfH, Math.min(dims.height - config.margin - halfH, y)),
         };
     }
 
@@ -116,16 +155,8 @@ export class MessageRenderer {
     private createMessageElement(message: PartMessage): SVGGElement {
         const group = createGroup({ class: 'message-bubble', 'pointer-events': 'none' });
 
-        const padding = 8;
-        const fontSize = 13;
-        const maxWidth = 120;
-
-        const lines = this.wrapText(message.text, maxWidth, fontSize);
-        const lineHeight = fontSize + 2;
-        const textHeight = lines.length * lineHeight;
-        const textWidth = Math.min(maxWidth, Math.max(...lines.map(l => l.length * fontSize * 0.5)));
-        const bubbleWidth = textWidth + padding * 2;
-        const bubbleHeight = textHeight + padding * 2;
+        const size = computeBubbleSize(message.text, config);
+        const { width: bubbleWidth, height: bubbleHeight, textHeight, lines } = size;
 
         const isGrievance = message.type === 'grievance';
         const rect = createRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, {
@@ -136,34 +167,17 @@ export class MessageRenderer {
         });
         group.appendChild(rect);
 
-        const startY = -textHeight / 2 + fontSize;
+        const startY = -textHeight / 2 + config.fontSize;
         const textLines: TextLine[] = lines.map(line => ({ text: line }));
         const textEl = createText(0, startY, textLines, {
-            'font-size': fontSize,
+            'font-size': config.fontSize,
             'font-family': 'sans-serif',
             'text-anchor': 'middle',
             fill: '#333',
-        });
+        }, config.lineHeight);
         group.appendChild(textEl);
 
         return group;
-    }
-
-    private wrapText(text: string, maxWidth: number, fontSize: number): string[] {
-        const words = text.split(' ');
-        const lines: string[] = [];
-        let currentLine = '';
-        for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            if (testLine.length * fontSize * 0.5 > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            } else {
-                currentLine = testLine;
-            }
-        }
-        if (currentLine) lines.push(currentLine);
-        return lines;
     }
 
     clear(): void {

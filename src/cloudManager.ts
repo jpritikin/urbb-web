@@ -1190,7 +1190,7 @@ export class CloudManager {
             message = this.model.sendMessage(senderId, targetId, text, type);
         });
         if (message) {
-            this.view.startMessage(message, senderState.x, senderState.y, targetState.x, targetState.y);
+            this.view.startMessage(message, senderId, targetId);
         }
     }
 
