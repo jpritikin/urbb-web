@@ -1016,9 +1016,8 @@ export class Cloud {
     }
 
     updateStyles(pathElement: SVGPathElement, textElement: SVGTextElement, debug: boolean, hovered: boolean): void {
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#1a1a1a' : '#ffffff';
-        const textColor = isDark ? '#f5f5f5' : '#1a1a1a';
+        const bgColor = '#ffffff';
+        const textColor = '#1a1a1a';
 
         if (debug) {
             pathElement.style.fill = 'yellow';

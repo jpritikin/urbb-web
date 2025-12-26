@@ -37,12 +37,20 @@ export class SeatManager {
         this.canvasHeight = canvasHeight;
     }
 
-    getConferenceTableRadius(seatCount?: number): number {
+    getConferenceTableRadii(seatCount?: number): { rx: number; ry: number } {
         const count = seatCount ?? this.seats.length;
-        const baseRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.3;
-        if (count <= 2) return baseRadius * 0.6;
-        if (count >= 7) return baseRadius;
-        return baseRadius * (0.6 + 0.4 * (count - 2) / 5);
+        const baseRx = this.canvasWidth * 0.35;
+        const baseRy = this.canvasHeight * 0.35;
+        let scale: number;
+        if (count <= 2) scale = 0.6;
+        else if (count >= 7) scale = 1;
+        else scale = 0.6 + 0.4 * (count - 2) / 5;
+        return { rx: baseRx * scale, ry: baseRy * scale };
+    }
+
+    getConferenceTableRadius(seatCount?: number): number {
+        const { rx, ry } = this.getConferenceTableRadii(seatCount);
+        return Math.min(rx, ry);
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
@@ -190,7 +198,7 @@ export class SeatManager {
         const angleStep = (2 * Math.PI) / totalSeats;
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
-        const radius = this.getConferenceTableRadius(totalSeats);
+        const { rx, ry } = this.getConferenceTableRadii(totalSeats);
 
         const targetAngles: number[] = [];
         for (let i = 0; i < totalSeats; i++) {
@@ -252,8 +260,8 @@ export class SeatManager {
                 seatId,
                 angle,
                 targetAngle: targetAngles[bestAngleIndex],
-                x: centerX + radius * Math.cos(angle),
-                y: centerY + radius * Math.sin(angle)
+                x: centerX + rx * Math.cos(angle),
+                y: centerY + ry * Math.sin(angle)
             });
         }
 
@@ -266,8 +274,8 @@ export class SeatManager {
             if (seat.angle < 0) seat.angle += 2 * Math.PI;
             if (seat.angle >= 2 * Math.PI) seat.angle -= 2 * Math.PI;
 
-            seat.x = centerX + radius * Math.cos(seat.angle);
-            seat.y = centerY + radius * Math.sin(seat.angle);
+            seat.x = centerX + rx * Math.cos(seat.angle);
+            seat.y = centerY + ry * Math.sin(seat.angle);
         }
 
         this.seats = newSeats;

@@ -157,7 +157,8 @@ export class SimulatorView {
     setThoughtBubbleContainer(container: SVGGElement): void {
         this.thoughtBubbleRenderer = new ThoughtBubbleRenderer(
             container,
-            (cloudId) => this.getCloudState(cloudId) ?? null
+            (cloudId) => this.getCloudState(cloudId) ?? null,
+            () => ({ width: this.canvasWidth, height: this.canvasHeight })
         );
         this.thoughtBubbleRenderer.setOnDismiss(() => {
             this.onThoughtBubbleDismiss?.();

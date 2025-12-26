@@ -1,24 +1,42 @@
 import { ThoughtBubble } from '../ifsModel.js';
 import { createGroup, createRect, createCircle, createText, setClickHandler, TextLine } from '../svgHelpers.js';
 
-export interface CloudPosition {
-    x: number;
-    y: number;
+interface CloudPosition { x: number; y: number }
+
+interface BubbleLayout {
+    bubbleX: number;
+    bubbleY: number;
+    bubbleWidth: number;
+    bubbleHeight: number;
+    tailDirX: number;
+    tailDirY: number;
+    textHeight: number;
+    lines: string[];
 }
+
+const PADDING = 12;
+const FONT_SIZE = 16;
+const MAX_WIDTH = 200;
+const LINE_HEIGHT = FONT_SIZE + 4;
+const TAIL_LENGTH = 50;
+const MARGIN = 10;
 
 export class ThoughtBubbleRenderer {
     private container: SVGGElement;
     private currentGroup: SVGGElement | null = null;
     private renderedBubble: { text: string; cloudId: string } | null = null;
     private getCloudPosition: (cloudId: string) => CloudPosition | null;
+    private getDimensions: () => { width: number; height: number };
     private onDismiss: (() => void) | null = null;
 
     constructor(
         container: SVGGElement,
-        getCloudPosition: (cloudId: string) => CloudPosition | null
+        getCloudPosition: (cloudId: string) => CloudPosition | null,
+        getDimensions: () => { width: number; height: number }
     ) {
         this.container = container;
         this.getCloudPosition = getCloudPosition;
+        this.getDimensions = getDimensions;
     }
 
     setOnDismiss(callback: () => void): void {
@@ -45,24 +63,48 @@ export class ThoughtBubbleRenderer {
         this.show(bubble, now);
     }
 
+    private computeLayout(cloudId: string, text: string): BubbleLayout | null {
+        const pos = this.getCloudPosition(cloudId);
+        if (!pos) return null;
+
+        const dims = this.getDimensions();
+        const centerX = dims.width / 2;
+        const centerY = dims.height / 2;
+
+        const lines = this.wrapText(text, MAX_WIDTH, FONT_SIZE);
+        const textHeight = lines.length * LINE_HEIGHT;
+        const textWidth = Math.min(MAX_WIDTH, Math.max(...lines.map(l => l.length * FONT_SIZE * 0.55)));
+        const bubbleWidth = textWidth + PADDING;
+        const bubbleHeight = textHeight + PADDING * 2;
+
+        const dx = pos.x - centerX;
+        const dy = pos.y - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dirX = dist > 0 ? dx / dist : 0;
+        const dirY = dist > 0 ? dy / dist : -1;
+
+        let bubbleX = pos.x + dirX * (TAIL_LENGTH + bubbleWidth / 2);
+        let bubbleY = pos.y + dirY * (TAIL_LENGTH + bubbleHeight / 2);
+
+        bubbleX = Math.max(MARGIN + bubbleWidth / 2, Math.min(dims.width - MARGIN - bubbleWidth / 2, bubbleX));
+        bubbleY = Math.max(MARGIN + bubbleHeight / 2, Math.min(dims.height - MARGIN - bubbleHeight / 2, bubbleY));
+
+        const tailDx = bubbleX - pos.x;
+        const tailDy = bubbleY - pos.y;
+        const tailDist = Math.sqrt(tailDx * tailDx + tailDy * tailDy);
+        const tailDirX = tailDist > 0 ? tailDx / tailDist : 0;
+        const tailDirY = tailDist > 0 ? tailDy / tailDist : -1;
+
+        return { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight, lines };
+    }
+
     private show(bubble: ThoughtBubble, now: number): void {
-        const pos = this.getCloudPosition(bubble.cloudId);
-        if (!pos) return;
+        const layout = this.computeLayout(bubble.cloudId, bubble.text);
+        if (!layout) return;
+
+        const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight, lines } = layout;
 
         this.currentGroup = createGroup({ class: 'thought-bubble', 'pointer-events': 'none' });
-
-        const padding = 12;
-        const fontSize = 16;
-        const maxWidth = 200;
-        const lines = this.wrapText(bubble.text, maxWidth, fontSize);
-        const lineHeight = fontSize + 4;
-        const textHeight = lines.length * lineHeight;
-        const textWidth = Math.min(maxWidth, Math.max(...lines.map(l => l.length * fontSize * 0.55)));
-        const bubbleWidth = textWidth + padding;
-        const bubbleHeight = textHeight + padding * 2;
-
-        const bubbleX = pos.x;
-        const bubbleY = pos.y - 60 - bubbleHeight / 2;
 
         const dismiss = () => {
             this.hide();
@@ -75,18 +117,20 @@ export class ThoughtBubbleRenderer {
         this.currentGroup.appendChild(rect);
 
         const tailStyle = { fill: 'white', stroke: '#333', 'stroke-width': 1.5, 'pointer-events': 'auto' };
-        const smallCircle1 = createCircle(bubbleX, bubbleY + bubbleHeight / 2 + 8, 6, tailStyle);
+        const circle1Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 8;
+        const circle2Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 18;
+        const smallCircle1 = createCircle(bubbleX - tailDirX * circle1Dist, bubbleY - tailDirY * circle1Dist, 6, tailStyle);
         setClickHandler(smallCircle1, dismiss);
         this.currentGroup.appendChild(smallCircle1);
 
-        const smallCircle2 = createCircle(bubbleX, bubbleY + bubbleHeight / 2 + 18, 4, tailStyle);
+        const smallCircle2 = createCircle(bubbleX - tailDirX * circle2Dist, bubbleY - tailDirY * circle2Dist, 4, tailStyle);
         setClickHandler(smallCircle2, dismiss);
         this.currentGroup.appendChild(smallCircle2);
 
-        const textStartY = bubbleY - textHeight / 2 + fontSize;
+        const textStartY = bubbleY - textHeight / 2 + FONT_SIZE;
         const textLines: TextLine[] = lines.map(line => ({
             text: line,
-            fontSize,
+            fontSize: FONT_SIZE,
             fontStyle: 'italic' as const,
         }));
         const text = createText(bubbleX, textStartY, textLines, {
@@ -118,12 +162,44 @@ export class ThoughtBubbleRenderer {
     }
 
     private updatePosition(cloudId: string): void {
-        if (!this.currentGroup) return;
+        if (!this.currentGroup || !this.renderedBubble) return;
 
-        const pos = this.getCloudPosition(cloudId);
-        if (!pos) {
+        const layout = this.computeLayout(cloudId, this.renderedBubble.text);
+        if (!layout) {
             this.hide();
             return;
+        }
+
+        const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight } = layout;
+
+        const rect = this.currentGroup.querySelector('rect');
+        if (rect) {
+            rect.setAttribute('x', String(bubbleX - bubbleWidth / 2));
+            rect.setAttribute('y', String(bubbleY - bubbleHeight / 2));
+        }
+
+        const circles = this.currentGroup.querySelectorAll('circle');
+        const circle1Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 8;
+        const circle2Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 18;
+        if (circles[0]) {
+            circles[0].setAttribute('cx', String(bubbleX - tailDirX * circle1Dist));
+            circles[0].setAttribute('cy', String(bubbleY - tailDirY * circle1Dist));
+        }
+        if (circles[1]) {
+            circles[1].setAttribute('cx', String(bubbleX - tailDirX * circle2Dist));
+            circles[1].setAttribute('cy', String(bubbleY - tailDirY * circle2Dist));
+        }
+
+        const text = this.currentGroup.querySelector('text');
+        if (text) {
+            const textStartY = bubbleY - textHeight / 2 + FONT_SIZE;
+            text.setAttribute('x', String(bubbleX));
+            text.setAttribute('y', String(textStartY));
+            const tspans = text.querySelectorAll('tspan');
+            tspans.forEach((tspan, i) => {
+                tspan.setAttribute('x', String(bubbleX));
+                tspan.setAttribute('y', String(textStartY + i * LINE_HEIGHT));
+            });
         }
     }
 

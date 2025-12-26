@@ -81,6 +81,8 @@ export class CloudManager {
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
     private insideAct: boolean = false;
+    private resizeDebounceTimer: number | null = null;
+    private fullscreenTransitioning: boolean = false;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -315,19 +317,42 @@ export class CloudManager {
 
     private setupFullscreenHandling(): void {
         document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                this.exitFullscreenMode();
+            this.fullscreenTransitioning = true;
+            if (document.fullscreenElement) {
+                this.uiManager?.setFullscreen(true);
+                this.requestLandscapeOrientation();
+            } else {
+                this.uiManager?.setFullscreen(false);
+                this.unlockOrientation();
             }
+            this.scheduleResize();
         });
 
         window.addEventListener('resize', () => {
-            if (this.uiManager?.getIsFullscreen()) {
-                if (!this.uiManager.isLandscape() && this.uiManager.isMobile()) {
+            if (this.fullscreenTransitioning || this.uiManager?.getIsFullscreen()) {
+                if (this.uiManager?.getIsFullscreen() && !this.uiManager.isLandscape() && this.uiManager.isMobile()) {
                     this.exitFullscreen();
                     return;
                 }
-                this.resizeCanvasToViewport();
+                this.scheduleResize();
             }
+        });
+    }
+
+    private scheduleResize(): void {
+        if (this.resizeDebounceTimer !== null) {
+            cancelAnimationFrame(this.resizeDebounceTimer);
+        }
+        this.resizeDebounceTimer = requestAnimationFrame(() => {
+            this.resizeDebounceTimer = requestAnimationFrame(() => {
+                this.resizeDebounceTimer = null;
+                this.fullscreenTransitioning = false;
+                if (this.uiManager?.getIsFullscreen()) {
+                    this.resizeCanvasToViewport();
+                } else {
+                    this.restoreCanvasSize();
+                }
+            });
         });
     }
 
@@ -348,8 +373,9 @@ export class CloudManager {
 
         try {
             await this.container.requestFullscreen();
-            this.enterFullscreenMode();
+            // enterFullscreenMode() will be called by fullscreenchange handler
         } catch {
+            // Fallback for browsers without fullscreen API
             this.enterFullscreenMode();
         }
     }
@@ -357,7 +383,7 @@ export class CloudManager {
     private enterFullscreenMode(): void {
         this.uiManager?.setFullscreen(true);
         this.requestLandscapeOrientation();
-        this.resizeCanvasToViewport();
+        this.scheduleResize();
     }
 
     private async exitFullscreen(): Promise<void> {
@@ -371,7 +397,7 @@ export class CloudManager {
     private exitFullscreenMode(): void {
         this.uiManager?.setFullscreen(false);
         this.unlockOrientation();
-        this.restoreCanvasSize();
+        this.scheduleResize();
     }
 
     private requestLandscapeOrientation(): void {
@@ -505,18 +531,6 @@ export class CloudManager {
 
     private hideThoughtBubble(): void {
         this.model.clearThoughtBubbles();
-    }
-
-    private reduceBlending(cloudId: string, baseAmount: number): void {
-        if (!this.model.isBlended(cloudId)) return;
-
-        const needAttention = this.model.parts.getNeedAttention(cloudId);
-        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
-        const amount = baseAmount * multiplier;
-
-        const currentDegree = this.model.getBlendingDegree(cloudId);
-        const targetDegree = Math.max(0, currentDegree - amount);
-        this.model.setBlendingDegree(cloudId, targetDegree);
     }
 
     private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize', cloudId: string): void {
@@ -749,35 +763,6 @@ export class CloudManager {
             const result = this.controller!.executeAction('notice_part', protectorId, { targetCloudId });
             this.applyActionResult(result, protectorId);
         });
-    }
-
-    private startUnblendingPart(cloudId: string): void {
-        const cloud = this.getCloudById(cloudId);
-        if (!cloud) throw new Error(`Part not found: ${cloudId}`);
-
-        const targetIds = this.model.getTargetCloudIds();
-        const firstTargetId = Array.from(targetIds)[0];
-        if (!firstTargetId) throw new Error('No target part to unblend toward');
-
-        const targetInstance = this.instances.find(i => i.cloud.id === firstTargetId);
-        if (!targetInstance) throw new Error(`Target part not found: ${firstTargetId}`);
-
-        const cloudState = this.view.getCloudState(firstTargetId);
-        if (!cloudState) throw new Error(`Cannot locate target: ${firstTargetId}`);
-
-        cloud.startUnblending(cloudState.x, cloudState.y);
-    }
-
-    private startUnblendingBlendedPart(cloudId: string): void {
-        if (!this.model.isBlended(cloudId)) throw new Error(`Part is not blended: ${cloudId}`);
-
-        this.showThoughtBubble("Okay, I'll separate a bit...", cloudId);
-        this.reduceBlending(cloudId, 0.3);
-    }
-
-    private blendTargetPart(cloudId: string): void {
-        this.model.removeTargetCloud(cloudId);
-        this.model.addBlendedPart(cloudId, 'therapist');
     }
 
     private promotePendingBlend(cloudId: string): void {

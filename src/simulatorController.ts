@@ -57,24 +57,12 @@ export class SimulatorController {
             case 'select_a_target':
                 this.model.setTargetCloud(cloudId);
                 stateChanges.push(`${cloudId} selected as target`);
-                return {
-                    success: true,
-                    stateChanges,
-                    uiFeedback: {
-                        thoughtBubble: { text: "Joining the conference...", cloudId }
-                    }
-                };
+                return { success: true, stateChanges };
 
             case 'join_conference':
                 this.model.addTargetCloud(cloudId);
                 stateChanges.push(`${cloudId} joined conference`);
-                return {
-                    success: true,
-                    stateChanges,
-                    uiFeedback: {
-                        thoughtBubble: { text: "Joining the conference...", cloudId }
-                    }
-                };
+                return { success: true, stateChanges };
 
             case 'step_back':
                 return this.handleStepBack(cloudId);
@@ -152,8 +140,7 @@ export class SimulatorController {
         return {
             success: true,
             stateChanges: [`${cloudId} separating`],
-            reduceBlending: { cloudId, amount: 0.3 },
-            uiFeedback: { thoughtBubble: { text: "Okay, I'll separate a bit...", cloudId } }
+            reduceBlending: { cloudId, amount: 0.3 }
         };
     }
 
@@ -258,7 +245,7 @@ export class SimulatorController {
     private getSelfRecognitionResponse(cloudId: string): string {
         const isProtector = this.relationships.getProtecting(cloudId).size > 0;
         const specific = isProtector
-            ? ["I feel your gratitude.", "I feel your concern."]
+            ? ["I feel your beauty.", "I feel your concern."]
             : ["I feel your compassion.", "I feel your warmth."];
         const responses = [...specific, "I see a brilliant star."];
         return this.rng.cosmetic.pickRandom(responses);
@@ -678,14 +665,10 @@ export class SimulatorController {
     }
 
     private handleBacklash(protectorId: string, protecteeId: string): ControllerActionResult {
-        this.model.parts.adjustTrust(protecteeId, 0.5);
-        const currentNeedAttention = this.model.parts.getNeedAttention(protectorId);
-        this.model.parts.setNeedAttention(protectorId, currentNeedAttention + 1);
-        this.model.addBlendedPart(protectorId, 'spontaneous');
-        this.model.stepBackPart(protecteeId);
         return {
             success: true,
-            stateChanges: [`${protectorId} triggered backlash on ${protecteeId}`]
+            stateChanges: [`${protectorId} triggered backlash on ${protecteeId}`],
+            triggerBacklash: { protectorId, protecteeId }
         };
     }
 }

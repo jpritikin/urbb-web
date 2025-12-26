@@ -838,7 +838,9 @@ body.ifs-fullscreen main {
 }
 
 .scenario-selector h2 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0;
+  border-bottom: none;
   color: #6b4c8a;
   font-size: 1.5rem;
 }
@@ -950,4 +952,3 @@ body.ifs-fullscreen main {
 .dark .scenario-description {
   color: #aaa;
 }
-

@@ -46,8 +46,7 @@ function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Sce
     const selector = document.createElement('div');
     selector.className = 'scenario-selector';
     selector.innerHTML = `
-        <h2>🌟 Choose Your Journey</h2>
-        <p>Select a scenario to begin the IFS simulation</p>
+        <h2>Select your next client</h2>
         <div class="scenario-cards"></div>
     `;
 
