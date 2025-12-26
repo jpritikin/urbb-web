@@ -33,7 +33,7 @@ interface SupportingEntryState {
     duration: number;
 }
 
-export interface AnimationConfig {
+export interface TransitionAnimatorConfig {
     canvasWidth: number;
     canvasHeight: number;
     getCloudState: (cloudId: string) => CloudAnimatedState | undefined;
@@ -44,8 +44,8 @@ export interface AnimationConfig {
 
 const BLENDED_OPACITY = 0.7;
 
-export class AnimationManager {
-    private config: AnimationConfig;
+export class TransitionAnimator {
+    private config: TransitionAnimatorConfig;
     private spiralExits: Map<string, SpiralExitState> = new Map();
     private flyOutExits: Map<string, FlyOutExitState> = new Map();
     private delayedArrivals: Map<string, DelayedArrivalState> = new Map();
@@ -53,7 +53,7 @@ export class AnimationManager {
     private stretchAnimators: Map<string, StretchAnimator> = new Map();
     private blendedOffsets: Map<string, { x: number; y: number }> = new Map();
 
-    constructor(config: AnimationConfig) {
+    constructor(config: TransitionAnimatorConfig) {
         this.config = config;
     }
 

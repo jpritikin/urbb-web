@@ -20,6 +20,9 @@ import { formatActionLabel } from './actionFormatter.js';
 import { UIManager } from './uiManager.js';
 import { InputHandler } from './inputHandler.js';
 import { ActionEffectApplicator } from './actionEffectApplicator.js';
+import { FullscreenManager } from './fullscreenManager.js';
+import { AnimationLoop } from './animationLoop.js';
+import { MessageOrchestrator } from './messageOrchestrator.js';
 
 export { CloudType };
 export { TherapistAction, THERAPIST_ACTIONS };
@@ -43,9 +46,7 @@ export class CloudManager {
     private canvasHeight: number = 600;
     private panX: number = 0;
     private panY: number = 0;
-    private animating: boolean = false;
-    private animationFrameId: number | null = null;
-    private lastFrameTime: number = 0;
+    private animationLoop: AnimationLoop;
     private partitionCount: number = 8;
     private currentPartition: number = 0;
     private animatedStar: AnimatedStar | null = null;
@@ -54,6 +55,8 @@ export class CloudManager {
 
     private uiManager: UIManager | null = null;
     private inputHandler: InputHandler | null = null;
+    private fullscreenManager: FullscreenManager | null = null;
+    private messageOrchestrator: MessageOrchestrator | null = null;
 
     private physicsEngine: PhysicsEngine;
     private panoramaController: PanoramaController;
@@ -70,21 +73,14 @@ export class CloudManager {
     private resolvingClouds: Set<string> = new Set();
     private carpetRenderer: CarpetRenderer | null = null;
     private messageContainer: SVGGElement | null = null;
-    private messageCooldownTimers: Map<string, number> = new Map();
-    private blendStartTimers: Map<string, number> = new Map();
-    private pendingGrievanceTargets: Map<string, string> = new Map();
-    private genericDialogueCooldowns: Map<string, number> = new Map();
-    private readonly BLEND_MESSAGE_DELAY = 3;
-    private readonly GENERIC_DIALOGUE_INTERVAL = 8;
     private rng: DualRNG = createDualRNG();
     private recorder: ActionRecorder = new ActionRecorder();
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
     private insideAct: boolean = false;
-    private resizeDebounceTimer: number | null = null;
-    private fullscreenTransitioning: boolean = false;
 
     constructor() {
+        this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
         this.physicsEngine = new PhysicsEngine({
             torusMajorRadius: 200,
             torusMinorRadius: 80,
@@ -117,6 +113,7 @@ export class CloudManager {
     setRNG(rng: DualRNG): void {
         this.rng = rng;
         this.initController();
+        this.messageOrchestrator?.setRNG(rng);
     }
 
     getRNG(): DualRNG {
@@ -195,7 +192,19 @@ export class CloudManager {
         this.messageContainer = createGroup({ id: 'message-container' });
         this.uiGroup.appendChild(this.messageContainer);
         this.view.setMessageContainer(this.messageContainer);
-        this.view.setOnMessageReceived((message) => this.onMessageReceived(message));
+
+        this.messageOrchestrator = new MessageOrchestrator(
+            this.model,
+            this.view,
+            this.relationships,
+            this.rng,
+            {
+                act: (label, fn) => this.act(label, fn),
+                showThoughtBubble: (text, cloudId) => this.showThoughtBubble(text, cloudId),
+                getCloudById: (id) => this.getCloudById(id),
+            }
+        );
+        this.view.setOnMessageReceived((message) => this.messageOrchestrator!.onMessageReceived(message));
 
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container' });
         this.uiGroup.appendChild(thoughtBubbleContainer);
@@ -269,26 +278,36 @@ export class CloudManager {
         this.panX = this.canvasWidth / 2;
         this.panY = this.canvasHeight / 2;
         this.updateViewBox();
-        this.setupVisibilityHandling();
-        this.setupFullscreenHandling();
-    }
 
-    private setupVisibilityHandling(): void {
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (this.animating) {
-                    this.stopAnimation();
-                    this.animating = true;
-                }
-            } else {
-                if (this.animating) {
-                    this.lastFrameTime = performance.now();
-                    this.animate();
-                }
+        this.fullscreenManager = new FullscreenManager(
+            this.container,
+            this.svgElement,
+            this.originalCanvasWidth,
+            this.originalCanvasHeight,
+            {
+                onResize: (width, height) => this.handleResize(width, height),
+                getIsFullscreen: () => this.uiManager?.getIsFullscreen() ?? false,
+                setFullscreen: (value) => this.uiManager?.setFullscreen(value),
+                isMobile: () => this.uiManager?.isMobile() ?? false,
+                isLandscape: () => this.uiManager?.isLandscape() ?? false,
             }
-        });
+        );
+        this.fullscreenManager.setup();
+        this.animationLoop.setupVisibilityHandling();
     }
 
+    private handleResize(width: number, height: number): void {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+        this.panX = width / 2;
+        this.panY = height / 2;
+
+        this.view.setDimensions(width, height);
+        this.animatedStar?.setPosition(width / 2, height / 2);
+        this.carpetRenderer?.setDimensions(width, height);
+        this.uiManager?.updateDimensions(width, height);
+        this.updateViewBox();
+    }
 
     private createSelfStar(): void {
         if (!this.uiGroup) return;
@@ -315,152 +334,8 @@ export class CloudManager {
         });
     }
 
-    private setupFullscreenHandling(): void {
-        document.addEventListener('fullscreenchange', () => {
-            this.fullscreenTransitioning = true;
-            if (document.fullscreenElement) {
-                this.uiManager?.setFullscreen(true);
-                this.requestLandscapeOrientation();
-            } else {
-                this.uiManager?.setFullscreen(false);
-                this.unlockOrientation();
-            }
-            this.scheduleResize();
-        });
-
-        window.addEventListener('resize', () => {
-            if (this.fullscreenTransitioning || this.uiManager?.getIsFullscreen()) {
-                if (this.uiManager?.getIsFullscreen() && !this.uiManager.isLandscape() && this.uiManager.isMobile()) {
-                    this.exitFullscreen();
-                    return;
-                }
-                this.scheduleResize();
-            }
-        });
-    }
-
-    private scheduleResize(): void {
-        if (this.resizeDebounceTimer !== null) {
-            cancelAnimationFrame(this.resizeDebounceTimer);
-        }
-        this.resizeDebounceTimer = requestAnimationFrame(() => {
-            this.resizeDebounceTimer = requestAnimationFrame(() => {
-                this.resizeDebounceTimer = null;
-                this.fullscreenTransitioning = false;
-                if (this.uiManager?.getIsFullscreen()) {
-                    this.resizeCanvasToViewport();
-                } else {
-                    this.restoreCanvasSize();
-                }
-            });
-        });
-    }
-
-    private async toggleFullscreen(): Promise<void> {
-        if (this.uiManager?.getIsFullscreen()) {
-            await this.exitFullscreen();
-        } else {
-            await this.enterFullscreen();
-        }
-    }
-
-    private async enterFullscreen(): Promise<void> {
-        if (!this.container || !this.uiManager) return;
-
-        if (!this.uiManager.isLandscape() && this.uiManager.isMobile()) {
-            return;
-        }
-
-        try {
-            await this.container.requestFullscreen();
-            // enterFullscreenMode() will be called by fullscreenchange handler
-        } catch {
-            // Fallback for browsers without fullscreen API
-            this.enterFullscreenMode();
-        }
-    }
-
-    private enterFullscreenMode(): void {
-        this.uiManager?.setFullscreen(true);
-        this.requestLandscapeOrientation();
-        this.scheduleResize();
-    }
-
-    private async exitFullscreen(): Promise<void> {
-        if (document.fullscreenElement) {
-            await document.exitFullscreen();
-        } else {
-            this.exitFullscreenMode();
-        }
-    }
-
-    private exitFullscreenMode(): void {
-        this.uiManager?.setFullscreen(false);
-        this.unlockOrientation();
-        this.scheduleResize();
-    }
-
-    private requestLandscapeOrientation(): void {
-        const screen = window.screen as Screen & {
-            orientation?: { lock?: (orientation: string) => Promise<void> };
-        };
-        screen.orientation?.lock?.('landscape').catch(() => {});
-    }
-
-    private unlockOrientation(): void {
-        const screen = window.screen as Screen & {
-            orientation?: { unlock?: () => void };
-        };
-        try { screen.orientation?.unlock?.(); } catch {}
-    }
-
-    private resizeCanvasToViewport(): void {
-        if (!this.svgElement || !this.container) return;
-
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-
-        this.canvasWidth = width;
-        this.canvasHeight = height;
-
-        this.svgElement.setAttribute('width', String(width));
-        this.svgElement.setAttribute('height', String(height));
-        this.svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-        this.view.setDimensions(width, height);
-        this.panX = width / 2;
-        this.panY = height / 2;
-
-        if (this.animatedStar) {
-            this.animatedStar.setPosition(width / 2, height / 2);
-        }
-
-        this.carpetRenderer?.setDimensions(width, height);
-        this.uiManager?.updateDimensions(width, height);
-        this.updateViewBox();
-    }
-
-    private restoreCanvasSize(): void {
-        if (!this.svgElement) return;
-
-        this.canvasWidth = this.originalCanvasWidth;
-        this.canvasHeight = this.originalCanvasHeight;
-
-        this.svgElement.setAttribute('width', String(this.originalCanvasWidth));
-        this.svgElement.setAttribute('height', String(this.originalCanvasHeight));
-        this.svgElement.setAttribute('viewBox', `0 0 ${this.originalCanvasWidth} ${this.originalCanvasHeight}`);
-
-        this.view.setDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
-        this.panX = this.originalCanvasWidth / 2;
-        this.panY = this.originalCanvasHeight / 2;
-
-        if (this.animatedStar) {
-            this.animatedStar.setPosition(this.originalCanvasWidth / 2, this.originalCanvasHeight / 2);
-        }
-
-        this.carpetRenderer?.setDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
-        this.uiManager?.updateDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
-        this.updateViewBox();
+    private toggleFullscreen(): void {
+        this.fullscreenManager?.toggle();
     }
 
     isPieMenuOpen(): boolean {
@@ -472,13 +347,11 @@ export class CloudManager {
     }
 
     private toggleAnimationPause(): void {
-        if (this.animating) {
-            this.stopAnimation();
+        if (this.animationLoop.isRunning()) {
+            this.animationLoop.stop();
             this.uiManager?.setAnimationPaused(true);
         } else {
-            this.animating = true;
-            this.lastFrameTime = performance.now();
-            this.animate();
+            this.animationLoop.start();
             this.uiManager?.setAnimationPaused(false);
         }
     }
@@ -712,7 +585,7 @@ export class CloudManager {
     }
 
     startAnimation(): void {
-        if (this.animating) return;
+        if (this.animationLoop.isRunning()) return;
 
         const panoramaPositions = new Map<string, { x: number; y: number; scale: number }>();
         for (const instance of this.instances) {
@@ -725,26 +598,14 @@ export class CloudManager {
         }
         this.view.initializeViewStates(this.instances, panoramaPositions);
 
-        this.animating = true;
-        this.lastFrameTime = performance.now();
-        this.animate();
+        this.animationLoop.start();
 
-        window.stopAnimations = () => this.stopAnimation();
-        window.resumeAnimations = () => {
-            if (!this.animating) {
-                this.animating = true;
-                this.lastFrameTime = performance.now();
-                this.animate();
-            }
-        };
+        window.stopAnimations = () => this.animationLoop.stop();
+        window.resumeAnimations = () => this.animationLoop.start();
     }
 
     stopAnimation(): void {
-        this.animating = false;
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
+        this.animationLoop.stop();
     }
 
     private handlePanoramaSelect(cloud: Cloud): void {
@@ -965,19 +826,7 @@ export class CloudManager {
         this.pieMenuController?.hide();
     }
 
-    private animate(): void {
-        if (!this.animating) return;
-
-        if (document.hidden) {
-            this.lastFrameTime = performance.now();
-            this.animationFrameId = requestAnimationFrame(() => this.animate());
-            return;
-        }
-
-        const currentTime = performance.now();
-        const deltaTime = Math.min((currentTime - this.lastFrameTime) / 1000, 0.1);
-        this.lastFrameTime = currentTime;
-
+    private animate(deltaTime: number): void {
         this.view.animate(deltaTime);
         this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
@@ -1029,10 +878,10 @@ export class CloudManager {
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
             }
-            this.updateMessageTimers(deltaTime);
+            this.messageOrchestrator?.updateTimers(deltaTime);
             if (!isTransitioning && !this.isPieMenuOpen()) {
-                this.checkAndSendGrievanceMessages();
-                this.checkAndShowGenericDialogues(deltaTime);
+                this.messageOrchestrator?.checkAndSendGrievanceMessages();
+                this.messageOrchestrator?.checkAndShowGenericDialogues(deltaTime);
                 this.checkBlendedPartsAttention();
             }
             this.view.animateMessages(deltaTime);
@@ -1104,7 +953,6 @@ export class CloudManager {
             }
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
 
     private updateStarScale(): void {
@@ -1175,36 +1023,6 @@ export class CloudManager {
         }
     }
 
-    private sendMessage(senderId: string, targetId: string, text: string, type: 'grievance'): void {
-        const senderState = this.view.getCloudState(senderId);
-        const targetState = this.view.getCloudState(targetId);
-        if (!senderState || !targetState) return;
-
-        const senderName = this.model.parts.getPartName(senderId);
-        const targetName = this.model.parts.getPartName(targetId);
-        const actionLabel = senderId === targetId
-            ? `${senderName} spirals in self-grievance`
-            : `${senderName} sends grievance to ${targetName}`;
-        let message: PartMessage | null = null;
-        this.act(actionLabel, () => {
-            message = this.model.sendMessage(senderId, targetId, text, type);
-        });
-        if (message) {
-            this.view.startMessage(message, senderId, targetId);
-        }
-    }
-
-    private onMessageReceived(message: PartMessage): void {
-        if (message.type === 'grievance') {
-            this.model.parts.adjustTrust(message.targetId, 0.99);
-            this.model.parts.adjustNeedAttention(message.senderId, 0.8);
-            if (message.senderId !== message.targetId) {
-                this.model.parts.setAttacked(message.targetId);
-            }
-        }
-        this.model.removeMessage(message.id);
-    }
-
     private checkBlendedPartsAttention(): void {
         const blendedParts = this.model.getBlendedParts();
         for (const cloudId of blendedParts) {
@@ -1239,127 +1057,5 @@ export class CloudManager {
 
     private increaseGrievanceNeedAttention(deltaTime: number): void {
         this.model.increaseGrievanceNeedAttention(this.relationships, deltaTime);
-    }
-
-    private updateMessageTimers(deltaTime: number): void {
-        // Update cooldown timers
-        for (const [key, time] of this.messageCooldownTimers) {
-            this.messageCooldownTimers.set(key, time + deltaTime);
-        }
-        // Update blend start timers
-        for (const [key, time] of this.blendStartTimers) {
-            this.blendStartTimers.set(key, time + deltaTime);
-        }
-    }
-
-    private checkAndSendGrievanceMessages(): void {
-        // Don't send messages while spiral exits are active or parts are awaiting arrival
-        if (this.view.hasActiveSpiralExits()) return;
-
-        const blendedParts = this.model.getBlendedParts();
-        const targetIds = this.model.getTargetCloudIds();
-
-        // Track new blends and clean up old blend timers
-        for (const blendedId of blendedParts) {
-            if (!this.blendStartTimers.has(blendedId)) {
-                this.blendStartTimers.set(blendedId, 0);
-            }
-        }
-        for (const blendedId of this.blendStartTimers.keys()) {
-            if (!blendedParts.includes(blendedId)) {
-                this.blendStartTimers.delete(blendedId);
-            }
-        }
-
-        for (const blendedId of blendedParts) {
-            const blendedCloud = this.getCloudById(blendedId);
-            if (!blendedCloud) continue;
-
-            // Don't send messages from parts that have revealed their unburdened job
-            if (this.model.parts.isUnburdenedJobRevealed(blendedId)) continue;
-
-            // Don't send messages from parts that haven't visually arrived yet
-            if (this.view.isAwaitingArrival(blendedId)) continue;
-
-            const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
-            if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
-
-            const grievanceTargets = this.relationships.getGrievanceTargets(blendedId);
-            if (grievanceTargets.size === 0) continue;
-
-            // Single cooldown timer per blended part
-            const timeSinceSent = this.messageCooldownTimers.get(blendedId) ?? 10;
-            if (timeSinceSent < 3) continue;
-
-            // Check if there's a pending target from a previous summon
-            let grievanceTargetId = this.pendingGrievanceTargets.get(blendedId);
-
-            if (!grievanceTargetId) {
-                if (timeSinceSent < 10) continue;
-                // Pick a random target from all grievance targets
-                const grievanceTargetArray = Array.from(grievanceTargets);
-                grievanceTargetId = this.rng.model.pickRandom(grievanceTargetArray, 'grievance_target');
-            }
-
-            const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
-            if (dialogues.length === 0) continue;
-
-            // If target is not in conference yet, summon them (unless it's a self-grievance)
-            if (!targetIds.has(grievanceTargetId) && grievanceTargetId !== blendedId) {
-                const blenderName = this.model.parts.getPartName(blendedId);
-                const targetName = this.model.parts.getPartName(grievanceTargetId);
-                this.act(`${blenderName} summons ${targetName}`, () => {
-                    this.model.addTargetCloud(grievanceTargetId);
-                });
-                this.pendingGrievanceTargets.set(blendedId, grievanceTargetId);
-                this.messageCooldownTimers.set(blendedId, 0);
-                continue;
-            }
-
-            // Don't send messages to parts that haven't visually arrived yet
-            if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
-
-            const text = this.rng.cosmetic.pickRandom(dialogues);
-            this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
-            this.messageCooldownTimers.set(blendedId, 0);
-            // Clear the pending target since we just sent the message
-            this.pendingGrievanceTargets.delete(blendedId);
-        }
-    }
-
-    private checkAndShowGenericDialogues(deltaTime: number): void {
-        if (this.view.hasActiveSpiralExits()) return;
-
-        const blendedParts = this.model.getBlendedParts();
-
-        for (const blendedId of this.genericDialogueCooldowns.keys()) {
-            if (!blendedParts.includes(blendedId)) {
-                this.genericDialogueCooldowns.delete(blendedId);
-            }
-        }
-
-        for (const blendedId of blendedParts) {
-            if (this.view.isAwaitingArrival(blendedId)) continue;
-
-            const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
-            if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
-
-            const hasGrievances = this.relationships.getGrievanceTargets(blendedId).size > 0;
-            if (hasGrievances) continue;
-
-            const dialogues = this.model.parts.getDialogues(blendedId)?.genericBlendedDialogues;
-            if (!dialogues || dialogues.length === 0) continue;
-
-            const cooldown = this.genericDialogueCooldowns.get(blendedId) ?? this.GENERIC_DIALOGUE_INTERVAL;
-            const newCooldown = cooldown + deltaTime;
-            this.genericDialogueCooldowns.set(blendedId, newCooldown);
-
-            if (newCooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
-                const text = this.rng.cosmetic.pickRandom(dialogues);
-                this.showThoughtBubble(text, blendedId);
-                this.genericDialogueCooldowns.set(blendedId, 0);
-                break;
-            }
-        }
     }
 }
