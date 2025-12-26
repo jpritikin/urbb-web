@@ -36,7 +36,7 @@ export class SelfRay {
     private clipPath: SVGClipPathElement | null = null;
     private sparkles: Sparkle[] = [];
     private sparkleGroup: SVGGElement | null = null;
-    private animationFrameId: number | null = null;
+    private timeSincePositionUpdate: number = 0;
     private hovered: boolean = false;
     private config: SelfRayConfig;
     private onClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
@@ -101,7 +101,6 @@ export class SelfRay {
         this.sparkleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.group.appendChild(this.sparkleGroup);
         this.initSparkles();
-        this.startSparkleAnimation();
 
         this.hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         this.hitArea.setAttribute('fill', 'transparent');
@@ -318,36 +317,22 @@ export class SelfRay {
         }
     }
 
-    private startSparkleAnimation(): void {
-        let lastUpdate = 0;
-        const updateInterval = 100;
-
-        const animate = (timestamp: number) => {
-            for (const sparkle of this.sparkles) {
-                sparkle.progress += sparkle.speed;
-                if (sparkle.progress > 1) {
-                    sparkle.progress = 0;
-                    sparkle.offsetRatio = (Math.random() - 0.5) * 2;
-                }
+    animate(deltaTime: number): void {
+        for (const sparkle of this.sparkles) {
+            sparkle.progress += sparkle.speed * deltaTime;
+            if (sparkle.progress > 1) {
+                sparkle.progress = 0;
+                sparkle.offsetRatio = (Math.random() - 0.5) * 2;
             }
-            if (timestamp - lastUpdate >= updateInterval) {
-                this.updateSparklePositions();
-                lastUpdate = timestamp;
-            }
-            this.animationFrameId = requestAnimationFrame(animate);
-        };
-        this.animationFrameId = requestAnimationFrame(animate);
-    }
-
-    private stopSparkleAnimation(): void {
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+        }
+        this.timeSincePositionUpdate += deltaTime;
+        if (this.timeSincePositionUpdate >= 100) {
+            this.updateSparklePositions();
+            this.timeSincePositionUpdate = 0;
         }
     }
 
     remove(): void {
-        this.stopSparkleAnimation();
         if (this.group && this.group.parentNode) {
             this.group.style.transition = 'opacity 0.3s ease-out';
             this.group.style.opacity = '0';

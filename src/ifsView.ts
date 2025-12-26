@@ -488,6 +488,10 @@ export class SimulatorView {
         }
     }
 
+    animateSelfRay(deltaTime: number): void {
+        this.selfRay?.animate(deltaTime);
+    }
+
     private updateCloudStateTargets(model: SimulatorModel, instances: CloudInstance[]): void {
         const targetIds = model.getTargetCloudIds();
         const blendedParts = model.getBlendedParts();

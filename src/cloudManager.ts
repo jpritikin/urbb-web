@@ -1014,6 +1014,7 @@ export class CloudManager {
         if (mode === 'foreground') {
             this.updateThoughtBubbles();
             this.view.updateSelfRayPosition();
+            this.view.animateSelfRay(deltaTime);
             this.view.animateStretchEffects(deltaTime);
             this.view.animateSpiralExits();
             this.view.animateFlyOutExits();
