@@ -155,10 +155,10 @@ export class PieMenuController {
         const isBlended = model.isBlended(cloudId);
         const isSupporting = model.getAllSupportingParts().has(cloudId);
         const proxyAsTargetId = this.getProxyAsTarget(cloudId);
-        const proxyRevealed = proxyAsTargetId && model.isIdentityRevealed(proxyAsTargetId);
+        const proxyRevealed = proxyAsTargetId && model.parts.isIdentityRevealed(proxyAsTargetId);
         const targetIds = model.getTargetCloudIds();
         const proxies = relationships.getProxies(cloudId);
-        const hasRevealedProxy = Array.from(proxies).some(id => model.isIdentityRevealed(id));
+        const hasRevealedProxy = Array.from(proxies).some(id => model.parts.isIdentityRevealed(id));
         const noBlendedParts = model.getBlendedParts().length === 0;
         const isSoleTargetWithRevealedProxy = isTarget && targetIds.size === 1 && hasRevealedProxy && noBlendedParts;
         const blendReason = model.getBlendReason(cloudId);
@@ -187,13 +187,13 @@ export class PieMenuController {
                 include = isTarget && !isBlended;
             } else if (action.id === 'help_protected') {
                 const protectedIds = relationships.getProtecting(cloudId);
-                include = isTarget && protectedIds.size > 0 && model.isIdentityRevealed(cloudId);
+                include = isTarget && protectedIds.size > 0 && model.parts.isIdentityRevealed(cloudId);
             } else if (action.id === 'notice_part') {
                 const protectedIds = relationships.getProtecting(cloudId);
                 const hasFullyTrustingProtectee = Array.from(protectedIds).some(
-                    protectedId => model.getTrust(protectedId) >= 1
+                    protectedId => model.parts.getTrust(protectedId) >= 1
                 );
-                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.isUnburdenedJobRevealed(cloudId);
+                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.parts.isUnburdenedJobRevealed(cloudId);
             } else {
                 include = isTarget;
             }

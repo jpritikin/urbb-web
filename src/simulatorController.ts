@@ -128,8 +128,8 @@ export class SimulatorController {
     }
 
     private handleStepBack(cloudId: string): ControllerActionResult {
-        if (this.model.wasProxy(cloudId)) {
-            this.model.adjustTrust(cloudId, 0.98);
+        if (this.model.parts.wasProxy(cloudId)) {
+            this.model.parts.adjustTrust(cloudId, 0.98);
             return {
                 success: true,
                 stateChanges: [`${cloudId} wanted to watch`],
@@ -167,8 +167,8 @@ export class SimulatorController {
     }
 
     private getJobResponse(cloudId: string): string {
-        if (this.model.isUnburdenedJobRevealed(cloudId)) {
-            const unburdenedJob = this.model.getDialogues(cloudId)?.unburdenedJob;
+        if (this.model.parts.isUnburdenedJobRevealed(cloudId)) {
+            const unburdenedJob = this.model.parts.getDialogues(cloudId)?.unburdenedJob;
             if (!unburdenedJob) {
                 throw new Error(`Part ${cloudId} has unburdenedJobRevealed but no unburdenedJob dialogue`);
             }
@@ -181,21 +181,21 @@ export class SimulatorController {
         }
         const protectedId = Array.from(protectedIds)[0];
         const protectedName = this.getPartName(protectedId);
-        this.model.revealIdentity(cloudId);
-        this.model.revealIdentity(protectedId);
+        this.model.parts.revealIdentity(cloudId);
+        this.model.parts.revealIdentity(protectedId);
         this.model.summonSupportingPart(cloudId, protectedId);
 
         return `I protect the ${protectedName} one.`;
     }
 
     private handleJob(cloudId: string, isBlended: boolean): ControllerActionResult {
-        if (this.model.isIdentityRevealed(cloudId) && !this.model.isUnburdenedJobRevealed(cloudId)) {
+        if (this.model.parts.isIdentityRevealed(cloudId) && !this.model.parts.isUnburdenedJobRevealed(cloudId)) {
             const protectedIds = this.relationships.getProtecting(cloudId);
             const protecteeInConference = Array.from(protectedIds).some(
                 id => this.model.isTarget(id) || this.model.isBlended(id) || this.model.getAllSupportingParts().has(id)
             );
             if (protectedIds.size === 0 || protecteeInConference) {
-                this.model.adjustTrust(cloudId, 0.95);
+                this.model.parts.adjustTrust(cloudId, 0.95);
                 return {
                     success: true,
                     stateChanges: [`${cloudId} already answered`],
@@ -226,7 +226,7 @@ export class SimulatorController {
             return { success: false, message: 'Not a protector', stateChanges: [] };
         }
 
-        const trust = this.model.getTrust(cloudId);
+        const trust = this.model.parts.getTrust(cloudId);
         const willing = trust >= this.rng.model.random('help_protected:willing');
         const partName = this.getPartName(cloudId);
 
@@ -243,7 +243,7 @@ export class SimulatorController {
             };
         }
 
-        this.model.setConsentedToHelp(cloudId);
+        this.model.parts.setConsentedToHelp(cloudId);
         return {
             success: true,
             message: 'Consented',
@@ -272,8 +272,8 @@ export class SimulatorController {
             const topBlendedId = topBlended[0];
             const partName = this.getPartName(topBlendedId);
 
-            if (!this.model.isIdentityRevealed(topBlendedId)) {
-                this.model.revealIdentity(topBlendedId);
+            if (!this.model.parts.isIdentityRevealed(topBlendedId)) {
+                this.model.parts.revealIdentity(topBlendedId);
                 return {
                     success: true,
                     stateChanges: [`${topBlendedId} identity revealed`],
@@ -322,7 +322,7 @@ export class SimulatorController {
         const proxyName = this.getPartName(proxyId);
 
         this.model.addBlendedPart(proxyId, 'therapist');
-        this.model.revealIdentity(proxyId);
+        this.model.parts.revealIdentity(proxyId);
 
         return {
             success: true,
@@ -345,7 +345,7 @@ export class SimulatorController {
                     blendedResponses.push({ cloudId: blendedId, response: this.rng.cosmetic.pickRandom(dialogues) });
                 }
             } else {
-                const dialogues = this.model.getDialogues(blendedId).genericBlendedDialogues;
+                const dialogues = this.model.parts.getDialogues(blendedId).genericBlendedDialogues;
                 if (dialogues && dialogues.length > 0) {
                     blendedResponses.push({ cloudId: blendedId, response: this.rng.cosmetic.pickRandom(dialogues) });
                 }
@@ -355,7 +355,7 @@ export class SimulatorController {
         for (const grievanceId of grievanceTargets) {
             const isPending = this.model.isPendingBlend(grievanceId);
             if (!targetIds.has(grievanceId) && !blendedParts.includes(grievanceId) && !isPending) {
-                if (this.model.getTrust(grievanceId) < 0.5) {
+                if (this.model.parts.getTrust(grievanceId) < 0.5) {
                     this.model.enqueuePendingBlend(grievanceId, 'therapist');
                     stateChanges.push(`${grievanceId} pending blend`);
                 }
@@ -363,7 +363,7 @@ export class SimulatorController {
         }
 
         const hasPendingBlends = this.model.peekPendingBlend() !== null;
-        this.model.revealRelationships(cloudId);
+        this.model.parts.revealRelationships(cloudId);
         stateChanges.push(`${cloudId} relationships revealed`);
 
         if (blendedParts.length === 0 && !hasPendingBlends) {
@@ -375,7 +375,7 @@ export class SimulatorController {
         }
 
         if (blendedResponses.length > 0) {
-            this.model.adjustTrust(cloudId, 0.9);
+            this.model.parts.adjustTrust(cloudId, 0.9);
             return {
                 success: true,
                 stateChanges,
@@ -398,7 +398,7 @@ export class SimulatorController {
             };
         }
 
-        const targetTrust = this.model.getTrust(targetCloudId);
+        const targetTrust = this.model.parts.getTrust(targetCloudId);
         if (targetTrust < 1) {
             return {
                 success: false,
@@ -408,10 +408,10 @@ export class SimulatorController {
         }
 
         const targetName = this.getPartName(targetCloudId);
-        this.model.revealUnburdenedJob(protectorId);
-        this.model.setNeedAttention(protectorId, 0);
+        this.model.parts.revealUnburdenedJob(protectorId);
+        this.model.parts.setNeedAttention(protectorId, 0);
 
-        const unburdenedJob = this.model.getDialogues(protectorId)?.unburdenedJob;
+        const unburdenedJob = this.model.parts.getDialogues(protectorId)?.unburdenedJob;
         const response = unburdenedJob
             ? `I see that ${targetName} is okay now. ${unburdenedJob}`
             : `I see that ${targetName} is okay now. I don't need to protect them anymore.`;
@@ -429,8 +429,8 @@ export class SimulatorController {
             return { success: false, message: 'Part not found', stateChanges: [] };
         }
 
-        if (this.model.isFieldRevealed(cloudId, field)) {
-            this.model.adjustTrust(cloudId, 0.98);
+        if (this.model.parts.isFieldRevealed(cloudId, field)) {
+            this.model.parts.adjustTrust(cloudId, 0.98);
             return {
                 success: true,
                 stateChanges: [],
@@ -455,7 +455,7 @@ export class SimulatorController {
         }
 
         const trustGainingFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
-        if (this.model.isAttacked(cloudId) && this.model.isTrustAtCeiling(cloudId) && trustGainingFields.includes(field)) {
+        if (this.model.parts.isAttacked(cloudId) && this.model.parts.isTrustAtCeiling(cloudId) && trustGainingFields.includes(field)) {
             return {
                 success: true,
                 stateChanges: [],
@@ -472,7 +472,7 @@ export class SimulatorController {
                 const isProtector = this.relationships.getProtecting(cloudId).size > 0;
                 if (field === 'compassion' && isProtector) {
                     response = partState.dialogues.compassionResponse ?? "That means a lot to me.";
-                    this.model.addTrust(cloudId, 0.25);
+                    this.model.parts.addTrust(cloudId, 0.25);
                 } else {
                     const result = this.handleWhatNeedToKnowInternal(cloudId);
                     if (result.triggerBacklash) {
@@ -497,17 +497,17 @@ export class SimulatorController {
                         "I've been working so hard for so long. Thank you for noticing.",
                     ];
                     response = this.rng.cosmetic.pickRandom(gratitudeResponses);
-                    this.model.addTrust(cloudId, 0.25);
+                    this.model.parts.addTrust(cloudId, 0.25);
                 } else {
                     response = "Gratitude? For what?";
-                    this.model.adjustTrust(cloudId, 0.95);
+                    this.model.parts.adjustTrust(cloudId, 0.95);
                 }
                 break;
             }
 
             case 'job':
                 response = this.getJobResponse(cloudId);
-                this.model.addTrust(cloudId, 0.25);
+                this.model.parts.addTrust(cloudId, 0.25);
                 break;
 
             case 'jobAppraisal':
@@ -524,12 +524,12 @@ export class SimulatorController {
 
             case 'age':
                 response = this.revealAge(cloudId);
-                this.model.addTrust(cloudId, 0.25);
+                this.model.parts.addTrust(cloudId, 0.25);
                 break;
 
             case 'identity':
                 response = this.revealIdentity(cloudId);
-                this.model.addTrust(cloudId, 0.25);
+                this.model.parts.addTrust(cloudId, 0.25);
                 break;
 
             default:
@@ -549,7 +549,7 @@ export class SimulatorController {
     }
 
     private revealAge(cloudId: string): string {
-        this.model.revealAge(cloudId);
+        this.model.parts.revealAge(cloudId);
         const age = this.model.getPartState(cloudId)?.biography.partAge;
         if (typeof age === 'number') {
             return `I'm ${age} years old.`;
@@ -560,7 +560,7 @@ export class SimulatorController {
     }
 
     private revealIdentity(cloudId: string): string {
-        this.model.revealIdentity(cloudId);
+        this.model.parts.revealIdentity(cloudId);
         return `I'm the ${this.getPartName(cloudId)}.`;
     }
 
@@ -569,24 +569,24 @@ export class SimulatorController {
         const protectorIds = this.relationships.getProtectedBy(cloudId);
 
         for (const protectorId of protectorIds) {
-            if (!this.model.hasConsentedToHelp(protectorId)) {
-                const protectorTrust = this.model.getTrust(protectorId);
+            if (!this.model.parts.hasConsentedToHelp(protectorId)) {
+                const protectorTrust = this.model.parts.getTrust(protectorId);
                 const newProtectorTrust = protectorTrust - trustGain;
                 if (newProtectorTrust < this.rng.model.random('whatNeedToKnow:backlash_check')) {
-                    this.model.setTrust(protectorId, 0);
+                    this.model.parts.setTrust(protectorId, 0);
                     return {
                         response: '',
                         triggerBacklash: { protectorId, protecteeId: cloudId }
                     };
                 } else {
-                    this.model.setTrust(protectorId, newProtectorTrust);
+                    this.model.parts.setTrust(protectorId, newProtectorTrust);
                 }
             }
         }
 
-        const trust = this.model.getTrust(cloudId);
+        const trust = this.model.parts.getTrust(cloudId);
         if (trust < 1) {
-            this.model.addTrust(cloudId, trustGain);
+            this.model.parts.addTrust(cloudId, trustGain);
             return { response: "Blah blah blah." };
         }
 
@@ -597,19 +597,19 @@ export class SimulatorController {
         const partState = this.model.getPartState(cloudId);
         if (!partState) return "...";
 
-        if (!this.model.isIdentityRevealed(cloudId)) {
-            this.model.adjustTrust(cloudId, 0.95);
+        if (!this.model.parts.isIdentityRevealed(cloudId)) {
+            this.model.parts.adjustTrust(cloudId, 0.95);
             return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
         }
 
         const dialogues = partState.dialogues.burdenedJobAppraisal;
         if (!dialogues || dialogues.length === 0) {
-            this.model.adjustTrust(cloudId, 0.95);
+            this.model.parts.adjustTrust(cloudId, 0.95);
             return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
         }
 
-        this.model.revealJobAppraisal(cloudId);
-        this.model.addTrust(cloudId, 0.25);
+        this.model.parts.revealJobAppraisal(cloudId);
+        this.model.parts.addTrust(cloudId, 0.25);
         return this.rng.cosmetic.pickRandom(dialogues);
     }
 
@@ -617,39 +617,39 @@ export class SimulatorController {
         const partState = this.model.getPartState(cloudId);
         if (!partState) return "...";
 
-        if (!this.model.isIdentityRevealed(cloudId)) {
-            this.model.adjustTrust(cloudId, 0.95);
+        if (!this.model.parts.isIdentityRevealed(cloudId)) {
+            this.model.parts.adjustTrust(cloudId, 0.95);
             return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
         }
 
         const dialogues = partState.dialogues.burdenedJobImpact;
         if (!dialogues || dialogues.length === 0) {
-            this.model.adjustTrust(cloudId, 0.95);
+            this.model.parts.adjustTrust(cloudId, 0.95);
             return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
         }
 
-        this.model.revealJobImpact(cloudId);
-        this.model.addTrust(cloudId, 0.25);
+        this.model.parts.revealJobImpact(cloudId);
+        this.model.parts.addTrust(cloudId, 0.25);
         return this.rng.cosmetic.pickRandom(dialogues);
     }
 
     private handleApologizeInternal(cloudId: string): string {
-        if (!this.model.isAttacked(cloudId)) {
+        if (!this.model.parts.isAttacked(cloudId)) {
             return "What are you apologizing for?";
         }
 
         const grievanceSenders = this.relationships.getGrievanceSenders(cloudId);
         const hasUnburdenedAttacker = Array.from(grievanceSenders).some(
-            senderId => this.model.isUnburdenedJobRevealed(senderId)
+            senderId => this.model.parts.isUnburdenedJobRevealed(senderId)
         );
         if (!hasUnburdenedAttacker) {
-            this.model.adjustTrust(cloudId, 0.95);
+            this.model.parts.adjustTrust(cloudId, 0.95);
             return "The ones who attacked me are still burdened. How can I trust you?";
         }
 
-        const trust = this.model.getTrust(cloudId);
+        const trust = this.model.parts.getTrust(cloudId);
         if (trust < 0.5 || this.rng.model.random('apologize:accept') > trust) {
-            this.model.adjustTrust(cloudId, 0.9);
+            this.model.parts.adjustTrust(cloudId, 0.9);
             const rejections = [
                 "It's going to take more than that.",
                 "Words are easy. Show me you mean it.",
@@ -658,8 +658,8 @@ export class SimulatorController {
             return this.rng.cosmetic.pickRandom(rejections);
         }
 
-        this.model.clearAttacked(cloudId);
-        this.model.addTrust(cloudId, 0.2);
+        this.model.parts.clearAttacked(cloudId);
+        this.model.parts.addTrust(cloudId, 0.2);
         const acceptances = [
             "Thank you. I appreciate that.",
             "I can tell you mean it. Thank you.",
@@ -669,7 +669,7 @@ export class SimulatorController {
     }
 
     private handleSpontaneousBlend(cloudId: string): ControllerActionResult {
-        this.model.setNeedAttention(cloudId, 0.95);
+        this.model.parts.setNeedAttention(cloudId, 0.95);
         this.model.partDemandsAttention(cloudId);
         return {
             success: true,
@@ -678,9 +678,9 @@ export class SimulatorController {
     }
 
     private handleBacklash(protectorId: string, protecteeId: string): ControllerActionResult {
-        this.model.adjustTrust(protecteeId, 0.5);
-        const currentNeedAttention = this.model.getNeedAttention(protectorId);
-        this.model.setNeedAttention(protectorId, currentNeedAttention + 1);
+        this.model.parts.adjustTrust(protecteeId, 0.5);
+        const currentNeedAttention = this.model.parts.getNeedAttention(protectorId);
+        this.model.parts.setNeedAttention(protectorId, currentNeedAttention + 1);
         this.model.addBlendedPart(protectorId, 'spontaneous');
         this.model.stepBackPart(protecteeId);
         return {

@@ -42,6 +42,7 @@ export interface ViewStateSnapshot {
 export interface RecordedSession {
     version: 1;
     codeVersion: string;
+    platform: 'desktop' | 'mobile';
     modelSeed: number;
     timestamp: number;
     initialModel: SerializedModel;

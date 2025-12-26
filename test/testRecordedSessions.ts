@@ -26,6 +26,7 @@ interface SessionSpec {
 const SESSIONS: SessionSpec[] = [
     { path: 'test/scenarios/innerCriticSession.json', name: 'Inner Critic', parts: 2, actions: 22 },
     { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy', parts: 4, actions: 57 },
+    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash', parts: 2, actions: 20 },
 ];
 
 let results: TestResult[] = [];

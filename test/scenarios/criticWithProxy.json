@@ -1,6 +1,7 @@
 {
   "version": 1,
   "codeVersion": "v3.36.0",
+  "platform": "desktop",
   "modelSeed": 1063746377,
   "timestamp": 1766711185340,
   "initialModel": {

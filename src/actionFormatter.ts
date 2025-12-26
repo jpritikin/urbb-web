@@ -1,6 +1,7 @@
 import type { RecordedAction } from './testability/types.js';
 
 const KNOWN_ACTIONS = new Set([
+    'select_a_target',
     'join_conference',
     'step_back',
     'separate',
@@ -39,6 +40,9 @@ export function formatActionLabel(
     const targetName = action.targetCloudId ? getPartName(action.targetCloudId) : undefined;
 
     switch (action.action) {
+        case 'select_a_target':
+            return `Select: ${name}`;
+
         case 'join_conference':
             return `Click: ${name}`;
 

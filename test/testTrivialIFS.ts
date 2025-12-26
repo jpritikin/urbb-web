@@ -26,10 +26,10 @@ function runAllTrivialIFSTests(): void {
         ]);
 
         const model = sim.getModel();
-        test('Part registration - protector trust', model.getTrust('protector') === 0.8,
-             `expected 0.8 got ${model.getTrust('protector')}`);
-        test('Part registration - exile trust', model.getTrust('exile') === 0.3,
-             `expected 0.3 got ${model.getTrust('exile')}`);
+        test('Part registration - protector trust', model.parts.getTrust('protector') === 0.8,
+             `expected 0.8 got ${model.parts.getTrust('protector')}`);
+        test('Part registration - exile trust', model.parts.getTrust('exile') === 0.3,
+             `expected 0.3 got ${model.parts.getTrust('exile')}`);
     }
 
     // Relationship setup
@@ -107,9 +107,9 @@ function runAllTrivialIFSTests(): void {
             grievances: [{ cloudId: 'aggrieved', targetIds: 'target', dialogues: 'I hate target' }],
         });
 
-        const initialNeed = sim.getModel().getNeedAttention('aggrieved');
+        const initialNeed = sim.getModel().parts.getNeedAttention('aggrieved');
         sim.advanceTime(10); // 10 seconds
-        const afterNeed = sim.getModel().getNeedAttention('aggrieved');
+        const afterNeed = sim.getModel().parts.getNeedAttention('aggrieved');
 
         test('Time advance - needAttention increases', afterNeed > initialNeed,
              `expected ${afterNeed} > ${initialNeed}`);

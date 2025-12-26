@@ -7,6 +7,7 @@ export class ActionRecorder {
     private initialRelationships: SerializedRelationships | null = null;
     private modelSeed: number = 0;
     private codeVersion: string = '';
+    private platform: 'desktop' | 'mobile' = 'desktop';
     private startTimestamp: number = 0;
     private lastActionTime: number = 0;
     private rng: DualRNG | null = null;
@@ -16,6 +17,7 @@ export class ActionRecorder {
         initialModel: SerializedModel,
         initialRelationships: SerializedRelationships,
         codeVersion: string,
+        platform: 'desktop' | 'mobile',
         modelRng?: SeededRNG,
         rng?: DualRNG
     ): void {
@@ -23,6 +25,7 @@ export class ActionRecorder {
         this.initialModel = initialModel;
         this.initialRelationships = initialRelationships;
         this.codeVersion = codeVersion;
+        this.platform = platform;
         this.modelSeed = modelRng?.getInitialSeed() ?? 0;
         this.startTimestamp = Date.now();
         this.lastActionTime = performance.now();
@@ -58,6 +61,7 @@ export class ActionRecorder {
         return {
             version: 1,
             codeVersion: this.codeVersion,
+            platform: this.platform,
             modelSeed: this.modelSeed,
             timestamp: this.startTimestamp,
             initialModel: this.initialModel,

@@ -2,6 +2,7 @@ import { SimulatorModel } from '../ifsModel.js';
 import { CloudRelationshipManager } from '../cloudRelationshipManager.js';
 import { SeededRNG, DualRNG, createDualRNG } from './rng.js';
 import { SimulatorController } from '../simulatorController.js';
+import { ActionEffectApplicator } from '../actionEffectApplicator.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
     SerializedModel, SerializedRelationships
@@ -13,12 +14,14 @@ export class HeadlessSimulator {
     private relationships: CloudRelationshipManager;
     private rng: DualRNG;
     private controller: SimulatorController;
+    private effectApplicator: ActionEffectApplicator;
 
     constructor(config?: { seed?: number }) {
         this.model = new SimulatorModel();
         this.relationships = new CloudRelationshipManager();
         this.rng = createDualRNG(config?.seed);
         this.controller = this.createController();
+        this.effectApplicator = new ActionEffectApplicator(this.model);
     }
 
     private createController(): SimulatorController {
@@ -26,7 +29,7 @@ export class HeadlessSimulator {
             model: this.model,
             relationships: this.relationships,
             rng: this.rng,
-            getPartName: (id) => this.model.getPartName(id)
+            getPartName: (id) => this.model.parts.getPartName(id)
         });
     }
 
@@ -39,6 +42,7 @@ export class HeadlessSimulator {
         sim.model = SimulatorModel.fromJSON(initialModel);
         sim.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
         sim.controller = sim.createController();
+        sim.effectApplicator = new ActionEffectApplicator(sim.model);
         return sim;
     }
 
@@ -84,26 +88,7 @@ export class HeadlessSimulator {
             isBlended: this.model.isBlended(cloudId)
         });
 
-        if (result.reduceBlending) {
-            const currentDegree = this.model.getBlendingDegree(result.reduceBlending.cloudId);
-            const needAttention = this.model.getNeedAttention(result.reduceBlending.cloudId);
-            const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
-            const amount = result.reduceBlending.amount * multiplier;
-            this.model.setBlendingDegree(result.reduceBlending.cloudId, Math.max(0, currentDegree - amount));
-        }
-
-        if (result.triggerBacklash) {
-            const { protectorId, protecteeId } = result.triggerBacklash;
-            this.model.adjustTrust(protecteeId, 0.5);
-            const currentNeedAttention = this.model.getNeedAttention(protectorId);
-            this.model.setNeedAttention(protectorId, currentNeedAttention + 1);
-            this.model.addBlendedPart(protectorId, 'spontaneous');
-            this.model.stepBackPart(protecteeId);
-        }
-
-        if (result.createSelfRay) {
-            this.model.setSelfRay(result.createSelfRay.cloudId);
-        }
+        this.effectApplicator.apply(result, cloudId);
 
         return {
             success: result.success,
@@ -113,7 +98,7 @@ export class HeadlessSimulator {
     }
 
     checkWillingness(cloudId: string): boolean {
-        const trust = this.model.getTrust(cloudId);
+        const trust = this.model.parts.getTrust(cloudId);
         return trust >= this.rng.model.random();
     }
 

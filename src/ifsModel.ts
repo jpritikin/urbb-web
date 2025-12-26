@@ -34,7 +34,7 @@ export class SimulatorModel {
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
     private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
-    private parts: PartStateManager = new PartStateManager();
+    readonly parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
     private pendingAttentionDemand: string | null = null;
     private messages: PartMessage[] = [];
@@ -305,138 +305,6 @@ export class SimulatorModel {
         return this.parts.getAllPartStates();
     }
 
-    getTrust(cloudId: string): number {
-        return this.parts.getTrust(cloudId);
-    }
-
-    setTrust(cloudId: string, trust: number): void {
-        this.parts.setTrust(cloudId, trust);
-    }
-
-    adjustTrust(cloudId: string, multiplier: number): void {
-        this.parts.adjustTrust(cloudId, multiplier);
-    }
-
-    addTrust(cloudId: string, amount: number): void {
-        this.parts.addTrust(cloudId, amount);
-    }
-
-    getNeedAttention(cloudId: string): number {
-        return this.parts.getNeedAttention(cloudId);
-    }
-
-    setNeedAttention(cloudId: string, needAttention: number): void {
-        this.parts.setNeedAttention(cloudId, needAttention);
-    }
-
-    adjustNeedAttention(cloudId: string, multiplier: number): void {
-        this.parts.adjustNeedAttention(cloudId, multiplier);
-    }
-
-    markAsProxy(cloudId: string): void {
-        this.parts.markAsProxy(cloudId);
-    }
-
-    wasProxy(cloudId: string): boolean {
-        return this.parts.wasProxy(cloudId);
-    }
-
-    setAttacked(cloudId: string): void {
-        this.parts.setAttacked(cloudId);
-    }
-
-    clearAttacked(cloudId: string): void {
-        this.parts.clearAttacked(cloudId);
-    }
-
-    isAttacked(cloudId: string): boolean {
-        return this.parts.isAttacked(cloudId);
-    }
-
-    isTrustAtCeiling(cloudId: string): boolean {
-        return this.parts.isTrustAtCeiling(cloudId);
-    }
-
-    getDialogues(cloudId: string): PartDialogues {
-        return this.parts.getDialogues(cloudId);
-    }
-
-    getBiography(cloudId: string): PartBiography | undefined {
-        return this.parts.getBiography(cloudId);
-    }
-
-    revealIdentity(cloudId: string): void {
-        this.parts.revealIdentity(cloudId);
-    }
-
-    isIdentityRevealed(cloudId: string): boolean {
-        return this.parts.isIdentityRevealed(cloudId);
-    }
-
-    revealAge(cloudId: string): void {
-        this.parts.revealAge(cloudId);
-    }
-
-    revealRelationships(cloudId: string): void {
-        this.parts.revealRelationships(cloudId);
-    }
-
-    revealProtects(cloudId: string): void {
-        this.parts.revealProtects(cloudId);
-    }
-
-    revealUnburdenedJob(cloudId: string): void {
-        this.parts.revealUnburdenedJob(cloudId);
-    }
-
-    isUnburdenedJobRevealed(cloudId: string): boolean {
-        return this.parts.isUnburdenedJobRevealed(cloudId);
-    }
-
-    revealJobAppraisal(cloudId: string): void {
-        this.parts.revealJobAppraisal(cloudId);
-    }
-
-    isJobAppraisalRevealed(cloudId: string): boolean {
-        return this.parts.isJobAppraisalRevealed(cloudId);
-    }
-
-    revealJobImpact(cloudId: string): void {
-        this.parts.revealJobImpact(cloudId);
-    }
-
-    isJobImpactRevealed(cloudId: string): boolean {
-        return this.parts.isJobImpactRevealed(cloudId);
-    }
-
-    isFieldRevealed(cloudId: string, field: string): boolean {
-        return this.parts.isFieldRevealed(cloudId, field);
-    }
-
-    setConsentedToHelp(cloudId: string): void {
-        this.parts.setConsentedToHelp(cloudId);
-    }
-
-    hasConsentedToHelp(cloudId: string): boolean {
-        return this.parts.hasConsentedToHelp(cloudId);
-    }
-
-    hasJob(cloudId: string): boolean {
-        return this.parts.hasJob(cloudId);
-    }
-
-    getUnrevealedBiographyFields(cloudId: string): ('age' | 'identity' | 'job')[] {
-        return this.parts.getUnrevealedBiographyFields(cloudId);
-    }
-
-    getDisplayAge(cloudId: string): string | null {
-        return this.parts.getDisplayAge(cloudId);
-    }
-
-    getPartName(cloudId: string): string {
-        return this.parts.getPartName(cloudId);
-    }
-
     clone(): SimulatorModel {
         const cloned = new SimulatorModel();
         cloned.targetCloudIds = new Set(this.targetCloudIds);
@@ -449,7 +317,7 @@ export class SimulatorModel {
             cloned.blendedParts.set(id, { ...state });
         }
         cloned.pendingBlends = this.pendingBlends.map(p => ({ ...p }));
-        cloned.parts = this.parts.clone();
+        (cloned as { parts: PartStateManager }).parts = this.parts.clone();
         cloned.messages = this.messages.map(m => ({ ...m }));
         cloned.messageIdCounter = this.messageIdCounter;
         cloned.thoughtBubbles = this.thoughtBubbles.map(b => ({ ...b }));
@@ -482,11 +350,11 @@ export class SimulatorModel {
             const hasGrievances = relationships.getGrievanceTargets(cloudId).size > 0;
             if (!hasGrievances) continue;
 
-            if (this.isUnburdenedJobRevealed(cloudId)) continue;
+            if (this.parts.isUnburdenedJobRevealed(cloudId)) continue;
             if (this.isBlended(cloudId) || this.isTarget(cloudId)) continue;
 
-            const current = this.getNeedAttention(cloudId);
-            this.setNeedAttention(cloudId, current + deltaTime * 0.05);
+            const current = this.parts.getNeedAttention(cloudId);
+            this.parts.setNeedAttention(cloudId, current + deltaTime * 0.05);
         }
     }
 
@@ -593,7 +461,7 @@ export class SimulatorModel {
         model.pendingAttentionDemand = json.pendingAttentionDemand;
         model.messages = json.messages.map(m => ({ ...m }));
         model.messageIdCounter = json.messageIdCounter;
-        model.parts = PartStateManager.fromJSON(json.partStates);
+        (model as { parts: PartStateManager }).parts = PartStateManager.fromJSON(json.partStates);
         model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({ ...b }));
         return model;
     }

@@ -11,15 +11,15 @@ import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
 import { BiographyField } from './selfRay.js';
-import {
-    createGroup, createRect, createText,
-    createForeignObject, setClickHandler
-} from './svgHelpers.js';
-import { RNG, DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
+import { createGroup } from './svgHelpers.js';
+import { DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
 import { ActionRecorder } from './testability/recorder.js';
 import type { RecordedSession, RecordedAction, ControllerActionResult } from './testability/types.js';
 import { SimulatorController } from './simulatorController.js';
 import { formatActionLabel } from './actionFormatter.js';
+import { UIManager } from './uiManager.js';
+import { InputHandler } from './inputHandler.js';
+import { ActionEffectApplicator } from './actionEffectApplicator.js';
 
 export { CloudType };
 export { TherapistAction, THERAPIST_ACTIONS };
@@ -52,7 +52,8 @@ export class CloudManager {
     private zoomGroup: SVGGElement | null = null;
     private uiGroup: SVGGElement | null = null;
 
-    private uiContainer: HTMLElement | null = null;
+    private uiManager: UIManager | null = null;
+    private inputHandler: InputHandler | null = null;
 
     private physicsEngine: PhysicsEngine;
     private panoramaController: PanoramaController;
@@ -62,18 +63,8 @@ export class CloudManager {
     private selectedAction: TherapistAction | null = null;
     private onActionSelect: ((action: TherapistAction, cloud: Cloud) => void) | null = null;
     private relationshipClouds: Map<string, { instance: CloudInstance; region: string }> = new Map();
-    private modeToggleContainer: HTMLElement | null = null;
     private pieMenuController: PieMenuController | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
-    private hoveredCloudId: string | null = null;
-    private touchOpenedPieMenu: boolean = false;
-    private longPressTimer: number | null = null;
-    private longPressStartTime: number = 0;
-    private readonly LONG_PRESS_DURATION = 500;
-    private tracePanel: HTMLElement | null = null;
-    private traceVisible: boolean = false;
-    private isFullscreen: boolean = false;
-    private mobileBanner: HTMLElement | null = null;
     private originalCanvasWidth: number = 800;
     private originalCanvasHeight: number = 600;
     private resolvingClouds: Set<string> = new Set();
@@ -85,10 +76,11 @@ export class CloudManager {
     private genericDialogueCooldowns: Map<string, number> = new Map();
     private readonly BLEND_MESSAGE_DELAY = 3;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
-    private pendingTargetAction: { action: TherapistAction; sourceCloudId: string } | null = null;
     private rng: DualRNG = createDualRNG();
     private recorder: ActionRecorder = new ActionRecorder();
     private controller: SimulatorController | null = null;
+    private effectApplicator: ActionEffectApplicator | null = null;
+    private insideAct: boolean = false;
 
     constructor() {
         this.physicsEngine = new PhysicsEngine({
@@ -117,6 +109,7 @@ export class CloudManager {
             rng: this.rng,
             getPartName: (id) => this.getCloudById(id)?.text ?? id
         });
+        this.effectApplicator = new ActionEffectApplicator(this.model, this.view);
     }
 
     setRNG(rng: DualRNG): void {
@@ -128,22 +121,21 @@ export class CloudManager {
         return this.rng;
     }
 
-    private recordingOverlay: SVGGElement | null = null;
-
     startRecording(codeVersion: string): void {
-        // Ensure we have a seeded RNG for deterministic replay
         if (!(this.rng.model instanceof SeededRNG)) {
             const seed = Math.floor(Math.random() * 2147483647);
             this.setRNG(createDualRNG(seed));
         }
+        const platform = this.uiManager?.isMobile() ? 'mobile' : 'desktop';
         this.recorder.start(
             this.model.toJSON(),
             this.relationships.toJSON(),
             codeVersion,
+            platform,
             this.rng.model as SeededRNG,
             this.rng
         );
-        this.showRecordingOverlay();
+        this.uiManager?.showRecording();
     }
 
     stopRecording(): RecordedSession | null {
@@ -152,37 +144,8 @@ export class CloudManager {
             this.relationships.toJSON()
         );
         this.recorder.clear();
-        this.hideRecordingOverlay();
+        this.uiManager?.hideRecording();
         return session;
-    }
-
-    private showRecordingOverlay(): void {
-        if (!this.svgElement || this.recordingOverlay) return;
-
-        this.recordingOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        this.recordingOverlay.setAttribute('pointer-events', 'none');
-
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', String(this.canvasWidth / 2));
-        text.setAttribute('y', String(this.canvasHeight / 2));
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('dominant-baseline', 'middle');
-        text.setAttribute('font-size', '48');
-        text.setAttribute('font-weight', 'bold');
-        text.setAttribute('fill', 'rgba(255, 0, 0, 0.15)');
-        text.setAttribute('transform', `rotate(-15, ${this.canvasWidth / 2}, ${this.canvasHeight / 2})`);
-        text.style.userSelect = 'none';
-        text.textContent = 'RECORDING SESSION';
-
-        this.recordingOverlay.appendChild(text);
-        this.svgElement.insertBefore(this.recordingOverlay, this.svgElement.firstChild);
-    }
-
-    private hideRecordingOverlay(): void {
-        if (this.recordingOverlay) {
-            this.recordingOverlay.remove();
-            this.recordingOverlay = null;
-        }
     }
 
     isRecording(): boolean {
@@ -247,14 +210,33 @@ export class CloudManager {
         this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
         this.pieMenuController.setGetPartContext((cloudId) => ({
             isProtector: this.relationships.getProtecting(cloudId).size > 0,
-            isIdentityRevealed: this.model.isIdentityRevealed(cloudId),
-            isAttacked: this.model.isAttacked(cloudId),
-            partName: this.model.getPartName(cloudId),
+            isIdentityRevealed: this.model.parts.isIdentityRevealed(cloudId),
+            isAttacked: this.model.parts.isAttacked(cloudId),
+            partName: this.model.parts.getPartName(cloudId),
         }));
         this.pieMenuController.setOnClose(() => {
-            this.hoveredCloudId = null;
+            this.inputHandler?.setHoveredCloud(null);
             this.updateAllCloudStyles();
         });
+
+        this.inputHandler = new InputHandler(
+            {
+                model: this.model,
+                view: this.view,
+                pieMenuController: this.pieMenuController,
+                getCloudById: (id) => this.getCloudById(id),
+                updateAllCloudStyles: () => this.updateAllCloudStyles(),
+            },
+            {
+                onCloudSelected: (cloud, touchEvent) => this.handlePanoramaSelect(cloud),
+                onTargetActionComplete: (action, sourceCloudId, targetCloudId) => {
+                    if (action.id === 'notice_part') {
+                        this.handleNoticePart(sourceCloudId, targetCloudId);
+                    }
+                },
+                onPendingTargetSet: (text, cloudId) => this.showThoughtBubble(text, cloudId),
+            }
+        );
 
         this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.zoomGroup);
         this.view.setOnSelfRayClick((cloudId, x, y, event) => {
@@ -265,17 +247,23 @@ export class CloudManager {
             if (mode === 'panorama') {
                 this.model.clearSelfRay();
             }
-            this.pendingTargetAction = null;
+            this.inputHandler?.clearPendingTargetAction();
             this.updateUIForMode();
-            this.updateModeToggle();
+            this.uiManager?.setMode(mode);
         });
 
         this.createSelfStar();
-        this.createModeToggle();
-        this.createFullscreenButton();
-        this.createUIContainer();
-        this.createTraceButton();
-        this.createTracePanel();
+
+        this.uiManager = new UIManager(this.container, this.svgElement, this.uiGroup, {
+            canvasWidth: this.canvasWidth,
+            canvasHeight: this.canvasHeight,
+            onModeToggle: (isForeground) => this.handleModeToggle(isForeground),
+            onFullscreenToggle: () => this.toggleFullscreen(),
+            onAnimationPauseToggle: () => this.toggleAnimationPause(),
+            onTracePanelToggle: () => this.toggleTracePanel(),
+        });
+        this.uiManager.createAllUI();
+
         this.panX = this.canvasWidth / 2;
         this.panY = this.canvasHeight / 2;
         this.updateViewBox();
@@ -299,30 +287,6 @@ export class CloudManager {
         });
     }
 
-    setHoveredCloud(cloudId: string | null): void {
-        this.hoveredCloudId = cloudId;
-    }
-
-    startLongPress(cloudId: string): void {
-        if (this.view.getMode() !== 'foreground') return;
-        this.cancelLongPress();
-        this.longPressStartTime = performance.now();
-        this.longPressTimer = window.setTimeout(() => {
-            this.longPressTimer = null;
-        }, this.LONG_PRESS_DURATION);
-    }
-
-    cancelLongPress(): void {
-        if (this.longPressTimer !== null) {
-            clearTimeout(this.longPressTimer);
-            this.longPressTimer = null;
-        }
-    }
-
-    isLongPressActive(): boolean {
-        return this.longPressTimer !== null &&
-            (performance.now() - this.longPressStartTime) >= this.LONG_PRESS_DURATION;
-    }
 
     private createSelfStar(): void {
         if (!this.uiGroup) return;
@@ -340,109 +304,13 @@ export class CloudManager {
         (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
     }
 
-    private createModeToggle(): void {
-        if (!this.uiGroup) return;
-
-        const foreignObject = createForeignObject(this.canvasWidth - 42, 10, 32, 32);
-        foreignObject.classList.add('mode-toggle-fo');
-
-        this.modeToggleContainer = document.createElement('button');
-        this.modeToggleContainer.className = 'zoom-toggle-btn';
-        this.modeToggleContainer.innerHTML = '🔍';
-        this.modeToggleContainer.title = 'Panorama view — click to focus';
-        this.modeToggleContainer.addEventListener('click', () => {
-            const isForeground = this.view.getMode() === 'foreground';
-            this.handleModeToggle(!isForeground);
-        });
-
-        foreignObject.appendChild(this.modeToggleContainer);
-        this.uiGroup.appendChild(foreignObject);
-    }
-
     private handleModeToggle(isForeground: boolean): void {
         const mode = isForeground ? 'foreground' : 'panorama';
         this.act(`Mode: ${mode}`, () => {
             this.view.setMode(mode);
             this.updateUIForMode();
-            this.updateModeToggle();
+            this.uiManager?.setMode(mode);
         });
-    }
-
-    private createFullscreenButton(): void {
-        if (!this.container || !this.uiGroup) return;
-
-        this.createMobileBanner();
-        this.createFullscreenToggleButton();
-    }
-
-    private isMobileDevice(): boolean {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || (window.innerWidth <= 800 && 'ontouchstart' in window);
-    }
-
-    private createMobileBanner(): void {
-        if (!this.container || !this.isMobileDevice()) return;
-
-        this.mobileBanner = document.createElement('div');
-        this.mobileBanner.className = 'mobile-fullscreen-banner';
-        this.mobileBanner.innerHTML = `
-            <div class="banner-content">
-                <div class="rotation-prompt">
-                    <span class="rotation-icon">📱</span>
-                    <span class="rotation-text">Rotate to landscape</span>
-                    <span class="rotation-check">✓</span>
-                </div>
-                <button class="enter-fullscreen-btn">Enter Fullscreen</button>
-            </div>
-        `;
-
-        const enterBtn = this.mobileBanner.querySelector('.enter-fullscreen-btn');
-        enterBtn?.addEventListener('click', () => this.enterFullscreen());
-
-        this.container.appendChild(this.mobileBanner);
-        this.updateOrientationIndicator();
-
-        window.addEventListener('orientationchange', () => this.updateOrientationIndicator());
-        window.addEventListener('resize', () => this.updateOrientationIndicator());
-    }
-
-    private createFullscreenToggleButton(): void {
-        if (!this.uiGroup) return;
-
-        const foreignObject = createForeignObject(this.canvasWidth - 84, 10, 32, 32);
-        foreignObject.classList.add('fullscreen-toggle-fo');
-
-        const btn = document.createElement('button');
-        btn.className = 'zoom-toggle-btn';
-        btn.innerHTML = '⛶';
-        btn.title = 'Toggle fullscreen';
-        btn.addEventListener('click', () => this.toggleFullscreen());
-
-        foreignObject.appendChild(btn);
-        this.uiGroup.appendChild(foreignObject);
-    }
-
-    private updateOrientationIndicator(): void {
-        if (!this.mobileBanner) return;
-
-        const isLandscape = window.innerWidth > window.innerHeight;
-        const check = this.mobileBanner.querySelector('.rotation-check') as HTMLElement;
-        const text = this.mobileBanner.querySelector('.rotation-text') as HTMLElement;
-        const btn = this.mobileBanner.querySelector('.enter-fullscreen-btn') as HTMLButtonElement;
-
-        if (check && text) {
-            if (isLandscape) {
-                check.style.display = 'inline';
-                text.textContent = 'Landscape ';
-            } else {
-                check.style.display = 'none';
-                text.textContent = 'Rotate to landscape';
-            }
-        }
-
-        if (btn) {
-            btn.disabled = !isLandscape;
-        }
     }
 
     private setupFullscreenHandling(): void {
@@ -453,10 +321,8 @@ export class CloudManager {
         });
 
         window.addEventListener('resize', () => {
-            if (this.isFullscreen) {
-                const isLandscape = window.innerWidth > window.innerHeight;
-                if (!isLandscape && this.isMobileDevice()) {
-                    console.log('[IFS] Exiting fullscreen due to portrait orientation');
+            if (this.uiManager?.getIsFullscreen()) {
+                if (!this.uiManager.isLandscape() && this.uiManager.isMobile()) {
                     this.exitFullscreen();
                     return;
                 }
@@ -466,7 +332,7 @@ export class CloudManager {
     }
 
     private async toggleFullscreen(): Promise<void> {
-        if (this.isFullscreen) {
+        if (this.uiManager?.getIsFullscreen()) {
             await this.exitFullscreen();
         } else {
             await this.enterFullscreen();
@@ -474,32 +340,22 @@ export class CloudManager {
     }
 
     private async enterFullscreen(): Promise<void> {
-        if (!this.container) return;
+        if (!this.container || !this.uiManager) return;
 
-        const isLandscape = window.innerWidth > window.innerHeight;
-        if (!isLandscape && this.isMobileDevice()) {
-            console.log('[IFS] Please rotate to landscape before entering fullscreen');
+        if (!this.uiManager.isLandscape() && this.uiManager.isMobile()) {
             return;
         }
 
         try {
             await this.container.requestFullscreen();
             this.enterFullscreenMode();
-        } catch (err) {
-            console.log('[IFS] Fullscreen not available, using pseudo-fullscreen');
+        } catch {
             this.enterFullscreenMode();
         }
     }
 
     private enterFullscreenMode(): void {
-        this.isFullscreen = true;
-        document.body.classList.add('ifs-fullscreen');
-        this.container?.classList.add('fullscreen-active');
-
-        if (this.mobileBanner) {
-            this.mobileBanner.style.display = 'none';
-        }
-
+        this.uiManager?.setFullscreen(true);
         this.requestLandscapeOrientation();
         this.resizeCanvasToViewport();
     }
@@ -513,47 +369,23 @@ export class CloudManager {
     }
 
     private exitFullscreenMode(): void {
-        this.isFullscreen = false;
-        document.body.classList.remove('ifs-fullscreen');
-        this.container?.classList.remove('fullscreen-active');
-
-        if (this.mobileBanner) {
-            this.mobileBanner.style.display = 'flex';
-        }
-
+        this.uiManager?.setFullscreen(false);
         this.unlockOrientation();
         this.restoreCanvasSize();
     }
 
     private requestLandscapeOrientation(): void {
         const screen = window.screen as Screen & {
-            orientation?: {
-                lock?: (orientation: string) => Promise<void>;
-                unlock?: () => void;
-            };
+            orientation?: { lock?: (orientation: string) => Promise<void> };
         };
-
-        if (screen.orientation?.lock) {
-            screen.orientation.lock('landscape').catch(() => {
-                // Orientation lock not supported or not in fullscreen
-            });
-        }
+        screen.orientation?.lock?.('landscape').catch(() => {});
     }
 
     private unlockOrientation(): void {
         const screen = window.screen as Screen & {
-            orientation?: {
-                unlock?: () => void;
-            };
+            orientation?: { unlock?: () => void };
         };
-
-        if (screen.orientation?.unlock) {
-            try {
-                screen.orientation.unlock();
-            } catch {
-                // Ignore unlock errors
-            }
-        }
+        try { screen.orientation?.unlock?.(); } catch {}
     }
 
     private resizeCanvasToViewport(): void {
@@ -578,7 +410,7 @@ export class CloudManager {
         }
 
         this.carpetRenderer?.setDimensions(width, height);
-        this.updateModeTogglePosition();
+        this.uiManager?.updateDimensions(width, height);
         this.updateViewBox();
     }
 
@@ -601,113 +433,27 @@ export class CloudManager {
         }
 
         this.carpetRenderer?.setDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
-        this.updateModeTogglePosition();
+        this.uiManager?.updateDimensions(this.originalCanvasWidth, this.originalCanvasHeight);
         this.updateViewBox();
-    }
-
-    private updateModeTogglePosition(): void {
-        if (!this.uiGroup) return;
-
-        const modeToggleFo = this.uiGroup.querySelector('.mode-toggle-fo');
-        if (modeToggleFo) {
-            modeToggleFo.setAttribute('x', String(this.canvasWidth - 42));
-        }
-
-        const fullscreenFo = this.uiGroup.querySelector('.fullscreen-toggle-fo');
-        if (fullscreenFo) {
-            fullscreenFo.setAttribute('x', String(this.canvasWidth - 84));
-        }
-    }
-
-    private createUIContainer(): void {
-        if (!this.container) return;
-
-        this.uiContainer = document.createElement('div');
-        this.uiContainer.style.position = 'absolute';
-        this.uiContainer.style.top = '10px';
-        this.uiContainer.style.right = '10px';
-        this.uiContainer.style.display = 'none';
-        this.uiContainer.style.zIndex = '1000';
-
-        this.container.appendChild(this.uiContainer);
     }
 
     isPieMenuOpen(): boolean {
         return this.pieMenuController?.isOpen() ?? false;
     }
 
-    private createTraceButton(): void {
-        if (!this.container) return;
-
-        const btn = document.createElement('button');
-        btn.className = 'trace-toggle-btn';
-        btn.textContent = '📜 Trace';
-        btn.title = 'Show state change history';
-        btn.addEventListener('click', () => this.toggleTracePanel());
-        this.container.appendChild(btn);
-    }
-
-    private createTracePanel(): void {
-        if (!this.container) return;
-
-        this.tracePanel = document.createElement('div');
-        this.tracePanel.className = 'trace-panel';
-        this.tracePanel.style.display = 'none';
-
-        const header = document.createElement('div');
-        header.className = 'trace-header';
-
-        const title = document.createElement('span');
-        title.textContent = 'State History';
-        header.appendChild(title);
-
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'trace-copy-btn';
-        copyBtn.textContent = 'Copy';
-        copyBtn.addEventListener('click', () => this.copyTraceToClipboard());
-        header.appendChild(copyBtn);
-
-        this.tracePanel.appendChild(header);
-
-        const content = document.createElement('pre');
-        content.className = 'trace-content';
-        this.tracePanel.appendChild(content);
-
-        this.container.appendChild(this.tracePanel);
-    }
-
     private toggleTracePanel(): void {
-        this.traceVisible = !this.traceVisible;
-        if (this.tracePanel) {
-            this.tracePanel.style.display = this.traceVisible ? 'block' : 'none';
-            if (this.traceVisible) {
-                this.updateTracePanel();
-            }
-        }
+        this.uiManager?.toggleTracePanel();
     }
 
-    private updateTracePanel(): void {
-        if (!this.tracePanel || !this.traceVisible) return;
-
-        const content = this.tracePanel.querySelector('.trace-content');
-        if (!content) return;
-
-        content.textContent = this.view.getTrace();
-    }
-
-    private copyTraceToClipboard(): void {
-        const content = this.tracePanel?.querySelector('.trace-content');
-        if (!content?.textContent) return;
-
-        navigator.clipboard.writeText(content.textContent);
-
-        const copyBtn = this.tracePanel?.querySelector('.trace-copy-btn');
-        if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-            }, 1000);
+    private toggleAnimationPause(): void {
+        if (this.animating) {
+            this.stopAnimation();
+            this.uiManager?.setAnimationPaused(true);
+        } else {
+            this.animating = true;
+            this.lastFrameTime = performance.now();
+            this.animate();
+            this.uiManager?.setAnimationPaused(false);
         }
     }
 
@@ -726,7 +472,7 @@ export class CloudManager {
         const isBlended = this.model.isBlended(cloud.id);
 
         if (action.id === 'notice_part') {
-            this.pendingTargetAction = { action, sourceCloudId: cloud.id };
+            this.inputHandler?.setPendingTargetAction(action, cloud.id);
             this.showThoughtBubble("Which part?", cloud.id);
             return;
         }
@@ -742,25 +488,7 @@ export class CloudManager {
     }
 
     private applyActionResult(result: ControllerActionResult, cloudId: string): void {
-        if (result.uiFeedback?.thoughtBubble) {
-            this.showThoughtBubble(
-                result.uiFeedback.thoughtBubble.text,
-                result.uiFeedback.thoughtBubble.cloudId
-            );
-        }
-        if (result.uiFeedback?.actionLabel) {
-            this.view.setAction(result.uiFeedback.actionLabel);
-        }
-        if (result.reduceBlending) {
-            this.reduceBlending(result.reduceBlending.cloudId, result.reduceBlending.amount);
-        }
-        if (result.triggerBacklash) {
-            this.triggerBacklash(result.triggerBacklash.protectorId, result.triggerBacklash.protecteeId);
-        }
-        if (result.createSelfRay) {
-            const unrevealed = this.model.getUnrevealedBiographyFields(result.createSelfRay.cloudId);
-            this.createSelfRay(result.createSelfRay.cloudId, unrevealed);
-        }
+        this.effectApplicator!.apply(result, cloudId);
     }
 
     setActionSelectHandler(handler: (action: TherapistAction, cloud: Cloud) => void): void {
@@ -771,22 +499,6 @@ export class CloudManager {
         return this.selectedAction;
     }
 
-    private reduceBlending(cloudId: string, baseAmount: number): void {
-        if (!this.model.isBlended(cloudId)) return;
-
-        const cloud = this.getCloudById(cloudId);
-        if (!cloud) return;
-
-        // Parts with low needAttention unblend more readily (up to 3x faster)
-        const needAttention = this.model.getNeedAttention(cloudId);
-        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
-        const amount = baseAmount * multiplier;
-
-        const currentDegree = this.model.getBlendingDegree(cloudId);
-        const targetDegree = Math.max(0, currentDegree - amount);
-        this.model.setBlendingDegree(cloudId, targetDegree);
-    }
-
     private showThoughtBubble(text: string, cloudId: string): void {
         this.model.addThoughtBubble(text, cloudId);
     }
@@ -795,27 +507,25 @@ export class CloudManager {
         this.model.clearThoughtBubbles();
     }
 
-    private createSelfRay(cloudId: string, _unrevealedFields: ('age' | 'identity' | 'job')[]): void {
-        this.model.setSelfRay(cloudId);
+    private reduceBlending(cloudId: string, baseAmount: number): void {
+        if (!this.model.isBlended(cloudId)) return;
+
+        const needAttention = this.model.parts.getNeedAttention(cloudId);
+        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
+        const amount = baseAmount * multiplier;
+
+        const currentDegree = this.model.getBlendingDegree(cloudId);
+        const targetDegree = Math.max(0, currentDegree - amount);
+        this.model.setBlendingDegree(cloudId, targetDegree);
     }
 
     private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize', cloudId: string): void {
-        this.pendingTargetAction = null;
+        this.inputHandler?.clearPendingTargetAction();
         if (!this.controller) return;
 
         this.act({ action: 'ray_field_select', cloudId, field }, () => {
             const result = this.controller!.executeAction('ray_field_select', cloudId, { field });
             this.applyActionResult(result, cloudId);
-        });
-    }
-
-    private triggerBacklash(protectorId: string, protecteeId: string): void {
-        this.act({ action: 'backlash', cloudId: protectorId, targetCloudId: protecteeId }, () => {
-            this.model.adjustTrust(protecteeId, 0.5);
-            const currentNeedAttention = this.model.getNeedAttention(protectorId);
-            this.model.setNeedAttention(protectorId, currentNeedAttention + 1);
-            this.model.addBlendedPart(protectorId, 'spontaneous');
-            this.model.stepBackPart(protecteeId);
         });
     }
 
@@ -874,17 +584,15 @@ export class CloudManager {
         });
 
         const state = this.model.getPartState(cloud.id);
-        const group = cloud.createSVGElements({
-            onClick: () => this.handleCloudClick(cloud),
-            onHover: (hovered) => {
-                this.setHoveredCloud(hovered ? cloud.id : null);
-                cloud.updateSVGElements(this.debug, state, hovered);
-            },
-            onLongPressStart: () => this.startLongPress(cloud.id),
-            onLongPressEnd: () => this.cancelLongPress(),
-            onTouchStart: (e) => this.handleCloudTouchStart(cloud, e),
-            onTouchEnd: () => this.handleCloudTouchEnd(cloud),
-        });
+        const eventHandlers = this.inputHandler?.createCloudEventHandlers(cloud) ?? {
+            onClick: () => {},
+            onHover: () => {},
+            onLongPressStart: () => {},
+            onLongPressEnd: () => {},
+            onTouchStart: () => {},
+            onTouchEnd: () => {},
+        };
+        const group = cloud.createSVGElements(eventHandlers);
         this.zoomGroup?.appendChild(group);
         cloud.updateSVGElements(this.debug, state, false);
 
@@ -916,9 +624,9 @@ export class CloudManager {
     applyAssessedNeedAttention(): void {
         for (const instance of this.instances) {
             const assessed = this.relationships.assessNeedAttention(instance.cloud.id);
-            this.model.setNeedAttention(instance.cloud.id, assessed);
+            this.model.parts.setNeedAttention(instance.cloud.id, assessed);
             if (this.relationships.getProxyFor(instance.cloud.id).size > 0) {
-                this.model.markAsProxy(instance.cloud.id);
+                this.model.parts.markAsProxy(instance.cloud.id);
             }
         }
     }
@@ -949,9 +657,10 @@ export class CloudManager {
     }
 
     private updateAllCloudStyles(): void {
+        const hoveredCloudId = this.inputHandler?.getHoveredCloudId() ?? null;
         for (const instance of this.instances) {
             const state = this.model.getPartState(instance.cloud.id);
-            const hovered = this.hoveredCloudId === instance.cloud.id;
+            const hovered = hoveredCloudId === instance.cloud.id;
             instance.cloud.updateSVGElements(this.debug, state, hovered);
         }
     }
@@ -1014,7 +723,6 @@ export class CloudManager {
                 this.animate();
             }
         };
-        this.createDebugPauseButton();
     }
 
     stopAnimation(): void {
@@ -1025,107 +733,13 @@ export class CloudManager {
         }
     }
 
-    private debugPauseButton: HTMLButtonElement | null = null;
-
-    private createDebugPauseButton(): void {
-        if (this.debugPauseButton || !this.container) return;
-
-        const btn = document.createElement('button');
-        btn.textContent = '⏸';
-        btn.style.cssText = `
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 1000;
-            padding: 6px 10px;
-            font-size: 16px;
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        `;
-
-        btn.addEventListener('click', () => {
-            if (this.animating) {
-                this.stopAnimation();
-                btn.textContent = '▶';
-                btn.style.background = '#51cf66';
-            } else {
-                this.animating = true;
-                this.lastFrameTime = performance.now();
-                this.animate();
-                btn.textContent = '⏸';
-                btn.style.background = '#ff6b6b';
-            }
+    private handlePanoramaSelect(cloud: Cloud): void {
+        this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
+            this.model.setTargetCloud(cloud.id);
+            this.view.setMode('foreground');
+            this.updateUIForMode();
+            this.uiManager?.setMode('foreground');
         });
-
-        this.container.appendChild(btn);
-        this.debugPauseButton = btn;
-    }
-
-    private handleCloudClick(cloud: Cloud): void {
-        if (this.touchOpenedPieMenu) {
-            this.touchOpenedPieMenu = false;
-            return;
-        }
-        this.hoveredCloudId = null;
-        this.selectCloud(cloud);
-    }
-
-    private handleCloudTouchStart(cloud: Cloud, e: TouchEvent): void {
-        this.hoveredCloudId = null;
-        this.updateAllCloudStyles();
-
-        if (this.view.getMode() !== 'foreground') return;
-        if (this.pendingTargetAction) return;
-
-        const cloudState = this.view.getCloudState(cloud.id);
-        if (cloudState && cloudState.opacity > 0) {
-            this.touchOpenedPieMenu = true;
-            this.pieMenuController?.toggle(cloud.id, cloudState.x, cloudState.y, e);
-        }
-    }
-
-    private handleCloudTouchEnd(cloud: Cloud): void {
-        if (!this.pendingTargetAction) return;
-        if (this.view.getMode() !== 'foreground') return;
-
-        const cloudState = this.view.getCloudState(cloud.id);
-        if (cloudState && cloudState.opacity > 0) {
-            this.completePendingTargetAction(cloud.id);
-        }
-    }
-
-    selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
-        if (this.view.getMode() === 'panorama') {
-            this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
-                this.model.setTargetCloud(cloud.id);
-                this.view.setMode('foreground');
-                this.updateUIForMode();
-                this.updateModeToggle();
-            });
-        } else if (this.view.getMode() === 'foreground') {
-            if (this.pendingTargetAction) {
-                this.completePendingTargetAction(cloud.id);
-                return;
-            }
-            const cloudState = this.view.getCloudState(cloud.id);
-            if (cloudState && cloudState.opacity > 0) {
-                this.pieMenuController?.toggle(cloud.id, cloudState.x, cloudState.y, touchEvent);
-            }
-        }
-    }
-
-    private completePendingTargetAction(targetCloudId: string): void {
-        if (!this.pendingTargetAction) return;
-
-        const { action, sourceCloudId } = this.pendingTargetAction;
-        this.pendingTargetAction = null;
-
-        if (action.id === 'notice_part') {
-            this.handleNoticePart(sourceCloudId, targetCloudId);
-        }
     }
 
     private handleNoticePart(protectorId: string, targetCloudId: string): void {
@@ -1172,7 +786,7 @@ export class CloudManager {
         const pending = this.model.getPendingBlends().find(p => p.cloudId === cloudId);
         if (!pending) return;
 
-        const name = this.model.getPartName(cloudId);
+        const name = this.model.parts.getPartName(cloudId);
         this.act(`${name} blends`, () => {
             const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
             let item = this.model.dequeuePendingBlend();
@@ -1300,18 +914,10 @@ export class CloudManager {
     }
 
     private completeUnblending(cloudId: string): void {
-        const name = this.model.getPartName(cloudId);
+        const name = this.model.parts.getPartName(cloudId);
         this.act(`${name} separates`, () => {
             this.model.promoteBlendedToTarget(cloudId);
         });
-    }
-
-    private updateModeToggle(): void {
-        if (!this.modeToggleContainer) return;
-        const isForeground = this.view.getMode() === 'foreground';
-        this.modeToggleContainer.innerHTML = isForeground ? '🔭' : '🔍';
-        this.modeToggleContainer.title = isForeground ? 'Focus view — click for panorama' : 'Panorama view — click to focus';
-        this.modeToggleContainer.classList.toggle('focused', isForeground);
     }
 
     private syncViewWithModel(oldModel: SimulatorModel | null = null): void {
@@ -1332,6 +938,10 @@ export class CloudManager {
     }
 
     private act(action: string | RecordedAction, fn: () => void): void {
+        if (this.insideAct) {
+            throw new Error('Nested act() calls are not allowed');
+        }
+
         const recordedAction = typeof action === 'string' ? undefined : action;
         const label = typeof action === 'string'
             ? action
@@ -1339,7 +949,12 @@ export class CloudManager {
 
         this.view.setAction(label);
         const oldModel = this.model.clone();
-        fn();
+        this.insideAct = true;
+        try {
+            fn();
+        } finally {
+            this.insideAct = false;
+        }
         this.syncViewWithModel(oldModel);
         if (recordedAction && this.recorder.isRecording()) {
             this.recorder.record(recordedAction, this.view.getViewStateSnapshot());
@@ -1451,7 +1066,7 @@ export class CloudManager {
                     this.panoramaController.applyPhysics(instance, this.instances, deltaTime * this.partitionCount);
                 }
                 const state = this.model.getPartState(instance.cloud.id);
-                const hovered = this.hoveredCloudId === instance.cloud.id;
+                const hovered = this.inputHandler?.getHoveredCloudId() === instance.cloud.id;
                 instance.cloud.updateSVGElements(this.debug, state, hovered);
             }
 
@@ -1472,6 +1087,9 @@ export class CloudManager {
 
         this.increaseGrievanceNeedAttention(deltaTime);
         this.updateHelpPanel();
+        if (this.uiManager?.isTracePanelVisible()) {
+            this.uiManager.updateTrace(this.view.getTrace());
+        }
 
         if (!this.isPieMenuOpen()) {
             const demandingCloudId = this.model.checkAttentionDemands(this.relationships);
@@ -1576,8 +1194,8 @@ export class CloudManager {
         const targetState = this.view.getCloudState(targetId);
         if (!senderState || !targetState) return;
 
-        const senderName = this.model.getPartName(senderId);
-        const targetName = this.model.getPartName(targetId);
+        const senderName = this.model.parts.getPartName(senderId);
+        const targetName = this.model.parts.getPartName(targetId);
         const actionLabel = senderId === targetId
             ? `${senderName} spirals in self-grievance`
             : `${senderName} sends grievance to ${targetName}`;
@@ -1592,10 +1210,10 @@ export class CloudManager {
 
     private onMessageReceived(message: PartMessage): void {
         if (message.type === 'grievance') {
-            this.model.adjustTrust(message.targetId, 0.99);
-            this.model.adjustNeedAttention(message.senderId, 0.8);
+            this.model.parts.adjustTrust(message.targetId, 0.99);
+            this.model.parts.adjustNeedAttention(message.senderId, 0.8);
             if (message.senderId !== message.targetId) {
-                this.model.setAttacked(message.targetId);
+                this.model.parts.setAttacked(message.targetId);
             }
         }
         this.model.removeMessage(message.id);
@@ -1607,7 +1225,7 @@ export class CloudManager {
             if (this.resolvingClouds.has(cloudId)) continue;
             if (this.model.getBlendReason(cloudId) !== 'spontaneous') continue;
 
-            if (this.model.getNeedAttention(cloudId) < 0.25) {
+            if (this.model.parts.getNeedAttention(cloudId) < 0.25) {
                 this.finishUnblending(cloudId);
             }
         }
@@ -1619,8 +1237,8 @@ export class CloudManager {
 
         for (const instance of this.instances) {
             const cloudId = instance.cloud.id;
-            const trust = this.model.getTrust(cloudId);
-            const needAttention = this.model.getNeedAttention(cloudId);
+            const trust = this.model.parts.getTrust(cloudId);
+            const needAttention = this.model.parts.getNeedAttention(cloudId);
 
             if (lowestTrust === null || trust < lowestTrust.trust) {
                 lowestTrust = { name: instance.cloud.text, trust };
@@ -1672,7 +1290,7 @@ export class CloudManager {
             if (!blendedCloud) continue;
 
             // Don't send messages from parts that have revealed their unburdened job
-            if (this.model.isUnburdenedJobRevealed(blendedId)) continue;
+            if (this.model.parts.isUnburdenedJobRevealed(blendedId)) continue;
 
             // Don't send messages from parts that haven't visually arrived yet
             if (this.view.isAwaitingArrival(blendedId)) continue;
@@ -1694,7 +1312,7 @@ export class CloudManager {
                 if (timeSinceSent < 10) continue;
                 // Pick a random target from all grievance targets
                 const grievanceTargetArray = Array.from(grievanceTargets);
-                grievanceTargetId = this.rng.cosmetic.pickRandom(grievanceTargetArray);
+                grievanceTargetId = this.rng.model.pickRandom(grievanceTargetArray, 'grievance_target');
             }
 
             const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
@@ -1702,8 +1320,8 @@ export class CloudManager {
 
             // If target is not in conference yet, summon them (unless it's a self-grievance)
             if (!targetIds.has(grievanceTargetId) && grievanceTargetId !== blendedId) {
-                const blenderName = this.model.getPartName(blendedId);
-                const targetName = this.model.getPartName(grievanceTargetId);
+                const blenderName = this.model.parts.getPartName(blendedId);
+                const targetName = this.model.parts.getPartName(grievanceTargetId);
                 this.act(`${blenderName} summons ${targetName}`, () => {
                     this.model.addTargetCloud(grievanceTargetId);
                 });
@@ -1743,7 +1361,7 @@ export class CloudManager {
             const hasGrievances = this.relationships.getGrievanceTargets(blendedId).size > 0;
             if (hasGrievances) continue;
 
-            const dialogues = this.model.getDialogues(blendedId)?.genericBlendedDialogues;
+            const dialogues = this.model.parts.getDialogues(blendedId)?.genericBlendedDialogues;
             if (!dialogues || dialogues.length === 0) continue;
 
             const cooldown = this.genericDialogueCooldowns.get(blendedId) ?? this.GENERIC_DIALOGUE_INTERVAL;
