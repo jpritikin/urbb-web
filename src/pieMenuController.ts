@@ -85,9 +85,17 @@ export class PieMenuController {
     }
 
     toggle(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
+        this.showMenu('cloud', cloudId, x, y, this.getItemsForCloud(cloudId), touchEvent);
+    }
+
+    toggleSelfRay(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
+        this.showMenu('selfRay', cloudId, x, y, this.getItemsForSelfRay(cloudId), touchEvent);
+    }
+
+    private showMenu(mode: MenuMode, cloudId: string, x: number, y: number, items: PieMenuItem[], touchEvent?: TouchEvent): void {
         if (!this.pieMenu) return;
 
-        if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === 'cloud') {
+        if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === mode) {
             this.pieMenu.hide();
             return;
         }
@@ -96,12 +104,9 @@ export class PieMenuController {
             this.pieMenu.hide();
         }
 
-        this.menuMode = 'cloud';
-        const items = this.getItemsForCloud(cloudId);
-        if (items.length === 0) {
-            return;
-        }
+        if (items.length === 0) return;
 
+        this.menuMode = mode;
         this.pieMenu.setItems(items);
         if (touchEvent && touchEvent.touches.length > 0) {
             const touch = touchEvent.touches[0];
@@ -109,30 +114,6 @@ export class PieMenuController {
         } else {
             this.pieMenu.show(x, y, cloudId);
         }
-        this.pieMenuOpen = true;
-        this.selectedCloudId = cloudId;
-    }
-
-    toggleSelfRay(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
-        if (!this.pieMenu) return;
-
-        if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === 'selfRay') {
-            this.pieMenu.hide();
-            return;
-        }
-
-        if (this.pieMenuOpen) {
-            this.pieMenu.hide();
-        }
-
-        this.menuMode = 'selfRay';
-        const items = this.getItemsForSelfRay(cloudId);
-        if (items.length === 0) {
-            return;
-        }
-
-        this.pieMenu.setItems(items);
-        this.pieMenu.show(x, y, cloudId);
         this.pieMenuOpen = true;
         this.selectedCloudId = cloudId;
     }
