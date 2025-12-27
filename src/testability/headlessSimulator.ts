@@ -149,7 +149,7 @@ export class HeadlessSimulator {
     }
 
     advanceTime(deltaTime: number): void {
-        this.model.increaseNeedAttention(this.relationships, deltaTime);
+        this.model.increaseNeedAttention(this.relationships, deltaTime, true);
         this.orchestrator.updateTimers(deltaTime);
         this.orchestrator.checkAndSendGrievanceMessages();
         this.orchestrator.checkAndShowGenericDialogues(deltaTime);

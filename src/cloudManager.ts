@@ -99,6 +99,7 @@ export class CloudManager {
         this.view = new SimulatorView(800, 600);
         PieMenu.setGlobalVisibilityCallback((visible) => {
             this.view.setConferenceRotationPaused(visible);
+            this.view.setHelpPanelVisible(!visible);
         });
         this.initController();
     }
@@ -956,9 +957,9 @@ export class CloudManager {
         this.lastAttentionCheck += deltaTime;
         if (!this.isPieMenuOpen() && this.lastAttentionCheck >= 0.5) {
             this.lastAttentionCheck = 0;
-            const demand = this.model.checkAttentionDemands(this.relationships, this.rng.cosmetic);
+            const inPanorama = this.view.getMode() === 'panorama';
+            const demand = this.model.checkAttentionDemands(this.relationships, this.rng.cosmetic, !inPanorama);
             if (demand) {
-                const inPanorama = this.view.getMode() === 'panorama';
                 const randomVal = this.rng.cosmetic.random('panorama_attention');
                 const panoramaTriggered = inPanorama && (demand.needAttention - 1) > randomVal;
                 if (demand.urgent || panoramaTriggered) {
@@ -1190,6 +1191,7 @@ export class CloudManager {
     }
 
     private increaseNeedAttention(deltaTime: number): void {
-        this.model.increaseNeedAttention(this.relationships, deltaTime);
+        const inConference = this.view.getMode() === 'foreground';
+        this.model.increaseNeedAttention(this.relationships, deltaTime, inConference);
     }
 }

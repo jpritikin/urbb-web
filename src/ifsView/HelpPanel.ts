@@ -116,4 +116,9 @@ export class HelpPanel {
     isExpanded(): boolean {
         return this.expanded;
     }
+
+    setVisible(visible: boolean): void {
+        if (!this.container) return;
+        this.container.style.visibility = visible ? 'visible' : 'hidden';
+    }
 }

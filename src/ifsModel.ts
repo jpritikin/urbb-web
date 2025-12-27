@@ -342,37 +342,37 @@ export class SimulatorModel {
         return cloned;
     }
 
-    checkAttentionDemands(relationships: CloudRelationshipManager, rng: RNG): { cloudId: string; urgent: boolean; needAttention: number } | null {
+    checkAttentionDemands(relationships: CloudRelationshipManager, rng: RNG, inConference: boolean): { cloudId: string; urgent: boolean; needAttention: number } | null {
         const allParts = this.parts.getAllPartStates();
         const sorted = [...allParts.entries()].sort(
             (a, b) => b[1].needAttention - a[1].needAttention
         );
 
-        const hasConference = this.targetCloudIds.size > 0;
-
         for (const [cloudId, state] of sorted) {
             if (state.needAttention <= 1) break;
 
-            if (this.blendedParts.has(cloudId)) continue;
-            if (this.pendingBlends.some(p => p.cloudId === cloudId)) continue;
-            if (this.targetCloudIds.has(cloudId)) continue;
+            if (inConference) {
+                if (this.blendedParts.has(cloudId)) continue;
+                if (this.pendingBlends.some(p => p.cloudId === cloudId)) continue;
+                if (this.targetCloudIds.has(cloudId)) continue;
+            }
 
             const protectors = relationships.getProtectedBy(cloudId);
             if (protectors.size > 0) continue;
 
             const urgent = state.needAttention > 2 && (state.needAttention - 2) > rng.random('urgent_attention');
-            if (!urgent && hasConference) continue;
+            if (!urgent && inConference) continue;
 
             return { cloudId, urgent, needAttention: state.needAttention };
         }
         return null;
     }
 
-    increaseNeedAttention(relationships: CloudRelationshipManager, deltaTime: number): void {
+    increaseNeedAttention(relationships: CloudRelationshipManager, deltaTime: number, inConference: boolean): void {
         const allParts = this.parts.getAllPartStates();
         for (const [cloudId] of allParts) {
             if (this.parts.isUnburdened(cloudId)) continue;
-            if (this.isBlended(cloudId) || this.isTarget(cloudId) || this.isPendingBlend(cloudId)) continue;
+            if (inConference && (this.isBlended(cloudId) || this.isTarget(cloudId) || this.isPendingBlend(cloudId))) continue;
 
             const hasGrievances = relationships.getGrievanceTargets(cloudId).size > 0;
             const isProtectee = relationships.getProtectedBy(cloudId).size > 0;

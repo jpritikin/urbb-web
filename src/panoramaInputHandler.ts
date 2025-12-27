@@ -72,6 +72,8 @@ export class PanoramaInputHandler {
             e.preventDefault();
             this.startPinch(e.touches[0], e.touches[1]);
         } else if (e.touches.length === 1) {
+            const target = e.target as Element;
+            if (target.closest('.cloud-group')) return;
             this.startDrag(e.touches[0]);
         }
     };

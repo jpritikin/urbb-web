@@ -130,6 +130,10 @@ export class SimulatorView {
         this.helpPanel.update(data);
     }
 
+    setHelpPanelVisible(visible: boolean): void {
+        this.helpPanel.setVisible(visible);
+    }
+
     setRayContainer(container: SVGGElement): void {
         this.rayContainer = container;
     }
