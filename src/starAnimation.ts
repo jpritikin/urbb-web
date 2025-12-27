@@ -93,6 +93,8 @@ export class AnimatedStar {
     private clippedGroup: SVGGElement | null = null;
     private transitionElements: TransitionElements | null = null;
     private coordinateConverter: CoordinateConverter | null = null;
+    private hitArea: SVGCircleElement | null = null;
+    private onClick: ((x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
 
     constructor(centerX: number, centerY: number) {
         const baseColor = getCSSColor('--daime-gold', { h: 50, s: 100, l: 50 });
@@ -108,6 +110,10 @@ export class AnimatedStar {
 
     private randomInterval(min: number, max: number): number {
         return min + Math.random() * (max - min);
+    }
+
+    setOnClick(callback: (x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
+        this.onClick = callback;
     }
 
     createElement(): SVGGElement {
@@ -157,6 +163,24 @@ export class AnimatedStar {
         this.staticStarOutline.setAttribute('stroke-width', '1');
         this.staticStarOutline.setAttribute('stroke-dasharray', '2,2');
         this.wrapperGroup.appendChild(this.staticStarOutline);
+
+        this.hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        this.hitArea.setAttribute('cx', String(this.centerX));
+        this.hitArea.setAttribute('cy', String(this.centerY));
+        this.hitArea.setAttribute('r', String(STAR_OUTER_RADIUS));
+        this.hitArea.setAttribute('fill', 'transparent');
+        this.hitArea.style.cursor = 'pointer';
+        this.hitArea.style.pointerEvents = 'auto';
+        this.hitArea.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onClick?.(this.centerX, this.centerY, e);
+        });
+        this.hitArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.onClick?.(this.centerX, this.centerY, e);
+        }, { passive: false });
+        this.wrapperGroup.appendChild(this.hitArea);
 
         this.createArmElements();
         this.updateArms();

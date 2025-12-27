@@ -372,7 +372,7 @@ export class PieMenu {
             slicePath.setAttribute('fill', this.getCategoryColor(item.category, 0.2));
             slicePath.setAttribute('stroke', this.getCategoryColor(item.category, 1));
             slicePath.setAttribute('stroke-width', '2');
-            this.showTooltip(`${item.shortName}: ${item.label}`);
+            this.showTooltip(item.shortName, item.label);
         };
 
         const unhighlight = () => {
@@ -430,7 +430,7 @@ export class PieMenu {
         return colors[category ?? ''] ?? `rgba(155, 89, 182, ${opacity})`;
     }
 
-    private showTooltip(text: string): void {
+    private showTooltip(shortName: string, label: string): void {
         this.hideTooltip();
 
         if (!this.group) return;
@@ -441,8 +441,7 @@ export class PieMenu {
         const padding = 12;
         const fontSize = 18;
         const lineHeight = fontSize + 6;
-        const lines = text.split('\n');
-        const estimatedHeight = lines.length * lineHeight + padding * 2;
+        const estimatedHeight = lineHeight + padding * 2;
 
         const svg = this.group.ownerSVGElement;
         const viewBox = svg?.viewBox.baseVal;
@@ -462,20 +461,20 @@ export class PieMenu {
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
         textEl.setAttribute('pointer-events', 'none');
+        textEl.setAttribute('y', String(tooltipY + padding + fontSize - 2));
 
-        for (let i = 0; i < lines.length; i++) {
-            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-            tspan.setAttribute('x', '0');
-            tspan.setAttribute('y', String(tooltipY + padding + fontSize - 2 + i * lineHeight));
-            tspan.textContent = lines[i];
-            textEl.appendChild(tspan);
-        }
+        const boldSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        boldSpan.setAttribute('font-weight', 'bold');
+        boldSpan.textContent = shortName + ': ';
+        textEl.appendChild(boldSpan);
+
+        const labelSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        labelSpan.textContent = label;
+        textEl.appendChild(labelSpan);
 
         this.tooltipElement.appendChild(textEl);
-        // Add to overlay container (after menu group) for max z-order
         const targetContainer = this.overlayContainer ?? this.group;
         targetContainer.appendChild(this.tooltipElement);
-        // Position relative to menu center since tooltip is now in overlay, not menu group
         this.tooltipElement.setAttribute('transform', `translate(${this.menuCenterX}, ${this.menuCenterY})`);
 
         const bbox = textEl.getBBox();

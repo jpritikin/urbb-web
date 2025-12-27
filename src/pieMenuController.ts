@@ -274,7 +274,7 @@ export class PieMenuController {
             items.push({
                 id: 'whatNeedToKnow',
                 label: 'What do you need me to know?',
-                shortName: 'Know?',
+                shortName: 'Need?',
                 category: 'curiosity'
             });
         }

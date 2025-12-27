@@ -134,7 +134,7 @@ export class HeadlessSimulator {
         });
 
         this.effectApplicator.apply(result, cloudId);
-        this.model.checkAndSetVictory();
+        this.model.checkAndSetVictory(this.relationships);
 
         return {
             success: result.success,

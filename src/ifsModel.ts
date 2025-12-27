@@ -461,14 +461,16 @@ export class SimulatorModel {
         this.thoughtBubbles = this.thoughtBubbles.filter(b => b.cloudId !== cloudId);
     }
 
-    checkAndSetVictory(): boolean {
+    checkAndSetVictory(relationships: { getProtecting: (id: string) => Set<string> }): boolean {
         if (this.victoryAchieved) return false;
 
         const allParts = this.getAllPartStates();
         if (allParts.size === 0) return false;
 
-        for (const [, state] of allParts) {
+        for (const [cloudId, state] of allParts) {
             if (state.trust <= 0.9 || state.needAttention >= 1) return false;
+            const isProtector = relationships.getProtecting(cloudId).size > 0;
+            if (isProtector && !state.biography.unburdened) return false;
         }
 
         this.victoryAchieved = true;

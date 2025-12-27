@@ -351,6 +351,13 @@ export class CloudManager {
         const centerY = this.canvasHeight / 2;
 
         this.animatedStar = new AnimatedStar(centerX, centerY);
+        this.animatedStar.setOnClick((x, y, event) => {
+            const selfRay = this.model.getSelfRay();
+            if (selfRay && this.pieMenuController) {
+                const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
+                this.pieMenuController.toggleSelfRay(selfRay.targetCloudId, x, y, touchEvent);
+            }
+        });
         const starElement = this.animatedStar.createElement();
 
         this.uiGroup.appendChild(starElement);
@@ -784,7 +791,7 @@ export class CloudManager {
         }
 
         this.view.setCloudNames(cloudNames);
-        this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions);
+        this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions, this.relationships);
     }
 
     private act(action: string | RecordedAction, fn: () => void): void {

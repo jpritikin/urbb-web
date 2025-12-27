@@ -417,7 +417,8 @@ export class SimulatorView {
         oldModel: SimulatorModel | null,
         newModel: SimulatorModel,
         instances: CloudInstance[],
-        panoramaPositions: Map<string, { x: number; y: number; scale: number }>
+        panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
+        relationships: { getProtecting: (id: string) => Set<string> }
     ): void {
         if (newModel.hasPendingAttentionDemand()) {
             newModel.consumeAttentionDemand();
@@ -461,17 +462,17 @@ export class SimulatorView {
 
         this.generateTraceEntries(oldModel, newModel);
 
-        this.checkVictoryCondition(newModel);
+        this.checkVictoryCondition(newModel, relationships);
     }
 
-    private checkVictoryCondition(model: SimulatorModel): void {
+    private checkVictoryCondition(model: SimulatorModel, relationships: { getProtecting: (id: string) => Set<string> }): void {
         if (this.victoryBanner.isShown() || !this.htmlContainer) return;
 
         const now = Date.now();
         if (now - this.lastVictoryCheck < 1000) return;
         this.lastVictoryCheck = now;
 
-        if (model.checkAndSetVictory()) {
+        if (model.checkAndSetVictory(relationships)) {
             this.victoryBanner.show(this.htmlContainer);
             this.events.emit('victory-achieved', {});
         }

@@ -37,6 +37,12 @@ const ALREADY_TOLD_RESPONSES = [
     "We covered that.",
 ];
 
+const COMPASSION_RECEIVED_RESPONSES = [
+    "It feels good to hear that.",
+    "I appreciate you being here.",
+    "I feel a little warmer inside.",
+];
+
 export class SimulatorController {
     private model: SimulatorModel;
     private relationships: CloudRelationshipManager;
@@ -191,19 +197,17 @@ export class SimulatorController {
                 this.model.parts.adjustTrust(cloudId, 0.95);
                 return {
                     success: true,
-                    stateChanges: [`${cloudId} already answered`],
-                    uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
+                    stateChanges: [`${cloudId} already answered`]
                 };
             }
         }
 
-        const response = this.getJobResponse(cloudId);
+        this.getJobResponse(cloudId);
         const stateChanges = [`${cloudId} revealed job`];
 
         const result: ControllerActionResult = {
             success: true,
-            stateChanges,
-            uiFeedback: { thoughtBubble: { text: response, cloudId } }
+            stateChanges
         };
 
         if (isBlended) {
@@ -447,8 +451,16 @@ export class SimulatorController {
             };
         }
 
-        const trustGainingFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
-        if (this.model.parts.isAttacked(cloudId) && this.model.parts.isTrustAtCeiling(cloudId) && trustGainingFields.includes(field)) {
+        const highTrustFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
+        if (highTrustFields.includes(field) && this.model.parts.getTrust(cloudId) >= 0.95) {
+            return {
+                success: true,
+                stateChanges: [],
+                uiFeedback: { thoughtBubble: { text: "Thanks, but there are other parts that need your attention more urgently.", cloudId } }
+            };
+        }
+
+        if (this.model.parts.isAttacked(cloudId) && this.model.parts.isTrustAtCeiling(cloudId) && highTrustFields.includes(field)) {
             return {
                 success: true,
                 stateChanges: [],
@@ -461,19 +473,24 @@ export class SimulatorController {
         let backlash: { protectorId: string; protecteeId: string } | undefined;
 
         switch (field) {
-            case 'whatNeedToKnow':
+            case 'whatNeedToKnow': {
+                const result = this.handleWhatNeedToKnowInternal(cloudId);
+                response = result.response;
+                trustGain = this.calculateTrustGain(cloudId);
+                backlash = result.triggerBacklash;
+                break;
+            }
+
             case 'compassion': {
                 const isProtector = this.relationships.getProtecting(cloudId).size > 0;
-                if (field === 'compassion' && isProtector) {
-                    response = partState.dialogues.compassionResponse ?? "That means a lot to me.";
-                    trustGain = this.calculateTrustGain(cloudId);
-                    this.model.parts.addTrust(cloudId, trustGain);
+                trustGain = this.calculateTrustGain(cloudId);
+                if (isProtector) {
+                    response = "*Shrug*";
+                    trustGain *= 0.25;
                 } else {
-                    const result = this.handleWhatNeedToKnowInternal(cloudId);
-                    response = result.response;
-                    trustGain = this.calculateTrustGain(cloudId);
-                    backlash = result.triggerBacklash;
+                    response = this.rng.cosmetic.pickRandom(COMPASSION_RECEIVED_RESPONSES);
                 }
+                this.model.parts.addTrust(cloudId, trustGain);
                 break;
             }
 
