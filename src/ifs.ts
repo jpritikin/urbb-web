@@ -24,20 +24,22 @@ function getPageVersion(): string {
 }
 
 function setupRecordingShortcuts(cloudManager: CloudManager): void {
-    let isRecording = false;
+    const toggleRecording = () => {
+        if (cloudManager.isRecording()) {
+            downloadSession(cloudManager);
+            console.log('[IFS] Recording stopped and downloaded');
+        } else {
+            cloudManager.startRecording(getPageVersion());
+            console.log('[IFS] Recording started');
+        }
+    };
+
+    cloudManager.setRecordingToggleHandler(toggleRecording);
 
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === ' ') {
             e.preventDefault();
-            if (isRecording) {
-                downloadSession(cloudManager);
-                isRecording = false;
-                console.log('[IFS] Recording stopped and downloaded');
-            } else {
-                cloudManager.startRecording(getPageVersion());
-                isRecording = true;
-                console.log('[IFS] Recording started (Ctrl+Space to stop and download)');
-            }
+            toggleRecording();
         }
     });
 }

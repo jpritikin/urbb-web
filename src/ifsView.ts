@@ -32,7 +32,8 @@ import {
     PositionTarget,
     SmoothingConfig,
     CloudAnimatedState,
-    DEFAULT_SMOOTHING
+    DEFAULT_SMOOTHING,
+    LINEAR_INTERPOLATION_SPEED
 } from './ifsView/types.js';
 
 export { STAR_OUTER_RADIUS };
@@ -48,17 +49,17 @@ export class SimulatorView {
 
     private cloudStates: Map<string, CloudAnimatedState> = new Map();
     private mode: 'panorama' | 'foreground' = 'panorama';
-    private previousMode: 'panorama' | 'foreground' = 'panorama';
-    private previousTargetIds: Set<string> = new Set();
     private previousForegroundIds: Set<string> = new Set();
     private transitionProgress: number = 0;
     private transitionDuration: number = 1.0;
     private transitionDirection: 'forward' | 'reverse' | 'none' = 'none';
+    private panoramaZoom: number = 0.5;
+    private transitionStartZoom: number = 1.0;
 
     private canvasWidth: number;
     private canvasHeight: number;
     private perspectiveFactor: number = 600;
-    private maxZoomFactor: number = 2.0;
+    private foregroundZoomFactor: number = 5.0;
 
     private starElement: SVGElement | null = null;
     private starCurrentX: number = 0;
@@ -89,6 +90,9 @@ export class SimulatorView {
 
     // Help panel
     private helpPanel: HelpPanel = new HelpPanel();
+
+    // Victory check throttle
+    private lastVictoryCheck: number = 0;
 
     constructor(canvasWidth: number, canvasHeight: number) {
         this.canvasWidth = canvasWidth;
@@ -208,11 +212,13 @@ export class SimulatorView {
 
     setMode(mode: 'panorama' | 'foreground'): void {
         if (mode !== this.mode) {
-            this.previousMode = this.mode;
-            this.mode = mode;
-
             const wasTransitioning = this.transitionDirection !== 'none' && this.transitionProgress < 1;
             const oldDirection = this.transitionDirection;
+
+            // Capture current zoom BEFORE changing mode/direction (so getCurrentZoomFactor returns correct value)
+            const currentZoom = this.getCurrentZoomFactor();
+
+            this.mode = mode;
 
             if (mode === 'foreground') {
                 this.transitionDirection = 'forward';
@@ -225,6 +231,7 @@ export class SimulatorView {
                 this.transitionProgress = 1 - this.transitionProgress;
             } else {
                 this.transitionProgress = 0;
+                this.transitionStartZoom = currentZoom;
             }
 
             // Reset opacity smoothing for all clouds to ensure consistent transition speed
@@ -235,6 +242,22 @@ export class SimulatorView {
             this.events.emit('mode-changed', { mode });
             this.events.emit('transition-started', { direction: this.transitionDirection });
         }
+    }
+
+    setPanoramaZoom(zoom: number): void {
+        this.panoramaZoom = zoom;
+    }
+
+    getPanoramaZoom(): number {
+        return this.panoramaZoom;
+    }
+
+    setTransitionDuration(seconds: number): void {
+        this.transitionDuration = seconds;
+    }
+
+    getTransitionDuration(): number {
+        return this.transitionDuration;
     }
 
     initializeViewStates(instances: CloudInstance[], panoramaPositions: Map<string, { x: number; y: number; scale: number }>): void {
@@ -297,7 +320,23 @@ export class SimulatorView {
                 const pos = panoramaPositions.get(cloudId);
                 const x = pos?.x ?? centerX;
                 const y = pos?.y ?? centerY;
-                return { x, y, scale: pos?.scale ?? 1 };
+                const scale = pos?.scale ?? 1;
+                return { x, y, scale };
+            }
+
+            case 'panorama-ui': {
+                // For FG clouds in uiGroup during reverse transition
+                // Target is panorama position transformed to screen coords
+                const pos = panoramaPositions.get(cloudId);
+                const rawX = pos?.x ?? centerX;
+                const rawY = pos?.y ?? centerY;
+                const rawScale = pos?.scale ?? 1;
+                const zoom = this.panoramaZoom;
+                return {
+                    x: centerX + (rawX - centerX) * zoom,
+                    y: centerY + (rawY - centerY) * zoom,
+                    scale: rawScale * zoom
+                };
             }
 
             case 'seat': {
@@ -422,25 +461,20 @@ export class SimulatorView {
 
         this.generateTraceEntries(oldModel, newModel);
 
-        const currentTargetIds = newModel.getTargetCloudIds();
-        if (this.transitionDirection !== 'reverse' || this.transitionProgress >= 1) {
-            this.previousTargetIds = new Set(currentTargetIds);
-        }
-
         this.checkVictoryCondition(newModel);
     }
 
     private checkVictoryCondition(model: SimulatorModel): void {
         if (this.victoryBanner.isShown() || !this.htmlContainer) return;
 
-        const allParts = model.getAllPartStates();
-        if (allParts.size === 0) return;
+        const now = Date.now();
+        if (now - this.lastVictoryCheck < 1000) return;
+        this.lastVictoryCheck = now;
 
-        for (const [, state] of allParts) {
-            if (state.trust <= 0.9) return;
+        if (model.checkAndSetVictory()) {
+            this.victoryBanner.show(this.htmlContainer);
+            this.events.emit('victory-achieved', {});
         }
-
-        this.victoryBanner.show(this.htmlContainer);
     }
 
     private syncSelfRay(model: SimulatorModel): void {
@@ -479,6 +513,13 @@ export class SimulatorView {
 
             const rayElement = this.selfRay.create();
             this.rayContainer.appendChild(rayElement);
+        }
+
+        if (this.selfRay) {
+            const openness = model.parts.getOpenness(modelRay.targetCloudId);
+            const targetCount = Math.max(1, model.getTargetCloudIds().size);
+            const trustGain = openness / targetCount;
+            this.selfRay.setTrustGainFeedback(trustGain);
         }
     }
 
@@ -526,7 +567,9 @@ export class SimulatorView {
             const isSupporting = allSupporting.has(cloudId);
             const isInForeground = isTarget || isBlended || isPendingBlend || isSupporting;
 
-            if (this.mode === 'foreground' && isInForeground) {
+            const inForegroundMode = this.mode === 'foreground' ||
+                (this.transitionDirection === 'reverse' && this.transitionProgress < 1);
+            if (inForegroundMode && isInForeground) {
                 currentForegroundIds.add(cloudId);
             }
 
@@ -591,8 +634,13 @@ export class SimulatorView {
                 positionTarget = { type: 'panorama' };
                 targetOpacity = 0;
             } else {
-                // Panorama mode
-                positionTarget = { type: 'panorama' };
+                // Panorama mode (or reverse transition)
+                // FG clouds in uiGroup need zoom-adjusted target
+                if (this.transitionDirection === 'reverse' && this.previousForegroundIds.has(cloudId)) {
+                    positionTarget = { type: 'panorama-ui' };
+                } else {
+                    positionTarget = { type: 'panorama' };
+                }
             }
 
             // Don't override state for parts in entry animation (supporting entries handle their own state)
@@ -604,6 +652,19 @@ export class SimulatorView {
                 }
             }
             state.targetScale = 1;
+        }
+
+        // Detect clouds that newly joined the foreground (while already in foreground mode)
+        if (this.mode === 'foreground' && this.transitionDirection === 'none') {
+            const newlyJoined: string[] = [];
+            for (const cloudId of currentForegroundIds) {
+                if (!this.previousForegroundIds.has(cloudId)) {
+                    newlyJoined.push(cloudId);
+                }
+            }
+            if (newlyJoined.length > 0) {
+                this.events.emit('clouds-joined-foreground', { cloudIds: newlyJoined });
+            }
         }
 
         // Update previous foreground set for next frame
@@ -687,24 +748,39 @@ export class SimulatorView {
                 model
             );
 
-            // Apply exponential smoothing to each property
-            if (state.smoothing.position > 0) {
-                const factor = 1 - Math.exp(-state.smoothing.position * deltaTime);
-                state.x += (resolved.x - state.x) * factor;
-                state.y += (resolved.y - state.y) * factor;
+
+            // Apply linear interpolation to position and scale
+            const posDiff = Math.sqrt((resolved.x - state.x) ** 2 + (resolved.y - state.y) ** 2);
+            if (posDiff > 0.5) {
+                state.x += (resolved.x - state.x) * deltaTime * LINEAR_INTERPOLATION_SPEED;
+                state.y += (resolved.y - state.y) * deltaTime * LINEAR_INTERPOLATION_SPEED;
             } else {
                 state.x = resolved.x;
                 state.y = resolved.y;
             }
 
-            if (state.smoothing.scale > 0) {
-                const factor = 1 - Math.exp(-state.smoothing.scale * deltaTime);
-                state.scale += (state.targetScale - state.scale) * factor;
+            const scaleDiff = resolved.scale - state.scale;
+            if (Math.abs(scaleDiff) > 0.001) {
+                state.scale += scaleDiff * deltaTime * LINEAR_INTERPOLATION_SPEED;
             } else {
-                state.scale = state.targetScale;
+                state.scale = resolved.scale;
             }
 
-            if (state.smoothing.opacity > 0) {
+            // For non-fg clouds fading out during forward transition, use late fade
+            const isFadingOut = state.targetOpacity === 0 && state.opacity > 0;
+            const isForwardTransition = this.transitionDirection === 'forward' && this.transitionProgress < 1;
+            if (isFadingOut && isForwardTransition) {
+                // Stay opaque until late in transition, then fade quickly
+                // progress 0→0.7: opacity stays at 1
+                // progress 0.7→1: opacity fades 1→0
+                const fadeStart = 0.7;
+                if (this.transitionProgress < fadeStart) {
+                    state.opacity = 1;
+                } else {
+                    const fadeProgress = (this.transitionProgress - fadeStart) / (1 - fadeStart);
+                    state.opacity = 1 - fadeProgress;
+                }
+            } else if (state.smoothing.opacity > 0) {
                 const factor = 1 - Math.exp(-state.smoothing.opacity * deltaTime);
                 state.opacity += (state.targetOpacity - state.opacity) * factor;
                 // Snap to target when very close to avoid lingering at near-zero opacity
@@ -823,21 +899,44 @@ export class SimulatorView {
     private animateStar(deltaTime: number): void {
         if (!this.starElement) return;
 
-        const speed = 3.0;
         const dx = this.starTargetX - this.starCurrentX;
         const dy = this.starTargetY - this.starCurrentY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 0.5) {
-            const step = Math.min(distance, speed * deltaTime * 100);
-            this.starCurrentX += (dx / distance) * step;
-            this.starCurrentY += (dy / distance) * step;
+            this.starCurrentX += dx * deltaTime * LINEAR_INTERPOLATION_SPEED;
+            this.starCurrentY += dy * deltaTime * LINEAR_INTERPOLATION_SPEED;
         } else {
             this.starCurrentX = this.starTargetX;
             this.starCurrentY = this.starTargetY;
         }
 
         this.starElement.setAttribute('transform', `translate(${this.starCurrentX}, ${this.starCurrentY})`);
+    }
+
+    transformStarPosition(factor: number): void {
+        this.starCurrentX *= factor;
+        this.starCurrentY *= factor;
+        this.starTargetX *= factor;
+        this.starTargetY *= factor;
+    }
+
+    getStarScreenPosition(): { x: number; y: number } {
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        return {
+            x: centerX + this.starCurrentX,
+            y: centerY + this.starCurrentY
+        };
+    }
+
+    getStarTargetPosition(): { x: number; y: number } {
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        return {
+            x: centerX + this.starTargetX,
+            y: centerY + this.starTargetY
+        };
     }
 
     private updateStarPosition(model: SimulatorModel): void {
@@ -1020,19 +1119,18 @@ export class SimulatorView {
     }
 
     getCurrentZoomFactor(): number {
-        const maxZoomFactor = this.maxZoomFactor;
-
+        // Panorama mode uses panoramaZoom (adjustable via pinch)
+        // Foreground mode zooms into foregroundZoomFactor for non-participating clouds
+        // Transitions interpolate smoothly between these
         if (this.transitionDirection !== 'none' && this.transitionProgress < 1) {
             const eased = this.easeInOutCubic(this.transitionProgress);
-            if (this.transitionDirection === 'forward') {
-                return 1 + (maxZoomFactor - 1) * eased;
-            } else {
-                return maxZoomFactor - (maxZoomFactor - 1) * eased;
-            }
+            const startZoom = this.transitionStartZoom;
+            const endZoom = this.transitionDirection === 'forward' ? this.foregroundZoomFactor : this.panoramaZoom;
+            return startZoom + (endZoom - startZoom) * eased;
         } else if (this.mode === 'foreground') {
-            return maxZoomFactor;
+            return this.foregroundZoomFactor;
         }
-        return 1.0;
+        return this.panoramaZoom;
     }
 
     getForegroundCloudIds(): Set<string> {
@@ -1178,19 +1276,4 @@ export class SimulatorView {
         return newModel.getMessages().some(m => !oldMessages.has(m.id));
     }
 
-    getViewStateSnapshot(): { foregroundIds: string[]; supportingEntries: string[]; cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }> } {
-        const cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }> = {};
-        for (const [cloudId, state] of this.cloudStates) {
-            cloudStates[cloudId] = {
-                opacity: state.opacity,
-                targetOpacity: state.targetOpacity,
-                positionType: state.positionTarget.type
-            };
-        }
-        return {
-            foregroundIds: Array.from(this.previousForegroundIds),
-            supportingEntries: [],
-            cloudStates
-        };
-    }
 }

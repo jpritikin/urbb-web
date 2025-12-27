@@ -1,6 +1,7 @@
 export interface HelpData {
     lowestTrust: { name: string; trust: number } | null;
     highestNeedAttention: { name: string; needAttention: number } | null;
+    victoryAchieved?: boolean;
 }
 
 export class HelpPanel {
@@ -68,15 +69,23 @@ export class HelpPanel {
         }
 
         if (data.highestNeedAttention) {
-            const naPct = Math.round(data.highestNeedAttention.needAttention * 100);
+            const na = data.highestNeedAttention.needAttention;
+            const naDisplay = na.toFixed(1);
+            const naColor = na < 1 ? 'green' : na < 2 ? 'orange' : 'red';
             html += `<div class="help-row">
                 <span class="help-label">Needs attention:</span>
-                <span class="help-value">${data.highestNeedAttention.name} (${naPct}%)</span>
+                <span class="help-value">${data.highestNeedAttention.name} (<span style="color:${naColor}">${naDisplay}</span>)</span>
             </div>`;
         }
 
         if (!data.lowestTrust && !data.highestNeedAttention) {
             html = '<div class="help-row"><span class="help-value">No parts registered</span></div>';
+        }
+
+        if (data.victoryAchieved) {
+            html += `<div class="help-row victory-row">
+                <span class="help-value">✨ Self-Leadership Achieved! 🌟</span>
+            </div>`;
         }
 
         content.innerHTML = html;

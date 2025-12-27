@@ -7,6 +7,7 @@ export interface UIManagerConfig {
     onFullscreenToggle: () => void;
     onAnimationPauseToggle: () => void;
     onTracePanelToggle: () => void;
+    onRecordingToggle?: () => void;
 }
 
 export class UIManager {
@@ -292,6 +293,22 @@ export class UIManager {
         `;
 
         btn.addEventListener('click', () => this.config.onAnimationPauseToggle());
+
+        let longPressTimer: number | null = null;
+        btn.addEventListener('touchstart', () => {
+            longPressTimer = window.setTimeout(() => {
+                if (this.config.onRecordingToggle) {
+                    this.config.onRecordingToggle();
+                }
+                longPressTimer = null;
+            }, 2000);
+        });
+        btn.addEventListener('touchend', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        });
 
         this.container.appendChild(btn);
         this.debugPauseButton = btn;

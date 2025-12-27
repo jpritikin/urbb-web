@@ -1,4 +1,4 @@
-import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, ViewStateSnapshot } from './types.js';
+import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot } from './types.js';
 import type { DualRNG, SeededRNG } from './rng.js';
 
 export class ActionRecorder {
@@ -32,7 +32,7 @@ export class ActionRecorder {
         this.rng = rng ?? null;
     }
 
-    record(action: RecordedAction, viewState?: ViewStateSnapshot): void {
+    record(action: RecordedAction, orchState?: OrchestratorSnapshot, modelState?: ModelSnapshot): void {
         const now = performance.now();
         const elapsedTime = (now - this.lastActionTime) / 1000;
         this.lastActionTime = now;
@@ -48,7 +48,7 @@ export class ActionRecorder {
             rngLog = fullLog.slice(this.lastRngCount);
             this.lastRngCount = currentCount;
         }
-        this.actions.push({ ...action, elapsedTime, viewState, rngCounts, rngLog });
+        this.actions.push({ ...action, elapsedTime, rngCounts, rngLog, orchState, modelState });
     }
 
     getSession(

@@ -1,6 +1,7 @@
 import { PartStateManager, PartState, PartBiography, PartDialogues } from './partStateManager.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import type { SerializedModel } from './testability/types.js';
+import type { RNG } from './testability/rng.js';
 
 export type BlendReason = 'spontaneous' | 'therapist';
 export type MessageType = 'grievance';
@@ -40,6 +41,7 @@ export class SimulatorModel {
     private messages: PartMessage[] = [];
     private messageIdCounter: number = 0;
     private thoughtBubbles: ThoughtBubble[] = [];
+    private victoryAchieved: boolean = false;
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -114,6 +116,23 @@ export class SimulatorModel {
             }
         }
         return allSupporting;
+    }
+
+    getConferenceCloudIds(): Set<string> {
+        const ids = new Set<string>();
+        for (const id of this.targetCloudIds) {
+            ids.add(id);
+        }
+        for (const id of this.blendedParts.keys()) {
+            ids.add(id);
+        }
+        for (const { cloudId } of this.pendingBlends) {
+            ids.add(cloudId);
+        }
+        for (const id of this.getAllSupportingParts()) {
+            ids.add(id);
+        }
+        return ids;
     }
 
     clearSupportingParts(): void {
@@ -324,7 +343,7 @@ export class SimulatorModel {
         return cloned;
     }
 
-    checkAttentionDemands(relationships: CloudRelationshipManager): string | null {
+    checkAttentionDemands(relationships: CloudRelationshipManager, rng: RNG): { cloudId: string; urgent: boolean; needAttention: number } | null {
         if (this.pendingAttentionDemand) return null;
 
         const allParts = this.parts.getAllPartStates();
@@ -332,29 +351,49 @@ export class SimulatorModel {
             (a, b) => b[1].needAttention - a[1].needAttention
         );
 
+        const hasConference = this.targetCloudIds.size > 0;
+
         for (const [cloudId, state] of sorted) {
             if (state.needAttention <= 1) break;
+
+            // Skip parts already in the conference
+            if (this.blendedParts.has(cloudId)) continue;
+            if (this.pendingBlends.some(p => p.cloudId === cloudId)) continue;
+            if (this.targetCloudIds.has(cloudId)) continue;
 
             const protectors = relationships.getProtectedBy(cloudId);
             if (protectors.size > 0) continue;
 
+            const urgent = state.needAttention > 2 && (state.needAttention - 2) > rng.random('urgent_attention');
+            if (!urgent && hasConference) continue;
+
             this.pendingAttentionDemand = cloudId;
-            return cloudId;
+            return { cloudId, urgent, needAttention: state.needAttention };
         }
         return null;
     }
 
-    increaseGrievanceNeedAttention(relationships: CloudRelationshipManager, deltaTime: number): void {
+    increaseNeedAttention(relationships: CloudRelationshipManager, deltaTime: number): void {
         const allParts = this.parts.getAllPartStates();
         for (const [cloudId] of allParts) {
+            if (this.parts.isUnburdened(cloudId)) continue;
+            if (this.isBlended(cloudId) || this.isTarget(cloudId) || this.isPendingBlend(cloudId)) continue;
+
             const hasGrievances = relationships.getGrievanceTargets(cloudId).size > 0;
-            if (!hasGrievances) continue;
+            const isProtectee = relationships.getProtectedBy(cloudId).size > 0;
+            const trust = this.parts.getTrust(cloudId);
 
-            if (this.parts.isUnburdenedJobRevealed(cloudId)) continue;
-            if (this.isBlended(cloudId) || this.isTarget(cloudId)) continue;
+            let rate = 0;
+            if (hasGrievances) {
+                rate = 0.05;
+            } else if (!isProtectee) {
+                rate = 0.01 * (1 - trust);
+            }
 
-            const current = this.parts.getNeedAttention(cloudId);
-            this.parts.setNeedAttention(cloudId, current + deltaTime * 0.05);
+            if (rate > 0) {
+                const current = this.parts.getNeedAttention(cloudId);
+                this.parts.setNeedAttention(cloudId, current + deltaTime * rate);
+            }
         }
     }
 
@@ -422,6 +461,24 @@ export class SimulatorModel {
         this.thoughtBubbles = this.thoughtBubbles.filter(b => b.cloudId !== cloudId);
     }
 
+    checkAndSetVictory(): boolean {
+        if (this.victoryAchieved) return false;
+
+        const allParts = this.getAllPartStates();
+        if (allParts.size === 0) return false;
+
+        for (const [, state] of allParts) {
+            if (state.trust <= 0.9 || state.needAttention >= 1) return false;
+        }
+
+        this.victoryAchieved = true;
+        return true;
+    }
+
+    isVictoryAchieved(): boolean {
+        return this.victoryAchieved;
+    }
+
     toJSON(): SerializedModel {
         const supportingParts: Record<string, string[]> = {};
         for (const [k, v] of this.supportingParts) {
@@ -443,6 +500,7 @@ export class SimulatorModel {
             messageIdCounter: this.messageIdCounter,
             partStates: this.parts.toJSON(),
             thoughtBubbles: this.thoughtBubbles.map(b => ({ ...b })),
+            victoryAchieved: this.victoryAchieved,
         };
     }
 
@@ -463,6 +521,7 @@ export class SimulatorModel {
         model.messageIdCounter = json.messageIdCounter;
         (model as { parts: PartStateManager }).parts = PartStateManager.fromJSON(json.partStates);
         model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({ ...b }));
+        model.victoryAchieved = json.victoryAchieved ?? false;
         return model;
     }
 }

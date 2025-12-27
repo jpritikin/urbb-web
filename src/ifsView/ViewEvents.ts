@@ -2,6 +2,8 @@ export type ViewEventMap = {
     'mode-changed': { mode: 'panorama' | 'foreground' };
     'transition-started': { direction: 'forward' | 'reverse' };
     'transition-completed': {};
+    'clouds-joined-foreground': { cloudIds: string[] };
+    'victory-achieved': {};
 };
 
 export class ViewEventEmitter {

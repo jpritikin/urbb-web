@@ -1,6 +1,5 @@
 import {
     STAR_OUTER_RADIUS,
-    getInnerRadiusForArmCount,
     getRenderSpec,
     type TransitionDirection,
     type PlannedTransitionBundle,
@@ -10,6 +9,7 @@ import { getCSSColor, type HSLColor } from './colorUtils.js';
 import { PulseAnimation } from './pulseAnimation.js';
 import { TransitionElements } from './transitionElements.js';
 import { CoordinateConverter } from './coordinateConverter.js';
+import { LINEAR_INTERPOLATION_SPEED } from './ifsView/types.js';
 
 export { STAR_OUTER_RADIUS };
 
@@ -226,7 +226,7 @@ export class AnimatedStar {
     private updateRadiusScale(deltaTime: number): void {
         const diff = this.targetRadiusScale - this.radiusScale;
         if (Math.abs(diff) > 0.001) {
-            this.radiusScale += diff * deltaTime * 3.0;
+            this.radiusScale += diff * deltaTime * LINEAR_INTERPOLATION_SPEED;
         } else {
             this.radiusScale = this.targetRadiusScale;
         }
@@ -905,11 +905,6 @@ export function createFillColorDebugPanel(star: AnimatedStar): HTMLElement {
     };
     updateMarker();
 
-    const logColor = () => {
-        const c = star.getFillColor();
-        console.log(`Fill color: S:${c.s.toFixed(0)} L:${c.l.toFixed(0)}`);
-    };
-
     const handleInput = (e: MouseEvent | TouchEvent) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -925,11 +920,10 @@ export function createFillColorDebugPanel(star: AnimatedStar): HTMLElement {
     let dragging = false;
     panel.addEventListener('mousedown', (e) => { dragging = true; handleInput(e); });
     panel.addEventListener('mousemove', (e) => { if (dragging) handleInput(e); });
-    panel.addEventListener('mouseup', () => { if (dragging) logColor(); dragging = false; });
+    panel.addEventListener('mouseup', () => { dragging = false; });
     panel.addEventListener('mouseleave', () => { dragging = false; });
     panel.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); });
     panel.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); });
-    panel.addEventListener('touchend', () => { logColor(); });
 
     return panel;
 }

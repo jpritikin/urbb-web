@@ -35,6 +35,8 @@ Don't add console.log() in animation loops that will generate tons of output.
 
 We may want to store the IFS simulator state in the future. All state should be serializable to JSON.
 
+Never use Math.random() directly in the IFS simulator. Use the model's RNG (via model.random()) to ensure reproducibility for testing and recording.
+
 ## Website Style Guidelines
 
 Style: glitzy New Age influencer, but decorated with faux janky styling/coding errors; Use Santo Daime theme color scheme; Try to rely on markdown. Minimize literal HTML in markdown. Try to avoid pixel dimensions and prefer resolution independent measures. Site must work perfectly on various screen sizes (desktop and mobile). Site must be able to switch between light and dark mode. Use emojis to emphasize key points in the text.

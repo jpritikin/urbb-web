@@ -43,8 +43,8 @@ export class ActionEffectApplicator {
 
     private triggerBacklash(protectorId: string, protecteeId: string): void {
         this.model.parts.adjustTrust(protecteeId, 0.5);
-        const currentNeedAttention = this.model.parts.getNeedAttention(protectorId);
-        this.model.parts.setNeedAttention(protectorId, currentNeedAttention + 1);
+        const trust = this.model.parts.getTrust(protectorId);
+        this.model.parts.addNeedAttention(protectorId, 0.5 * (1 - trust));
         this.model.addBlendedPart(protectorId, 'spontaneous');
         this.model.stepBackPart(protecteeId);
     }

@@ -193,7 +193,7 @@ export class PieMenuController {
                 const hasFullyTrustingProtectee = Array.from(protectedIds).some(
                     protectedId => model.parts.getTrust(protectedId) >= 1
                 );
-                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.parts.isUnburdenedJobRevealed(cloudId);
+                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.parts.isUnburdened(cloudId);
             } else {
                 include = isTarget;
             }

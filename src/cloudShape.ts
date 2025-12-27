@@ -1070,8 +1070,11 @@ export class Cloud {
             callbacks.onClick();
         }, true);
 
-        this.groupElement.addEventListener('mouseenter', () => callbacks.onHover(true));
-        this.groupElement.addEventListener('mouseleave', () => callbacks.onHover(false));
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isMobile) {
+            this.groupElement.addEventListener('mouseenter', () => callbacks.onHover(true));
+            this.groupElement.addEventListener('mouseleave', () => callbacks.onHover(false));
+        }
 
         this.groupElement.addEventListener('touchstart', (e: TouchEvent) => {
             callbacks.onLongPressStart();

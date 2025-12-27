@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "codeVersion": "v3.36.0",
-  "platform": "desktop",
-  "modelSeed": 1063746377,
-  "timestamp": 1766711185340,
+  "codeVersion": "v3.37.0",
+  "platform": "mobile",
+  "modelSeed": 895121275,
+  "timestamp": 1766863937689,
   "initialModel": {
     "targetCloudIds": [],
     "supportingParts": {},
@@ -19,8 +19,8 @@
         "id": "cloud_1",
         "name": "Inner Critic",
         "trust": 0.3,
-        "needAttention": 0.5211500000000002,
-        "agreedWaitUntil": 1766711194904,
+        "needAttention": 0.8655000000000069,
+        "agreedWaitUntil": 1766863940363,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -30,7 +30,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -48,10 +48,10 @@
       },
       "cloud_2": {
         "id": "cloud_2",
-        "name": "criticized",
+        "name": "criticized one",
         "trust": 0.2,
         "needAttention": 0.3,
-        "agreedWaitUntil": 1766711194906,
+        "agreedWaitUntil": 1766863940366,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -61,7 +61,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -78,8 +78,8 @@
         "id": "cloud_3",
         "name": "toddler",
         "trust": 0.5,
-        "needAttention": 0.3,
-        "agreedWaitUntil": 1766711194907,
+        "needAttention": 0.33655000000000274,
+        "agreedWaitUntil": 1766863940367,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -89,7 +89,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -106,8 +106,8 @@
         "id": "cloud_4",
         "name": "self-image",
         "trust": 0.5,
-        "needAttention": 0.1,
-        "agreedWaitUntil": 1766711194907,
+        "needAttention": 0.13655000000000012,
+        "agreedWaitUntil": 1766863940369,
         "wasProxy": true,
         "attacked": false,
         "biography": {
@@ -117,7 +117,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -131,7 +131,8 @@
         }
       }
     },
-    "thoughtBubbles": []
+    "thoughtBubbles": [],
+    "victoryAchieved": false
   },
   "initialRelationships": {
     "protections": [
@@ -183,2351 +184,1123 @@
     {
       "action": "select_a_target",
       "cloudId": "cloud_1",
-      "elapsedTime": 0.805,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+      "elapsedTime": 2.632,
       "rngCounts": {
         "model": 0,
         "cosmetic": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_1",
-      "elapsedTime": 1.918,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+      "elapsedTime": 1.73,
       "rngCounts": {
         "model": 0,
         "cosmetic": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_1",
       "field": "identity",
-      "elapsedTime": 2.679,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+      "elapsedTime": 3.681,
       "rngCounts": {
         "model": 1,
         "cosmetic": 1
       },
       "rngLog": [
         "ray_field:deflect"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "who_do_you_see",
       "cloudId": "cloud_1",
-      "elapsedTime": 1.941,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
+      "elapsedTime": 1.823,
       "rngCounts": {
         "model": 2,
         "cosmetic": 1
       },
       "rngLog": [
         "who_do_you_see:pick_proxy"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [
+          "cloud_4"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_4",
-      "elapsedTime": 2.473,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
+      "elapsedTime": 2.407,
       "rngCounts": {
         "model": 2,
         "cosmetic": 1
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 2.3929999999999967
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [
+          "cloud_4"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_4",
-      "elapsedTime": 2.507,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 1.487,
       "rngCounts": {
         "model": 2,
         "cosmetic": 2
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 3.895999999999992
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_4",
+      "elapsedTime": 1.937,
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "age",
+      "elapsedTime": 9.359,
+      "rngCounts": {
+        "model": 3,
+        "cosmetic": 2
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "compassion",
+      "elapsedTime": 2.304,
+      "rngCounts": {
+        "model": 4,
+        "cosmetic": 2
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.961,
+      "rngCounts": {
+        "model": 5,
+        "cosmetic": 2
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 6.418,
+      "rngCounts": {
+        "model": 5,
+        "cosmetic": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_1",
-      "elapsedTime": 1.777,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 5.483,
+      "rngCounts": {
+        "model": 5,
+        "cosmetic": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
           "cloud_4"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 2,
-        "cosmetic": 2
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "who_do_you_see",
       "cloudId": "cloud_1",
-      "elapsedTime": 2.317,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 3.714,
       "rngCounts": {
-        "model": 3,
+        "model": 6,
         "cosmetic": 3
       },
       "rngLog": [
         "who_do_you_see:clear_proxies"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "identity",
-      "elapsedTime": 2.156,
-      "viewState": {
-        "foregroundIds": [
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
           "cloud_4"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 4,
-        "cosmetic": 3
-      },
-      "rngLog": [
-        "ray_field:clear_ray"
-      ]
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_1",
       "field": "age",
-      "elapsedTime": 2.884,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 3.651,
       "rngCounts": {
-        "model": 5,
+        "model": 7,
         "cosmetic": 3
       },
       "rngLog": [
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_1",
       "field": "jobAppraisal",
-      "elapsedTime": 1.603,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.119,
       "rngCounts": {
-        "model": 6,
+        "model": 8,
         "cosmetic": 4
       },
       "rngLog": [
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_1",
       "field": "jobImpact",
-      "elapsedTime": 1.72,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 1.26,
       "rngCounts": {
-        "model": 7,
+        "model": 9,
         "cosmetic": 5
       },
       "rngLog": [
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_1",
-      "field": "compassion",
-      "elapsedTime": 1.965,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 8,
-        "cosmetic": 5
-      },
-      "rngLog": [
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "job",
-      "cloudId": "cloud_1",
-      "elapsedTime": 4.531,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [
-          "cloud_2"
-        ],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 8,
-        "cosmetic": 5
-      },
-      "rngLog": []
-    },
-    {
-      "action": "help_protected",
-      "cloudId": "cloud_1",
-      "elapsedTime": 3.248,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 9,
-        "cosmetic": 5
-      },
-      "rngLog": [
-        "help_protected:willing"
-      ]
-    },
-    {
-      "action": "join_conference",
-      "cloudId": "cloud_2",
-      "elapsedTime": 3.136,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 9,
-        "cosmetic": 5
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "cloud_2",
-      "elapsedTime": 1.845,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 9,
-        "cosmetic": 5
-      },
-      "rngLog": []
-    },
-    {
-      "action": "who_do_you_see",
-      "cloudId": "cloud_2",
-      "elapsedTime": 1.553,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "field": "gratitude",
+      "elapsedTime": 3.261,
       "rngCounts": {
         "model": 10,
         "cosmetic": 6
       },
       "rngLog": [
-        "who_do_you_see:clear_proxies"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "age",
-      "elapsedTime": 3.482,
-      "viewState": {
-        "foregroundIds": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
-          "cloud_2",
           "cloud_4"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
+        "blended": []
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 4.742,
+      "rngCounts": {
+        "model": 10,
+        "cosmetic": 6
       },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.672,
       "rngCounts": {
         "model": 11,
         "cosmetic": 6
       },
       "rngLog": [
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 1.451,
-      "viewState": {
-        "foregroundIds": [
+        "help_protected:willing"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
-          "cloud_2",
-          "cloud_4"
+          "cloud_4",
+          "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 13,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "gratitude",
-      "elapsedTime": 1.397,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 14,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 2.833,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 16,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 1.331,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 18,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 1.314,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 20,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 1.306,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 22,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 1.518,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 24,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 1.254,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 26,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
-      "cloudId": "cloud_4",
-      "elapsedTime": 3.519,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.23,
       "rngCounts": {
-        "model": 26,
+        "model": 11,
         "cosmetic": 6
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
-      "cloudId": "cloud_4",
+      "cloudId": "cloud_2",
+      "field": "identity",
+      "elapsedTime": 4.853,
+      "rngCounts": {
+        "model": 11,
+        "cosmetic": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
       "field": "age",
-      "elapsedTime": 3.107,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.057,
       "rngCounts": {
-        "model": 27,
-        "cosmetic": 6
+        "model": 12,
+        "cosmetic": 8
       },
       "rngLog": [
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_4",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 2.147,
-      "viewState": {
-        "foregroundIds": [
+        "ray_field:deflect"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
-          "cloud_2",
-          "cloud_4"
+          "cloud_4",
+          "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 29,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "cloud_4",
-      "elapsedTime": 2.437,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 29,
-        "cosmetic": 6
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_4",
-      "field": "compassion",
-      "elapsedTime": 1.891,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 31,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_4",
-      "field": "compassion",
-      "elapsedTime": 1.7,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 33,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_4",
-      "field": "whatNeedToKnow",
-      "elapsedTime": 1.458,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 35,
-        "cosmetic": 6
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "select_a_target",
-      "cloudId": "cloud_3",
-      "elapsedTime": 6.4,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 35,
-        "cosmetic": 6
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "cloud_3",
-      "elapsedTime": 2.424,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 35,
-        "cosmetic": 6
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "who_do_you_see",
-      "cloudId": "cloud_3",
-      "elapsedTime": 3.154,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.702,
       "rngCounts": {
-        "model": 36,
-        "cosmetic": 6
+        "model": 13,
+        "cosmetic": 9
       },
       "rngLog": [
-        "who_do_you_see:pick_proxy"
-      ]
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_4",
-      "elapsedTime": 2.43,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
+        "who_do_you_see:clear_proxies"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
       },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 6
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_4",
-      "elapsedTime": 1.337,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "spontaneous_blend",
-      "cloudId": "cloud_1",
-      "elapsedTime": 0.021,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0.7443568633101365,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "job",
-      "cloudId": "cloud_1",
-      "elapsedTime": 6.724,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0.02568006249999999,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0.02568006249999999,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.816,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.598,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.572,
-      "viewState": {
-        "foregroundIds": [
+      "modelState": {
+        "targets": [
           "cloud_1",
+          "cloud_4",
           "cloud_2"
         ],
-        "supportingEntries": [
-          "cloud_2"
-        ],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "age",
+      "elapsedTime": 2.786,
       "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
+        "model": 14,
+        "cosmetic": 9
       },
-      "rngLog": []
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 1.856,
+      "rngCounts": {
+        "model": 14,
+        "cosmetic": 9
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 2.681,
+      "rngCounts": {
+        "model": 15,
+        "cosmetic": 9
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 1.484,
+      "rngCounts": {
+        "model": 16,
+        "cosmetic": 9
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.834,
+      "rngCounts": {
+        "model": 17,
+        "cosmetic": 9
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.815,
+      "rngCounts": {
+        "model": 17,
+        "cosmetic": 9
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 1.715,
+      "rngCounts": {
+        "model": 18,
+        "cosmetic": 9
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_4",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "notice_part",
       "cloudId": "cloud_1",
       "targetCloudId": "cloud_2",
-      "elapsedTime": 4.83,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 3.409,
+      "rngCounts": {
+        "model": 18,
+        "cosmetic": 9
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
+          "cloud_4",
           "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          },
-          "cloud_3": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "select_a_target",
       "cloudId": "cloud_3",
-      "elapsedTime": 5.671,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 13.579,
+      "rngCounts": {
+        "model": 18,
+        "cosmetic": 9
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_3"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_3",
-      "elapsedTime": 2.634,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 2.335,
+      "rngCounts": {
+        "model": 18,
+        "cosmetic": 9
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_3"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 36,
-        "cosmetic": 7
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_3",
-      "field": "identity",
-      "elapsedTime": 2.738,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 37,
-        "cosmetic": 8
-      },
-      "rngLog": [
-        "ray_field:deflect"
-      ]
+        "blended": []
+      }
     },
     {
       "action": "who_do_you_see",
       "cloudId": "cloud_3",
-      "elapsedTime": 2.959,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
+      "elapsedTime": 4.2,
       "rngCounts": {
-        "model": 38,
-        "cosmetic": 8
+        "model": 19,
+        "cosmetic": 9
       },
       "rngLog": [
         "who_do_you_see:pick_proxy"
-      ]
-    },
-    {
-      "action": "job",
-      "cloudId": "cloud_4",
-      "elapsedTime": 2.046,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 38,
-        "cosmetic": 9
-      },
-      "rngLog": []
+        "blended": [
+          "cloud_4"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_4",
-      "elapsedTime": 1.385,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          }
-        }
-      },
+      "elapsedTime": 2.162,
       "rngCounts": {
-        "model": 38,
+        "model": 19,
         "cosmetic": 9
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 2.1599999999999984
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
+        ],
+        "blended": [
+          "cloud_4"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_4",
-      "elapsedTime": 1.35,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 1.192,
       "rngCounts": {
-        "model": 38,
+        "model": 19,
         "cosmetic": 10
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 3.3779999999999935
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3",
+          "cloud_4"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "blend",
+      "cloudId": "cloud_3",
+      "elapsedTime": 10.922,
+      "rngCounts": {
+        "model": 19,
+        "cosmetic": 10
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4"
+        ],
+        "blended": [
+          "cloud_3"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_3",
+      "elapsedTime": 5.315,
+      "rngCounts": {
+        "model": 19,
+        "cosmetic": 11
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_3": 5.301999999999993
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4"
+        ],
+        "blended": [
+          "cloud_3"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_3",
+      "elapsedTime": 1.264,
+      "rngCounts": {
+        "model": 19,
+        "cosmetic": 11
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_3": 6.581999999999998
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_3",
-      "elapsedTime": 2.301,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 1.944,
       "rngCounts": {
-        "model": 38,
-        "cosmetic": 10
-      },
-      "rngLog": []
-    },
-    {
-      "action": "who_do_you_see",
-      "cloudId": "cloud_3",
-      "elapsedTime": 1.925,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 39,
+        "model": 19,
         "cosmetic": 11
       },
-      "rngLog": [
-        "who_do_you_see:clear_proxies"
-      ]
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_3",
-      "field": "compassion",
-      "elapsedTime": 3.176,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 41,
-        "cosmetic": 11
-      },
-      "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "ray_field:clear_ray"
-      ]
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_3",
       "field": "identity",
-      "elapsedTime": 2.748,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 3.833,
       "rngCounts": {
-        "model": 42,
-        "cosmetic": 11
+        "model": 20,
+        "cosmetic": 12
+      },
+      "rngLog": [
+        "ray_field:deflect"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "age",
+      "elapsedTime": 2.04,
+      "rngCounts": {
+        "model": 21,
+        "cosmetic": 13
+      },
+      "rngLog": [
+        "ray_field:deflect"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2.374,
+      "rngCounts": {
+        "model": 22,
+        "cosmetic": 14
+      },
+      "rngLog": [
+        "who_do_you_see:clear_proxies"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "age",
+      "elapsedTime": 2.712,
+      "rngCounts": {
+        "model": 23,
+        "cosmetic": 14
       },
       "rngLog": [
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "identity",
+      "elapsedTime": 12.025,
+      "rngCounts": {
+        "model": 24,
+        "cosmetic": 14
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_3",
       "field": "whatNeedToKnow",
-      "elapsedTime": 1.803,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_3",
-          "cloud_4"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_3": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_4": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.804,
       "rngCounts": {
-        "model": 44,
-        "cosmetic": 11
+        "model": 25,
+        "cosmetic": 14
       },
       "rngLog": [
-        "whatNeedToKnow:trust_gain",
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": []
+      }
     }
   ],
   "finalModel": {
     "targetCloudIds": [
-      "cloud_3",
-      "cloud_4"
+      "cloud_4",
+      "cloud_3"
     ],
     "supportingParts": {},
     "blendedParts": {},
     "pendingBlends": [],
-    "selfRay": {
-      "targetCloudId": "cloud_3"
-    },
+    "selfRay": null,
     "displacedParts": [],
     "pendingAttentionDemand": null,
     "messages": [],
@@ -2536,9 +1309,9 @@
       "cloud_1": {
         "id": "cloud_1",
         "name": "Inner Critic",
-        "trust": 1,
+        "trust": 0.95,
         "needAttention": 0,
-        "agreedWaitUntil": 1766711194904,
+        "agreedWaitUntil": 1766863940363,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -2548,7 +1321,7 @@
           "selfReaction": null,
           "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": true,
+          "unburdened": true,
           "jobAppraisalRevealed": true,
           "jobImpactRevealed": true,
           "consentedToHelp": true
@@ -2566,10 +1339,10 @@
       },
       "cloud_2": {
         "id": "cloud_2",
-        "name": "criticized",
+        "name": "criticized one",
         "trust": 1,
         "needAttention": 0.3,
-        "agreedWaitUntil": 1766711194906,
+        "agreedWaitUntil": 1766863940366,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -2579,7 +1352,7 @@
           "selfReaction": null,
           "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -2595,19 +1368,19 @@
       "cloud_3": {
         "id": "cloud_3",
         "name": "toddler",
-        "trust": 1,
-        "needAttention": 0.3,
-        "agreedWaitUntil": 1766711194907,
+        "trust": 0.9500000000000001,
+        "needAttention": 0.6297700000000044,
+        "agreedWaitUntil": 1766863940367,
         "wasProxy": false,
         "attacked": false,
         "biography": {
-          "ageRevealed": false,
+          "ageRevealed": true,
           "partAge": 3,
           "protectsRevealed": false,
           "selfReaction": null,
           "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -2623,9 +1396,9 @@
       "cloud_4": {
         "id": "cloud_4",
         "name": "self-image",
-        "trust": 0.95,
-        "needAttention": 0.1,
-        "agreedWaitUntil": 1766711194907,
+        "trust": 1,
+        "needAttention": 0,
+        "agreedWaitUntil": 1766863940369,
         "wasProxy": true,
         "attacked": false,
         "biography": {
@@ -2635,7 +1408,7 @@
           "selfReaction": null,
           "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -2653,19 +1426,10 @@
       {
         "text": "Blah blah blah.",
         "cloudId": "cloud_3",
-        "expiresAt": 1766711331583
-      },
-      {
-        "text": "I'm the toddler.",
-        "cloudId": "cloud_3",
-        "expiresAt": 1766711329781
-      },
-      {
-        "text": "Blah blah blah.",
-        "cloudId": "cloud_3",
-        "expiresAt": 1766711327033
+        "expiresAt": 1766864111453
       }
-    ]
+    ],
+    "victoryAchieved": true
   },
   "finalRelationships": {
     "protections": [

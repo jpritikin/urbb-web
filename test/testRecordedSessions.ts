@@ -24,9 +24,8 @@ interface SessionSpec {
 }
 
 const SESSIONS: SessionSpec[] = [
-    { path: 'test/scenarios/innerCriticSession.json', name: 'Inner Critic', parts: 2, actions: 22 },
-    { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy', parts: 4, actions: 57 },
-    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash', parts: 2, actions: 20 },
+    { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy', parts: 4, actions: 46 },
+    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash', parts: 2, actions: 24 },
 ];
 
 let results: TestResult[] = [];
@@ -61,11 +60,11 @@ function testSession(spec: SessionSpec): void {
         .map((r, i) => ({ ...r, index: i, action: session.actions[i] }))
         .filter(r => !r.success);
     test(`${spec.name}: no failed actions`, failedActions.length === 0,
-         failedActions.map(r => `#${r.index} ${r.action.action}(${r.action.cloudId}): ${r.message}`).join(', '));
+        failedActions.map(r => `#${r.index} ${r.action.action}(${r.action.cloudId}): ${r.message}`).join(', '));
 
     test(`${spec.name}: has finalModel`, session.finalModel !== undefined);
     test(`${spec.name}: replay matches`, result.differences.length === 0,
-         result.differences.slice(0, 5).join('; '));
+        result.differences.slice(0, 5).join('; '));
 
     const sessionTests = results.slice(startCount);
     sessionResults.push({

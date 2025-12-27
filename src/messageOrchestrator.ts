@@ -1,7 +1,13 @@
 import { SimulatorModel, PartMessage } from './ifsModel.js';
-import { SimulatorView } from './ifsView.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import { DualRNG } from './testability/rng.js';
+
+export interface MessageOrchestratorView {
+    hasActiveSpiralExits(): boolean;
+    isAwaitingArrival(cloudId: string): boolean;
+    getCloudState(cloudId: string): unknown | null;
+    startMessage(message: PartMessage, senderId: string, targetId: string): void;
+}
 
 export interface MessageOrchestratorCallbacks {
     act: (label: string, fn: () => void) => void;
@@ -11,7 +17,7 @@ export interface MessageOrchestratorCallbacks {
 
 export class MessageOrchestrator {
     private model: SimulatorModel;
-    private view: SimulatorView;
+    private view: MessageOrchestratorView;
     private relationships: CloudRelationshipManager;
     private rng: DualRNG;
     private callbacks: MessageOrchestratorCallbacks;
@@ -26,7 +32,7 @@ export class MessageOrchestrator {
 
     constructor(
         model: SimulatorModel,
-        view: SimulatorView,
+        view: MessageOrchestratorView,
         relationships: CloudRelationshipManager,
         rng: DualRNG,
         callbacks: MessageOrchestratorCallbacks
@@ -46,15 +52,22 @@ export class MessageOrchestrator {
         for (const [key, time] of this.messageCooldownTimers) {
             this.messageCooldownTimers.set(key, time + deltaTime);
         }
-        for (const [key, time] of this.blendStartTimers) {
-            this.blendStartTimers.set(key, time + deltaTime);
+        const blendedParts = this.model.getBlendedParts();
+        for (const blendedId of blendedParts) {
+            const currentTime = this.blendStartTimers.get(blendedId) ?? 0;
+            this.blendStartTimers.set(blendedId, currentTime + deltaTime);
+        }
+        for (const blendedId of this.blendStartTimers.keys()) {
+            if (!blendedParts.includes(blendedId)) {
+                this.blendStartTimers.delete(blendedId);
+            }
         }
     }
 
     onMessageReceived(message: PartMessage): void {
         if (message.type === 'grievance') {
             this.model.parts.adjustTrust(message.targetId, 0.99);
-            this.model.parts.adjustNeedAttention(message.senderId, 0.8);
+            this.model.parts.addNeedAttention(message.senderId, -0.25);
             if (message.senderId !== message.targetId) {
                 this.model.parts.setAttacked(message.targetId);
             }
@@ -69,21 +82,10 @@ export class MessageOrchestrator {
         const targetIds = this.model.getTargetCloudIds();
 
         for (const blendedId of blendedParts) {
-            if (!this.blendStartTimers.has(blendedId)) {
-                this.blendStartTimers.set(blendedId, 0);
-            }
-        }
-        for (const blendedId of this.blendStartTimers.keys()) {
-            if (!blendedParts.includes(blendedId)) {
-                this.blendStartTimers.delete(blendedId);
-            }
-        }
-
-        for (const blendedId of blendedParts) {
             const blendedCloud = this.callbacks.getCloudById(blendedId);
             if (!blendedCloud) continue;
 
-            if (this.model.parts.isUnburdenedJobRevealed(blendedId)) continue;
+            if (this.model.parts.isUnburdened(blendedId)) continue;
             if (this.view.isAwaitingArrival(blendedId)) continue;
 
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
@@ -156,10 +158,19 @@ export class MessageOrchestrator {
             if (newCooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
                 const text = this.rng.cosmetic.pickRandom(dialogues);
                 this.callbacks.showThoughtBubble(text, blendedId);
+                this.model.parts.addNeedAttention(blendedId, -0.25);
                 this.genericDialogueCooldowns.set(blendedId, 0);
                 break;
             }
         }
+    }
+
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } {
+        return {
+            blendTimers: Object.fromEntries(this.blendStartTimers),
+            cooldowns: Object.fromEntries(this.messageCooldownTimers),
+            pending: Object.fromEntries(this.pendingGrievanceTargets),
+        };
     }
 
     private sendMessage(senderId: string, targetId: string, text: string, type: 'grievance'): void {

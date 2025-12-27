@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "codeVersion": "v3.36.0",
+  "codeVersion": "v3.37.0",
   "platform": "desktop",
-  "modelSeed": 228289871,
-  "timestamp": 1766725486952,
+  "modelSeed": 1140545727,
+  "timestamp": 1766862473436,
   "initialModel": {
     "targetCloudIds": [],
     "supportingParts": {},
@@ -19,8 +19,8 @@
         "id": "cloud_1",
         "name": "Inner Critic",
         "trust": 0.3,
-        "needAttention": 0.5262000000000002,
-        "agreedWaitUntil": 1766725496418,
+        "needAttention": 0.5539000000000006,
+        "agreedWaitUntil": 1766862482339,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -30,7 +30,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -48,10 +48,10 @@
       },
       "cloud_2": {
         "id": "cloud_2",
-        "name": "criticized",
+        "name": "criticized one",
         "trust": 0.2,
         "needAttention": 0.3,
-        "agreedWaitUntil": 1766725496421,
+        "agreedWaitUntil": 1766862482340,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -61,7 +61,7 @@
           "selfReaction": null,
           "relationshipsRevealed": false,
           "identityRevealed": false,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -75,7 +75,8 @@
         }
       }
     },
-    "thoughtBubbles": []
+    "thoughtBubbles": [],
+    "victoryAchieved": false
   },
   "initialRelationships": {
     "protections": [
@@ -101,621 +102,620 @@
   "actions": [
     {
       "action": "select_a_target",
-      "cloudId": "cloud_2",
-      "elapsedTime": 1.357,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "cloudId": "cloud_1",
+      "elapsedTime": 0.98,
       "rngCounts": {
         "model": 0,
         "cosmetic": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.971,
+      "rngCounts": {
+        "model": 0,
+        "cosmetic": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "identity",
+      "elapsedTime": 2.334,
+      "rngCounts": {
+        "model": 1,
+        "cosmetic": 0
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "age",
+      "elapsedTime": 2.576,
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 0
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.373,
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.597,
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_2",
-      "elapsedTime": 3.392,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.686,
       "rngCounts": {
-        "model": 0,
+        "model": 2,
         "cosmetic": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_2",
+      "elapsedTime": 4.229,
+      "rngCounts": {
+        "model": 2,
+        "cosmetic": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_2",
       "field": "identity",
-      "elapsedTime": 3.258,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.411,
       "rngCounts": {
-        "model": 1,
-        "cosmetic": 0
+        "model": 2,
+        "cosmetic": 2
       },
-      "rngLog": [
-        "ray_field:clear_ray"
-      ]
-    },
-    {
-      "action": "spontaneous_blend",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.494,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
       },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "job",
-      "cloudId": "cloud_1",
-      "elapsedTime": 7.016,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0.015252249999999967,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.569,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.507,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 3.571,
-      "viewState": {
-        "foregroundIds": [
+      "modelState": {
+        "targets": [
           "cloud_1",
           "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 2
-      },
-      "rngLog": []
-    },
-    {
-      "action": "join_conference",
-      "cloudId": "cloud_2",
-      "elapsedTime": 2.705,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 2
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "cloud_2",
-      "elapsedTime": 2.121,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 1,
-        "cosmetic": 2
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_2",
       "field": "age",
-      "elapsedTime": 6.743,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 1.929,
       "rngCounts": {
-        "model": 2,
+        "model": 3,
         "cosmetic": 2
       },
       "rngLog": [
         "ray_field:clear_ray"
-      ]
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_2",
       "field": "whatNeedToKnow",
-      "elapsedTime": 3.338,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 0.7,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.559,
       "rngCounts": {
-        "model": 4,
+        "model": 5,
         "cosmetic": 2
       },
       "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "whatNeedToKnow:backlash_check"
-      ]
-    },
-    {
-      "action": "spontaneous_blend",
-      "cloudId": "cloud_1",
-      "elapsedTime": 0.003,
-      "viewState": {
-        "foregroundIds": [
+        "whatNeedToKnow:backlash_check",
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
           "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.989971451391252,
-            "targetOpacity": 0.7,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 0.999999744,
-            "targetOpacity": 0,
-            "positionType": "absolute"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 4,
-        "cosmetic": 2
-      },
-      "rngLog": []
+        ]
+      }
     },
     {
       "action": "job",
       "cloudId": "cloud_1",
-      "elapsedTime": 11.932,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+      "elapsedTime": 8.833,
       "rngCounts": {
-        "model": 4,
-        "cosmetic": 4
+        "model": 6,
+        "cosmetic": 3
       },
-      "rngLog": []
+      "rngLog": [
+        "grievance_target"
+      ],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 8.829999999999998
+        },
+        "cooldowns": {
+          "cloud_1": 6.827999999999978
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_1",
-      "elapsedTime": 1.671,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 0.7,
-            "positionType": "blended"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 0,
-            "positionType": "panorama"
-          }
-        }
-      },
+      "elapsedTime": 1.458,
       "rngCounts": {
-        "model": 4,
-        "cosmetic": 4
+        "model": 6,
+        "cosmetic": 3
       },
-      "rngLog": []
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 10.285999999999992
+        },
+        "cooldowns": {
+          "cloud_1": 8.28399999999997
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ]
+      }
     },
     {
       "action": "separate",
       "cloudId": "cloud_1",
-      "elapsedTime": 1.794,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.7,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 0,
-            "targetOpacity": 1,
-            "positionType": "supporting"
-          }
-        }
-      },
+      "elapsedTime": 1.877,
       "rngCounts": {
-        "model": 4,
+        "model": 6,
+        "cosmetic": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 12.158999999999986
+        },
+        "cooldowns": {
+          "cloud_1": 10.156999999999965
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 5.156,
+      "rngCounts": {
+        "model": 7,
         "cosmetic": 4
       },
-      "rngLog": []
+      "rngLog": [
+        "help_protected:willing"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 15.323999999999923
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.839,
+      "rngCounts": {
+        "model": 7,
+        "cosmetic": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 18.156999999999876
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "compassion",
+      "elapsedTime": 2.097,
+      "rngCounts": {
+        "model": 8,
+        "cosmetic": 4
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 20.249999999999872
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 1.655,
+      "rngCounts": {
+        "model": 9,
+        "cosmetic": 5
+      },
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 21.90999999999985
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 6.455,
+      "rngCounts": {
+        "model": 10,
+        "cosmetic": 5
+      },
+      "rngLog": [
+        "help_protected:willing"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 28.345999999999833
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "join_conference",
       "cloudId": "cloud_2",
-      "elapsedTime": 3.307,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 2.409,
+      "rngCounts": {
+        "model": 10,
+        "cosmetic": 5
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 30.759999999999803
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
           "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 4,
-        "cosmetic": 4
-      },
-      "rngLog": []
+        "blended": []
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "cloud_2",
-      "elapsedTime": 2.969,
-      "viewState": {
-        "foregroundIds": [
+      "elapsedTime": 2.177,
+      "rngCounts": {
+        "model": 10,
+        "cosmetic": 5
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 32.931999999999796
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
           "cloud_1",
           "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 1,
-            "positionType": "seat"
-          }
-        }
-      },
+        "blended": []
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 6.565,
       "rngCounts": {
-        "model": 4,
-        "cosmetic": 4
+        "model": 11,
+        "cosmetic": 5
       },
-      "rngLog": []
+      "rngLog": [
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 39.509000000000086
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.059,
+      "rngCounts": {
+        "model": 11,
+        "cosmetic": 5
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 41.57300000000021
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": []
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_2",
       "field": "compassion",
-      "elapsedTime": 3.728,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
-        ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 1,
-            "targetOpacity": 0.7,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 1,
-            "targetOpacity": 0,
-            "positionType": "seat"
-          }
-        }
-      },
+      "elapsedTime": 2.642,
       "rngCounts": {
-        "model": 6,
-        "cosmetic": 4
+        "model": 12,
+        "cosmetic": 5
       },
       "rngLog": [
-        "whatNeedToKnow:trust_gain",
-        "whatNeedToKnow:backlash_check"
-      ]
-    },
-    {
-      "action": "spontaneous_blend",
-      "cloudId": "cloud_1",
-      "elapsedTime": 0.004,
-      "viewState": {
-        "foregroundIds": [
-          "cloud_1"
+        "ray_field:clear_ray"
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 44.21500000000027
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
         ],
-        "supportingEntries": [],
-        "cloudStates": {
-          "cloud_1": {
-            "opacity": 0.9597663244177614,
-            "targetOpacity": 0.7,
-            "positionType": "star"
-          },
-          "cloud_2": {
-            "opacity": 0.999999968,
-            "targetOpacity": 0,
-            "positionType": "absolute"
-          }
-        }
-      },
-      "rngCounts": {
-        "model": 6,
-        "cosmetic": 4
-      },
-      "rngLog": []
+        "blended": []
+      }
     }
   ],
   "finalModel": {
-    "targetCloudIds": [],
-    "supportingParts": {},
-    "blendedParts": {
-      "cloud_1": {
-        "degree": 1,
-        "reason": "spontaneous"
-      }
+    "targetCloudIds": [
+      "cloud_1",
+      "cloud_2"
+    ],
+    "supportingParts": {
+      "cloud_1": []
     },
+    "blendedParts": {},
     "pendingBlends": [],
-    "selfRay": null,
+    "selfRay": {
+      "targetCloudId": "cloud_2"
+    },
     "displacedParts": [],
     "pendingAttentionDemand": null,
     "messages": [],
-    "messageIdCounter": 3,
+    "messageIdCounter": 1,
     "partStates": {
       "cloud_1": {
         "id": "cloud_1",
         "name": "Inner Critic",
-        "trust": 0,
-        "needAttention": 0.95,
-        "agreedWaitUntil": 1766725496418,
+        "trust": 1,
+        "needAttention": 0.7408000000000017,
+        "agreedWaitUntil": 1766862482339,
         "wasProxy": false,
         "attacked": false,
         "biography": {
-          "ageRevealed": false,
+          "ageRevealed": true,
           "partAge": 8,
           "protectsRevealed": false,
           "selfReaction": null,
-          "relationshipsRevealed": false,
+          "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
-          "consentedToHelp": false
+          "consentedToHelp": true
         },
         "dialogues": {
           "burdenedJobAppraisal": [
@@ -730,10 +730,10 @@
       },
       "cloud_2": {
         "id": "cloud_2",
-        "name": "criticized",
-        "trust": 0.175,
+        "name": "criticized one",
+        "trust": 0.9931,
         "needAttention": 0.3,
-        "agreedWaitUntil": 1766725496421,
+        "agreedWaitUntil": 1766862482340,
         "wasProxy": false,
         "attacked": false,
         "biography": {
@@ -743,7 +743,7 @@
           "selfReaction": null,
           "relationshipsRevealed": true,
           "identityRevealed": true,
-          "unburdenedJobRevealed": false,
+          "unburdened": false,
           "jobAppraisalRevealed": false,
           "jobImpactRevealed": false,
           "consentedToHelp": false
@@ -757,7 +757,14 @@
         }
       }
     },
-    "thoughtBubbles": []
+    "thoughtBubbles": [
+      {
+        "text": "Blah blah blah.",
+        "cloudId": "cloud_2",
+        "expiresAt": 1766862558302
+      }
+    ],
+    "victoryAchieved": true
   },
   "finalRelationships": {
     "protections": [

@@ -51,6 +51,17 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.trust ?? 0.5;
     }
 
+    getOpenness(cloudId: string): number {
+        const bio = this.partStates.get(cloudId)?.biography;
+        if (!bio) return 0;
+        let openness = 0;
+        if (bio.ageRevealed) openness += 0.5;
+        if (bio.identityRevealed) openness += 0.2;
+        if (bio.jobAppraisalRevealed) openness += 0.15;
+        if (bio.jobImpactRevealed) openness += 0.15;
+        return openness;
+    }
+
     private clampTrust(state: PartState, trust: number): number {
         const maxTrust = state.attacked ? 0.8 : 1;
         return Math.max(0, Math.min(maxTrust, trust));
@@ -89,6 +100,13 @@ export class PartStateManager {
         const state = this.partStates.get(cloudId);
         if (state) {
             state.needAttention *= multiplier;
+        }
+    }
+
+    addNeedAttention(cloudId: string, amount: number): void {
+        const state = this.partStates.get(cloudId);
+        if (state) {
+            state.needAttention = Math.max(0, state.needAttention + amount);
         }
     }
 
@@ -168,15 +186,15 @@ export class PartStateManager {
         }
     }
 
-    revealUnburdenedJob(cloudId: string): void {
+    setUnburdened(cloudId: string): void {
         const state = this.partStates.get(cloudId);
-        if (state && !state.biography.unburdenedJobRevealed) {
-            state.biography.unburdenedJobRevealed = true;
+        if (state && !state.biography.unburdened) {
+            state.biography.unburdened = true;
         }
     }
 
-    isUnburdenedJobRevealed(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.biography.unburdenedJobRevealed ?? false;
+    isUnburdened(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.unburdened ?? false;
     }
 
     revealJobAppraisal(cloudId: string): void {
@@ -207,7 +225,7 @@ export class PartStateManager {
         switch (field) {
             case 'age': return bio.ageRevealed;
             case 'identity': return bio.identityRevealed;
-            case 'job': return bio.identityRevealed && !bio.unburdenedJobRevealed;
+            case 'job': return bio.identityRevealed && !bio.unburdened;
             case 'jobAppraisal': return bio.jobAppraisalRevealed;
             case 'jobImpact': return bio.jobImpactRevealed;
             default: return false;
@@ -240,7 +258,7 @@ export class PartStateManager {
         if (!state.biography.identityRevealed) {
             unrevealed.push('identity');
         }
-        if (!state.biography.unburdenedJobRevealed && state.dialogues.unburdenedJob) {
+        if (!state.biography.unburdened && state.dialogues.unburdenedJob) {
             unrevealed.push('job');
         }
         return unrevealed;

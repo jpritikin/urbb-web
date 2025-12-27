@@ -13,12 +13,24 @@ export interface SerializedModel {
     messageIdCounter: number;
     partStates: Record<string, PartState>;
     thoughtBubbles?: ThoughtBubble[];
+    victoryAchieved?: boolean;
 }
 
 export interface SerializedRelationships {
     protections: { protectorId: string; protectedId: string }[];
     grievances: { cloudId: string; targetIds: string[]; dialogues: string[] }[];
     proxies: { cloudId: string; proxyId: string }[];
+}
+
+export interface OrchestratorSnapshot {
+    blendTimers: Record<string, number>;
+    cooldowns: Record<string, number>;
+    pending: Record<string, string>;
+}
+
+export interface ModelSnapshot {
+    targets: string[];
+    blended: string[];
 }
 
 export interface RecordedAction {
@@ -28,15 +40,10 @@ export interface RecordedAction {
     field?: string;
     elapsedTime?: number;  // Seconds since last action (for time-based state changes)
     thoughtBubble?: { text: string; cloudId: string };
-    viewState?: ViewStateSnapshot;  // Debug info, not used for replay
     rngCounts?: { model: number; cosmetic: number };
     rngLog?: string[];  // Model RNG call purposes for this action
-}
-
-export interface ViewStateSnapshot {
-    foregroundIds: string[];
-    supportingEntries: string[];  // Cloud IDs with active entry animations
-    cloudStates: Record<string, { opacity: number; targetOpacity: number; positionType: string }>;
+    orchState?: OrchestratorSnapshot;  // Orchestrator state before action
+    modelState?: ModelSnapshot;  // Model state before action
 }
 
 export interface RecordedSession {
@@ -80,8 +87,8 @@ export interface Scenario {
 }
 
 export interface Assertion {
-    type: 'trust' | 'blended' | 'target' | 'message' | 'biography';
-    cloudId: string;
+    type: 'trust' | 'blended' | 'target' | 'message' | 'biography' | 'victory';
+    cloudId?: string;
     field?: string;
     expected: unknown;
     operator?: '==' | '>=' | '<=' | 'contains' | '!=';
@@ -106,6 +113,7 @@ export interface ControllerActionResult {
     triggerBacklash?: { protectorId: string; protecteeId: string };
     createSelfRay?: { cloudId: string };
     reduceBlending?: { cloudId: string; amount: number };
+    trustGain?: number;
 }
 
 export interface ScenarioResult {

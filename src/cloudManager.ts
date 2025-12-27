@@ -10,7 +10,6 @@ import { PanoramaController } from './panoramaController.js';
 import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
-import { BiographyField } from './selfRay.js';
 import { createGroup } from './svgHelpers.js';
 import { DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
 import { ActionRecorder } from './testability/recorder.js';
@@ -23,6 +22,7 @@ import { ActionEffectApplicator } from './actionEffectApplicator.js';
 import { FullscreenManager } from './fullscreenManager.js';
 import { AnimationLoop } from './animationLoop.js';
 import { MessageOrchestrator } from './messageOrchestrator.js';
+import { PanoramaInputHandler } from './panoramaInputHandler.js';
 
 export { CloudType };
 export { TherapistAction, THERAPIST_ACTIONS };
@@ -41,7 +41,6 @@ export class CloudManager {
     private container: HTMLElement | null = null;
     private debug: boolean = false;
     private relationships: CloudRelationshipManager = new CloudRelationshipManager();
-    private zoom: number = 1;
     private canvasWidth: number = 800;
     private canvasHeight: number = 600;
     private panX: number = 0;
@@ -57,6 +56,7 @@ export class CloudManager {
     private inputHandler: InputHandler | null = null;
     private fullscreenManager: FullscreenManager | null = null;
     private messageOrchestrator: MessageOrchestrator | null = null;
+    private panoramaInputHandler: PanoramaInputHandler | null = null;
 
     private physicsEngine: PhysicsEngine;
     private panoramaController: PanoramaController;
@@ -78,6 +78,9 @@ export class CloudManager {
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
     private insideAct: boolean = false;
+    private recordingToggleHandler: (() => void) | null = null;
+    private lastHelpPanelUpdate: number = 0;
+    private lastAttentionCheck: number = 0;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -151,6 +154,10 @@ export class CloudManager {
         return this.recorder.isRecording();
     }
 
+    setRecordingToggleHandler(handler: () => void): void {
+        this.recordingToggleHandler = handler;
+    }
+
     init(containerId: string): void {
         this.container = document.getElementById(containerId);
         if (!this.container) {
@@ -175,15 +182,16 @@ export class CloudManager {
         this.zoomGroup.setAttribute('id', 'zoom-group');
         this.svgElement.appendChild(this.zoomGroup);
 
+        // rayContainer is in screen coordinates but renders underneath clouds
+        const rayContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        rayContainer.setAttribute('id', 'ray-container');
+        this.svgElement.insertBefore(rayContainer, this.zoomGroup);
+        this.view.setRayContainer(rayContainer);
+
         // uiGroup contains content that stays in screen coordinates (star, pie menu, toggle)
         this.uiGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.uiGroup.setAttribute('id', 'ui-group');
         this.svgElement.appendChild(this.uiGroup);
-
-        const rayContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        rayContainer.setAttribute('id', 'ray-container');
-        this.zoomGroup.appendChild(rayContainer);
-        this.view.setRayContainer(rayContainer);
 
         this.pieMenuOverlay = createGroup({ id: 'pie-menu-overlay' });
         this.uiGroup.appendChild(this.pieMenuOverlay);
@@ -249,7 +257,12 @@ export class CloudManager {
             }
         );
 
-        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.zoomGroup);
+        this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.uiGroup);
+        // Ensure carpet is at the back (first child) so clouds render on top
+        const carpetGroup = this.uiGroup.querySelector('#carpet-group');
+        if (carpetGroup && this.uiGroup.firstChild !== carpetGroup) {
+            this.uiGroup.insertBefore(carpetGroup, this.uiGroup.firstChild);
+        }
         this.view.setOnSelfRayClick((cloudId, x, y, event) => {
             const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
             this.pieMenuController?.toggleSelfRay(cloudId, x, y, touchEvent);
@@ -262,6 +275,17 @@ export class CloudManager {
             this.updateUIForMode();
             this.uiManager?.setMode(mode);
         });
+        this.view.on('transition-started', ({ direction }) => {
+            this.onTransitionStart(direction);
+        });
+        this.view.on('transition-completed', () => {
+            this.finalizeCloudGroups();
+        });
+        this.view.on('clouds-joined-foreground', ({ cloudIds }) => {
+            for (const cloudId of cloudIds) {
+                this.moveCloudToUIGroup(cloudId);
+            }
+        });
 
         this.createSelfStar();
 
@@ -272,6 +296,7 @@ export class CloudManager {
             onFullscreenToggle: () => this.toggleFullscreen(),
             onAnimationPauseToggle: () => this.toggleAnimationPause(),
             onTracePanelToggle: () => this.toggleTracePanel(),
+            onRecordingToggle: () => this.recordingToggleHandler?.(),
         });
         this.uiManager.createAllUI();
 
@@ -294,6 +319,16 @@ export class CloudManager {
         );
         this.fullscreenManager.setup();
         this.animationLoop.setupVisibilityHandling();
+
+        this.panoramaInputHandler = new PanoramaInputHandler(
+            this.svgElement,
+            {
+                getMode: () => this.view.getMode(),
+                getInstances: () => this.instances,
+                getZoom: () => this.view.getPanoramaZoom(),
+                setZoom: (zoom) => this.view.setPanoramaZoom(zoom),
+            }
+        );
     }
 
     private handleResize(width: number, height: number): void {
@@ -344,6 +379,7 @@ export class CloudManager {
 
     private toggleTracePanel(): void {
         this.uiManager?.toggleTracePanel();
+        this.uiManager?.updateTrace(this.view.getTrace());
     }
 
     private toggleAnimationPause(): void {
@@ -421,34 +457,6 @@ export class CloudManager {
         this.view.syncThoughtBubbles(this.model);
     }
 
-    private positionRelatedCloud(instance: CloudInstance, region: string, index: number, total: number): void {
-        if (!this.zoomGroup) return;
-
-        const regionPositions = {
-            protector: { x: this.canvasWidth * 0.25, y: this.canvasHeight * 0.25 },
-            grievance: { x: this.canvasWidth * 0.25, y: this.canvasHeight * 0.75 },
-        };
-
-        const basePos = regionPositions[region as keyof typeof regionPositions];
-        const offsetY = (index - (total - 1) / 2) * 60;
-
-        const group = instance.cloud.getGroupElement();
-        if (group) {
-            if (group.parentNode !== this.zoomGroup) {
-                this.zoomGroup.appendChild(group);
-            }
-            group.setAttribute('transform', `translate(${basePos.x}, ${basePos.y + offsetY}) scale(1)`);
-            group.setAttribute('opacity', '1');
-        }
-
-        this.relationshipClouds.set(instance.cloud.id, { instance, region });
-    }
-
-    private clearRelatedClouds(): void {
-        this.relationshipClouds.clear();
-        this.model.clearSupportingParts();
-    }
-
     addCloud(word: string, options?: {
         id?: string;
         trust?: number;
@@ -472,12 +480,12 @@ export class CloudManager {
 
         const state = this.model.getPartState(cloud.id);
         const eventHandlers = this.inputHandler?.createCloudEventHandlers(cloud) ?? {
-            onClick: () => {},
-            onHover: () => {},
-            onLongPressStart: () => {},
-            onLongPressEnd: () => {},
-            onTouchStart: () => {},
-            onTouchEnd: () => {},
+            onClick: () => { },
+            onHover: () => { },
+            onLongPressStart: () => { },
+            onLongPressEnd: () => { },
+            onTouchStart: () => { },
+            onTouchEnd: () => { },
         };
         const group = cloud.createSVGElements(eventHandlers);
         this.zoomGroup?.appendChild(group);
@@ -557,8 +565,11 @@ export class CloudManager {
     }
 
     setZoom(zoomLevel: number): void {
-        this.zoom = Math.max(0.1, Math.min(5, zoomLevel));
-        this.updateViewBox();
+        this.view.setPanoramaZoom(zoomLevel);
+    }
+
+    setTransitionDuration(seconds: number): void {
+        this.view.setTransitionDuration(seconds);
     }
 
     centerOnPoint(x: number, y: number): void {
@@ -675,13 +686,6 @@ export class CloudManager {
         if (!cloud) return;
 
         const initialStretch = cloud.getBlendedStretch();
-        const debugState = this.view.getCloudState(cloudId);
-        console.log('[animateStretchResolution]', cloudId, {
-            hasStretch: !!initialStretch,
-            stretch: initialStretch,
-            cloudPos: debugState ? { x: debugState.x, y: debugState.y } : null,
-            isSeated: this.view.isSeated(cloudId)
-        });
         if (!initialStretch) {
             this.completeUnblending(cloudId);
             return;
@@ -803,7 +807,15 @@ export class CloudManager {
         }
         this.syncViewWithModel(oldModel);
         if (recordedAction && this.recorder.isRecording()) {
-            this.recorder.record(recordedAction, this.view.getViewStateSnapshot());
+            const orchState = this.messageOrchestrator?.getDebugState();
+            const modelState = {
+                targets: [...this.model.getTargetCloudIds()],
+                blended: this.model.getBlendedParts(),
+            };
+            this.recorder.record(recordedAction, orchState, modelState);
+        }
+        if (this.uiManager?.isTracePanelVisible()) {
+            this.uiManager.updateTrace(this.view.getTrace());
         }
     }
 
@@ -889,8 +901,6 @@ export class CloudManager {
             this.carpetRenderer?.clear();
         }
 
-        const targetIds = this.model.getTargetCloudIds();
-
         for (let i = 0; i < this.instances.length; i++) {
             const instance = this.instances[i];
 
@@ -920,35 +930,44 @@ export class CloudManager {
             }
         }
 
-        this.increaseGrievanceNeedAttention(deltaTime);
-        this.updateHelpPanel();
-        if (this.uiManager?.isTracePanelVisible()) {
-            this.uiManager.updateTrace(this.view.getTrace());
+        this.increaseNeedAttention(deltaTime);
+        this.lastHelpPanelUpdate += deltaTime;
+        if (this.lastHelpPanelUpdate >= 0.25) {
+            this.lastHelpPanelUpdate = 0;
+            this.updateHelpPanel();
         }
-
-        if (!this.isPieMenuOpen()) {
-            const demandingCloudId = this.model.checkAttentionDemands(this.relationships);
-            if (demandingCloudId) {
-                this.act({ action: 'spontaneous_blend', cloudId: demandingCloudId }, () => {
-                    this.controller?.executeAction('spontaneous_blend', demandingCloudId);
-                });
+        this.lastAttentionCheck += deltaTime;
+        if (!this.isPieMenuOpen() && this.lastAttentionCheck >= 0.5) {
+            this.lastAttentionCheck = 0;
+            const demand = this.model.checkAttentionDemands(this.relationships, this.rng.cosmetic);
+            if (demand) {
+                const inPanorama = this.view.getMode() === 'panorama';
+                const panoramaTriggered = inPanorama && (demand.needAttention - 1) > this.rng.cosmetic.random('panorama_attention');
+                if (demand.urgent || panoramaTriggered) {
+                    this.act({ action: 'spontaneous_blend', cloudId: demand.cloudId }, () => {
+                        if (demand.urgent) {
+                            this.model.clearTargets();
+                        }
+                        if (inPanorama) {
+                            this.view.setMode('foreground');
+                            this.updateUIForMode();
+                            this.uiManager?.setMode('foreground');
+                        }
+                        this.controller?.executeAction('spontaneous_blend', demand.cloudId);
+                    });
+                }
             }
         }
 
-        if (this.view.getMode() === 'panorama') {
+        const inPanorama = this.view.getMode() === 'panorama' && !this.view.isTransitioning();
+        if (inPanorama) {
             this.panoramaController.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
         } else {
-            // Ensure correct layering in zoomGroup: ray (bottom), carpet, clouds (top)
+            // Ensure carpet is at bottom of zoomGroup (clouds render on top)
             if (this.zoomGroup) {
-                const rayContainer = this.zoomGroup.querySelector('#ray-container');
                 const carpetGroup = this.zoomGroup.querySelector('#carpet-group');
-
-                if (rayContainer && rayContainer !== this.zoomGroup.firstChild) {
-                    this.zoomGroup.insertBefore(rayContainer, this.zoomGroup.firstChild);
-                }
-
-                if (carpetGroup && rayContainer && carpetGroup.previousSibling !== rayContainer) {
-                    this.zoomGroup.insertBefore(carpetGroup, rayContainer.nextSibling);
+                if (carpetGroup && carpetGroup !== this.zoomGroup.firstChild) {
+                    this.zoomGroup.insertBefore(carpetGroup, this.zoomGroup.firstChild);
                 }
             }
         }
@@ -958,67 +977,155 @@ export class CloudManager {
     private updateStarScale(): void {
         if (!this.animatedStar) return;
 
+        const starElement = this.animatedStar.getElement();
+        const inZoomGroup = starElement?.parentNode === this.zoomGroup;
+        const isReverseTransition = this.view.getTransitionDirection() === 'reverse';
+
         if (this.view.getMode() === 'foreground') {
+            // Foreground mode: scale based on part count
             const targetIds = this.model.getTargetCloudIds();
             const blendedParts = this.model.getBlendedParts();
             const totalParts = targetIds.size + blendedParts.length;
-            const scale = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
-            this.animatedStar.setTargetRadiusScale(scale);
+            const visualTarget = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
+            this.animatedStar.setTargetRadiusScale(visualTarget);
+        } else if (isReverseTransition && !inZoomGroup) {
+            // Reverse transition with star in uiGroup: animate toward panorama visual size
+            // Star will be moved to zoomGroup after transition, where its scale will be divided by zoom
+            const panoramaZoom = this.view.getPanoramaZoom();
+            this.animatedStar.setTargetRadiusScale(1.5 * panoramaZoom);
         } else {
+            // Panorama mode with star in zoomGroup: use fixed scale, let zoomGroup handle zoom
             this.animatedStar.setTargetRadiusScale(1.5);
         }
     }
 
     private updateZoomGroup(): void {
+        if (!this.zoomGroup) return;
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        const scale = this.view.getCurrentZoomFactor();
+
+        this.zoomGroup.setAttribute('transform',
+            `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
+    }
+
+    private moveCloudToUIGroup(cloudId: string): void {
+        if (!this.zoomGroup || !this.uiGroup) return;
+
+        const cloud = this.getCloudById(cloudId);
+        const group = cloud?.getGroupElement();
+        if (!group || group.parentNode === this.uiGroup) return;
+
+        // Always use panoramaZoom for the transform so reverse transitions work correctly.
+        // The view's panorama-ui position target also uses panoramaZoom.
+        const zoom = this.view.getPanoramaZoom();
+        const cloudState = this.view.getCloudState(cloudId);
+        if (cloudState) {
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+            // Transform from zoomGroup coords to uiGroup (screen) coords
+            cloudState.x = centerX + (cloudState.x - centerX) * zoom;
+            cloudState.y = centerY + (cloudState.y - centerY) * zoom;
+            cloudState.scale = cloudState.scale * zoom;
+        }
+
+        if (this.pieMenuOverlay) {
+            this.uiGroup.insertBefore(group, this.pieMenuOverlay);
+        } else {
+            this.uiGroup.appendChild(group);
+        }
+    }
+
+    private moveCloudToZoomGroup(cloudId: string): void {
+        if (!this.zoomGroup || !this.uiGroup) return;
+
+        const cloud = this.getCloudById(cloudId);
+        const group = cloud?.getGroupElement();
+        if (!group || group.parentNode === this.zoomGroup) return;
+
+        const zoom = this.view.getPanoramaZoom();
+        const cloudState = this.view.getCloudState(cloudId);
+        if (cloudState) {
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+            // Transform from uiGroup (screen) coords to zoomGroup coords
+            cloudState.x = centerX + (cloudState.x - centerX) / zoom;
+            cloudState.y = centerY + (cloudState.y - centerY) / zoom;
+            cloudState.scale = cloudState.scale / zoom;
+            // Also update targets so no further animation needed
+            cloudState.targetScale = cloudState.scale;
+            cloudState.positionTarget = { type: 'panorama' };
+        }
+
+        this.zoomGroup.appendChild(group);
+    }
+
+    private moveStarToUIGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.uiGroup) return;
+
+        const zoom = this.view.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        // Star offset is relative to center; in zoomGroup it gets scaled
+        // Transform to uiGroup: multiply offset and scale by zoom
+        this.view.transformStarPosition(zoom);
+        this.animatedStar.setRadiusScale(scaleBefore * zoom);
+
+        this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
+    }
+
+    private moveStarToZoomGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.zoomGroup) return;
+
+        const zoom = this.view.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        // Transform from uiGroup to zoomGroup: divide offset and scale by zoom
+        this.view.transformStarPosition(1 / zoom);
+        this.animatedStar.setRadiusScale(scaleBefore / zoom);
+
+        this.zoomGroup.appendChild(starElement);
+    }
+
+    private onTransitionStart(direction: 'forward' | 'reverse'): void {
+        if (!this.zoomGroup || !this.uiGroup) return;
+
+        // For forward: use conference clouds (what WILL be in foreground)
+        // For reverse: use previous foreground clouds (what IS currently in foreground)
+        const foregroundCloudIds = direction === 'forward'
+            ? this.model.getConferenceCloudIds()
+            : this.view.getForegroundCloudIds();
+
+        if (direction === 'forward') {
+            // panorama → fg: move participating clouds and star to uiGroup at start
+            for (const cloudId of foregroundCloudIds) {
+                this.moveCloudToUIGroup(cloudId);
+            }
+            this.moveStarToUIGroup();
+        }
+        // reverse: clouds and star stay in uiGroup, move to zoomGroup at end (in finalizeCloudGroups)
+    }
+
+    private finalizeCloudGroups(): void {
         if (!this.zoomGroup || !this.uiGroup) return;
 
         const mode = this.view.getMode();
-        const isTransitioning = this.view.isTransitioning();
-        const starElement = this.animatedStar?.getElement();
         const foregroundCloudIds = this.view.getForegroundCloudIds();
 
-        if (mode === 'foreground' && !isTransitioning) {
-            // In foreground mode, no zoom transform - clouds are at screen coords
-            this.zoomGroup.removeAttribute('transform');
-
-            // Move star to uiGroup first (it should be behind clouds)
-            if (starElement && starElement.parentNode !== this.uiGroup) {
-                // Insert star at beginning of uiGroup, before other elements
-                this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
-            }
-
-            // Move foreground clouds to uiGroup (after star, before pie menu overlay)
+        if (mode === 'foreground') {
+            this.moveStarToUIGroup();
             for (const cloudId of foregroundCloudIds) {
-                const cloud = this.getCloudById(cloudId);
-                const group = cloud?.getGroupElement();
-                if (group && group.parentNode !== this.uiGroup) {
-                    // Insert before pie menu overlay to keep overlay on top
-                    if (this.pieMenuOverlay) {
-                        this.uiGroup.insertBefore(group, this.pieMenuOverlay);
-                    } else {
-                        this.uiGroup.appendChild(group);
-                    }
-                }
+                this.moveCloudToUIGroup(cloudId);
             }
         } else {
-            // In panorama mode or during transition, apply zoom centered on canvas
-            const centerX = this.canvasWidth / 2;
-            const centerY = this.canvasHeight / 2;
-            const scale = this.zoom;
-
-            this.zoomGroup.setAttribute('transform',
-                `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
-
-            // Move star to zoomGroup for depth-sorting with clouds
-            if (starElement && starElement.parentNode !== this.zoomGroup) {
-                this.zoomGroup.appendChild(starElement);
-            }
-            // Move all clouds back to zoomGroup for panorama mode
+            this.moveStarToZoomGroup();
             for (const instance of this.instances) {
-                const group = instance.cloud.getGroupElement();
-                if (group && group.parentNode !== this.zoomGroup) {
-                    this.zoomGroup.appendChild(group);
-                }
+                this.moveCloudToZoomGroup(instance.cloud.id);
             }
         }
     }
@@ -1052,10 +1159,14 @@ export class CloudManager {
             }
         }
 
-        this.view.updateHelpPanel({ lowestTrust, highestNeedAttention });
+        this.view.updateHelpPanel({
+            lowestTrust,
+            highestNeedAttention,
+            victoryAchieved: this.model.isVictoryAchieved()
+        });
     }
 
-    private increaseGrievanceNeedAttention(deltaTime: number): void {
-        this.model.increaseGrievanceNeedAttention(this.relationships, deltaTime);
+    private increaseNeedAttention(deltaTime: number): void {
+        this.model.increaseNeedAttention(this.relationships, deltaTime);
     }
 }

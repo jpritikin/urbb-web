@@ -14,6 +14,6 @@ export const THERAPIST_ACTIONS: TherapistAction[] = [
     { id: 'separate', question: 'Can you ask that part to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
     { id: 'step_back', question: 'Can you ask this part to step back?', shortName: 'Step back', category: 'relationship' },
     { id: 'blend', question: 'Can you blend with this part?', shortName: 'Blend', category: 'relationship' },
-    { id: 'help_protected', question: 'If we could help the $PART one, would you be interested in that?', shortName: 'Help?', category: 'relationship' },
+    { id: 'help_protected', question: 'If we could help $PART, would you be interested in that?', shortName: 'Help?', category: 'relationship' },
     { id: 'notice_part', question: 'What do you notice about that part?', shortName: 'Notice', category: 'discovery', requiresTargetClick: true },
 ];

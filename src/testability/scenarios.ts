@@ -48,9 +48,22 @@ export function replaySession(session: RecordedSession): ReplayResult {
 
     for (let i = 0; i < session.actions.length; i++) {
         const action = session.actions[i];
+
+        // Use previous action's modelState to set view state for orchestrator
+        const prevModelState = i > 0 ? session.actions[i - 1].modelState : undefined;
+        if (prevModelState) {
+            const cloudStates: Record<string, unknown> = {};
+            for (const id of [...prevModelState.targets, ...prevModelState.blended]) {
+                cloudStates[id] = {};
+            }
+            sim.setViewState({ cloudStates });
+        }
+
+        const rngBeforeAdvance = sim.getRngCounts().model;
         if (action.elapsedTime && action.elapsedTime > 0) {
             sim.advanceTime(action.elapsedTime);
         }
+        const rngAfterAdvance = sim.getRngCounts().model;
 
         const preState = {
             targets: [...model.getTargetCloudIds()],
@@ -75,6 +88,20 @@ export function replaySession(session: RecordedSession): ReplayResult {
             )
         };
 
+        // Check recorded model state matches headless model state (recorded after action)
+        if (action.modelState) {
+            const actualTargets = postState.targets;
+            const actualBlended = postState.blended;
+            const expectedTargets = action.modelState.targets;
+            const expectedBlended = action.modelState.blended;
+            if (JSON.stringify(actualTargets.sort()) !== JSON.stringify(expectedTargets.sort())) {
+                stateTrace.push(`#${i} model mismatch: targets actual=${JSON.stringify(actualTargets)} expected=${JSON.stringify(expectedTargets)}`);
+            }
+            if (JSON.stringify(actualBlended.sort()) !== JSON.stringify(expectedBlended.sort())) {
+                stateTrace.push(`#${i} model mismatch: blended actual=${JSON.stringify(actualBlended)} expected=${JSON.stringify(expectedBlended)}`);
+            }
+        }
+
         // Trace significant state changes for debugging
         if (JSON.stringify(preState.proxies) !== JSON.stringify(postState.proxies)) {
             stateTrace.push(`#${i} ${action.action}(${action.cloudId}): proxies ${JSON.stringify(preState.proxies)} -> ${JSON.stringify(postState.proxies)}`);
@@ -91,9 +118,12 @@ export function replaySession(session: RecordedSession): ReplayResult {
             const actual = sim.getRngCounts();
             if (actual.model !== action.rngCounts.model) {
                 const fullLog = sim.getModelRngLog();
-                const actionLog = fullLog.slice(prevModelRngCount);
+                const advanceLog = fullLog.slice(rngBeforeAdvance, rngAfterAdvance);
+                const execLog = fullLog.slice(rngAfterAdvance);
                 const expectedLog = action.rngLog ?? [];
-                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; log [${actionLog.join(', ')}] vs [${expectedLog.join(', ')}]; state before: targets=${JSON.stringify(preState.targets)}, blended=${JSON.stringify(preState.blended)}, proxies=${JSON.stringify(preState.proxies)}; trace: ${stateTrace.join(' | ')}`;
+                const actualOrch = sim.getOrchestratorDebugState();
+                const expectedOrch = action.orchState;
+                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; advanceLog=[${advanceLog.join(', ')}] execLog=[${execLog.join(', ')}] vs expected=[${expectedLog.join(', ')}]; elapsed=${action.elapsedTime}s; actualOrch=${JSON.stringify(actualOrch)} expectedOrch=${JSON.stringify(expectedOrch)}; trace: ${stateTrace.join(' | ')}`;
             }
             prevModelRngCount = actual.model;
         }
@@ -144,6 +174,10 @@ function compareModels(actual: SerializedModel, expected: SerializedModel): stri
         }
     }
 
+    if ((actual.victoryAchieved ?? false) !== (expected.victoryAchieved ?? false)) {
+        diffs.push(`victoryAchieved: ${actual.victoryAchieved} vs ${expected.victoryAchieved}`);
+    }
+
     return diffs;
 }
 
@@ -171,26 +205,33 @@ function getAssertionValue(
     model: SerializedModel,
     sim: HeadlessSimulator
 ): unknown {
-    const partState = model.partStates[assertion.cloudId];
-
     switch (assertion.type) {
-        case 'trust':
+        case 'victory':
+            return model.victoryAchieved ?? false;
+
+        case 'trust': {
+            if (!assertion.cloudId) return undefined;
+            const partState = model.partStates[assertion.cloudId];
             return partState?.trust ?? 0;
+        }
 
         case 'blended':
-            return assertion.cloudId in model.blendedParts;
+            return assertion.cloudId ? assertion.cloudId in model.blendedParts : undefined;
 
         case 'target':
-            return model.targetCloudIds.includes(assertion.cloudId);
+            return assertion.cloudId ? model.targetCloudIds.includes(assertion.cloudId) : undefined;
 
         case 'message':
-            return model.messages.some(m =>
+            return assertion.cloudId ? model.messages.some(m =>
                 m.senderId === assertion.cloudId || m.targetId === assertion.cloudId
-            );
+            ) : undefined;
 
-        case 'biography':
-            if (!partState || !assertion.field) return undefined;
+        case 'biography': {
+            if (!assertion.cloudId || !assertion.field) return undefined;
+            const partState = model.partStates[assertion.cloudId];
+            if (!partState) return undefined;
             return (partState.biography as unknown as Record<string, unknown>)[assertion.field];
+        }
 
         default:
             return undefined;

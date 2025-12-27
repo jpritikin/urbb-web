@@ -36,7 +36,8 @@ export class SelfRay {
     private clipPath: SVGClipPathElement | null = null;
     private sparkles: Sparkle[] = [];
     private sparkleGroup: SVGGElement | null = null;
-    private timeSincePositionUpdate: number = 0;
+    private timeSincePositionUpdate: number = 0.1;
+    private targetSparkleCount: number = 0;
     private hovered: boolean = false;
     private config: SelfRayConfig;
     private onClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
@@ -55,6 +56,7 @@ export class SelfRay {
     create(): SVGGElement {
         this.group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.group.setAttribute('class', 'self-ray');
+        this.group.style.opacity = '0.2';
 
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         this.clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
@@ -107,8 +109,11 @@ export class SelfRay {
         this.hitArea.setAttribute('cursor', 'pointer');
         this.hitArea.setAttribute('pointer-events', 'fill');
 
-        this.hitArea.addEventListener('mouseenter', () => this.handleMouseEnter());
-        this.hitArea.addEventListener('mouseleave', () => this.handleMouseLeave());
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isMobile) {
+            this.hitArea.addEventListener('mouseenter', () => this.handleMouseEnter());
+            this.hitArea.addEventListener('mouseleave', () => this.handleMouseLeave());
+        }
         this.hitArea.addEventListener('click', (e) => this.handleClick(e));
         this.hitArea.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
 
@@ -270,23 +275,6 @@ export class SelfRay {
             sparkle.element.remove();
         }
         this.sparkles = [];
-
-        const sparkleCount = 60;
-        for (let i = 0; i < sparkleCount; i++) {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('r', '2');
-            circle.setAttribute('fill', 'white');
-            circle.setAttribute('opacity', '0.8');
-            this.sparkleGroup.appendChild(circle);
-
-            this.sparkles.push({
-                element: circle,
-                progress: i / sparkleCount,
-                speed: 0.0004 + Math.random() * 0.0005,
-                offsetRatio: (Math.random() - 0.5) * 1.9
-            });
-        }
-        this.updateSparklePositions();
     }
 
     private updateSparklePositions(): void {
@@ -312,7 +300,7 @@ export class SelfRay {
 
             const fadeIn = Math.min(1, t * 5);
             const fadeOut = Math.min(1, (1 - t) * 5);
-            const randomFlicker = 0.5 + Math.random() * 0.5;
+            const randomFlicker = 0.3 + Math.random() * 0.7;
             sparkle.element.setAttribute('opacity', String(0.8 * fadeIn * fadeOut * randomFlicker));
         }
     }
@@ -326,9 +314,32 @@ export class SelfRay {
             }
         }
         this.timeSincePositionUpdate += deltaTime;
-        if (this.timeSincePositionUpdate >= 100) {
+        if (this.timeSincePositionUpdate >= 0.1) {
             this.updateSparklePositions();
             this.timeSincePositionUpdate = 0;
+        }
+        this.adjustSparkleCount();
+    }
+
+    private adjustSparkleCount(): void {
+        if (!this.sparkleGroup) return;
+
+        if (this.sparkles.length > this.targetSparkleCount) {
+            const sparkle = this.sparkles.pop();
+            sparkle?.element.remove();
+        } else if (this.sparkles.length < this.targetSparkleCount) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', '2');
+            circle.setAttribute('fill', 'white');
+            circle.setAttribute('opacity', '0.8');
+            this.sparkleGroup.appendChild(circle);
+
+            this.sparkles.push({
+                element: circle,
+                progress: Math.random(),
+                speed: 0.02 + Math.random() * 0.03,
+                offsetRatio: (Math.random() - 0.5) * 1.9
+            });
         }
     }
 
@@ -349,5 +360,16 @@ export class SelfRay {
 
     getTargetCloudId(): string {
         return this.config.targetCloudId;
+    }
+
+    setTrustGainFeedback(trustGain: number): void {
+        const opacity = Math.min(1, Math.max(0.2, 0.2 + (trustGain / 0.6) * 0.8));
+        if (this.group) {
+            this.group.style.opacity = String(opacity);
+        }
+
+        this.targetSparkleCount = trustGain >= 0.2
+            ? Math.round(((trustGain - 0.2) / 0.8) * 200)
+            : 0;
     }
 }

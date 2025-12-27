@@ -2,6 +2,7 @@ export { SeatInfo } from '../carpetRenderer.js';
 
 export type PositionTarget =
     | { type: 'panorama' }
+    | { type: 'panorama-ui' }
     | { type: 'seat'; cloudId: string }
     | { type: 'star'; offsetX?: number; offsetY?: number }
     | { type: 'supporting'; targetId: string; index: number }
@@ -21,6 +22,8 @@ export const DEFAULT_SMOOTHING: SmoothingConfig = {
     opacity: 8,
     blendingDegree: 4
 };
+
+export const LINEAR_INTERPOLATION_SPEED = 3.0;
 
 export interface CloudAnimatedState {
     cloudId: string;

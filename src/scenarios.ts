@@ -31,7 +31,7 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
         },
     });
 
-    const criticized = cloudManager.addCloud('criticized', {
+    const criticized = cloudManager.addCloud('criticized one', {
         partAge: 'child',
         trust: 0.2,
         dialogues: {
@@ -108,7 +108,7 @@ export const SCENARIOS: Scenario[] = [
         id: 'medium',
         name: 'Self Proxies',
         difficulty: 'Medium',
-        estimatedMinutes: 3,
+        estimatedMinutes: 5,
         description: 'Deal with proxy relationships while addressing the Inner Critic.',
         setup: setupMediumScenario,
     },

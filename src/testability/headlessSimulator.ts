@@ -1,13 +1,37 @@
-import { SimulatorModel } from '../ifsModel.js';
+import { SimulatorModel, PartMessage } from '../ifsModel.js';
 import { CloudRelationshipManager } from '../cloudRelationshipManager.js';
 import { SeededRNG, DualRNG, createDualRNG } from './rng.js';
 import { SimulatorController } from '../simulatorController.js';
 import { ActionEffectApplicator } from '../actionEffectApplicator.js';
+import { MessageOrchestrator, MessageOrchestratorView } from '../messageOrchestrator.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
     SerializedModel, SerializedRelationships
 } from './types.js';
 import type { BiographyField } from '../selfRay.js';
+
+class HeadlessView implements MessageOrchestratorView {
+    private cloudStates: Record<string, unknown> = {};
+    private onMessageReceived: ((message: PartMessage) => void) | null = null;
+
+    setViewState(viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
+        this.cloudStates = viewState?.cloudStates ?? {};
+    }
+
+    setOnMessageReceived(callback: (message: PartMessage) => void): void {
+        this.onMessageReceived = callback;
+    }
+
+    hasActiveSpiralExits(): boolean { return false; }
+    isAwaitingArrival(_cloudId: string): boolean { return false; }
+    getCloudState(cloudId: string): unknown | null {
+        return this.cloudStates[cloudId] ?? null;
+    }
+    startMessage(message: PartMessage, _senderId: string, _targetId: string): void {
+        // Immediately deliver message in headless mode
+        this.onMessageReceived?.(message);
+    }
+}
 
 export class HeadlessSimulator {
     private model: SimulatorModel;
@@ -15,6 +39,8 @@ export class HeadlessSimulator {
     private rng: DualRNG;
     private controller: SimulatorController;
     private effectApplicator: ActionEffectApplicator;
+    private orchestrator: MessageOrchestrator;
+    private headlessView: HeadlessView;
 
     constructor(config?: { seed?: number }) {
         this.model = new SimulatorModel();
@@ -22,6 +48,8 @@ export class HeadlessSimulator {
         this.rng = createDualRNG(config?.seed);
         this.controller = this.createController();
         this.effectApplicator = new ActionEffectApplicator(this.model);
+        this.headlessView = new HeadlessView();
+        this.orchestrator = this.createOrchestrator();
     }
 
     private createController(): SimulatorController {
@@ -31,6 +59,22 @@ export class HeadlessSimulator {
             rng: this.rng,
             getPartName: (id) => this.model.parts.getPartName(id)
         });
+    }
+
+    private createOrchestrator(): MessageOrchestrator {
+        const orchestrator = new MessageOrchestrator(
+            this.model,
+            this.headlessView,
+            this.relationships,
+            this.rng,
+            {
+                act: (_label, fn) => fn(),
+                showThoughtBubble: () => {},
+                getCloudById: (id) => this.model.getPartState(id) ? { id } : null,
+            }
+        );
+        this.headlessView.setOnMessageReceived((message) => orchestrator.onMessageReceived(message));
+        return orchestrator;
     }
 
     static fromSession(
@@ -43,6 +87,7 @@ export class HeadlessSimulator {
         sim.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
         sim.controller = sim.createController();
         sim.effectApplicator = new ActionEffectApplicator(sim.model);
+        sim.orchestrator = sim.createOrchestrator();
         return sim;
     }
 
@@ -89,6 +134,7 @@ export class HeadlessSimulator {
         });
 
         this.effectApplicator.apply(result, cloudId);
+        this.model.checkAndSetVictory();
 
         return {
             success: result.success,
@@ -103,7 +149,10 @@ export class HeadlessSimulator {
     }
 
     advanceTime(deltaTime: number): void {
-        this.model.increaseGrievanceNeedAttention(this.relationships, deltaTime);
+        this.model.increaseNeedAttention(this.relationships, deltaTime);
+        this.orchestrator.updateTimers(deltaTime);
+        this.orchestrator.checkAndSendGrievanceMessages();
+        this.orchestrator.checkAndShowGenericDialogues(deltaTime);
     }
 
     getModel(): SimulatorModel {
@@ -136,5 +185,13 @@ export class HeadlessSimulator {
 
     getModelRngLog(): string[] {
         return this.rng.model.getCallLog();
+    }
+
+    getOrchestratorDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } {
+        return this.orchestrator.getDebugState();
+    }
+
+    setViewState(viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
+        this.headlessView.setViewState(viewState);
     }
 }

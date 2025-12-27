@@ -1,5 +1,5 @@
 import { SimulatorModel } from '../ifsModel.js';
-import { CarpetState, SeatInfo, createCarpetVertices, CARPET_FLY_DURATION, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE, CARPET_SCALE } from '../carpetRenderer.js';
+import { CarpetState, SeatInfo, createCarpetVertices, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE } from '../carpetRenderer.js';
 
 const SEAT_REARRANGEMENT_SPEED = 0.001;
 const STAR_CLOUD_ID = '*';
@@ -142,7 +142,6 @@ export class SeatManager {
         let enteringCount = this.getEnteringCarpetCount();
         for (const seatId of seatIds) {
             if (seatId !== STAR_CLOUD_ID && !previousSeatIds.has(seatId) && !this.carpets.has(seatId)) {
-                console.log('[SeatManager] Creating carpet for:', seatId);
                 this.createCarpet(seatId, seatIds.length, enteringCount);
                 enteringCount++;
             }

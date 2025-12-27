@@ -2,7 +2,7 @@ import { ThoughtBubble } from '../ifsModel.js';
 import { createGroup, createRect, createCircle, createText, setClickHandler, TextLine } from '../svgHelpers.js';
 import { BubbleLayout, THOUGHT_BUBBLE_CONFIG, computeBubbleLayout } from './bubblePlacement.js';
 
-interface CloudPosition { x: number; y: number }
+interface CloudPosition { x: number; y: number; opacity?: number }
 
 const config = THOUGHT_BUBBLE_CONFIG;
 
@@ -50,7 +50,7 @@ export class ThoughtBubbleRenderer {
 
     private computeLayout(cloudId: string, text: string): BubbleLayout | null {
         const pos = this.getCloudPosition(cloudId);
-        if (!pos) return null;
+        if (!pos || (pos.opacity !== undefined && pos.opacity < 0.1)) return null;
         const dims = this.getDimensions();
         return computeBubbleLayout(pos.x, pos.y, text, dims.width, dims.height, config);
     }

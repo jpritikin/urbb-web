@@ -750,7 +750,8 @@ body.ifs-fullscreen main {
   position: absolute;
   bottom: 0;
   right: 0;
-  min-width: 200px;
+  min-width: 18em;
+  white-space: nowrap;
   background: rgba(255, 255, 255, 0.95);
   border: 2px dotted #7b68ee;
   border-radius: 8px;
