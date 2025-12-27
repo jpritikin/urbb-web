@@ -326,7 +326,7 @@ export class PieMenu {
             slicePath.setAttribute('fill', this.getCategoryColor(item.category, 0.2));
             slicePath.setAttribute('stroke', this.getCategoryColor(item.category, 1));
             slicePath.setAttribute('stroke-width', '2');
-            this.showTooltip(item.label);
+            this.showTooltip(`${item.shortName}: ${item.label}`);
         };
 
         const unhighlight = () => {
@@ -383,9 +383,9 @@ export class PieMenu {
         this.tooltipElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.tooltipElement.setAttribute('class', 'pie-menu-tooltip');
 
-        const padding = 10;
-        const fontSize = 15;
-        const lineHeight = fontSize + 4;
+        const padding = 12;
+        const fontSize = 18;
+        const lineHeight = fontSize + 6;
         const lines = text.split('\n');
         const estimatedHeight = lines.length * lineHeight + padding * 2;
 
@@ -394,11 +394,12 @@ export class PieMenu {
         const canvasHeight = viewBox?.height ?? 600;
 
         const spaceBelow = canvasHeight - this.menuCenterY - this.radius - 15;
-        const showAbove = spaceBelow < estimatedHeight + 10;
+        const tooltipMargin = 40;
+        const showAbove = spaceBelow < estimatedHeight + tooltipMargin;
 
         const tooltipY = showAbove
-            ? -(this.radius + 15 + estimatedHeight)
-            : this.radius + 15;
+            ? -(this.radius + tooltipMargin + estimatedHeight)
+            : this.radius + tooltipMargin;
 
         const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         textEl.setAttribute('x', '0');
