@@ -465,26 +465,48 @@ export class PieMenu {
         const padding = 12;
         const fontSize = 18;
         const lineHeight = fontSize + 6;
-        const maxWidth = 280;
+        const maxWidth = 400;
+        const margin = 10;
 
         const svg = this.group.ownerSVGElement;
         const viewBox = svg?.viewBox.baseVal;
+        const canvasWidth = viewBox?.width ?? 800;
         const canvasHeight = viewBox?.height ?? 600;
 
         const labelLines = this.wrapText(label, maxWidth, fontSize);
         const totalLines = 1 + labelLines.length;
         const estimatedHeight = totalLines * lineHeight + padding * 2;
+        const estimatedWidth = maxWidth + padding * 2;
 
-        const spaceBelow = canvasHeight - this.menuCenterY - this.radius - 15;
         const tooltipMargin = 40;
-        const showAbove = spaceBelow < estimatedHeight + tooltipMargin;
+        const spaceBelow = canvasHeight - this.menuCenterY - this.radius - 15;
+        const spaceAbove = this.menuCenterY - this.radius - 15;
+        const showAbove = spaceBelow < estimatedHeight + tooltipMargin && spaceAbove > spaceBelow;
 
-        const tooltipY = showAbove
+        let tooltipY = showAbove
             ? -(this.radius + tooltipMargin + estimatedHeight)
             : this.radius + tooltipMargin;
 
+        // Clamp vertical position to canvas bounds
+        const absoluteTop = this.menuCenterY + tooltipY;
+        const absoluteBottom = absoluteTop + estimatedHeight;
+        if (absoluteTop < margin) {
+            tooltipY = margin - this.menuCenterY;
+        } else if (absoluteBottom > canvasHeight - margin) {
+            tooltipY = canvasHeight - margin - estimatedHeight - this.menuCenterY;
+        }
+
+        // Clamp horizontal position to canvas bounds
+        const halfWidth = estimatedWidth / 2;
+        let tooltipX = 0;
+        if (this.menuCenterX - halfWidth < margin) {
+            tooltipX = margin + halfWidth - this.menuCenterX;
+        } else if (this.menuCenterX + halfWidth > canvasWidth - margin) {
+            tooltipX = canvasWidth - margin - halfWidth - this.menuCenterX;
+        }
+
         const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        textEl.setAttribute('x', '0');
+        textEl.setAttribute('x', String(tooltipX));
         textEl.setAttribute('text-anchor', 'middle');
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
@@ -492,14 +514,14 @@ export class PieMenu {
 
         const boldSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
         boldSpan.setAttribute('font-weight', 'bold');
-        boldSpan.setAttribute('x', '0');
+        boldSpan.setAttribute('x', String(tooltipX));
         boldSpan.setAttribute('dy', String(tooltipY + padding + fontSize - 2));
         boldSpan.textContent = shortName;
         textEl.appendChild(boldSpan);
 
         for (const line of labelLines) {
             const lineSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-            lineSpan.setAttribute('x', '0');
+            lineSpan.setAttribute('x', String(tooltipX));
             lineSpan.setAttribute('dy', String(lineHeight));
             lineSpan.textContent = line;
             textEl.appendChild(lineSpan);
@@ -515,7 +537,7 @@ export class PieMenu {
         const rectHeight = bbox.height + padding * 2;
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', String(-rectWidth / 2));
+        rect.setAttribute('x', String(tooltipX - rectWidth / 2));
         rect.setAttribute('y', String(tooltipY));
         rect.setAttribute('width', String(rectWidth));
         rect.setAttribute('height', String(rectHeight));
