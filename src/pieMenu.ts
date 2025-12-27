@@ -35,13 +35,14 @@ export class PieMenu {
     private menuCenterY: number = 0;
     private itemSlices: { group: SVGGElement; highlight: () => void; unhighlight: () => void; select: () => void }[] = [];
     private activeSliceIndex: number = -1;
-    private touchDragMode: boolean = false;
+    private touchMode: 'none' | 'drag' | 'tap' = 'none';
     private boundTouchMove: ((e: TouchEvent) => void) | null = null;
     private boundTouchEnd: ((e: TouchEvent) => void) | null = null;
     private touchStartTime: number = 0;
     private touchStartX: number = 0;
     private touchStartY: number = 0;
     private hasDragged: boolean = false;
+    private tapSelectedIndex: number = -1;
     private readonly TAP_THRESHOLD_MS = 300;
     private readonly DRAG_THRESHOLD = 15;
 
@@ -111,7 +112,8 @@ export class PieMenu {
         this.menuCenterY = y;
         this.itemSlices = [];
         this.activeSliceIndex = -1;
-        this.touchDragMode = touchMode;
+        this.touchMode = touchMode ? 'drag' : 'none';
+        this.tapSelectedIndex = -1;
         this.createMenuElements(x, y);
 
         if (touchMode) {
@@ -125,16 +127,9 @@ export class PieMenu {
     }
 
     hide(): void {
-        if (this.boundTouchMove) {
-            document.removeEventListener('touchmove', this.boundTouchMove);
-            this.boundTouchMove = null;
-        }
-        if (this.boundTouchEnd) {
-            document.removeEventListener('touchend', this.boundTouchEnd);
-            this.boundTouchEnd = null;
-        }
-        this.touchDragMode = false;
-
+        this.cleanupTouchListeners();
+        this.touchMode = 'none';
+        this.tapSelectedIndex = -1;
         this.hideTooltip();
 
         if (this.group && this.group.parentNode) {
@@ -187,6 +182,12 @@ export class PieMenu {
             e.stopPropagation();
             this.hide();
         });
+        centerCircle.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (this.touchMode === 'tap') {
+                this.hide();
+            }
+        }, { passive: false });
         this.group.appendChild(centerCircle);
 
         const closeX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -236,7 +237,7 @@ export class PieMenu {
     }
 
     private handleTouchMove(e: TouchEvent): void {
-        if (!this.touchDragMode) return;
+        if (this.touchMode !== 'drag') return;
         if (e.touches.length === 0) return;
         e.preventDefault();
 
@@ -271,14 +272,17 @@ export class PieMenu {
         const wasQuickTap = elapsed < this.TAP_THRESHOLD_MS && !this.hasDragged;
 
         if (wasQuickTap) {
+            // Switch to tap mode - keep menu open, clear highlight
             if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
                 this.itemSlices[this.activeSliceIndex].unhighlight();
             }
             this.activeSliceIndex = -1;
-            this.exitTouchDragMode();
+            this.cleanupTouchListeners();
+            this.touchMode = 'tap';
             return;
         }
 
+        // Drag completed - select if on a slice, otherwise close
         if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
             this.itemSlices[this.activeSliceIndex].select();
         } else {
@@ -286,7 +290,7 @@ export class PieMenu {
         }
     }
 
-    private exitTouchDragMode(): void {
+    private cleanupTouchListeners(): void {
         if (this.boundTouchMove) {
             document.removeEventListener('touchmove', this.boundTouchMove);
             this.boundTouchMove = null;
@@ -295,19 +299,6 @@ export class PieMenu {
             document.removeEventListener('touchend', this.boundTouchEnd);
             this.boundTouchEnd = null;
         }
-        this.touchDragMode = false;
-    }
-
-    private enterTouchDragMode(clientX: number, clientY: number): void {
-        this.touchStartTime = performance.now();
-        this.touchStartX = clientX;
-        this.touchStartY = clientY;
-        this.hasDragged = false;
-        this.touchDragMode = true;
-        this.boundTouchMove = this.handleTouchMove.bind(this);
-        this.boundTouchEnd = this.handleTouchEnd.bind(this);
-        document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
-        document.addEventListener('touchend', this.boundTouchEnd, { passive: false });
     }
 
     private createSlicePath(startAngle: number, endAngle: number, innerR: number, outerR: number): string {
@@ -408,15 +399,20 @@ export class PieMenu {
             selectItem();
         });
 
-        // Mobile: touchstart re-enters drag mode if menu is in static mode
+        // Mobile tap mode: first tap highlights, second tap confirms
         group.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (!this.touchDragMode) {
-                const touch = e.touches[0];
-                this.enterTouchDragMode(touch.clientX, touch.clientY);
+            if (this.touchMode === 'tap') {
+                if (this.tapSelectedIndex === index) {
+                    selectItem();
+                } else {
+                    if (this.tapSelectedIndex >= 0 && this.tapSelectedIndex < this.itemSlices.length) {
+                        this.itemSlices[this.tapSelectedIndex].unhighlight();
+                    }
+                    this.tapSelectedIndex = index;
+                    highlight();
+                }
             }
-            this.activeSliceIndex = index;
-            highlight();
         }, { passive: false });
 
         return group;
