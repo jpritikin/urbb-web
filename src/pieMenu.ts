@@ -38,6 +38,12 @@ export class PieMenu {
     private touchDragMode: boolean = false;
     private boundTouchMove: ((e: TouchEvent) => void) | null = null;
     private boundTouchEnd: ((e: TouchEvent) => void) | null = null;
+    private touchStartTime: number = 0;
+    private touchStartX: number = 0;
+    private touchStartY: number = 0;
+    private hasDragged: boolean = false;
+    private readonly TAP_THRESHOLD_MS = 300;
+    private readonly DRAG_THRESHOLD = 15;
 
     constructor(private container: SVGGElement) {}
 
@@ -76,6 +82,10 @@ export class PieMenu {
     }
 
     showWithTouch(x: number, y: number, cloudId: string, touchClientX: number, touchClientY: number): void {
+        this.touchStartTime = performance.now();
+        this.touchStartX = touchClientX;
+        this.touchStartY = touchClientY;
+        this.hasDragged = false;
         this.showInternal(x, y, cloudId, true);
         const sliceIndex = this.getSliceIndexFromPoint(touchClientX, touchClientY);
         if (sliceIndex >= 0 && sliceIndex < this.itemSlices.length) {
@@ -231,6 +241,15 @@ export class PieMenu {
         e.preventDefault();
 
         const touch = e.touches[0];
+
+        if (!this.hasDragged) {
+            const dx = touch.clientX - this.touchStartX;
+            const dy = touch.clientY - this.touchStartY;
+            if (Math.sqrt(dx * dx + dy * dy) > this.DRAG_THRESHOLD) {
+                this.hasDragged = true;
+            }
+        }
+
         const sliceIndex = this.getSliceIndexFromPoint(touch.clientX, touch.clientY);
 
         if (sliceIndex !== this.activeSliceIndex) {
@@ -248,11 +267,47 @@ export class PieMenu {
         e.preventDefault();
         e.stopPropagation();
 
+        const elapsed = performance.now() - this.touchStartTime;
+        const wasQuickTap = elapsed < this.TAP_THRESHOLD_MS && !this.hasDragged;
+
+        if (wasQuickTap) {
+            if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
+                this.itemSlices[this.activeSliceIndex].unhighlight();
+            }
+            this.activeSliceIndex = -1;
+            this.exitTouchDragMode();
+            return;
+        }
+
         if (this.activeSliceIndex >= 0 && this.activeSliceIndex < this.itemSlices.length) {
             this.itemSlices[this.activeSliceIndex].select();
         } else {
             this.hide();
         }
+    }
+
+    private exitTouchDragMode(): void {
+        if (this.boundTouchMove) {
+            document.removeEventListener('touchmove', this.boundTouchMove);
+            this.boundTouchMove = null;
+        }
+        if (this.boundTouchEnd) {
+            document.removeEventListener('touchend', this.boundTouchEnd);
+            this.boundTouchEnd = null;
+        }
+        this.touchDragMode = false;
+    }
+
+    private enterTouchDragMode(clientX: number, clientY: number): void {
+        this.touchStartTime = performance.now();
+        this.touchStartX = clientX;
+        this.touchStartY = clientY;
+        this.hasDragged = false;
+        this.touchDragMode = true;
+        this.boundTouchMove = this.handleTouchMove.bind(this);
+        this.boundTouchEnd = this.handleTouchEnd.bind(this);
+        document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+        document.addEventListener('touchend', this.boundTouchEnd, { passive: false });
     }
 
     private createSlicePath(startAngle: number, endAngle: number, innerR: number, outerR: number): string {
@@ -353,9 +408,13 @@ export class PieMenu {
             selectItem();
         });
 
-        // Mobile: touchstart highlights the initially touched slice
+        // Mobile: touchstart re-enters drag mode if menu is in static mode
         group.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (!this.touchDragMode) {
+                const touch = e.touches[0];
+                this.enterTouchDragMode(touch.clientX, touch.clientY);
+            }
             this.activeSliceIndex = index;
             highlight();
         }, { passive: false });
