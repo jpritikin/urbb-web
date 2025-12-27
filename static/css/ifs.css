@@ -709,7 +709,7 @@ body.ifs-fullscreen main {
   position: absolute;
   bottom: 10px;
   right: 10px;
-  z-index: 50;
+  z-index: 40;
 }
 
 .help-button {

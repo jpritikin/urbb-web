@@ -420,11 +420,6 @@ export class SimulatorView {
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
         relationships: { getProtecting: (id: string) => Set<string> }
     ): void {
-        if (newModel.hasPendingAttentionDemand()) {
-            newModel.consumeAttentionDemand();
-            this.setMode('foreground');
-        }
-
         // Check for displaced parts and start spiral exits
         const displacedParts = newModel.getDisplacedParts();
         const hasDisplacements = displacedParts.size > 0;

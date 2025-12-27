@@ -959,7 +959,8 @@ export class CloudManager {
             const demand = this.model.checkAttentionDemands(this.relationships, this.rng.cosmetic);
             if (demand) {
                 const inPanorama = this.view.getMode() === 'panorama';
-                const panoramaTriggered = inPanorama && (demand.needAttention - 1) > this.rng.cosmetic.random('panorama_attention');
+                const randomVal = this.rng.cosmetic.random('panorama_attention');
+                const panoramaTriggered = inPanorama && (demand.needAttention - 1) > randomVal;
                 if (demand.urgent || panoramaTriggered) {
                     this.act({ action: 'spontaneous_blend', cloudId: demand.cloudId }, () => {
                         if (demand.urgent) {

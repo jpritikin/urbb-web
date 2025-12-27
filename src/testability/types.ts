@@ -8,7 +8,6 @@ export interface SerializedModel {
     pendingBlends: { cloudId: string; reason: BlendReason }[];
     selfRay: SelfRayState | null;
     displacedParts: string[];
-    pendingAttentionDemand: string | null;
     messages: PartMessage[];
     messageIdCounter: number;
     partStates: Record<string, PartState>;

@@ -282,7 +282,7 @@ export class UIManager {
             position: absolute;
             bottom: 10px;
             left: 10px;
-            z-index: 1000;
+            z-index: 40;
             padding: 6px 10px;
             font-size: 16px;
             background: #ff6b6b;

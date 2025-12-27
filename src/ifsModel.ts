@@ -37,7 +37,6 @@ export class SimulatorModel {
     private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
     readonly parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
-    private pendingAttentionDemand: string | null = null;
     private messages: PartMessage[] = [];
     private messageIdCounter: number = 0;
     private thoughtBubbles: ThoughtBubble[] = [];
@@ -344,8 +343,6 @@ export class SimulatorModel {
     }
 
     checkAttentionDemands(relationships: CloudRelationshipManager, rng: RNG): { cloudId: string; urgent: boolean; needAttention: number } | null {
-        if (this.pendingAttentionDemand) return null;
-
         const allParts = this.parts.getAllPartStates();
         const sorted = [...allParts.entries()].sort(
             (a, b) => b[1].needAttention - a[1].needAttention
@@ -356,7 +353,6 @@ export class SimulatorModel {
         for (const [cloudId, state] of sorted) {
             if (state.needAttention <= 1) break;
 
-            // Skip parts already in the conference
             if (this.blendedParts.has(cloudId)) continue;
             if (this.pendingBlends.some(p => p.cloudId === cloudId)) continue;
             if (this.targetCloudIds.has(cloudId)) continue;
@@ -367,7 +363,6 @@ export class SimulatorModel {
             const urgent = state.needAttention > 2 && (state.needAttention - 2) > rng.random('urgent_attention');
             if (!urgent && hasConference) continue;
 
-            this.pendingAttentionDemand = cloudId;
             return { cloudId, urgent, needAttention: state.needAttention };
         }
         return null;
@@ -395,16 +390,6 @@ export class SimulatorModel {
                 this.parts.setNeedAttention(cloudId, current + deltaTime * rate);
             }
         }
-    }
-
-    consumeAttentionDemand(): string | null {
-        const cloudId = this.pendingAttentionDemand;
-        this.pendingAttentionDemand = null;
-        return cloudId;
-    }
-
-    hasPendingAttentionDemand(): boolean {
-        return this.pendingAttentionDemand !== null;
     }
 
     sendMessage(senderId: string, targetId: string, text: string, type: MessageType): PartMessage {
@@ -497,7 +482,6 @@ export class SimulatorModel {
             pendingBlends: this.pendingBlends.map(p => ({ ...p })),
             selfRay: this.selfRay ? { ...this.selfRay } : null,
             displacedParts: Array.from(this.displacedParts),
-            pendingAttentionDemand: this.pendingAttentionDemand,
             messages: this.messages.map(m => ({ ...m })),
             messageIdCounter: this.messageIdCounter,
             partStates: this.parts.toJSON(),
@@ -518,7 +502,6 @@ export class SimulatorModel {
         model.pendingBlends = json.pendingBlends.map(p => ({ ...p }));
         model.selfRay = json.selfRay ? { ...json.selfRay } : null;
         model.displacedParts = new Set(json.displacedParts);
-        model.pendingAttentionDemand = json.pendingAttentionDemand;
         model.messages = json.messages.map(m => ({ ...m }));
         model.messageIdCounter = json.messageIdCounter;
         (model as { parts: PartStateManager }).parts = PartStateManager.fromJSON(json.partStates);
