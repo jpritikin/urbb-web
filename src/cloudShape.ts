@@ -884,6 +884,17 @@ export class Cloud {
         this.currentStretch = null;
     }
 
+    releaseBlendedStretch(): void {
+        if (this.latticeDeformation) {
+            this.latticeDeformation.releaseToZero();
+        }
+        this.currentStretch = null;
+    }
+
+    isStretchReleased(): boolean {
+        return !this.latticeDeformation || this.latticeDeformation.isReleased();
+    }
+
     startUnblending(targetX: number, targetY: number): void {
         this.isUnblending = true;
         if (!this.latticeDeformation) {

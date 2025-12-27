@@ -132,12 +132,7 @@ export class PieMenuController {
         }
 
         this.pieMenu.setItems(items);
-        if (touchEvent && touchEvent.touches.length > 0) {
-            const touch = touchEvent.touches[0];
-            this.pieMenu.showWithTouch(x, y, cloudId, touch.clientX, touch.clientY);
-        } else {
-            this.pieMenu.show(x, y, cloudId);
-        }
+        this.pieMenu.show(x, y, cloudId);
         this.pieMenuOpen = true;
         this.selectedCloudId = cloudId;
     }

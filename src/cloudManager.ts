@@ -263,9 +263,10 @@ export class CloudManager {
         if (carpetGroup && this.uiGroup.firstChild !== carpetGroup) {
             this.uiGroup.insertBefore(carpetGroup, this.uiGroup.firstChild);
         }
-        this.view.setOnSelfRayClick((cloudId, x, y, event) => {
+        this.view.setOnSelfRayClick((cloudId, _x, _y, event) => {
+            const starPos = this.view.getStarScreenPosition();
             const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
-            this.pieMenuController?.toggleSelfRay(cloudId, x, y, touchEvent);
+            this.pieMenuController?.toggleSelfRay(cloudId, starPos.x, starPos.y, touchEvent);
         });
         this.view.setOnModeChange((mode) => {
             if (mode === 'panorama') {
@@ -351,11 +352,12 @@ export class CloudManager {
         const centerY = this.canvasHeight / 2;
 
         this.animatedStar = new AnimatedStar(centerX, centerY);
-        this.animatedStar.setOnClick((x, y, event) => {
+        this.animatedStar.setOnClick((_x, _y, event) => {
             const selfRay = this.model.getSelfRay();
             if (selfRay && this.pieMenuController) {
+                const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
-                this.pieMenuController.toggleSelfRay(selfRay.targetCloudId, x, y, touchEvent);
+                this.pieMenuController.toggleSelfRay(selfRay.targetCloudId, starPos.x, starPos.y, touchEvent);
             }
         });
         const starElement = this.animatedStar.createElement();
@@ -792,6 +794,7 @@ export class CloudManager {
 
         this.view.setCloudNames(cloudNames);
         this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions, this.relationships);
+        this.animatedStar?.setPointerEventsEnabled(this.model.hasSelfRay());
     }
 
     private act(action: string | RecordedAction, fn: () => void): void {
@@ -906,6 +909,12 @@ export class CloudManager {
             this.view.animateMessages(deltaTime);
         } else {
             this.carpetRenderer?.clear();
+            // Clear stretch once fully released during panorama
+            for (const instance of this.instances) {
+                if (instance.cloud.isStretchReleased()) {
+                    instance.cloud.clearBlendedStretch();
+                }
+            }
         }
 
         for (let i = 0; i < this.instances.length; i++) {
@@ -938,6 +947,7 @@ export class CloudManager {
         }
 
         this.increaseNeedAttention(deltaTime);
+        this.view.checkVictoryCondition(this.model, this.relationships);
         this.lastHelpPanelUpdate += deltaTime;
         if (this.lastHelpPanelUpdate >= 0.25) {
             this.lastHelpPanelUpdate = 0;
@@ -1114,8 +1124,13 @@ export class CloudManager {
                 this.moveCloudToUIGroup(cloudId);
             }
             this.moveStarToUIGroup();
+        } else {
+            // fg → panorama: release stretch gradually on partially blended clouds
+            for (const cloudId of this.model.getBlendedParts()) {
+                const cloud = this.getCloudById(cloudId);
+                cloud?.releaseBlendedStretch();
+            }
         }
-        // reverse: clouds and star stay in uiGroup, move to zoomGroup at end (in finalizeCloudGroups)
     }
 
     private finalizeCloudGroups(): void {

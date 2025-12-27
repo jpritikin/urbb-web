@@ -349,4 +349,18 @@ export class LatticeDeformation {
         }
         this.tugTarget.active = false;
     }
+
+    releaseToZero(): void {
+        this.tugTarget.offsetX = 0;
+        this.tugTarget.offsetY = 0;
+    }
+
+    isReleased(): boolean {
+        if (!this.tugTarget.active) return true;
+        const threshold = 1;
+        return Math.abs(this.currentOffset.x) < threshold &&
+               Math.abs(this.currentOffset.y) < threshold &&
+               this.tugTarget.offsetX === 0 &&
+               this.tugTarget.offsetY === 0;
+    }
 }

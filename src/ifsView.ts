@@ -465,7 +465,7 @@ export class SimulatorView {
         this.checkVictoryCondition(newModel, relationships);
     }
 
-    private checkVictoryCondition(model: SimulatorModel, relationships: { getProtecting: (id: string) => Set<string> }): void {
+    checkVictoryCondition(model: SimulatorModel, relationships: { getProtecting: (id: string) => Set<string> }): void {
         if (this.victoryBanner.isShown() || !this.htmlContainer) return;
 
         const now = Date.now();

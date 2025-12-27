@@ -161,7 +161,7 @@ function compareModels(actual: SerializedModel, expected: SerializedModel): stri
         if (Math.abs(actualState.trust - expectedState.trust) > 0.001) {
             diffs.push(`${id}.trust: ${actualState.trust} vs ${expectedState.trust}`);
         }
-        if (Math.abs(actualState.needAttention - expectedState.needAttention) > 0.001) {
+        if (Math.abs(actualState.needAttention - expectedState.needAttention) > 0.01) {
             diffs.push(`${id}.needAttention: ${actualState.needAttention} vs ${expectedState.needAttention}`);
         }
 

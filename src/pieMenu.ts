@@ -430,6 +430,30 @@ export class PieMenu {
         return colors[category ?? ''] ?? `rgba(155, 89, 182, ${opacity})`;
     }
 
+    private wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+        const charWidth = fontSize * 0.55;
+        const maxChars = Math.floor(maxWidth / charWidth);
+
+        if (text.length <= maxChars) return [text];
+
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let currentLine = '';
+
+        for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            if (testLine.length <= maxChars) {
+                currentLine = testLine;
+            } else {
+                if (currentLine) lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        return lines;
+    }
+
     private showTooltip(shortName: string, label: string): void {
         this.hideTooltip();
 
@@ -441,11 +465,15 @@ export class PieMenu {
         const padding = 12;
         const fontSize = 18;
         const lineHeight = fontSize + 6;
-        const estimatedHeight = lineHeight + padding * 2;
+        const maxWidth = 280;
 
         const svg = this.group.ownerSVGElement;
         const viewBox = svg?.viewBox.baseVal;
         const canvasHeight = viewBox?.height ?? 600;
+
+        const labelLines = this.wrapText(label, maxWidth, fontSize);
+        const totalLines = 1 + labelLines.length;
+        const estimatedHeight = totalLines * lineHeight + padding * 2;
 
         const spaceBelow = canvasHeight - this.menuCenterY - this.radius - 15;
         const tooltipMargin = 40;
@@ -461,16 +489,21 @@ export class PieMenu {
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
         textEl.setAttribute('pointer-events', 'none');
-        textEl.setAttribute('y', String(tooltipY + padding + fontSize - 2));
 
         const boldSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
         boldSpan.setAttribute('font-weight', 'bold');
-        boldSpan.textContent = shortName + ': ';
+        boldSpan.setAttribute('x', '0');
+        boldSpan.setAttribute('dy', String(tooltipY + padding + fontSize - 2));
+        boldSpan.textContent = shortName;
         textEl.appendChild(boldSpan);
 
-        const labelSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        labelSpan.textContent = label;
-        textEl.appendChild(labelSpan);
+        for (const line of labelLines) {
+            const lineSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            lineSpan.setAttribute('x', '0');
+            lineSpan.setAttribute('dy', String(lineHeight));
+            lineSpan.textContent = line;
+            textEl.appendChild(lineSpan);
+        }
 
         this.tooltipElement.appendChild(textEl);
         const targetContainer = this.overlayContainer ?? this.group;
@@ -478,7 +511,7 @@ export class PieMenu {
         this.tooltipElement.setAttribute('transform', `translate(${this.menuCenterX}, ${this.menuCenterY})`);
 
         const bbox = textEl.getBBox();
-        const rectWidth = bbox.width + padding * 2;
+        const rectWidth = Math.min(bbox.width + padding * 2, maxWidth + padding * 2);
         const rectHeight = bbox.height + padding * 2;
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
