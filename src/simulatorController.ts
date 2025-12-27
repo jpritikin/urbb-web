@@ -296,7 +296,7 @@ export class SimulatorController {
         const targetIds = this.model.getTargetCloudIds();
         const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
         if (availableProxies.length === 0) {
-            const successChance = this.model.getSelfRay()?.targetCloudId === cloudId ? 0.95 : 0.2;
+            const successChance = this.model.getSelfRay()?.targetCloudId === cloudId ? 0.95 : 0.1;
             if (this.rng.model.random('who_do_you_see:clear_proxies') < successChance) {
                 this.relationships.clearProxies(cloudId);
                 return {
