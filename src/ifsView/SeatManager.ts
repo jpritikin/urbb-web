@@ -425,81 +425,88 @@ export class SeatManager {
         }
 
         const nonStarSeats = this.seats.filter(s => s.seatId !== STAR_CLOUD_ID);
-        const matching = new Map<string, { x: number; y: number }>();
-        const newMatching = new Map<string, string>();
 
         if (activeCarpetIds.length === 0 || nonStarSeats.length === 0) {
             this.previousMatching.clear();
-            return matching;
+            return new Map();
         }
 
-        const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
-        const remainingCarpets = new Set(activeCarpetIds);
-        const remainingSeats = new Set(nonStarSeats);
-
-        for (const carpetId of activeCarpetIds) {
-            const prevSeatId = this.previousMatching.get(carpetId);
-            if (!prevSeatId) continue;
-
-            const prevSeat = seatById.get(prevSeatId);
-            if (!prevSeat || !remainingSeats.has(prevSeat)) continue;
-
+        const distanceToSeat = (carpetId: string, seat: SeatState): number => {
             const carpet = this.carpets.get(carpetId)!;
-            const prevDx = prevSeat.x - carpet.currentX;
-            const prevDy = prevSeat.y - carpet.currentY;
-            const prevDist = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
+            const dx = seat.x - carpet.currentX;
+            const dy = seat.y - carpet.currentY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
 
-            let shouldKeep = true;
-            for (const seat of remainingSeats) {
-                if (seat.seatId === prevSeatId) continue;
-                const dx = seat.x - carpet.currentX;
-                const dy = seat.y - carpet.currentY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist + REASSIGNMENT_THRESHOLD < prevDist) {
-                    shouldKeep = false;
+        const computeGreedyMatching = (carpetIds: string[], seats: SeatState[]): Map<string, string> => {
+            const result = new Map<string, string>();
+            const remainingCarpets = new Set(carpetIds);
+            const remainingSeats = new Set(seats);
+
+            while (remainingCarpets.size > 0 && remainingSeats.size > 0) {
+                let bestCarpetId: string | null = null;
+                let bestSeat: SeatState | null = null;
+                let bestDist = Infinity;
+
+                for (const carpetId of remainingCarpets) {
+                    for (const seat of remainingSeats) {
+                        const dist = distanceToSeat(carpetId, seat);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestCarpetId = carpetId;
+                            bestSeat = seat;
+                        }
+                    }
+                }
+
+                if (bestCarpetId && bestSeat) {
+                    result.set(bestCarpetId, bestSeat.seatId);
+                    remainingCarpets.delete(bestCarpetId);
+                    remainingSeats.delete(bestSeat);
+                } else {
                     break;
                 }
             }
+            return result;
+        };
 
-            if (shouldKeep) {
-                matching.set(carpetId, { x: prevSeat.x, y: prevSeat.y });
-                newMatching.set(carpetId, prevSeatId);
-                remainingCarpets.delete(carpetId);
-                remainingSeats.delete(prevSeat);
+        const computeTotalDistance = (matching: Map<string, string>): number => {
+            const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
+            let total = 0;
+            for (const [carpetId, seatId] of matching) {
+                const seat = seatById.get(seatId);
+                if (seat) total += distanceToSeat(carpetId, seat);
             }
+            return total;
+        };
+
+        const optimalMatching = computeGreedyMatching(activeCarpetIds, nonStarSeats);
+        const optimalDistance = computeTotalDistance(optimalMatching);
+
+        const previousStillValid = activeCarpetIds.every(id => {
+            const prevSeatId = this.previousMatching.get(id);
+            return prevSeatId && nonStarSeats.some(s => s.seatId === prevSeatId);
+        }) && new Set(Array.from(this.previousMatching.values())).size === this.previousMatching.size;
+
+        let newMatching: Map<string, string>;
+        if (previousStillValid && this.previousMatching.size === activeCarpetIds.length) {
+            const previousDistance = computeTotalDistance(this.previousMatching);
+            newMatching = previousDistance - optimalDistance > REASSIGNMENT_THRESHOLD
+                ? optimalMatching
+                : this.previousMatching;
+        } else {
+            newMatching = optimalMatching;
         }
 
-        while (remainingCarpets.size > 0 && remainingSeats.size > 0) {
-            let bestCarpetId: string | null = null;
-            let bestSeat: SeatState | null = null;
-            let bestDist = Infinity;
-
-            for (const carpetId of remainingCarpets) {
-                const carpet = this.carpets.get(carpetId)!;
-                for (const seat of remainingSeats) {
-                    const dx = seat.x - carpet.currentX;
-                    const dy = seat.y - carpet.currentY;
-                    const dist = dx * dx + dy * dy;
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        bestCarpetId = carpetId;
-                        bestSeat = seat;
-                    }
-                }
-            }
-
-            if (bestCarpetId && bestSeat) {
-                matching.set(bestCarpetId, { x: bestSeat.x, y: bestSeat.y });
-                newMatching.set(bestCarpetId, bestSeat.seatId);
-                remainingCarpets.delete(bestCarpetId);
-                remainingSeats.delete(bestSeat);
-            } else {
-                break;
-            }
+        const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
+        const result = new Map<string, { x: number; y: number }>();
+        for (const [carpetId, seatId] of newMatching) {
+            const seat = seatById.get(seatId)!;
+            result.set(carpetId, { x: seat.x, y: seat.y });
         }
 
         this.previousMatching = newMatching;
-        return matching;
+        return result;
     }
 
     private updateCarpetPositions(deltaTime: number): void {
