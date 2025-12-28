@@ -259,6 +259,10 @@ export class CloudManager {
         );
 
         this.carpetRenderer = new CarpetRenderer(this.canvasWidth, this.canvasHeight, this.uiGroup);
+        this.carpetRenderer.setOnCarpetDrag(
+            (carpetId, x, y) => this.view.setCarpetPosition(carpetId, x, y),
+            () => this.view.clearCarpetDragging()
+        );
         // Ensure carpet is at the back (first child) so clouds render on top
         const carpetGroup = this.uiGroup.querySelector('#carpet-group');
         if (carpetGroup && this.uiGroup.firstChild !== carpetGroup) {
@@ -861,7 +865,7 @@ export class CloudManager {
             this.syncViewWithModel();
         }
 
-        if (this.view.isSeatCountAnimating() || this.view.isConferenceRotating()) {
+        if (this.view.isConferenceRotating()) {
             this.view.updateForegroundPositions(this.model, this.instances);
         }
 

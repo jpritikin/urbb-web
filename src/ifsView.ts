@@ -413,6 +413,14 @@ export class SimulatorView {
         return this.seatManager.getCarpets();
     }
 
+    setCarpetPosition(carpetId: string, x: number, y: number): void {
+        this.seatManager.setCarpetPosition(carpetId, x, y);
+    }
+
+    clearCarpetDragging(): void {
+        this.seatManager.clearDragging();
+    }
+
     getSeats(): SeatInfo[] {
         return this.seatManager.getSeats();
     }
@@ -874,12 +882,8 @@ export class SimulatorView {
         });
     }
 
-    isSeatCountAnimating(): boolean {
-        return this.seatManager.isSeatCountAnimating();
-    }
-
     isConferenceRotating(): boolean {
-        return this.mode === 'foreground' && this.seatManager.isConferenceRotating();
+        return this.mode === 'foreground';
     }
 
     setConferenceRotationPaused(paused: boolean): void {

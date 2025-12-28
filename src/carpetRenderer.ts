@@ -129,6 +129,9 @@ export class CarpetRenderer {
     private carpetGroup: SVGGElement;
     private carpetElements: SVGGElement[] = [];
     private carpetStates: Map<number, CarpetState> = new Map();
+    private onCarpetDrag: ((carpetId: string, x: number, y: number) => void) | null = null;
+    private onCarpetDragEnd: (() => void) | null = null;
+    private draggingCarpetId: string | null = null;
 
     private readonly CARPET_OCCUPIED_DROP = 35;
     private readonly CARPET_DAMPING = 0.92;
@@ -142,6 +145,71 @@ export class CarpetRenderer {
         this.carpetGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.carpetGroup.setAttribute('id', 'carpet-group');
         parentGroup.appendChild(this.carpetGroup);
+
+        this.setupDragHandlers(parentGroup);
+    }
+
+    private setupDragHandlers(parentGroup: SVGGElement): void {
+        const svg = parentGroup.ownerSVGElement;
+        if (!svg) return;
+
+        const getEventPos = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
+            const rect = svg.getBoundingClientRect();
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            const scaleX = svg.viewBox.baseVal.width / rect.width;
+            const scaleY = svg.viewBox.baseVal.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        };
+
+        const onStart = (e: MouseEvent | TouchEvent) => {
+            let target = e.target as SVGElement | null;
+            while (target && !target.dataset?.carpetId) {
+                target = target.parentElement as SVGElement | null;
+            }
+            const carpetId = target?.dataset?.carpetId;
+            if (carpetId) {
+                this.draggingCarpetId = carpetId;
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
+        const onMove = (e: MouseEvent | TouchEvent) => {
+            if (!this.draggingCarpetId || !this.onCarpetDrag) return;
+            const pos = getEventPos(e);
+            this.onCarpetDrag(this.draggingCarpetId, pos.x, pos.y);
+            e.preventDefault();
+        };
+
+        const onEnd = () => {
+            this.draggingCarpetId = null;
+            this.onCarpetDragEnd?.();
+        };
+
+        this.carpetGroup.addEventListener('mousedown', onStart);
+        svg.addEventListener('mousemove', onMove);
+        svg.addEventListener('mouseup', onEnd);
+        svg.addEventListener('mouseleave', onEnd);
+        this.carpetGroup.addEventListener('touchstart', onStart, { passive: false });
+        svg.addEventListener('touchmove', onMove, { passive: false });
+        svg.addEventListener('touchend', onEnd);
+    }
+
+    setOnCarpetDrag(callback: (carpetId: string, x: number, y: number) => void, onEnd?: () => void): void {
+        this.onCarpetDrag = callback;
+        this.onCarpetDragEnd = onEnd ?? null;
+    }
+
+    isDragging(): boolean {
+        return this.draggingCarpetId !== null;
+    }
+
+    getDraggingCarpetId(): string | null {
+        return this.draggingCarpetId;
     }
 
     private easeInOutCubic(t: number): number {
@@ -184,12 +252,8 @@ export class CarpetRenderer {
                     carpet.currentY = carpet.targetY;
                     carpet.currentScale = CARPET_SCALE;
                 }
-            } else {
-                const smoothing = 5;
-                const factor = 1 - Math.exp(-smoothing * deltaTime);
-                carpet.currentX += (carpet.targetX - carpet.currentX) * factor;
-                carpet.currentY += (carpet.targetY - carpet.currentY) * factor;
             }
+            // Position updates handled by SeatManager
 
             carpet.isOccupied = seat !== undefined;
             const targetOffset = carpet.isOccupied ? this.CARPET_OCCUPIED_DROP : 0;
@@ -238,12 +302,14 @@ export class CarpetRenderer {
             const carpet = this.carpetElements[i];
             carpet.setAttribute('transform', `translate(${data.x}, ${data.y}) scale(${data.scale})`);
             carpet.setAttribute('opacity', String(data.opacity));
+            carpet.dataset.carpetId = data.carpetId;
 
             this.updateCarpetPath(carpet, data.vertices);
         }
     }
 
     private getRenderData(carpetStates: Map<string, CarpetState>): Array<{
+        carpetId: string;
         x: number;
         y: number;
         scale: number;
@@ -251,6 +317,7 @@ export class CarpetRenderer {
         vertices: Array<{ x: number; y: number }>;
     }> {
         const carpets: Array<{
+            carpetId: string;
             x: number;
             y: number;
             scale: number;
@@ -258,7 +325,7 @@ export class CarpetRenderer {
             vertices: Array<{ x: number; y: number }>;
         }> = [];
 
-        for (const carpet of carpetStates.values()) {
+        for (const [carpetId, carpet] of carpetStates) {
             let opacity = 1;
             if (carpet.entering && carpet.progress < 0) {
                 opacity = 0;
@@ -279,6 +346,7 @@ export class CarpetRenderer {
             const isoX = 8 * depthScale * 2;
 
             carpets.push({
+                carpetId,
                 x: carpet.currentX - isoX / 2,
                 y: carpet.currentY + carpet.occupiedOffset,
                 scale: carpet.currentScale / CARPET_SCALE,
@@ -415,6 +483,8 @@ export class CarpetRenderer {
     private createCarpetElement(): SVGGElement {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'flying-carpet');
+        group.setAttribute('pointer-events', 'all');
+        group.setAttribute('cursor', 'grab');
 
         const sideFace = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         sideFace.setAttribute('class', 'carpet-side-face');
