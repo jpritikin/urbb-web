@@ -1,15 +1,14 @@
 #!/usr/bin/env npx tsx
 
-import { runAddingInvariantsTests } from './testAddingInvariants.js';
 import { runRemovingInvariantsTests } from './testRemovingInvariants.js';
 import { runGeometryProviderTests } from './testGeometryProvider.js';
 import { runGeometryProviderOrderTests } from './testGeometryProviderOrder.js';
-import { runNewArmBaseLengthTests } from './testNewArmBaseLength.js';
 import { runOverlappingGeometryTests } from './testOverlappingGeometry.js';
 import { runOverlappingSmoothTests } from './testOverlappingSmooth.js';
 import { runRedistributionTests } from './testRedistribution.js';
 import { runRenderSpecTestSuite } from './testRenderSpec.js';
 import { runSortingSymmetryTests } from './testSortingSymmetry.js';
+import { runSSOTTests } from './testSSOT.js';
 import { runTrivialIFSTests } from './testTrivialIFS.js';
 import { runRecordedSessionTests } from './testRecordedSessions.js';
 
@@ -27,16 +26,15 @@ function runAllTests(): void {
 
     // Run each test suite
     const suites = [
-        { name: 'Adding Invariants', fn: runAddingInvariantsTests },
         { name: 'Removing Invariants', fn: runRemovingInvariantsTests },
         { name: 'Geometry Provider', fn: runGeometryProviderTests },
         { name: 'Geometry Provider Order', fn: runGeometryProviderOrderTests },
-        { name: 'New Arm Base Length', fn: runNewArmBaseLengthTests },
         { name: 'Overlapping Geometry', fn: runOverlappingGeometryTests },
         { name: 'Overlapping Smooth', fn: runOverlappingSmoothTests },
         { name: 'Redistribution', fn: runRedistributionTests },
         { name: 'Render Spec', fn: runRenderSpecTestSuite },
         { name: 'Sorting Symmetry', fn: runSortingSymmetryTests },
+        { name: 'SSOT Boundary', fn: runSSOTTests },
         { name: 'Trivial IFS', fn: runTrivialIFSTests },
         { name: 'Recorded Sessions', fn: runRecordedSessionTests },
     ];

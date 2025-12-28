@@ -1,10 +1,12 @@
 import {
     createSingleTransitionGeometry,
+    buildStaticArms,
     computeTransitionWithGeometry,
     TransitionDirection,
     STAR_OUTER_RADIUS,
-    getInnerRadiusForArmCount,
+    getTransitionInnerRadius,
     dist,
+    mod,
 } from '../src/starAnimationCore.js';
 
 const CENTER_X = 200;
@@ -21,18 +23,22 @@ function testGeometryProvider(): { passed: number; failed: number; failures: str
                 for (let sourceArmIndex = 0; sourceArmIndex < armCount; sourceArmIndex++) {
                     const prefix = `${type.toUpperCase()}-${direction === 1 ? 'CW' : 'CCW'} ${armCount}arms idx${sourceArmIndex}`;
 
-                    const geom = createSingleTransitionGeometry({
-                        type,
-                        sourceArmIndex,
-                        armCount,
-                        centerX: CENTER_X,
-                        centerY: CENTER_Y,
-                        outerRadius: STAR_OUTER_RADIUS,
-                        rotation: 0,
-                        direction,
-                    });
+                    const rotation = 0;
 
                     for (const progress of [0, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 1.0]) {
+                        const innerRadius = getTransitionInnerRadius(armCount, type, progress, STAR_OUTER_RADIUS);
+                        const staticArms = buildStaticArms(armCount, rotation, CENTER_X, CENTER_Y, innerRadius, STAR_OUTER_RADIUS);
+                        const geom = createSingleTransitionGeometry({
+                            type,
+                            sourceArmIndex,
+                            armCount,
+                            centerX: CENTER_X,
+                            centerY: CENTER_Y,
+                            outerRadius: STAR_OUTER_RADIUS,
+                            rotation,
+                            direction,
+                        }, staticArms);
+
                         const result = computeTransitionWithGeometry(
                             geom,
                             { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation: 0, direction },
@@ -57,24 +63,21 @@ function testGeometryProvider(): { passed: number; failed: number; failures: str
                                                 tipToB2 > minEdge && tipToB2 < 40 &&
                                                 baseToBase > minBase && baseToBase < 25;
 
-                        // Tip should be on or near the outer circle
-                        const tipDist = dist(result.t.x, result.t.y, CENTER_X, CENTER_Y);
-                        const tipOnOuter = Math.abs(tipDist - STAR_OUTER_RADIUS) < 1;
+                        // Edge lengths should match adjacent arm's edge lengths
+                        const adjIndex = type === 'adding' ? sourceArmIndex : mod(sourceArmIndex + direction, armCount);
+                        const adjArm = staticArms.get(adjIndex)!;
+                        const adjTipToB1 = dist(adjArm.t.x, adjArm.t.y, adjArm.b1.x, adjArm.b1.y);
+                        const adjTipToB2 = dist(adjArm.t.x, adjArm.t.y, adjArm.b2.x, adjArm.b2.y);
+                        const edgeLengthsMatch = Math.abs(tipToB1 - adjTipToB1) < 0.01 &&
+                                                  Math.abs(tipToB2 - adjTipToB2) < 0.01;
 
-                        // At progress=0, transition arm should be collapsed on adjacent (for adding)
-                        // At progress=1, transition arm should be at final position
-                        let boundaryOk = true;
-                        if (progress === 1.0) {
-                            boundaryOk = tipOnOuter;
-                        }
-
-                        const allOk = triangleValid && edgesReasonable && boundaryOk;
+                        const allOk = triangleValid && edgesReasonable && edgeLengthsMatch;
 
                         if (allOk) {
                             passed++;
                         } else {
                             failed++;
-                            failures.push(`${prefix} p=${progress}: tri=${triangleValid} edges=${edgesReasonable} boundary=${boundaryOk}`);
+                            failures.push(`${prefix} p=${progress}: tri=${triangleValid} edges=${edgesReasonable} edgeMatch=${edgeLengthsMatch}`);
                         }
                     }
                 }
