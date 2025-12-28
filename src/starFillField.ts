@@ -145,9 +145,10 @@ export class StarFillField {
             );
 
             const speed = this.perlinNoise.noise(dot.noiseOffset, this.noiseTime * animatedSpeedNoiseRate);
+            const baseSpeed = 60;
 
-            dot.x += vx * speed;
-            dot.y += vy * speed;
+            dot.x += vx * speed * baseSpeed * deltaTime;
+            dot.y += vy * speed * baseSpeed * deltaTime;
 
             if (dot.x < 0) dot.x = -dot.x;
             else if (dot.x > FIELD_SIZE) dot.x = 2 * FIELD_SIZE - dot.x;

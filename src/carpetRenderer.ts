@@ -277,7 +277,7 @@ export class CarpetRenderer {
                     const diff = next.yOffset - vertex.yOffset;
                     vertex.velocity += diff * this.CARPET_SPRING_STRENGTH * 0.3 * deltaTime;
                 }
-                vertex.velocity *= this.CARPET_DAMPING;
+                vertex.velocity *= Math.pow(this.CARPET_DAMPING, deltaTime * 60);
                 vertex.yOffset += vertex.velocity * deltaTime;
             }
         }
