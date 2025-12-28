@@ -1,6 +1,7 @@
 import {
     createSingleTransitionGeometry,
     computeTransitionWithGeometry,
+    buildStaticArms,
     STAR_OUTER_RADIUS,
     getInnerRadiusForArmCount,
     getTransitionInnerRadius,
@@ -89,6 +90,8 @@ function testSingleCase(testCase: TestCase): TestResult {
     const rotation = 0;
     const failures: string[] = [];
 
+    const innerRadius = getInnerRadiusForArmCount(armCount);
+    const staticArms = buildStaticArms(armCount, rotation, CENTER_X, CENTER_Y, innerRadius, STAR_OUTER_RADIUS);
     const geom = createSingleTransitionGeometry({
         type,
         sourceArmIndex: sourceIndex,
@@ -98,7 +101,7 @@ function testSingleCase(testCase: TestCase): TestResult {
         outerRadius: STAR_OUTER_RADIUS,
         rotation,
         direction,
-    });
+    }, staticArms);
 
     const params = { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation, direction };
     const center = { x: CENTER_X, y: CENTER_Y };

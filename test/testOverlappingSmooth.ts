@@ -379,7 +379,9 @@ export function runOverlappingSmoothTests(): { passed: number; failed: number; f
         direction: 1,
     }));
 
-    for (const src2 of [1, 2, 4, 5]) {
+    // src2=1 is prohibited: when first adds at index 0 with direction 1, the new arm is at index 1
+    // Second transition cannot use the new arm as its adjacent
+    for (const src2 of [2, 4, 5]) {
         checkResult(`ADD+ADD src1=0 src2=${src2}`, collectTestResult({
             firstType: 'adding',
             secondType: 'adding',

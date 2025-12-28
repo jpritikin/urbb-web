@@ -1,6 +1,7 @@
 import {
     computeTransitionWithGeometry,
     createSingleTransitionGeometry,
+    buildStaticArms,
     computeArmRedistribution,
     getArmPoints,
     getInnerRadiusForArmCount,
@@ -71,6 +72,9 @@ function testNoCrossing(): void {
         const dirName = direction === 1 ? 'CW' : 'CCW';
         const prefix = `${armCount}arms idx${sourceIndex} ${dirName}`;
 
+        const rotation = 0;
+        const innerRadius = getInnerRadiusForArmCount(armCount);
+        const staticArms = buildStaticArms(armCount, rotation, CENTER_X, CENTER_Y, innerRadius, STAR_OUTER_RADIUS);
         const geom = createSingleTransitionGeometry({
             type: 'adding',
             sourceArmIndex: sourceIndex,
@@ -78,15 +82,15 @@ function testNoCrossing(): void {
             centerX: CENTER_X,
             centerY: CENTER_Y,
             outerRadius: STAR_OUTER_RADIUS,
-            rotation: 0,
+            rotation,
             direction,
-        });
+        }, staticArms);
 
         const params = {
             centerX: CENTER_X,
             centerY: CENTER_Y,
             outerRadius: STAR_OUTER_RADIUS,
-            rotation: 0,
+            rotation,
             direction,
         };
 
@@ -210,6 +214,9 @@ export function runSortingSymmetryTests(): { passed: number; failed: number; fai
         const dirName = direction === 1 ? 'CW' : 'CCW';
         const prefix = `${armCount}arms idx${sourceIndex} ${dirName}`;
 
+        const rotation = 0;
+        const innerRadius = getInnerRadiusForArmCount(armCount);
+        const staticArms = buildStaticArms(armCount, rotation, CENTER_X, CENTER_Y, innerRadius, STAR_OUTER_RADIUS);
         const geom = createSingleTransitionGeometry({
             type: 'adding',
             sourceArmIndex: sourceIndex,
@@ -217,15 +224,15 @@ export function runSortingSymmetryTests(): { passed: number; failed: number; fai
             centerX: CENTER_X,
             centerY: CENTER_Y,
             outerRadius: STAR_OUTER_RADIUS,
-            rotation: 0,
+            rotation,
             direction,
-        });
+        }, staticArms);
 
         const params = {
             centerX: CENTER_X,
             centerY: CENTER_Y,
             outerRadius: STAR_OUTER_RADIUS,
-            rotation: 0,
+            rotation,
             direction,
         };
 

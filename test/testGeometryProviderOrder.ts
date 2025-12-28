@@ -1,5 +1,5 @@
 import {
-    createSingleTransitionGeometry,
+    getRenderSpec,
     normalizeAngle,
     TransitionDirection,
     STAR_OUTER_RADIUS,
@@ -22,9 +22,9 @@ interface TestResult {
     message: string;
 }
 
-// Test that b1 = CCW base and b2 = CW base are computed correctly
-// For adding CW from source arm S: new arm's b2 locks to adjacent's b1
-// For adding CCW from source arm S: new arm's b1 locks to adjacent's b2
+// Test that b1 = CCW base and b2 = CW base are computed correctly at p=0.5
+// For ADDING at p=0.5: redistribution hasn't started yet (Phase 2 starts at 0.5), so arms are at ORIGINAL positions
+// For REMOVING at p=0.5: redistribution is COMPLETE (Phase 1 ends at 0.5), so arms are at FINAL positions
 function testBaseAnglesCorrect(
     description: string,
     adjB1: number,
@@ -32,11 +32,19 @@ function testBaseAnglesCorrect(
     sourceIndex: number,
     armCount: number,
     direction: TransitionDirection,
-    rotation: number
+    rotation: number,
+    transitionType: 'adding' | 'removing'
 ): TestResult {
-    const angleStep = (2 * Math.PI) / armCount;
+    // For ADDING at p=0.5: arms are still at original positions (armCount)
+    // For REMOVING at p=0.5: arms have redistributed to final count (armCount-1)
+    // This test only runs for 'adding', so we use the original armCount
+    const effectiveArmCount = armCount;
+    const angleStep = (2 * Math.PI) / effectiveArmCount;
     const halfStep = angleStep / 2;
-    const sourceTipAngle = rotation - Math.PI / 2 + sourceIndex * angleStep;
+
+    // Source arm stays at its original index (for adding, new arm inserts next to it)
+    const effectiveSourceIndex = sourceIndex;
+    const sourceTipAngle = rotation - Math.PI / 2 + effectiveSourceIndex * angleStep;
 
     // b1 should be CCW from tip = tipAngle - halfStep
     // b2 should be CW from tip = tipAngle + halfStep
@@ -119,26 +127,44 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
     let failed = 0;
     const failures: string[] = [];
 
-    // Test single adding transitions
+    // Test static arm angles via getRenderSpec
     for (const armCount of [4, 5, 6, 7]) {
         for (let sourceIndex = 0; sourceIndex < armCount; sourceIndex++) {
             for (const direction of [1, -1] as TransitionDirection[]) {
                 for (const rotation of [0, Math.PI / 4, Math.PI / 2]) {
-                    const geom = createSingleTransitionGeometry({
-                        type: 'adding',
-                        sourceArmIndex: sourceIndex,
+                    const spec = getRenderSpec({
+                        bundle: {
+                            first: {
+                                type: 'adding',
+                                sourceArmIndex: sourceIndex,
+                                startArmCount: armCount,
+                                direction,
+                                progress: 0.5,
+                            },
+                            second: null,
+                            overlapStart: 0,
+                            firstCompleted: false,
+                        },
                         armCount,
+                        rotation,
                         centerX: CENTER_X,
                         centerY: CENTER_Y,
                         outerRadius: OUTER_R,
-                        rotation,
-                        direction,
+                        expansionMagnitude: 0,
                     });
 
-                    const adjB1 = geom.getAdjB1Angle(0);
-                    const adjB2 = geom.getAdjB2Angle(0);
+                    // Get the adjacent arm's angle spec (source arm for adding)
+                    const adjSpec = spec.staticArms.get(sourceIndex);
+                    if (!adjSpec) {
+                        failed++;
+                        failures.push(`adding ${armCount}arms src${sourceIndex}: adjacent arm not found`);
+                        continue;
+                    }
+
+                    const adjB1 = adjSpec.tipAngle - adjSpec.halfStep;
+                    const adjB2 = adjSpec.tipAngle + adjSpec.halfStep;
                     const desc = `adding ${armCount}arms src${sourceIndex} ${direction === 1 ? 'CW' : 'CCW'} rot${toDeg(rotation).toFixed(0)}`;
-                    const result = testBaseAnglesCorrect(desc, adjB1, adjB2, sourceIndex, armCount, direction, rotation);
+                    const result = testBaseAnglesCorrect(desc, adjB1, adjB2, sourceIndex, armCount, direction, rotation, 'adding');
 
                     if (result.passed) {
                         passed++;
@@ -151,25 +177,45 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
         }
     }
 
-    // Test phase 1 rotation direction
+    // Test phase 1 rotation direction via getRenderSpec
     for (const type of ['adding', 'removing'] as const) {
         for (const armCount of [4, 5, 6, 7]) {
             for (let sourceIndex = 0; sourceIndex < armCount; sourceIndex++) {
                 for (const direction of [1, -1] as TransitionDirection[]) {
-                    const geom = createSingleTransitionGeometry({
-                        type,
-                        sourceArmIndex: sourceIndex,
+                    const rotation = 0;
+                    const spec = getRenderSpec({
+                        bundle: {
+                            first: {
+                                type,
+                                sourceArmIndex: sourceIndex,
+                                startArmCount: armCount,
+                                direction,
+                                progress: 0,
+                            },
+                            second: null,
+                            overlapStart: 0,
+                            firstCompleted: false,
+                        },
                         armCount,
+                        rotation,
                         centerX: CENTER_X,
                         centerY: CENTER_Y,
                         outerRadius: OUTER_R,
-                        rotation: 0,
-                        direction,
+                        expansionMagnitude: 0,
                     });
 
-                    const innerRadius = geom.getInnerRadius(0);
-                    const adjB1 = geom.getAdjB1Angle(0);
-                    const adjB2 = geom.getAdjB2Angle(0);
+                    // Get the adjacent arm's angle spec
+                    const adjIndex = type === 'adding' ? sourceIndex : (sourceIndex + direction + armCount) % armCount;
+                    const adjSpec = spec.staticArms.get(adjIndex);
+                    if (!adjSpec) {
+                        failed++;
+                        failures.push(`${type} ${armCount}arms src${sourceIndex}: adjacent arm not found`);
+                        continue;
+                    }
+
+                    const innerRadius = spec.innerRadius;
+                    const adjB1 = adjSpec.tipAngle - adjSpec.halfStep;
+                    const adjB2 = adjSpec.tipAngle + adjSpec.halfStep;
 
                     const desc = `${type} ${armCount}arms src${sourceIndex} ${direction === 1 ? 'CW' : 'CCW'}`;
                     const result = testPhase1RotationDirection(desc, adjB1, adjB2, direction, innerRadius);
