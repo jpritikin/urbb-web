@@ -52,6 +52,8 @@ export class SeatManager {
     private carpetVelocities: Map<string, CarpetVelocity> = new Map();
     private lastUpdateTime: number = 0;
     private draggingCarpetId: string | null = null;
+    private dragOffsetX: number = 0;
+    private dragOffsetY: number = 0;
     private previousMatching: Map<string, string> = new Map();
     private debugGroup: SVGGElement | null = null;
 
@@ -145,14 +147,14 @@ export class SeatManager {
         }));
     }
 
-    private getSeatPosition(seatId: string): { x: number; y: number } | undefined {
+    getSeatPosition(seatId: string): { x: number; y: number } | undefined {
         const seat = this.seats.find(s => s.seatId === seatId);
         return seat ? { x: seat.x, y: seat.y } : undefined;
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
         const carpet = this.carpets.get(cloudId);
-        if (carpet) {
+        if (carpet && !carpet.entering && !carpet.exiting) {
             return { x: carpet.currentX, y: carpet.currentY };
         }
         return this.getSeatPosition(cloudId);
@@ -180,9 +182,13 @@ export class SeatManager {
             this.draggingCarpetId = null;
             return;
         }
-        carpet.currentX = x;
-        carpet.currentY = y;
-        this.draggingCarpetId = carpetId;
+        if (this.draggingCarpetId !== carpetId) {
+            this.dragOffsetX = carpet.currentX - x;
+            this.dragOffsetY = carpet.currentY - y;
+            this.draggingCarpetId = carpetId;
+        }
+        carpet.currentX = x + this.dragOffsetX;
+        carpet.currentY = y + this.dragOffsetY;
     }
 
     clearDragging(): void {
