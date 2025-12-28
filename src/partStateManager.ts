@@ -197,6 +197,17 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.biography.unburdened ?? false;
     }
 
+    revealJob(cloudId: string): void {
+        const state = this.partStates.get(cloudId);
+        if (state && !state.biography.jobRevealed) {
+            state.biography.jobRevealed = true;
+        }
+    }
+
+    isJobRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.jobRevealed ?? false;
+    }
+
     revealJobAppraisal(cloudId: string): void {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.jobAppraisalRevealed) {
@@ -225,7 +236,7 @@ export class PartStateManager {
         switch (field) {
             case 'age': return bio.ageRevealed;
             case 'identity': return bio.identityRevealed;
-            case 'job': return bio.identityRevealed && !bio.unburdened;
+            case 'job': return bio.jobRevealed;
             case 'jobAppraisal': return bio.jobAppraisalRevealed;
             case 'jobImpact': return bio.jobImpactRevealed;
             default: return false;

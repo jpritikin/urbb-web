@@ -188,7 +188,7 @@ export class SimulatorController {
     }
 
     private handleJob(cloudId: string, isBlended: boolean): ControllerActionResult {
-        if (this.model.parts.isIdentityRevealed(cloudId) && !this.model.parts.isUnburdened(cloudId)) {
+        if (this.model.parts.isJobRevealed(cloudId)) {
             const protectedIds = this.relationships.getProtecting(cloudId);
             const protecteeInConference = Array.from(protectedIds).some(
                 id => this.model.isTarget(id) || this.model.isBlended(id) || this.model.getAllSupportingParts().has(id)
@@ -197,17 +197,20 @@ export class SimulatorController {
                 this.model.parts.adjustTrust(cloudId, 0.95);
                 return {
                     success: true,
-                    stateChanges: [`${cloudId} already answered`]
+                    stateChanges: [`${cloudId} already answered`],
+                    uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
                 };
             }
         }
 
-        this.getJobResponse(cloudId);
+        const response = this.getJobResponse(cloudId);
+        this.model.parts.revealJob(cloudId);
         const stateChanges = [`${cloudId} revealed job`];
 
         const result: ControllerActionResult = {
             success: true,
-            stateChanges
+            stateChanges,
+            uiFeedback: { thoughtBubble: { text: response, cloudId } }
         };
 
         if (isBlended) {
@@ -515,6 +518,7 @@ export class SimulatorController {
 
             case 'job':
                 response = this.getJobResponse(cloudId);
+                this.model.parts.revealJob(cloudId);
                 this.model.parts.addTrust(cloudId, 0.05);
                 break;
 
