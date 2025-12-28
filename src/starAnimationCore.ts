@@ -920,8 +920,61 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
     const secondHalfStepChange = finalHalfStep - intermediateHalfStep;
 
     // Apply each transition's contribution based on its phase timing
-    const tipAngle = origTipAngle + firstAngleChange * firstT + secondAngleChange * secondT;
+    let tipAngle = origTipAngle + firstAngleChange * firstT + secondAngleChange * secondT;
     const halfStep = origHalfStep + firstHalfStepChange * firstT + secondHalfStepChange * secondT;
+
+    // For the arm on the "other side" of the second transition gap, position it to create
+    // the correct gap width based on transition progress.
+    // For ADDING: gap grows from 0 to finalAngleStep during Phase 2 (secondT 0→1)
+    // For REMOVING: gap shrinks from finalAngleStep to 0 during Phase 1 (secondT 0→1)
+    if (secondT > 0 && secondT < 1 && secondType === 'adding') {
+        // For direction=1 (CW): insert at source+1, other side is at insertIdx (wraps around)
+        // For direction=-1 (CCW): insert at source, other side is at source-1
+        const otherSideIntermediate = secondDirection === 1
+            ? mod(secondInsertIdx, intermediateCount)
+            : mod(secondSourceIndex - 1, intermediateCount);
+
+        // Map to original index
+        let otherSideOriginal: number;
+        if (firstType === 'removing') {
+            otherSideOriginal = otherSideIntermediate >= firstSourceIndex
+                ? otherSideIntermediate + 1 : otherSideIntermediate;
+        } else {
+            otherSideOriginal = otherSideIntermediate > firstInsertIdx
+                ? otherSideIntermediate - 1 : otherSideIntermediate;
+        }
+
+        if (i === otherSideOriginal) {
+            // Gap width grows from 0 at secondT=0 to finalAngleStep at secondT=1
+            const gapWidth = finalAngleStep * secondT;
+
+            // The adjacent arm's edge (in secondDirection) defines one side of the gap
+            // We need to know where the adjacent arm is - compute it the same way
+            const adjOriginal = secondSourceOriginal;
+            const adjOrigTipAngle = rotation - Math.PI / 2 + adjOriginal * baseAngleStep;
+            let adjIntermediateIdx = adjOriginal;
+            if (firstType === 'adding') {
+                if (adjOriginal >= firstInsertIdx) adjIntermediateIdx++;
+            } else {
+                if (adjOriginal > firstSourceIndex) adjIntermediateIdx--;
+            }
+            const adjIntermediateTipAngle = rotation - Math.PI / 2 + adjIntermediateIdx * intermediateAngleStep;
+            let adjFinalIdx = adjIntermediateIdx;
+            if (adjIntermediateIdx >= secondInsertIdx) adjFinalIdx++;
+            const adjFinalTipAngle = rotation - Math.PI / 2 + adjFinalIdx * finalAngleStep;
+
+            const adjFirstChange = adjIntermediateTipAngle - adjOrigTipAngle;
+            const adjSecondChange = adjFinalTipAngle - adjIntermediateTipAngle;
+            const adjTipAngle = adjOrigTipAngle + adjFirstChange * firstT + adjSecondChange * secondT;
+
+            // Adjacent arm's edge in secondDirection
+            const adjEdge = adjTipAngle + secondDirection * halfStep;
+
+            // This arm's edge should be at adjEdge + gapWidth (in secondDirection)
+            const thisEdge = adjEdge + secondDirection * gapWidth;
+            tipAngle = thisEdge + secondDirection * halfStep;
+        }
+    }
 
     return { tipAngle, halfStep };
 }

@@ -12,6 +12,7 @@ import { runSSOTTests } from './testSSOT.js';
 import { runTrivialIFSTests } from './testTrivialIFS.js';
 import { runRecordedSessionTests } from './testRecordedSessions.js';
 import { runOverlappingAddSpaceTests } from './testOverlappingAddSpace.js';
+import { runSecondTransitionAdjacentTests } from './testSecondTransitionAdjacent.js';
 
 interface TestResult {
     name: string;
@@ -39,6 +40,7 @@ function runAllTests(): void {
         { name: 'Trivial IFS', fn: runTrivialIFSTests },
         { name: 'Recorded Sessions', fn: runRecordedSessionTests },
         { name: 'Overlapping Add Space', fn: runOverlappingAddSpaceTests },
+        { name: 'Second Transition Adjacent', fn: runSecondTransitionAdjacentTests },
     ];
 
     for (const suite of suites) {
