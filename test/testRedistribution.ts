@@ -256,26 +256,6 @@ function runAllRedistributionTests(): void {
          r11 ? `expected ${toDeg(expectedFinal).toFixed(1)}° got ${toDeg(r11.tipAngle).toFixed(1)}°` : 'null result');
 }
 
-// Test: Source arm returns null for removing
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 2,  // This is the source being removed
-        startArmCount: 5,
-        firstSourceIndex: 2,
-        secondSourceIndex: 0,
-        firstType: 'removing',
-        secondType: 'adding',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 0.5,
-        p2: 0,
-        rotation: 0,
-    };
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP first source (removing) returns null', result === null, result ? 'got non-null' : '');
-}
-
 // ==================== Test intermediate progress values ====================
 
 
@@ -457,26 +437,6 @@ function runAllRedistributionTests(): void {
     const result = computeOverlappingArmRedistribution(params);
     test('OVERLAP ADD+ADD CCW arm2 p1=1 p2=1', result !== null && anglesEqual(result.tipAngle, expectedFinal),
          result ? `expected ${toDeg(expectedFinal).toFixed(1)}° got ${toDeg(result.tipAngle).toFixed(1)}°` : 'null result');
-}
-
-// Test: Second source arm for removing should return null
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 3,  // In original star, this becomes secondSource after first transition
-        startArmCount: 5,
-        firstSourceIndex: 1,
-        secondSourceIndex: 2,  // Index 2 in 4-arm star = index 3 in original
-        firstType: 'removing',
-        secondType: 'removing',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 1,
-        p2: 0.5,
-        rotation: 0,
-    };
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP second source (removing) returns null', result === null, result ? 'got non-null' : '');
 }
 
 // Test: All arms in a 5-arm star adding CW from source 0

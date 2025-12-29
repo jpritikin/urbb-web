@@ -61,7 +61,14 @@ function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean
 }
 
 function isBundleComplete(bundle: PlannedTransitionBundle & TransitionScheduling): boolean {
-    return bundle.bundleProgress >= 1;
+    const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+    if (!isDouble) {
+        return bundle.bundleProgress >= 1;
+    }
+    // For double transitions, complete when second transition finishes (p2 = 1)
+    const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+    const { p2 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
+    return p2 >= 1;
 }
 
 export class AnimatedStar {

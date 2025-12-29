@@ -658,8 +658,6 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
         rotation,
     } = params;
 
-    if (firstType === 'removing' && i === firstSourceIndex) return null;
-
     const firstInsertIdx = firstDirection === 1 ? firstSourceIndex + 1 : firstSourceIndex;
 
     let secondSourceOriginal: number;
@@ -670,7 +668,6 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
         secondSourceOriginal = secondSourceIndex > firstInsertIdx
             ? secondSourceIndex - 1 : secondSourceIndex;
     }
-    if (secondType === 'removing' && i === secondSourceOriginal && p2 > 0) return null;
 
     const intermediateCount = firstType === 'adding' ? startArmCount + 1 : startArmCount - 1;
     const finalCount = secondType === 'adding' ? intermediateCount + 1 : intermediateCount - 1;
@@ -752,14 +749,13 @@ export function computeTransitionProgress(
     bundleProgress: number,
     overlapStart: number
 ): { p1: number; p2: number } {
-    // Total work = first (0→1) + second (0→1) - overlap
-    const totalWork = 2 - overlapStart;
-    const work = bundleProgress * totalWork;
+    // Each transition runs at the same speed (0→1 takes the same time)
+    // Bundle completes when second transition finishes
+    // Total duration = 1 + (1 - overlapStart) = 2 - overlapStart
+    const totalDuration = 2 - overlapStart;
 
-    const p1 = Math.min(work, 1);
-    const p2 = work <= overlapStart
-        ? 0
-        : Math.min((work - overlapStart) / (1 - overlapStart), 1);
+    const p1 = Math.min(bundleProgress * totalDuration, 1);
+    const p2 = Math.max(0, Math.min((bundleProgress * totalDuration - overlapStart), 1));
 
     return { p1, p2 };
 }
@@ -986,25 +982,26 @@ export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
         innerRadius = computeBundleInnerRadius(bundle);
         const hidden = computeHiddenIndices(bundle, armCount);
 
-        const angleSpecs = new Map<number, ArmAngleSpec>();
+        // Build specs for ALL arms (geometry lookups need hidden arms too)
+        const allAngleSpecs = new Map<number, ArmAngleSpec>();
         for (let i = 0; i < armCount; i++) {
-            if (hidden.has(i)) continue;
             const spec = computeStaticArmSpec(i, bundle, armCount, rotation);
             if (spec) {
-                angleSpecs.set(i, spec);
+                allAngleSpecs.set(i, spec);
             }
         }
+        const allArmPoints = buildStaticArmPoints(allAngleSpecs, centerX, centerY, innerRadius, outerRadius);
 
-        const staticArmPoints = buildStaticArmPoints(angleSpecs, centerX, centerY, innerRadius, outerRadius);
-
-        for (const [i, spec] of angleSpecs) {
-            const points = staticArmPoints.get(i)!;
+        // Only include non-hidden arms in the render output
+        for (const [i, spec] of allAngleSpecs) {
+            if (hidden.has(i)) continue;
+            const points = allArmPoints.get(i)!;
             staticArms.set(i, { tipAngle: spec.tipAngle, halfStep: spec.halfStep, tip: points.t, b1: points.b1, b2: points.b2 });
         }
 
         const transitionParams = { centerX, centerY, outerRadius, rotation, innerRadius };
-        firstTransitionArm = computeFirstTransitionArm(bundle, transitionParams, staticArmPoints);
-        secondTransitionArm = computeSecondTransitionArm(bundle, transitionParams, staticArmPoints);
+        firstTransitionArm = computeFirstTransitionArm(bundle, transitionParams, allArmPoints);
+        secondTransitionArm = computeSecondTransitionArm(bundle, transitionParams, allArmPoints);
     }
 
     return { staticArms, firstTransitionArm, secondTransitionArm, innerRadius };
