@@ -362,32 +362,26 @@ export interface SingleTransitionParams extends TransitionGeometryParams {
     armCount: number;
 }
 
-interface AddingCoordinates {
-    addingArmCount: number;
-    addingDirection: TransitionDirection;
-    addingSourceIndex: number;
+function getAddingDirection(type: 'adding' | 'removing', direction: TransitionDirection): TransitionDirection {
+    return type === 'adding' ? direction : -direction as TransitionDirection;
 }
 
-function toAddingCoordinates(
-    type: 'adding' | 'removing',
-    sourceArmIndex: number,
-    armCount: number,
-    direction: TransitionDirection
-): AddingCoordinates {
-    const addingArmCount = type === 'adding' ? armCount : armCount - 1;
-    const addingDirection: TransitionDirection = type === 'adding' ? direction : -direction as TransitionDirection;
+function getAdjacentIndex(type: 'adding' | 'removing', sourceIndex: number, armCount: number, direction: TransitionDirection): number {
+    return type === 'adding' ? sourceIndex : mod(sourceIndex + direction, armCount);
+}
 
-    let addingSourceIndex: number;
-    if (type === 'adding') {
-        addingSourceIndex = sourceArmIndex;
-    } else {
-        const originalAdjIndex = mod(sourceArmIndex + direction, armCount);
-        addingSourceIndex = originalAdjIndex > sourceArmIndex
-            ? originalAdjIndex - 1
-            : originalAdjIndex;
-    }
-
-    return { addingArmCount, addingDirection, addingSourceIndex };
+function createTransitionGeometryFromAdj(
+    adjPoints: ArmPoints,
+    otherNeighborPoints: ArmPoints,
+    addingDirection: TransitionDirection
+): TransitionGeometry {
+    const pivotBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
+    const swingTargetBase = addingDirection === 1 ? otherNeighborPoints.b2 : otherNeighborPoints.b1;
+    return {
+        getAdjPoints: () => adjPoints,
+        getPivotBase: () => pivotBase,
+        getSwingTargetBase: () => swingTargetBase,
+    };
 }
 
 export function createSingleTransitionGeometry(
@@ -395,22 +389,14 @@ export function createSingleTransitionGeometry(
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
     const { type, sourceArmIndex, armCount, direction } = params;
-    const { addingDirection } = toAddingCoordinates(type, sourceArmIndex, armCount, direction);
-
-    const adjOriginalIndex = type === 'adding' ? sourceArmIndex : mod(sourceArmIndex + direction, armCount);
-    const adjPoints = staticArmPoints.get(adjOriginalIndex)!;
-
-    const pivotBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
-
-    const otherNeighborIndex = mod(adjOriginalIndex - addingDirection, armCount);
-    const otherNeighborPoints = staticArmPoints.get(otherNeighborIndex)!;
-    const swingTargetBase = addingDirection === 1 ? otherNeighborPoints.b2 : otherNeighborPoints.b1;
-
-    return {
-        getAdjPoints: () => adjPoints,
-        getPivotBase: () => pivotBase,
-        getSwingTargetBase: () => swingTargetBase,
-    };
+    const addingDirection = getAddingDirection(type, direction);
+    const adjIndex = getAdjacentIndex(type, sourceArmIndex, armCount, direction);
+    const otherNeighborIndex = mod(adjIndex - addingDirection, armCount);
+    return createTransitionGeometryFromAdj(
+        staticArmPoints.get(adjIndex)!,
+        staticArmPoints.get(otherNeighborIndex)!,
+        addingDirection
+    );
 }
 
 export function computeTransitionWithGeometry(
@@ -455,24 +441,30 @@ export function createFirstTransitionGeometry(
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
     const { firstType, firstSourceIndex, firstStartArmCount, firstDirection } = params;
-    const { addingDirection } = toAddingCoordinates(firstType, firstSourceIndex, firstStartArmCount, firstDirection);
+    const addingDirection = getAddingDirection(firstType, firstDirection);
+    const adjIndex = getAdjacentIndex(firstType, firstSourceIndex, firstStartArmCount, firstDirection);
+    const otherNeighborIndex = mod(adjIndex - addingDirection, firstStartArmCount);
+    return createTransitionGeometryFromAdj(
+        staticArmPoints.get(adjIndex)!,
+        staticArmPoints.get(otherNeighborIndex)!,
+        addingDirection
+    );
+}
 
-    const adjOriginalIndex = firstType === 'adding'
-        ? firstSourceIndex
-        : mod(firstSourceIndex + firstDirection, firstStartArmCount);
+function getInsertIndex(type: 'adding' | 'removing', sourceIndex: number, direction: TransitionDirection): number {
+    return type === 'adding' ? (direction === 1 ? sourceIndex + 1 : sourceIndex) : -1;
+}
 
-    const adjPoints = staticArmPoints.get(adjOriginalIndex)!;
-    const pivotBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
-
-    const otherNeighborIndex = mod(adjOriginalIndex - addingDirection, firstStartArmCount);
-    const otherNeighborPoints = staticArmPoints.get(otherNeighborIndex)!;
-    const swingTargetBase = addingDirection === 1 ? otherNeighborPoints.b2 : otherNeighborPoints.b1;
-
-    return {
-        getAdjPoints: () => adjPoints,
-        getPivotBase: () => pivotBase,
-        getSwingTargetBase: () => swingTargetBase,
-    };
+function mapIntermediateToOriginal(
+    intermediateIdx: number,
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstInsertIdx: number
+): number {
+    if (firstType === 'removing') {
+        return intermediateIdx >= firstSourceIndex ? intermediateIdx + 1 : intermediateIdx;
+    }
+    return intermediateIdx > firstInsertIdx ? intermediateIdx - 1 : intermediateIdx;
 }
 
 export function createSecondTransitionGeometry(
@@ -485,101 +477,35 @@ export function createSecondTransitionGeometry(
     } = params;
 
     const intermediateCount = firstType === 'adding' ? firstStartArmCount + 1 : firstStartArmCount - 1;
-    const { addingDirection } = toAddingCoordinates(secondType, secondSourceIndex, intermediateCount, secondDirection);
+    const addingDirection = getAddingDirection(secondType, secondDirection);
+    const adjInIntermediate = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
 
-    const secondAdjIndexInIntermediate = secondType === 'adding'
-        ? secondSourceIndex
-        : mod(secondSourceIndex + secondDirection, intermediateCount);
-
-    const firstInsertIdx = firstType === 'adding'
-        ? (firstDirection === 1 ? firstSourceIndex + 1 : firstSourceIndex)
-        : -1;
-
-    if (firstType === 'adding' && secondAdjIndexInIntermediate === firstInsertIdx) {
+    if (firstType === 'adding' && adjInIntermediate === firstInsertIdx) {
         throw new Error('Second transition adjacent arm cannot be the new arm from first transition');
     }
 
-    // Map intermediate index to original
-    let adjLookupIndex: number;
-    if (firstType === 'removing') {
-        adjLookupIndex = secondAdjIndexInIntermediate >= firstSourceIndex
-            ? secondAdjIndexInIntermediate + 1
-            : secondAdjIndexInIntermediate;
-    } else {
-        adjLookupIndex = secondAdjIndexInIntermediate > firstInsertIdx
-            ? secondAdjIndexInIntermediate - 1
-            : secondAdjIndexInIntermediate;
-    }
-
+    const adjLookupIndex = mapIntermediateToOriginal(adjInIntermediate, firstType, firstSourceIndex, firstInsertIdx);
     const adjPoints = staticArmPoints.get(adjLookupIndex);
     if (!adjPoints) {
         throw new Error(`Adjacent arm at index ${adjLookupIndex} not found in staticArmPoints`);
     }
 
-    const pivotBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
-
-    const otherNeighborInIntermediate = mod(secondAdjIndexInIntermediate - addingDirection, intermediateCount);
-
-    let otherNeighborOriginal: number;
-    if (firstType === 'removing') {
-        otherNeighborOriginal = otherNeighborInIntermediate >= firstSourceIndex
-            ? otherNeighborInIntermediate + 1
-            : otherNeighborInIntermediate;
-    } else {
-        otherNeighborOriginal = otherNeighborInIntermediate > firstInsertIdx
-            ? otherNeighborInIntermediate - 1
-            : otherNeighborInIntermediate;
-    }
-
-    // Check if the other neighbor is the new arm from first transition (prohibited)
-    const isOtherNeighborNewArm = firstType === 'adding' && otherNeighborInIntermediate === firstInsertIdx;
-    if (isOtherNeighborNewArm) {
+    const otherNeighborInIntermediate = mod(adjInIntermediate - addingDirection, intermediateCount);
+    if (firstType === 'adding' && otherNeighborInIntermediate === firstInsertIdx) {
         throw new Error('Second transition other neighbor cannot be the new arm from first transition');
     }
 
+    const otherNeighborOriginal = mapIntermediateToOriginal(otherNeighborInIntermediate, firstType, firstSourceIndex, firstInsertIdx);
     const otherNeighborPoints = staticArmPoints.get(otherNeighborOriginal);
     if (!otherNeighborPoints) {
         throw new Error(`Other neighbor arm at index ${otherNeighborOriginal} not found in staticArmPoints`);
     }
-    const swingTargetBase = addingDirection === 1 ? otherNeighborPoints.b2 : otherNeighborPoints.b1;
 
-    return {
-        getAdjPoints: () => adjPoints,
-        getPivotBase: () => pivotBase,
-        getSwingTargetBase: () => swingTargetBase,
-    };
+    return createTransitionGeometryFromAdj(adjPoints, otherNeighborPoints, addingDirection);
 }
 
 // ============== Arm Redistribution ==============
-
-export interface OverlappingTransitionState {
-    firstType: 'adding' | 'removing';
-    firstProgress: number;
-    firstSourceIndex: number;
-    firstStartArmCount: number;
-    secondProgress: number | null;
-    secondSourceIndex: number | null;
-    secondStartArmCount: number | null;
-}
-
-export function selectDisjointSourceArm(firstSourceIndex: number, armCount: number): number {
-    return (firstSourceIndex + Math.floor(armCount / 2)) % armCount;
-}
-
-export function computeOverlappingInnerRadius(state: OverlappingTransitionState): number {
-    const startCount = state.firstStartArmCount;
-    const endCount = state.secondStartArmCount !== null
-        ? state.secondStartArmCount + (state.firstType === 'adding' ? 1 : -1)
-        : startCount + (state.firstType === 'adding' ? 1 : -1);
-
-    const combinedProgress = state.secondProgress !== null
-        ? (state.firstProgress + state.secondProgress) / 2
-        : state.firstProgress;
-
-    const startRatio = getInnerRadiusRatio(startCount);
-    const endRatio = getInnerRadiusRatio(endCount);
-    return lerp(startRatio, endRatio, combinedProgress) * STAR_OUTER_RADIUS;
-}
 
 function computeRedistributionT(type: 'adding' | 'removing', progress: number): number {
     return type === 'adding'
@@ -643,7 +569,7 @@ export interface OverlappingRedistributionParams {
     rotation: number;
 }
 
-export function computeOverlappingArmRedistribution(params: OverlappingRedistributionParams): ArmAngleSpec | null {
+export function computeOverlappingArmRedistribution(params: OverlappingRedistributionParams): ArmAngleSpec {
     const {
         originalArmIndex: i,
         startArmCount,
@@ -658,22 +584,8 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
         rotation,
     } = params;
 
-    const firstInsertIdx = firstDirection === 1 ? firstSourceIndex + 1 : firstSourceIndex;
-
-    let secondSourceOriginal: number;
-    if (firstType === 'removing') {
-        secondSourceOriginal = secondSourceIndex >= firstSourceIndex
-            ? secondSourceIndex + 1 : secondSourceIndex;
-    } else {
-        secondSourceOriginal = secondSourceIndex > firstInsertIdx
-            ? secondSourceIndex - 1 : secondSourceIndex;
-    }
-
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
     const intermediateCount = firstType === 'adding' ? startArmCount + 1 : startArmCount - 1;
-    const finalCount = secondType === 'adding' ? intermediateCount + 1 : intermediateCount - 1;
-
-    const origAngleStep = getAngleStep(startArmCount);
-    const finalAngleStep = getAngleStep(finalCount);
 
     const firstT = computeRedistributionT(firstType, p1);
     const secondT = computeRedistributionT(secondType, p2);
@@ -826,7 +738,7 @@ export function computeStaticArmSpec(
     const { first, second } = bundle;
 
     if (second) {
-        const result = computeOverlappingArmRedistribution({
+        return computeOverlappingArmRedistribution({
             originalArmIndex: armIndex,
             startArmCount: first.startArmCount,
             firstSourceIndex: first.sourceArmIndex,
@@ -839,17 +751,14 @@ export function computeStaticArmSpec(
             p2: second.progress,
             rotation,
         });
-        if (result) return result;
-    } else {
-        return computeArmRedistribution(
-            armIndex, tipAngle, halfStep,
-            first.type, first.progress,
-            first.sourceArmIndex, first.direction,
-            armCount, rotation
-        );
     }
 
-    return { tipAngle, halfStep };
+    return computeArmRedistribution(
+        armIndex, tipAngle, halfStep,
+        first.type, first.progress,
+        first.sourceArmIndex, first.direction,
+        armCount, rotation
+    );
 }
 
 function armPointsToRenderSpec(arm: ArmPoints, centerX: number, centerY: number): ArmRenderSpec {
