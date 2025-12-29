@@ -101,6 +101,11 @@ export class SimulatorController {
         const selfRay = this.model.getSelfRay();
         const protectedIds = this.relationships.getProtecting(cloudId);
 
+        // select_a_target (panorama mode - can target any non-targeted, non-blended part)
+        if (!isTarget && !isBlended) {
+            actions.push({ action: 'select_a_target', cloudId });
+        }
+
         // join_conference
         if (isSupporting && !isBlended) {
             actions.push({ action: 'join_conference', cloudId });

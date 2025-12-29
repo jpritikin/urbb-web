@@ -233,6 +233,13 @@ export function formatMonteCarloResults(results: MonteCarloResults): string {
     return lines.join('\n');
 }
 
+interface ActionHistory {
+    actionCounts: Map<string, number>;  // action:cloudId -> count this iteration
+    stateVisits: Map<string, number>;   // stateKey -> count this iteration
+    lastAction?: ValidAction;
+    consecutiveSameState: number;
+}
+
 export class RandomWalkRunner {
     private coverage: CoverageData = this.createEmptyCoverage();
     private actionsEverValid: Set<string> = new Set();
@@ -317,6 +324,12 @@ export class RandomWalkRunner {
             });
 
             let prevStateKey = this.getStateKey(sim);
+            const history: ActionHistory = {
+                actionCounts: new Map(),
+                stateVisits: new Map(),
+                consecutiveSameState: 0,
+            };
+            history.stateVisits.set(prevStateKey, 1);
 
             for (let step = 0; step < config.maxActionsPerIteration; step++) {
                 const validActions = controller.getValidActions();
@@ -334,9 +347,13 @@ export class RandomWalkRunner {
                 if (filtered.length === 0) break;
 
                 const action = config.heuristicScoring
-                    ? this.pickActionWithHeuristic(sim, controller, filtered, rng.model)
+                    ? this.pickActionWithHeuristic(sim, controller, filtered, rng.model, history)
                     : rng.model.pickRandom(filtered, 'random_walk');
                 actions.push(action);
+
+                const actionKey = `${action.action}:${action.cloudId}`;
+                history.actionCounts.set(actionKey, (history.actionCounts.get(actionKey) ?? 0) + 1);
+                history.lastAction = action;
 
                 if (action.action === 'wait') {
                     sim.advanceTime(WAIT_DURATION);
@@ -348,7 +365,14 @@ export class RandomWalkRunner {
                     this.recordCoverage(action, prevStateKey, sim, seed);
                 }
 
-                prevStateKey = this.getStateKey(sim);
+                const newStateKey = this.getStateKey(sim);
+                if (newStateKey === prevStateKey) {
+                    history.consecutiveSameState++;
+                } else {
+                    history.consecutiveSameState = 0;
+                }
+                history.stateVisits.set(newStateKey, (history.stateVisits.get(newStateKey) ?? 0) + 1);
+                prevStateKey = newStateKey;
 
                 if (sim.getModel().isVictoryAchieved()) {
                     return { seed, actions, finalModel: sim.getModelJSON(), victory: true };
@@ -365,45 +389,161 @@ export class RandomWalkRunner {
         sim: HeadlessSimulator,
         _controller: SimulatorController,
         actions: ValidAction[],
-        rng: RNG
+        rng: RNG,
+        history: ActionHistory
     ): ValidAction {
         const scored: { action: ValidAction; score: number }[] = [];
         const model = sim.getModel();
+        const relationships = sim.getRelationships();
+
+        // Analyze the current state to determine what we should work toward
+        const targets = model.getTargetCloudIds();
+        const blendedParts = model.getBlendedParts();
+        const selfRay = model.getSelfRay();
+        const allPartIds = model.getAllPartIds();
+
+        // Find protectors and their protectees for goal-directed planning
+        const protectorInfo: { protectorId: string; protectedId: string; protectorTrust: number; protectedTrust: number }[] = [];
+        for (const partId of allPartIds) {
+            const protecting = relationships.getProtecting(partId);
+            for (const protectedId of protecting) {
+                protectorInfo.push({
+                    protectorId: partId,
+                    protectedId,
+                    protectorTrust: model.parts.getTrust(partId),
+                    protectedTrust: model.parts.getTrust(protectedId),
+                });
+            }
+        }
+
+        // Determine current goal priority:
+        // 1. If we have a protector in targets with identity revealed, build protectee trust
+        // 2. If protector needs identity revealed, use job action
+        // 3. If protectee not in conference, need to reveal protector job first
+        // 4. Explore new states if stuck
 
         for (const action of actions) {
             let score = 0;
+            const actionKey = `${action.action}:${action.cloudId}`;
+            const timesUsed = history.actionCounts.get(actionKey) ?? 0;
+
+            // Heavy penalty for repeating the same action too many times
+            if (timesUsed > 0) score -= timesUsed * 2;
+            if (timesUsed > 5) score -= 10;
+
+            // Penalty for stuck states - encourage any state change
+            if (history.consecutiveSameState > 3) score += 2;
+
+            // Recovery when we have no targets - heavily prioritize getting back into conference
+            if (targets.size === 0 && blendedParts.length === 0) {
+                if (action.action === 'join_conference') score += 10;
+                else if (action.action === 'wait') score -= 5;  // Waiting does nothing here
+            }
 
             if (action.action === 'wait') {
-                // Wait is useful when there are blended parts (for grievance messages)
-                const blendedCount = model.getBlendedParts().length;
-                score = blendedCount > 0 ? 1 : -1;
-            } else {
-                // Prefer actions on parts with lower trust (more room to grow)
+                // Wait is strategic: good after blend when grievances can deliver
+                const hasPendingBlend = model.peekPendingBlend() !== null;
+                const waitCount = history.actionCounts.get('wait:') ?? 0;
+                if (hasPendingBlend) {
+                    score += 3;  // Wait for pending blend
+                } else if (blendedParts.length > 0 && waitCount < 3) {
+                    score += 1;  // Wait a bit for grievance messages, but not too much
+                } else {
+                    score -= 3;  // No point waiting
+                }
+            } else if (action.action === 'job') {
+                // Job reveals identity and summons protectees - high priority early
+                const isJobRevealed = model.parts.isJobRevealed(action.cloudId);
+                if (!isJobRevealed) {
+                    score += 4;  // Major progression action
+                } else {
+                    score -= 2;  // Already done
+                }
+            } else if (action.action === 'join_conference') {
+                // Bringing supporting parts into conference enables more interactions
+                score += 5;  // High priority - expands our options
+            } else if (action.action === 'feel_toward') {
+                // Creates self-ray - needed to build trust via ray fields
                 const trust = model.parts.getTrust(action.cloudId);
-                score += (1 - trust) * 2;
+                if (trust < 1) {
+                    score += 3;  // Good for building trust
+                }
+                // Extra bonus for targeting protectees (low-trust parts that need work)
+                const isProtectee = protectorInfo.some(p => p.protectedId === action.cloudId);
+                if (isProtectee && trust < 0.8) {
+                    score += 3;
+                }
+            } else if (action.action === 'ray_field_select') {
+                // Build trust via ray fields - essential for progress
+                const trust = model.parts.getTrust(action.cloudId);
+                if (trust < 1) {
+                    score += 2;
+                    // Prefer fields we haven't used on this part
+                    const fieldKey = `ray_field_select:${action.cloudId}:${action.field}`;
+                    if (!history.actionCounts.has(fieldKey)) score += 2;
+                } else {
+                    score -= 1;  // Trust already high
+                }
+            } else if (action.action === 'help_protected') {
+                // Only valuable if the protector has high trust (likely to consent)
+                const trust = model.parts.getTrust(action.cloudId);
+                if (trust >= 0.7) {
+                    score += 3;
+                } else {
+                    score -= 2;  // Will likely refuse
+                }
+            } else if (action.action === 'notice_part') {
+                // Victory condition! But only works if protectee has trust >= 1
+                const protectedTrust = action.targetCloudId ? model.parts.getTrust(action.targetCloudId) : 0;
+                if (protectedTrust >= 1) {
+                    score += 10;  // This is the goal!
+                } else {
+                    score -= 3;  // Won't work yet
+                }
+            } else if (action.action === 'who_do_you_see') {
+                // Can reveal blended parts or clear proxies - useful for exploration
+                if (blendedParts.length > 0) score += 2;
+                else score += 1;
+            } else if (action.action === 'blend') {
+                // Blending can trigger grievances when used strategically
+                score += 0;  // Neutral - can be useful but risky
+            } else if (action.action === 'separate') {
+                // Useful to unblend and try different approaches
+                score += 1;
+            } else if (action.action === 'step_back') {
+                // Stepping back removes parts from conference - only useful strategically
+                if (targets.size > 1) {
+                    score -= 1;  // Might be useful to focus
+                } else {
+                    score -= 5;  // Don't lose our only target!
+                }
+            } else if (action.action === 'select_a_target') {
+                // Selecting a target from panorama - essential for recovery and exploration
+                if (targets.size === 0 && blendedParts.length === 0) {
+                    score += 8;  // Critical when we have nothing going on
+                } else {
+                    // Prefer targeting parts we need to work on
+                    const isProtectee = protectorInfo.some(p => p.protectedId === action.cloudId);
+                    const trust = model.parts.getTrust(action.cloudId);
+                    if (isProtectee && trust < 1) {
+                        score += 3;  // This is a part we need to build trust with
+                    } else {
+                        score += 1;
+                    }
+                }
+            }
 
-                // Prefer ray_field_select when self-ray is active (builds trust)
-                if (action.action === 'ray_field_select') score += 3;
-
-                // Prefer feel_toward (creates self-ray)
-                if (action.action === 'feel_toward') score += 2;
-
-                // Prefer help_protected and notice_part (key progression actions)
-                if (action.action === 'help_protected') score += 4;
-                if (action.action === 'notice_part') score += 5;
-
-                // Penalize step_back (often counterproductive)
-                if (action.action === 'step_back') score -= 1;
-
-                // Penalize blend (often leads to stuck states)
-                if (action.action === 'blend') score -= 0.5;
+            // Bonus for targeting parts with lower trust (more room for growth)
+            if (action.cloudId) {
+                const trust = model.parts.getTrust(action.cloudId);
+                score += (1 - trust);
             }
 
             scored.push({ action, score });
         }
 
-        // Softmax selection with temperature
-        const temperature = 0.5;
+        // Softmax selection with temperature (higher = more random exploration)
+        const temperature = 1.0;
         const maxScore = Math.max(...scored.map(s => s.score));
         const expScores = scored.map(s => ({ action: s.action, exp: Math.exp((s.score - maxScore) / temperature) }));
         const sumExp = expScores.reduce((sum, s) => sum + s.exp, 0);
