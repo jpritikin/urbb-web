@@ -484,9 +484,6 @@ export function isValidSecondSourceIndex(
     const intermediateCount = firstType === 'adding' ? firstStartArmCount + 1 : firstStartArmCount - 1;
 
     if (firstType === 'removing') {
-        // For removing, check that both transitions don't use the same adjacent arm.
-        // First transition's adjacent is in original space; second's is in intermediate space.
-        // Map first's adjacent to intermediate space (decrement if >= firstSourceIndex).
         const firstAdj = mod(firstSourceIndex + firstDirection, firstStartArmCount);
         const firstAdjInIntermediate = firstAdj > firstSourceIndex ? firstAdj - 1 : firstAdj;
 
@@ -494,7 +491,23 @@ export function isValidSecondSourceIndex(
         const secondAdj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
         const secondOtherNeighbor = mod(secondAdj - addingDirection, intermediateCount);
 
-        return secondAdj !== firstAdjInIntermediate && secondOtherNeighbor !== firstAdjInIntermediate;
+        // Check that second's adjacent/neighbor don't conflict with first's adjacent
+        if (secondAdj === firstAdjInIntermediate || secondOtherNeighbor === firstAdjInIntermediate) {
+            return false;
+        }
+
+        // For double-REMOVE: second source arm cannot be the first's adjacent arm
+        // (the arm the first transition is animating around)
+        if (secondType === 'removing') {
+            const secondSourceInOriginal = secondSourceIndex >= firstSourceIndex
+                ? secondSourceIndex + 1
+                : secondSourceIndex;
+            if (secondSourceInOriginal === firstAdj) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // First transition is adding
