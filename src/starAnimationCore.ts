@@ -748,6 +748,22 @@ export interface PlannedTransitionBundle {
     overlapStart: number | null;
 }
 
+export function computeTransitionProgress(
+    bundleProgress: number,
+    overlapStart: number
+): { p1: number; p2: number } {
+    // Total work = first (0→1) + second (0→1) - overlap
+    const totalWork = 2 - overlapStart;
+    const work = bundleProgress * totalWork;
+
+    const p1 = Math.min(work, 1);
+    const p2 = work <= overlapStart
+        ? 0
+        : Math.min((work - overlapStart) / (1 - overlapStart), 1);
+
+    return { p1, p2 };
+}
+
 export interface RenderSpecParams {
     bundle: PlannedTransitionBundle | null;
     armCount: number;

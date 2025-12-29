@@ -1,6 +1,7 @@
 import {
     STAR_OUTER_RADIUS,
     getRenderSpec,
+    computeTransitionProgress,
     type TransitionDirection,
     type PlannedTransitionBundle,
 } from './starAnimationCore.js';
@@ -39,6 +40,7 @@ const VALID_ARM_COUNTS = new Set([3, 5, 6, 7]);
 interface TransitionScheduling {
     queuedSecondStart: number | null;
     pendingSecondSourceIndex: number | null;
+    bundleProgress: number;
 }
 
 function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean, armCount: number): PlannedTransitionBundle & TransitionScheduling {
@@ -54,13 +56,12 @@ function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean
         overlapStart: null,
         queuedSecondStart: isDouble ? 0.25 + Math.random() * 0.5 : null,
         pendingSecondSourceIndex,
+        bundleProgress: 0,
     };
 }
 
-function isBundleComplete(bundle: PlannedTransitionBundle): boolean {
-    const firstDone = bundle.first.progress >= 1;
-    const secondDone = !bundle.second || bundle.second.progress >= 1;
-    return firstDone && secondDone;
+function isBundleComplete(bundle: PlannedTransitionBundle & TransitionScheduling): boolean {
+    return bundle.bundleProgress >= 1;
 }
 
 export class AnimatedStar {
@@ -290,17 +291,16 @@ export class AnimatedStar {
         const bundle = this.transitionBundle;
 
         if (bundle) {
-            bundle.first.progress += deltaTime / ARM_TRANSITION_DURATION;
+            const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+            const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+            const totalWork = isDouble ? 2 - overlapStart : 1;
+            bundle.bundleProgress += deltaTime / (ARM_TRANSITION_DURATION * totalWork);
 
             // Check if we should start second overlapping transition
+            const { p1 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
             if (!bundle.second && bundle.queuedSecondStart !== null &&
-                bundle.first.progress >= bundle.queuedSecondStart) {
+                p1 >= bundle.queuedSecondStart) {
                 this.startSecondTransition();
-            }
-
-            // Advance second transition if active
-            if (bundle.second) {
-                bundle.second.progress += deltaTime / ARM_TRANSITION_DURATION;
             }
 
             // Handle completion - only when entire bundle is done
@@ -334,6 +334,10 @@ export class AnimatedStar {
             ? bundle.pendingSecondSourceIndex
             : this.selectDisjointSourceArm(first.sourceArmIndex, intermediateArmCount);
 
+        // Compute p1 at this moment to record as overlapStart
+        const overlapStart = bundle.queuedSecondStart ?? 0;
+        const { p1 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
+
         bundle.second = {
             type: first.type,
             direction: first.direction,
@@ -341,7 +345,7 @@ export class AnimatedStar {
             sourceArmIndex: secondSourceIndex,
             startArmCount: intermediateArmCount,
         };
-        bundle.overlapStart = first.progress;
+        bundle.overlapStart = p1;
         bundle.queuedSecondStart = null;
         bundle.pendingSecondSourceIndex = null;
 
@@ -425,8 +429,20 @@ export class AnimatedStar {
         const bundle = this.transitionBundle;
         if (!bundle) return null;
 
+        const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+        const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+
+        // Compute p1/p2 from bundleProgress
+        const { p1, p2 } = isDouble
+            ? computeTransitionProgress(bundle.bundleProgress, overlapStart)
+            : { p1: bundle.bundleProgress, p2: 0 };
+
+        // Update first.progress
+        bundle.first.progress = p1;
+
         // Case 1: Second transition is already active
         if (bundle.second) {
+            bundle.second.progress = p2;
             return bundle;
         }
 
@@ -441,7 +457,7 @@ export class AnimatedStar {
                 second: {
                     type: bundle.first.type,
                     direction: bundle.first.direction,
-                    progress: 0,
+                    progress: p2,
                     sourceArmIndex: bundle.pendingSecondSourceIndex,
                     startArmCount: intermediateCount,
                 },
@@ -787,6 +803,7 @@ export class AnimatedStar {
             overlapStart: null,
             queuedSecondStart: overlapProgress,
             pendingSecondSourceIndex: secondSourceIndex,
+            bundleProgress: 0,
         };
         this.transitionElements?.createFirst();
 
