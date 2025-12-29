@@ -182,8 +182,8 @@ export interface RandomWalkConfig {
     stopOnVictory?: boolean;
     stopOnError?: boolean;
     coverageTracking?: boolean;
-    heuristicScoring?: boolean;  // Bias toward actions that increase score
-    extractVictoryPaths?: boolean;  // Save winning action sequences
+    heuristicScoring?: boolean;
+    extractVictoryPaths?: boolean;
 }
 
 export interface RandomWalkResult {
