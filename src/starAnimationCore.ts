@@ -459,6 +459,26 @@ function getInsertIndex(type: 'adding' | 'removing', sourceIndex: number, direct
     return type === 'adding' ? (direction === 1 ? sourceIndex + 1 : sourceIndex) : -1;
 }
 
+export function isValidSecondSourceIndex(
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstDirection: TransitionDirection,
+    firstStartArmCount: number,
+    secondType: 'adding' | 'removing',
+    secondSourceIndex: number,
+    secondDirection: TransitionDirection,
+): boolean {
+    if (firstType === 'removing') return true;
+
+    const intermediateCount = firstStartArmCount + 1;
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
+    const addingDirection = getAddingDirection(secondType, secondDirection);
+    const adj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+    const otherNeighbor = mod(adj - addingDirection, intermediateCount);
+
+    return adj !== firstInsertIdx && otherNeighbor !== firstInsertIdx;
+}
+
 function mapIntermediateToOriginal(
     intermediateIdx: number,
     firstType: 'adding' | 'removing',

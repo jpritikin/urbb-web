@@ -2,6 +2,7 @@ import {
     STAR_OUTER_RADIUS,
     getRenderSpec,
     computeTransitionProgress,
+    isValidSecondSourceIndex,
     type TransitionDirection,
     type PlannedTransitionBundle,
 } from './starAnimationCore.js';
@@ -43,18 +44,53 @@ interface TransitionScheduling {
     bundleProgress: number;
 }
 
-function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean, armCount: number): PlannedTransitionBundle & TransitionScheduling {
-    let pendingSecondSourceIndex: number | null = null;
-    if (isDouble) {
-        const intermediateCount = first.type === 'adding' ? armCount + 1 : armCount - 1;
-        const offset = Math.floor(intermediateCount / 2);
-        pendingSecondSourceIndex = (first.sourceArmIndex + offset) % intermediateCount;
+function selectValidSecondSourceIndex(
+    first: PlannedTransitionBundle['first'],
+    armCount: number,
+): number {
+    const intermediateCount = first.type === 'adding' ? armCount + 1 : armCount - 1;
+
+    for (let attempt = 0; attempt < 100; attempt++) {
+        const candidate = Math.floor(Math.random() * intermediateCount);
+        if (isValidSecondSourceIndex(
+            first.type, first.sourceArmIndex, first.direction, armCount,
+            first.type, candidate, first.direction
+        )) {
+            return candidate;
+        }
     }
+
+    // Fallback: find any valid index deterministically
+    for (let i = 0; i < intermediateCount; i++) {
+        if (isValidSecondSourceIndex(
+            first.type, first.sourceArmIndex, first.direction, armCount,
+            first.type, i, first.direction
+        )) {
+            return i;
+        }
+    }
+
+    throw new Error('No valid second source index found');
+}
+
+function createBundle(
+    first: PlannedTransitionBundle['first'],
+    isDouble: boolean,
+    armCount: number,
+): PlannedTransitionBundle & TransitionScheduling {
+    let pendingSecondSourceIndex: number | null = null;
+    let queuedSecondStart: number | null = null;
+
+    if (isDouble) {
+        pendingSecondSourceIndex = selectValidSecondSourceIndex(first, armCount);
+        queuedSecondStart = 0.25 + Math.random() * 0.5;
+    }
+
     return {
         first,
         second: null,
         overlapStart: null,
-        queuedSecondStart: isDouble ? 0.25 + Math.random() * 0.5 : null,
+        queuedSecondStart,
         pendingSecondSourceIndex,
         bundleProgress: 0,
     };
