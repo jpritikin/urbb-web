@@ -459,6 +459,19 @@ function getInsertIndex(type: 'adding' | 'removing', sourceIndex: number, direct
     return type === 'adding' ? (direction === 1 ? sourceIndex + 1 : sourceIndex) : -1;
 }
 
+function getGapForAdd(sourceIndex: number, direction: TransitionDirection, armCount: number): number {
+    return direction === 1 ? mod(sourceIndex + 1, armCount) : sourceIndex;
+}
+
+function mapIntermediateGapToOriginal(
+    intermediateGap: number,
+    firstInsertIdx: number
+): number | null {
+    if (intermediateGap === firstInsertIdx) return null;
+    if (intermediateGap > firstInsertIdx) return intermediateGap - 1;
+    return intermediateGap;
+}
+
 export function isValidSecondSourceIndex(
     firstType: 'adding' | 'removing',
     firstSourceIndex: number,
@@ -484,12 +497,28 @@ export function isValidSecondSourceIndex(
         return secondAdj !== firstAdjInIntermediate && secondOtherNeighbor !== firstAdjInIntermediate;
     }
 
+    // First transition is adding
     const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
     const addingDirection = getAddingDirection(secondType, secondDirection);
     const adj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
     const otherNeighbor = mod(adj - addingDirection, intermediateCount);
 
-    return adj !== firstInsertIdx && otherNeighbor !== firstInsertIdx;
+    // Basic check: second transition can't use the newly inserted arm
+    if (adj === firstInsertIdx || otherNeighbor === firstInsertIdx) {
+        return false;
+    }
+
+    // For double-ADD: ensure both ADDs don't target the same original gap
+    if (secondType === 'adding') {
+        const firstGap = getGapForAdd(firstSourceIndex, firstDirection, firstStartArmCount);
+        const secondGapIntermediate = getGapForAdd(secondSourceIndex, secondDirection, intermediateCount);
+        const secondGapOriginal = mapIntermediateGapToOriginal(secondGapIntermediate, firstInsertIdx);
+        if (secondGapOriginal === firstGap) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function mapIntermediateToOriginal(
