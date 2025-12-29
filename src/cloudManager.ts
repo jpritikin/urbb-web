@@ -230,6 +230,7 @@ export class CloudManager {
             model: this.model,
             view: this.view,
             relationships: this.relationships,
+            controller: this.controller!,
         });
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
         this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));

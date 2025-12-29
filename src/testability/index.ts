@@ -2,7 +2,7 @@ export { RNG, SeededRNG, SystemRNG, DualRNG, createDualRNG, createSeededDualRNG 
 export { ActionRecorder, sessionToJSON, sessionFromJSON, copySessionToClipboard, pasteSessionFromClipboard } from './recorder.js';
 export { HeadlessSimulator } from './headlessSimulator.js';
 export { runScenario, replaySession, formatScenarioResult } from './scenarios.js';
-export { MonteCarloRunner, formatMonteCarloResults } from './monteCarlo.js';
+export { MonteCarloRunner, formatMonteCarloResults, RandomWalkRunner, formatRandomWalkResults } from './monteCarlo.js';
 export type {
     SerializedModel,
     SerializedRelationships,
@@ -19,4 +19,11 @@ export type {
     MonteCarloResults,
     MetricDefinition,
     MonteCarloConfig,
+    RandomWalkConfig,
+    RandomWalkResult,
+    RandomWalkResults,
+    CoverageData,
+    CoverageEntry,
+    VictoryPath,
+    CoverageGap,
 } from './types.js';

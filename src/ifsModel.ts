@@ -323,6 +323,10 @@ export class SimulatorModel {
         return this.parts.getAllPartStates();
     }
 
+    getAllPartIds(): string[] {
+        return Array.from(this.parts.getAllPartStates().keys());
+    }
+
     clone(): SimulatorModel {
         const cloned = new SimulatorModel();
         cloned.targetCloudIds = new Set(this.targetCloudIds);
