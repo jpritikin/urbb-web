@@ -156,3 +156,66 @@ export interface MonteCarloConfig {
     metrics: MetricDefinition[];
     stopOnError?: boolean;
 }
+
+export interface ActionGeneratorConfig {
+    maxActions: number;
+    allowedActions?: string[];  // If undefined, all actions are allowed
+}
+
+export interface CoverageEntry {
+    count: number;
+    seeds: number[];  // First N seeds that hit this
+}
+
+export interface CoverageData {
+    actions: Record<string, CoverageEntry>;
+    actionCloudPairs: Record<string, CoverageEntry>;  // "action:cloudId"
+    transitions: Record<string, CoverageEntry>;  // "fromState->toState"
+    rayFields: Record<string, CoverageEntry>;  // Biography fields accessed
+    stateVisits: Record<string, CoverageEntry>;  // Serialized state snapshots
+}
+
+export interface RandomWalkConfig {
+    iterations: number;
+    maxActionsPerIteration: number;
+    allowedActions?: string[];
+    stopOnVictory?: boolean;
+    stopOnError?: boolean;
+    coverageTracking?: boolean;
+    heuristicScoring?: boolean;  // Bias toward actions that increase score
+    extractVictoryPaths?: boolean;  // Save winning action sequences
+}
+
+export interface RandomWalkResult {
+    seed: number;
+    actions: { action: string; cloudId: string; targetCloudId?: string; field?: string }[];
+    finalModel: SerializedModel;
+    victory: boolean;
+    error?: string;
+}
+
+export interface VictoryPath {
+    seed: number;
+    actions: { action: string; cloudId: string; targetCloudId?: string; field?: string }[];
+    length: number;
+    finalScore: number;
+}
+
+export interface CoverageGap {
+    type: 'action_never_valid' | 'action_never_picked' | 'precondition_never_met';
+    action: string;
+    reason: string;
+    suggestion?: string;
+}
+
+export interface RandomWalkResults {
+    iterations: number;
+    completedIterations: number;
+    victories: number;
+    errors: RandomWalkResult[];
+    coverage?: CoverageData;
+    coverageGaps?: CoverageGap[];
+    victoryPaths?: VictoryPath[];
+    bestScore?: number;
+    timing: { totalMs: number; avgPerIteration: number };
+}

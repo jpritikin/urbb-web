@@ -17,3 +17,5 @@ export const THERAPIST_ACTIONS: TherapistAction[] = [
     { id: 'help_protected', question: 'If we could help $PART, would you be interested in that?', shortName: 'Help?', category: 'relationship' },
     { id: 'notice_part', question: 'What do you notice about that part?', shortName: 'Notice', category: 'discovery', requiresTargetClick: true },
 ];
+
+export const ALL_ACTION_IDS = THERAPIST_ACTIONS.map(a => a.id);

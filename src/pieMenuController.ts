@@ -5,12 +5,14 @@ import { SimulatorView } from './ifsView.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
 import { BiographyField, PartContext } from './selfRay.js';
+import { SimulatorController, ValidAction } from './simulatorController.js';
 
 export interface PieMenuDependencies {
     getCloudById: (id: string) => Cloud | null;
     model: SimulatorModel;
     view: SimulatorView;
     relationships: CloudRelationshipManager;
+    controller?: SimulatorController;
 }
 
 type MenuMode = 'cloud' | 'selfRay';
@@ -125,89 +127,57 @@ export class PieMenuController {
     }
 
     private getItemsForCloud(cloudId: string): PieMenuItem[] {
-        const { model, relationships } = this.deps;
+        const { model, relationships, controller } = this.deps;
 
-        const isTarget = model.isTarget(cloudId);
-        const isBlended = model.isBlended(cloudId);
-        const isSupporting = model.getAllSupportingParts().has(cloudId);
+        const validActions = controller?.getValidActions() ?? [];
+        const validForCloud = validActions.filter(a => a.cloudId === cloudId && a.action !== 'ray_field_select');
+
         const proxyAsTargetId = this.getProxyAsTarget(cloudId);
         const proxyRevealed = proxyAsTargetId && model.parts.isIdentityRevealed(proxyAsTargetId);
-        const targetIds = model.getTargetCloudIds();
-        const proxies = relationships.getProxies(cloudId);
-        const hasRevealedProxy = Array.from(proxies).some(id => model.parts.isIdentityRevealed(id));
-        const noBlendedParts = model.getBlendedParts().length === 0;
-        const isSoleTargetWithRevealedProxy = isTarget && targetIds.size === 1 && hasRevealedProxy && noBlendedParts;
-        const blendReason = model.getBlendReason(cloudId);
-        const isSpontaneousBlend = isBlended && blendReason === 'spontaneous';
 
         const items: PieMenuItem[] = [];
+        const seenActions = new Set<string>();
 
-        for (const action of THERAPIST_ACTIONS) {
-            let include = false;
+        for (const validAction of validForCloud) {
+            if (seenActions.has(validAction.action)) continue;
+            seenActions.add(validAction.action);
 
-            if (action.id === 'join_conference') {
-                include = isSupporting && !isBlended;
+            const action = THERAPIST_ACTIONS.find(a => a.id === validAction.action);
+            if (!action) continue;
+
+            let label = action.question;
+
+            if (action.id === 'feel_toward' && proxyRevealed) {
+                label = "How do you feel toward this part that doesn't know you very well?";
+            } else if (action.id === 'who_do_you_see' && model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
+                const proxyCloud = this.deps.getCloudById(proxyAsTargetId!);
+                const proxyName = proxyCloud?.text ?? 'the proxy';
+                label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
             } else if (action.id === 'separate') {
-                include = isBlended;
-            } else if (action.id === 'step_back') {
-                const hasOtherTargets = targetIds.size > 0;
-                include = (isTarget || isSupporting || (isBlended && hasOtherTargets)) && !isSpontaneousBlend;
-            } else if (action.id === 'job') {
-                include = isTarget || isBlended;
-            } else if (action.id === 'who_do_you_see') {
-                include = isTarget;
-            } else if (action.id === 'feel_toward') {
-                const selfRay = model.getSelfRay();
-                include = isTarget && selfRay?.targetCloudId !== cloudId;
-            } else if (action.id === 'blend') {
-                include = isTarget && !isBlended;
+                label = "Can you make a little space for client?";
             } else if (action.id === 'help_protected') {
                 const protectedIds = relationships.getProtecting(cloudId);
-                include = isTarget && protectedIds.size > 0 && model.parts.isIdentityRevealed(cloudId);
-            } else if (action.id === 'notice_part') {
-                const protectedIds = relationships.getProtecting(cloudId);
-                const hasFullyTrustingProtectee = Array.from(protectedIds).some(
-                    protectedId => model.parts.getTrust(protectedId) >= 1
-                );
-                include = isTarget && protectedIds.size > 0 && hasFullyTrustingProtectee && !model.parts.isUnburdened(cloudId);
-            } else {
-                include = isTarget;
-            }
-
-            if (include) {
-                let label = action.question;
-
-                if (action.id === 'feel_toward' && proxyRevealed) {
-                    label = "How do you feel toward this part that doesn't know you very well?";
-                } else if (action.id === 'who_do_you_see' && model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
-                    const proxyCloud = this.deps.getCloudById(proxyAsTargetId!);
-                    const proxyName = proxyCloud?.text ?? 'the proxy';
-                    label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
-                } else if (action.id === 'separate') {
-                    label = "Can you make a little space for client?";
-                } else if (action.id === 'help_protected') {
-                    const protectedIds = relationships.getProtecting(cloudId);
-                    if (protectedIds.size > 0) {
-                        const protectedId = Array.from(protectedIds)[0];
-                        const protectedCloud = this.deps.getCloudById(protectedId);
-                        const protectedName = protectedCloud?.text ?? 'that';
-                        label = label.replace('$PART', protectedName);
-                    }
+                if (protectedIds.size > 0) {
+                    const protectedId = Array.from(protectedIds)[0];
+                    const protectedCloud = this.deps.getCloudById(protectedId);
+                    const protectedName = protectedCloud?.text ?? 'that';
+                    label = label.replace('$PART', protectedName);
                 }
-
-                items.push({
-                    id: action.id,
-                    label,
-                    shortName: action.shortName,
-                    category: action.category
-                });
             }
+
+            items.push({
+                id: action.id,
+                label,
+                shortName: action.shortName,
+                category: action.category
+            });
         }
 
         return items;
     }
 
     private getItemsForSelfRay(cloudId: string): PieMenuItem[] {
+        const { controller } = this.deps;
         const context = this.getPartContext?.(cloudId) ?? {
             isProtector: false,
             isIdentityRevealed: false,
@@ -215,67 +185,29 @@ export class PieMenuController {
             partName: ''
         };
 
+        const validActions = controller?.getValidActions() ?? [];
+        const rayActions = validActions.filter(a => a.cloudId === cloudId && a.action === 'ray_field_select');
+        const validFields = new Set(rayActions.map(a => a.field));
+
+        const fieldLabels: Record<string, { label: string; shortName: string; category: string }> = {
+            age: { label: 'How old are you?', shortName: 'Age', category: 'curiosity' },
+            identity: { label: 'Who are you?', shortName: 'Identity', category: 'curiosity' },
+            jobAppraisal: { label: 'How do you like your job?', shortName: 'Appraisal', category: 'curiosity' },
+            jobImpact: { label: 'How do you understand the impact of your job?', shortName: 'Impact', category: 'curiosity' },
+            whatNeedToKnow: { label: 'What do you need me to know?', shortName: 'Need?', category: 'curiosity' },
+            gratitude: { label: 'Thank you for being here', shortName: 'Gratitude', category: 'gratitude' },
+            compassion: { label: 'I care about you', shortName: 'Compassion', category: 'gratitude' },
+            apologize: { label: `Apologize to ${context.partName} for allowing other parts to attack it`, shortName: 'Apologize', category: 'gratitude' },
+        };
+
+        const fieldOrder = ['age', 'identity', 'jobAppraisal', 'jobImpact', 'whatNeedToKnow', 'gratitude', 'compassion', 'apologize'];
+
         const items: PieMenuItem[] = [];
-
-        items.push({
-            id: 'age',
-            label: 'How old are you?',
-            shortName: 'Age',
-            category: 'curiosity'
-        });
-
-        items.push({
-            id: 'identity',
-            label: 'Who are you?',
-            shortName: 'Identity',
-            category: 'curiosity'
-        });
-
-        const showJobQuestions = !context.isIdentityRevealed || context.isProtector;
-        if (showJobQuestions) {
-            items.push({
-                id: 'jobAppraisal',
-                label: 'How do you like your job?',
-                shortName: 'Appraisal',
-                category: 'curiosity'
-            });
-
-            items.push({
-                id: 'jobImpact',
-                label: 'How do you understand the impact of your job?',
-                shortName: 'Impact',
-                category: 'curiosity'
-            });
-        } else {
-            items.push({
-                id: 'whatNeedToKnow',
-                label: 'What do you need me to know?',
-                shortName: 'Need?',
-                category: 'curiosity'
-            });
-        }
-
-        items.push({
-            id: 'gratitude',
-            label: 'Thank you for being here',
-            shortName: 'Gratitude',
-            category: 'gratitude'
-        });
-
-        items.push({
-            id: 'compassion',
-            label: 'I care about you',
-            shortName: 'Compassion',
-            category: 'gratitude'
-        });
-
-        if (context.isAttacked) {
-            items.push({
-                id: 'apologize',
-                label: `Apologize to ${context.partName} for allowing other parts to attack it`,
-                shortName: 'Apologize',
-                category: 'gratitude'
-            });
+        for (const field of fieldOrder) {
+            if (validFields.has(field as BiographyField)) {
+                const info = fieldLabels[field];
+                items.push({ id: field, label: info.label, shortName: info.shortName, category: info.category });
+            }
         }
 
         return items;

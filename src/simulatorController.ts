@@ -17,6 +17,18 @@ export interface ActionOptions {
     isBlended?: boolean;
 }
 
+export interface ValidAction {
+    action: string;
+    cloudId: string;
+    targetCloudId?: string;
+    field?: BiographyField;
+}
+
+export const ALL_RAY_FIELDS: BiographyField[] = [
+    'age', 'identity', 'jobAppraisal', 'jobImpact', 'gratitude',
+    'whatNeedToKnow', 'compassion', 'apologize'
+];
+
 const UNWILLING_RESPONSES = [
     "I'm not comfortable with that idea.",
     "No, I don't think so.",
@@ -54,6 +66,113 @@ export class SimulatorController {
         this.relationships = deps.relationships;
         this.rng = deps.rng;
         this.getPartName = deps.getPartName;
+    }
+
+    getValidActions(): ValidAction[] {
+        const actions: ValidAction[] = [];
+
+        const selfRay = this.model.getSelfRay();
+        if (selfRay) {
+            const cloudId = selfRay.targetCloudId;
+            const rayFields = this.getValidRayFields(cloudId);
+            for (const field of rayFields) {
+                actions.push({ action: 'ray_field_select', cloudId, field });
+            }
+        }
+
+        const partIds = this.model.getAllPartIds();
+        for (const cloudId of partIds) {
+            const cloudActions = this.getValidCloudActions(cloudId);
+            actions.push(...cloudActions);
+        }
+
+        return actions;
+    }
+
+    private getValidCloudActions(cloudId: string): ValidAction[] {
+        const actions: ValidAction[] = [];
+
+        const isTarget = this.model.isTarget(cloudId);
+        const isBlended = this.model.isBlended(cloudId);
+        const isSupporting = this.model.getAllSupportingParts().has(cloudId);
+        const blendReason = this.model.getBlendReason(cloudId);
+        const isSpontaneousBlend = isBlended && blendReason === 'spontaneous';
+        const targetIds = this.model.getTargetCloudIds();
+        const selfRay = this.model.getSelfRay();
+        const protectedIds = this.relationships.getProtecting(cloudId);
+
+        // join_conference
+        if (isSupporting && !isBlended) {
+            actions.push({ action: 'join_conference', cloudId });
+        }
+
+        // separate
+        if (isBlended) {
+            actions.push({ action: 'separate', cloudId });
+        }
+
+        // step_back
+        if ((isTarget || isSupporting || (isBlended && targetIds.size > 0)) && !isSpontaneousBlend) {
+            actions.push({ action: 'step_back', cloudId });
+        }
+
+        // job
+        if (isTarget || isBlended) {
+            actions.push({ action: 'job', cloudId });
+        }
+
+        // who_do_you_see
+        if (isTarget) {
+            actions.push({ action: 'who_do_you_see', cloudId });
+        }
+
+        // feel_toward
+        if (isTarget && selfRay?.targetCloudId !== cloudId) {
+            actions.push({ action: 'feel_toward', cloudId });
+        }
+
+        // blend
+        if (isTarget && !isBlended) {
+            actions.push({ action: 'blend', cloudId });
+        }
+
+        // help_protected
+        if (isTarget && protectedIds.size > 0 && this.model.parts.isIdentityRevealed(cloudId)) {
+            actions.push({ action: 'help_protected', cloudId });
+        }
+
+        // notice_part
+        if (isTarget && protectedIds.size > 0 && !this.model.parts.isUnburdened(cloudId)) {
+            for (const protectedId of protectedIds) {
+                if (this.model.parts.getTrust(protectedId) >= 1) {
+                    actions.push({ action: 'notice_part', cloudId, targetCloudId: protectedId });
+                }
+            }
+        }
+
+        return actions;
+    }
+
+    private getValidRayFields(cloudId: string): BiographyField[] {
+        const fields: BiographyField[] = [];
+        const isProtector = this.relationships.getProtecting(cloudId).size > 0;
+        const isIdentityRevealed = this.model.parts.isIdentityRevealed(cloudId);
+        const isAttacked = this.model.parts.isAttacked(cloudId);
+
+        fields.push('age', 'identity', 'gratitude', 'compassion');
+
+        const showJobQuestions = !isIdentityRevealed || isProtector;
+        if (showJobQuestions) {
+            fields.push('jobAppraisal', 'jobImpact');
+        } else {
+            fields.push('whatNeedToKnow');
+        }
+
+        if (isAttacked) {
+            fields.push('apologize');
+        }
+
+        return fields;
     }
 
     private calculateTrustGain(cloudId: string): number {
