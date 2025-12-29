@@ -58,7 +58,7 @@ function testGapsDuringOverlappingTransition(): { passed: number; failed: number
     }> = [
         { label: 'ADD 5->7', type: 'adding', startCount: 5, firstSource: 2, secondSource: 5, direction: 1, overlapStart: 0.5, p2Values: [0.25, 0.5, 0.59, 0.75, 0.95] },
         { label: 'ADD 5->7 alt', type: 'adding', startCount: 5, firstSource: 0, secondSource: 3, direction: 1, overlapStart: 0.5, p2Values: [0.5, 0.75, 0.95] },
-        { label: 'REM 7->5', type: 'removing', startCount: 7, firstSource: 1, secondSource: 2, direction: 1, overlapStart: 0.5, p2Values: [0.05, 0.25, 0.5] },
+        { label: 'REM 7->5', type: 'removing', startCount: 7, firstSource: 1, secondSource: 4, direction: 1, overlapStart: 0.5, p2Values: [0.05, 0.25, 0.5] },
         { label: 'ADD 3->5 CCW', type: 'adding', startCount: 3, firstSource: 1, secondSource: 3, direction: -1, overlapStart: 0.42, p2Values: [0.05, 0.25, 0.5, 0.75, 0.95, 1.0] },
     ];
 
