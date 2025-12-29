@@ -526,7 +526,8 @@ export function isValidSecondSourceIndex(
         const firstGap = getGapForAdd(firstSourceIndex, firstDirection, firstStartArmCount);
         const secondGapIntermediate = getGapForAdd(secondSourceIndex, secondDirection, intermediateCount);
         const secondGapOriginal = mapIntermediateGapToOriginal(secondGapIntermediate, firstInsertIdx);
-        if (secondGapOriginal === firstGap) {
+        // null means second is inserting at the exact position of the first insert (same gap)
+        if (secondGapOriginal === null || secondGapOriginal === firstGap) {
             return false;
         }
     }
