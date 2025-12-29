@@ -48,6 +48,19 @@ const testCases: TestCase[] = [
         description: 'ADD CCW from 3, then ADD CCW from 4 - same gap (gap 3)',
     },
 
+    // Second ADD targets position where first arm was inserted (same gap)
+    {
+        firstType: 'adding',
+        firstSourceIndex: 2,
+        firstDirection: 1,
+        firstStartArmCount: 3,
+        secondType: 'adding',
+        secondSourceIndex: 2,
+        secondDirection: 1,
+        expectedValid: false,
+        description: 'ADD CW from 2 (3 arms), then ADD CW from 2 - second inserts at first insert position',
+    },
+
     // Valid double-ADD cases (different gaps)
     {
         firstType: 'adding',
