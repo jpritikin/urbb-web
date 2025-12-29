@@ -468,9 +468,22 @@ export function isValidSecondSourceIndex(
     secondSourceIndex: number,
     secondDirection: TransitionDirection,
 ): boolean {
-    if (firstType === 'removing') return true;
+    const intermediateCount = firstType === 'adding' ? firstStartArmCount + 1 : firstStartArmCount - 1;
 
-    const intermediateCount = firstStartArmCount + 1;
+    if (firstType === 'removing') {
+        // For removing, check that both transitions don't use the same adjacent arm.
+        // First transition's adjacent is in original space; second's is in intermediate space.
+        // Map first's adjacent to intermediate space (decrement if >= firstSourceIndex).
+        const firstAdj = mod(firstSourceIndex + firstDirection, firstStartArmCount);
+        const firstAdjInIntermediate = firstAdj > firstSourceIndex ? firstAdj - 1 : firstAdj;
+
+        const addingDirection = getAddingDirection(secondType, secondDirection);
+        const secondAdj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+        const secondOtherNeighbor = mod(secondAdj - addingDirection, intermediateCount);
+
+        return secondAdj !== firstAdjInIntermediate && secondOtherNeighbor !== firstAdjInIntermediate;
+    }
+
     const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
     const addingDirection = getAddingDirection(secondType, secondDirection);
     const adj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);

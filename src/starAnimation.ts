@@ -833,6 +833,10 @@ export class AnimatedStar {
             console.error(`Invalid secondSourceIndex ${secondSourceIndex} for ${intermediateCount} arms`);
             return;
         }
+        if (!isValidSecondSourceIndex(type, firstSourceIndex, direction, startArmCount, type, secondSourceIndex, direction)) {
+            console.error(`Invalid secondSourceIndex ${secondSourceIndex}: both transitions would use the same adjacent arm`);
+            return;
+        }
 
         this.transitionBundle = {
             first: {
