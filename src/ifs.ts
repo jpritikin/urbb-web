@@ -56,7 +56,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
     // Auto-stop after 1 hour
     setTimeout(() => {
         if (cloudManager.isRecording()) {
-            downloadSession(cloudManager);
+            cloudManager.stopRecording();
             console.log('[IFS] Recording auto-stopped after 1 hour');
         }
     }, MAX_RECORDING_MS);
