@@ -1,4 +1,5 @@
 export const STAR_OUTER_RADIUS = 20;
+const TIP_ANGLE_OFFSET = -Math.PI / 2;
 
 // ============== Geometry Primitives ==============
 
@@ -35,6 +36,14 @@ export function lerp(start: number, end: number, t: number): number {
 
 export function mod(n: number, m: number): number {
     return ((n % m) + m) % m;
+}
+
+function polarToPoint(center: Point, radius: number, angle: number): Point {
+    return { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) };
+}
+
+function getTipAngle(rotation: number, armIndex: number, angleStep: number): number {
+    return rotation + TIP_ANGLE_OFFSET + armIndex * angleStep;
 }
 
 // ============== Arm Geometry ==============
@@ -98,11 +107,12 @@ export function getArmPoints(
     innerR: number,
     outerR: number
 ): ArmPoints {
+    const center = { x: centerX, y: centerY };
     const { tipAngle, halfStep } = spec;
     return {
-        t: { x: centerX + outerR * Math.cos(tipAngle), y: centerY + outerR * Math.sin(tipAngle) },
-        b1: { x: centerX + innerR * Math.cos(tipAngle - halfStep), y: centerY + innerR * Math.sin(tipAngle - halfStep) },
-        b2: { x: centerX + innerR * Math.cos(tipAngle + halfStep), y: centerY + innerR * Math.sin(tipAngle + halfStep) },
+        t: polarToPoint(center, outerR, tipAngle),
+        b1: polarToPoint(center, innerR, tipAngle - halfStep),
+        b2: polarToPoint(center, innerR, tipAngle + halfStep),
     };
 }
 
@@ -132,7 +142,7 @@ export function buildStaticArms(
     const halfStep = angleStep / 2;
     const result = new Map<number, ArmPoints>();
     for (let i = 0; i < armCount; i++) {
-        const tipAngle = rotation - Math.PI / 2 + i * angleStep;
+        const tipAngle = getTipAngle(rotation, i, angleStep);
         result.set(i, getArmPoints(centerX, centerY, { tipAngle, halfStep }, innerRadius, outerRadius));
     }
     return result;
@@ -384,18 +394,29 @@ function createTransitionGeometryFromAdj(
     };
 }
 
-export function createSingleTransitionGeometry(
-    params: SingleTransitionParams,
+function createTransitionGeometryCore(
+    type: 'adding' | 'removing',
+    sourceIndex: number,
+    armCount: number,
+    direction: TransitionDirection,
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
-    const { type, sourceArmIndex, armCount, direction } = params;
     const addingDirection = getAddingDirection(type, direction);
-    const adjIndex = getAdjacentIndex(type, sourceArmIndex, armCount, direction);
+    const adjIndex = getAdjacentIndex(type, sourceIndex, armCount, direction);
     const otherNeighborIndex = mod(adjIndex - addingDirection, armCount);
     return createTransitionGeometryFromAdj(
         staticArmPoints.get(adjIndex)!,
         staticArmPoints.get(otherNeighborIndex)!,
         addingDirection
+    );
+}
+
+export function createSingleTransitionGeometry(
+    params: SingleTransitionParams,
+    staticArmPoints: Map<number, ArmPoints>
+): TransitionGeometry {
+    return createTransitionGeometryCore(
+        params.type, params.sourceArmIndex, params.armCount, params.direction, staticArmPoints
     );
 }
 
@@ -440,14 +461,9 @@ export function createFirstTransitionGeometry(
     params: OverlappingTransitionParams,
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
-    const { firstType, firstSourceIndex, firstStartArmCount, firstDirection } = params;
-    const addingDirection = getAddingDirection(firstType, firstDirection);
-    const adjIndex = getAdjacentIndex(firstType, firstSourceIndex, firstStartArmCount, firstDirection);
-    const otherNeighborIndex = mod(adjIndex - addingDirection, firstStartArmCount);
-    return createTransitionGeometryFromAdj(
-        staticArmPoints.get(adjIndex)!,
-        staticArmPoints.get(otherNeighborIndex)!,
-        addingDirection
+    return createTransitionGeometryCore(
+        params.firstType, params.firstSourceIndex, params.firstStartArmCount,
+        params.firstDirection, staticArmPoints
     );
 }
 
@@ -513,6 +529,21 @@ function computeRedistributionT(type: 'adding' | 'removing', progress: number): 
         : Math.min(progress / 0.5, 1);
 }
 
+function computeTargetArmIndex(
+    armIndex: number,
+    transitionType: 'adding' | 'removing',
+    sourceIndex: number,
+    direction: TransitionDirection
+): number {
+    if (transitionType === 'removing') {
+        return armIndex > sourceIndex ? armIndex - 1 : armIndex;
+    }
+    const shouldShift = direction === 1
+        ? (armIndex > sourceIndex)
+        : (armIndex >= sourceIndex);
+    return shouldShift ? armIndex + 1 : armIndex;
+}
+
 export function computeArmRedistribution(
     armIndex: number,
     currentTipAngle: number,
@@ -527,31 +558,14 @@ export function computeArmRedistribution(
     const targetArmCount = transitionType === 'adding' ? currentArmCount + 1 : currentArmCount - 1;
     const targetAngleStep = getAngleStep(targetArmCount);
     const targetHalfStep = targetAngleStep / 2;
-
     const redistributionT = computeRedistributionT(transitionType, transitionProgress);
 
-    let targetTipAngle: number;
-    if (transitionType === 'removing') {
-        if (armIndex > transitionSourceIndex) {
-            targetTipAngle = rotation - Math.PI / 2 + (armIndex - 1) * targetAngleStep;
-        } else {
-            targetTipAngle = rotation - Math.PI / 2 + armIndex * targetAngleStep;
-        }
-    } else {
-        const shouldShift = transitionDirection === 1
-            ? (armIndex > transitionSourceIndex)
-            : (armIndex >= transitionSourceIndex);
-
-        if (shouldShift) {
-            targetTipAngle = rotation - Math.PI / 2 + (armIndex + 1) * targetAngleStep;
-        } else {
-            targetTipAngle = rotation - Math.PI / 2 + armIndex * targetAngleStep;
-        }
-    }
+    const targetIdx = computeTargetArmIndex(armIndex, transitionType, transitionSourceIndex, transitionDirection);
+    const targetTipAngle = getTipAngle(rotation, targetIdx, targetAngleStep);
 
     return {
-        tipAngle: currentTipAngle + (targetTipAngle - currentTipAngle) * redistributionT,
-        halfStep: currentHalfStep + (targetHalfStep - currentHalfStep) * redistributionT,
+        tipAngle: lerp(currentTipAngle, targetTipAngle, redistributionT),
+        halfStep: lerp(currentHalfStep, targetHalfStep, redistributionT),
     };
 }
 
@@ -621,7 +635,7 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
     }
 
     return {
-        tipAngle: rotation - Math.PI / 2 + i * anglePerArm + gapsBefore,
+        tipAngle: rotation + TIP_ANGLE_OFFSET + i * anglePerArm + gapsBefore,
         halfStep,
     };
 }
@@ -728,7 +742,7 @@ export function computeStaticArmSpec(
     rotation: number
 ): ArmAngleSpec {
     const baseAngleStep = getAngleStep(armCount);
-    const tipAngle = rotation - Math.PI / 2 + armIndex * baseAngleStep;
+    const tipAngle = getTipAngle(rotation, armIndex, baseAngleStep);
     const halfStep = baseAngleStep / 2;
 
     if (!bundle) {
@@ -781,56 +795,53 @@ interface TransitionComputeParams {
     innerRadius: number;
 }
 
+function buildOverlappingParams(
+    bundle: PlannedTransitionBundle,
+    params: TransitionComputeParams
+): OverlappingTransitionParams {
+    const { first, second } = bundle;
+    const { centerX, centerY, outerRadius, rotation } = params;
+    return {
+        centerX, centerY, outerRadius, rotation,
+        direction: first.direction,
+        firstType: first.type,
+        firstSourceIndex: first.sourceArmIndex,
+        firstStartArmCount: first.startArmCount,
+        firstDirection: first.direction,
+        secondType: second!.type,
+        secondSourceIndex: second!.sourceArmIndex,
+        secondDirection: second!.direction,
+    };
+}
+
 function computeFirstTransitionArm(
     bundle: PlannedTransitionBundle,
     params: TransitionComputeParams,
     staticArmPoints: Map<number, ArmPoints>
 ): ArmRenderSpec | null {
     const { first, second } = bundle;
-
     if (!second && first.progress >= 1) return null;
 
-    const firstProgress = Math.min(first.progress, 1);
     const { centerX, centerY, outerRadius, rotation, innerRadius } = params;
+    const firstProgress = Math.min(first.progress, 1);
 
-    let arm: ArmPoints;
-    if (second) {
-        const overlappingParams: OverlappingTransitionParams = {
-            centerX, centerY, outerRadius, rotation,
-            direction: first.direction,
-            firstType: first.type,
-            firstSourceIndex: first.sourceArmIndex,
-            firstStartArmCount: first.startArmCount,
-            firstDirection: first.direction,
-            secondType: second.type,
-            secondSourceIndex: second.sourceArmIndex,
-            secondDirection: second.direction,
-        };
-
-        const geom = createFirstTransitionGeometry(overlappingParams, staticArmPoints);
-        arm = computeTransitionWithGeometry(
-            geom,
-            { centerX, centerY, outerRadius, rotation, direction: first.direction },
-            first.type,
-            firstProgress,
-            innerRadius
-        );
-    } else {
-        const geom = createSingleTransitionGeometry({
+    const geom = second
+        ? createFirstTransitionGeometry(buildOverlappingParams(bundle, params), staticArmPoints)
+        : createSingleTransitionGeometry({
             type: first.type,
             sourceArmIndex: first.sourceArmIndex,
             armCount: first.startArmCount,
             centerX, centerY, outerRadius, rotation,
             direction: first.direction,
         }, staticArmPoints);
-        arm = computeTransitionWithGeometry(
-            geom,
-            { centerX, centerY, outerRadius, rotation, direction: first.direction },
-            first.type,
-            firstProgress,
-            innerRadius
-        );
-    }
+
+    const arm = computeTransitionWithGeometry(
+        geom,
+        { centerX, centerY, outerRadius, rotation, direction: first.direction },
+        first.type,
+        firstProgress,
+        innerRadius
+    );
 
     return armPointsToRenderSpec(arm, centerX, centerY);
 }
@@ -840,24 +851,12 @@ function computeSecondTransitionArm(
     params: TransitionComputeParams,
     staticArmPoints: Map<number, ArmPoints>,
 ): ArmRenderSpec | null {
-    const { first, second } = bundle;
+    const { second } = bundle;
     if (!second || second.progress <= 0 || second.progress >= 1) return null;
 
     const { centerX, centerY, outerRadius, rotation, innerRadius } = params;
 
-    const overlappingParams: OverlappingTransitionParams = {
-        centerX, centerY, outerRadius, rotation,
-        direction: first.direction,
-        firstType: first.type,
-        firstSourceIndex: first.sourceArmIndex,
-        firstStartArmCount: first.startArmCount,
-        firstDirection: first.direction,
-        secondType: second.type,
-        secondSourceIndex: second.sourceArmIndex,
-        secondDirection: second.direction,
-    };
-
-    const geom = createSecondTransitionGeometry(overlappingParams, staticArmPoints);
+    const geom = createSecondTransitionGeometry(buildOverlappingParams(bundle, params), staticArmPoints);
     const arm = computeTransitionWithGeometry(
         geom,
         { centerX, centerY, outerRadius, rotation, direction: second.direction },
@@ -869,45 +868,36 @@ function computeSecondTransitionArm(
     return armPointsToRenderSpec(arm, centerX, centerY);
 }
 
+function specToRenderSpec(
+    spec: ArmAngleSpec,
+    centerX: number, centerY: number,
+    innerRadius: number, outerRadius: number
+): ArmRenderSpec {
+    const points = getArmPoints(centerX, centerY, spec, innerRadius, outerRadius);
+    return { ...spec, tip: points.t, b1: points.b1, b2: points.b2 };
+}
+
 export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
     const { bundle, armCount, rotation, centerX, centerY, outerRadius } = params;
 
+    const innerRadius = bundle ? computeBundleInnerRadius(bundle) : getInnerRadiusForArmCount(armCount);
+    const hidden = bundle ? computeHiddenIndices(bundle, armCount) : new Set<number>();
+
+    const allAngleSpecs = new Map<number, ArmAngleSpec>();
+    for (let i = 0; i < armCount; i++) {
+        allAngleSpecs.set(i, computeStaticArmSpec(i, bundle, armCount, rotation));
+    }
+    const allArmPoints = buildStaticArmPoints(allAngleSpecs, centerX, centerY, innerRadius, outerRadius);
+
     const staticArms = new Map<number, ArmRenderSpec>();
-    let innerRadius: number;
+    for (const [i, spec] of allAngleSpecs) {
+        if (hidden.has(i)) continue;
+        staticArms.set(i, specToRenderSpec(spec, centerX, centerY, innerRadius, outerRadius));
+    }
+
     let firstTransitionArm: ArmRenderSpec | null = null;
     let secondTransitionArm: ArmRenderSpec | null = null;
-
-    if (!bundle) {
-        innerRadius = getInnerRadiusForArmCount(armCount);
-        const baseAngleStep = getAngleStep(armCount);
-        for (let i = 0; i < armCount; i++) {
-            const tipAngle = rotation - Math.PI / 2 + i * baseAngleStep;
-            const halfStep = baseAngleStep / 2;
-            const spec = { tipAngle, halfStep };
-            const points = getArmPoints(centerX, centerY, spec, innerRadius, outerRadius);
-            staticArms.set(i, { ...spec, tip: points.t, b1: points.b1, b2: points.b2 });
-        }
-    } else {
-        innerRadius = computeBundleInnerRadius(bundle);
-        const hidden = computeHiddenIndices(bundle, armCount);
-
-        // Build specs for ALL arms (geometry lookups need hidden arms too)
-        const allAngleSpecs = new Map<number, ArmAngleSpec>();
-        for (let i = 0; i < armCount; i++) {
-            const spec = computeStaticArmSpec(i, bundle, armCount, rotation);
-            if (spec) {
-                allAngleSpecs.set(i, spec);
-            }
-        }
-        const allArmPoints = buildStaticArmPoints(allAngleSpecs, centerX, centerY, innerRadius, outerRadius);
-
-        // Only include non-hidden arms in the render output
-        for (const [i, spec] of allAngleSpecs) {
-            if (hidden.has(i)) continue;
-            const points = allArmPoints.get(i)!;
-            staticArms.set(i, { tipAngle: spec.tipAngle, halfStep: spec.halfStep, tip: points.t, b1: points.b1, b2: points.b2 });
-        }
-
+    if (bundle) {
         const transitionParams = { centerX, centerY, outerRadius, rotation, innerRadius };
         firstTransitionArm = computeFirstTransitionArm(bundle, transitionParams, allArmPoints);
         secondTransitionArm = computeSecondTransitionArm(bundle, transitionParams, allArmPoints);
