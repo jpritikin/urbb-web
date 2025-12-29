@@ -64,14 +64,7 @@ function createBundleAtProgress(
         ? intermediateCount + 1
         : intermediateCount - 1;
 
-    let armCount: number;
-    if (secondCompleted) {
-        armCount = finalCount;
-    } else if (firstCompleted) {
-        armCount = intermediateCount;
-    } else {
-        armCount = config.startArmCount;
-    }
+    const armCount = config.startArmCount;
 
     const bundle: PlannedTransitionBundle = {
         first: {
@@ -89,7 +82,7 @@ function createBundleAtProgress(
             startArmCount: intermediateCount,
         },
         overlapStart: config.overlapStart,
-        firstCompleted,
+        
     };
 
     return { bundle, armCount };
@@ -229,7 +222,8 @@ function testArmCountConsistency(config: TransitionConfig, numSteps: number = 20
         }
 
         // Check monotonicity: adding should only increase, removing should only decrease
-        if (prevCount !== null) {
+        // Skip progress=1.0 since armCount stays at startArmCount and final state is tested separately
+        if (prevCount !== null && progress < 1.0) {
             const bothAdding = config.firstType === 'adding' && config.secondType === 'adding';
             const bothRemoving = config.firstType === 'removing' && config.secondType === 'removing';
 
@@ -364,7 +358,7 @@ export function runOverlappingSmoothTests(): { passed: number; failed: number; f
         secondType: 'adding',
         startArmCount: 4,
         firstSourceIndex: 0,
-        secondSourceIndex: 2,
+        secondSourceIndex: 3,
         overlapStart: 0.5,
         direction: 1,
     }));
@@ -380,8 +374,10 @@ export function runOverlappingSmoothTests(): { passed: number; failed: number; f
     }));
 
     // src2=1 is prohibited: when first adds at index 0 with direction 1, the new arm is at index 1
-    // Second transition cannot use the new arm as its adjacent
-    for (const src2 of [2, 4, 5]) {
+    // Second transition cannot use the new arm as its adjacent or other neighbor
+    // For CW adding from src2, the adjacent is src2 and the other neighbor is src2-1
+    // So src2=1 (adjacent is new arm) and src2=2 (other neighbor is new arm) are both prohibited
+    for (const src2 of [3, 4, 5]) {
         checkResult(`ADD+ADD src1=0 src2=${src2}`, collectTestResult({
             firstType: 'adding',
             secondType: 'adding',

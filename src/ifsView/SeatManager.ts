@@ -2,6 +2,7 @@ import { SimulatorModel } from '../ifsModel.js';
 import { CarpetState, SeatInfo, createCarpetVertices, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE } from '../carpetRenderer.js';
 
 export const CARPET_MAX_VELOCITY = 20;
+export const CARPET_ACCELERATION = 1.5;
 export const UPDATE_INTERVAL = 100;
 export const STAR_CLOUD_ID = '*';
 export const UNBLENDED_SEAT_ID = '__unblended__';
@@ -52,8 +53,12 @@ export class SeatManager {
     private carpetVelocities: Map<string, CarpetVelocity> = new Map();
     private lastUpdateTime: number = 0;
     private draggingCarpetId: string | null = null;
+    private dragOffsetX: number = 0;
+    private dragOffsetY: number = 0;
     private previousMatching: Map<string, string> = new Map();
+    private matchingChangedTime: number = 0;
     private debugGroup: SVGGElement | null = null;
+    private debugEnabled: boolean = false;
 
     constructor(canvasWidth: number, canvasHeight: number, initialPhase: number = Math.random() * Math.PI * 2) {
         this.canvasWidth = canvasWidth;
@@ -145,14 +150,14 @@ export class SeatManager {
         }));
     }
 
-    private getSeatPosition(seatId: string): { x: number; y: number } | undefined {
+    getSeatPosition(seatId: string): { x: number; y: number } | undefined {
         const seat = this.seats.find(s => s.seatId === seatId);
         return seat ? { x: seat.x, y: seat.y } : undefined;
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
         const carpet = this.carpets.get(cloudId);
-        if (carpet) {
+        if (carpet && !carpet.entering && !carpet.exiting) {
             return { x: carpet.currentX, y: carpet.currentY };
         }
         return this.getSeatPosition(cloudId);
@@ -180,9 +185,13 @@ export class SeatManager {
             this.draggingCarpetId = null;
             return;
         }
-        carpet.currentX = x;
-        carpet.currentY = y;
-        this.draggingCarpetId = carpetId;
+        if (this.draggingCarpetId !== carpetId) {
+            this.dragOffsetX = carpet.currentX - x;
+            this.dragOffsetY = carpet.currentY - y;
+            this.draggingCarpetId = carpetId;
+        }
+        carpet.currentX = x + this.dragOffsetX;
+        carpet.currentY = y + this.dragOffsetY;
     }
 
     clearDragging(): void {
@@ -419,81 +428,93 @@ export class SeatManager {
         }
 
         const nonStarSeats = this.seats.filter(s => s.seatId !== STAR_CLOUD_ID);
-        const matching = new Map<string, { x: number; y: number }>();
-        const newMatching = new Map<string, string>();
 
         if (activeCarpetIds.length === 0 || nonStarSeats.length === 0) {
             this.previousMatching.clear();
-            return matching;
+            return new Map();
         }
 
-        const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
-        const remainingCarpets = new Set(activeCarpetIds);
-        const remainingSeats = new Set(nonStarSeats);
-
-        for (const carpetId of activeCarpetIds) {
-            const prevSeatId = this.previousMatching.get(carpetId);
-            if (!prevSeatId) continue;
-
-            const prevSeat = seatById.get(prevSeatId);
-            if (!prevSeat || !remainingSeats.has(prevSeat)) continue;
-
+        const distanceToSeat = (carpetId: string, seat: SeatState): number => {
             const carpet = this.carpets.get(carpetId)!;
-            const prevDx = prevSeat.x - carpet.currentX;
-            const prevDy = prevSeat.y - carpet.currentY;
-            const prevDist = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
+            const dx = seat.x - carpet.currentX;
+            const dy = seat.y - carpet.currentY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
 
-            let shouldKeep = true;
-            for (const seat of remainingSeats) {
-                if (seat.seatId === prevSeatId) continue;
-                const dx = seat.x - carpet.currentX;
-                const dy = seat.y - carpet.currentY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist + REASSIGNMENT_THRESHOLD < prevDist) {
-                    shouldKeep = false;
+        const computeGreedyMatching = (carpetIds: string[], seats: SeatState[]): Map<string, string> => {
+            const result = new Map<string, string>();
+            const remainingCarpets = new Set(carpetIds);
+            const remainingSeats = new Set(seats);
+
+            while (remainingCarpets.size > 0 && remainingSeats.size > 0) {
+                let bestCarpetId: string | null = null;
+                let bestSeat: SeatState | null = null;
+                let bestDist = Infinity;
+
+                for (const carpetId of remainingCarpets) {
+                    for (const seat of remainingSeats) {
+                        const dist = distanceToSeat(carpetId, seat);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestCarpetId = carpetId;
+                            bestSeat = seat;
+                        }
+                    }
+                }
+
+                if (bestCarpetId && bestSeat) {
+                    result.set(bestCarpetId, bestSeat.seatId);
+                    remainingCarpets.delete(bestCarpetId);
+                    remainingSeats.delete(bestSeat);
+                } else {
                     break;
                 }
             }
+            return result;
+        };
 
-            if (shouldKeep) {
-                matching.set(carpetId, { x: prevSeat.x, y: prevSeat.y });
-                newMatching.set(carpetId, prevSeatId);
-                remainingCarpets.delete(carpetId);
-                remainingSeats.delete(prevSeat);
+        const computeTotalDistance = (matching: Map<string, string>): number => {
+            const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
+            let total = 0;
+            for (const [carpetId, seatId] of matching) {
+                const seat = seatById.get(seatId);
+                if (seat) total += distanceToSeat(carpetId, seat);
             }
+            return total;
+        };
+
+        const optimalMatching = computeGreedyMatching(activeCarpetIds, nonStarSeats);
+        const optimalDistance = computeTotalDistance(optimalMatching);
+
+        const previousStillValid = activeCarpetIds.every(id => {
+            const prevSeatId = this.previousMatching.get(id);
+            return prevSeatId && nonStarSeats.some(s => s.seatId === prevSeatId);
+        }) && new Set(Array.from(this.previousMatching.values())).size === this.previousMatching.size;
+
+        let newMatching: Map<string, string>;
+        if (previousStillValid && this.previousMatching.size === activeCarpetIds.length) {
+            const previousDistance = computeTotalDistance(this.previousMatching);
+            newMatching = previousDistance - optimalDistance > REASSIGNMENT_THRESHOLD
+                ? optimalMatching
+                : this.previousMatching;
+        } else {
+            newMatching = optimalMatching;
         }
 
-        while (remainingCarpets.size > 0 && remainingSeats.size > 0) {
-            let bestCarpetId: string | null = null;
-            let bestSeat: SeatState | null = null;
-            let bestDist = Infinity;
-
-            for (const carpetId of remainingCarpets) {
-                const carpet = this.carpets.get(carpetId)!;
-                for (const seat of remainingSeats) {
-                    const dx = seat.x - carpet.currentX;
-                    const dy = seat.y - carpet.currentY;
-                    const dist = dx * dx + dy * dy;
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        bestCarpetId = carpetId;
-                        bestSeat = seat;
-                    }
-                }
-            }
-
-            if (bestCarpetId && bestSeat) {
-                matching.set(bestCarpetId, { x: bestSeat.x, y: bestSeat.y });
-                newMatching.set(bestCarpetId, bestSeat.seatId);
-                remainingCarpets.delete(bestCarpetId);
-                remainingSeats.delete(bestSeat);
-            } else {
-                break;
-            }
+        const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
+        const result = new Map<string, { x: number; y: number }>();
+        for (const [carpetId, seatId] of newMatching) {
+            const seat = seatById.get(seatId)!;
+            result.set(carpetId, { x: seat.x, y: seat.y });
         }
 
+        const matchingChanged = newMatching.size !== this.previousMatching.size ||
+            Array.from(newMatching).some(([k, v]) => this.previousMatching.get(k) !== v);
+        if (matchingChanged) {
+            this.matchingChangedTime = performance.now();
+        }
         this.previousMatching = newMatching;
-        return matching;
+        return result;
     }
 
     private updateCarpetPositions(deltaTime: number): void {
@@ -510,55 +531,60 @@ export class SeatManager {
 
             if (carpetId === this.draggingCarpetId) continue;
 
-            const centerX = this.canvasWidth / 2;
-            const centerY = this.canvasHeight / 2;
+            const velocity = this.carpetVelocities.get(carpetId) ?? { vx: 0, vy: 0 };
 
-            const curDx = carpet.currentX - centerX;
-            const curDy = carpet.currentY - centerY;
-            const curRadius = Math.sqrt(curDx * curDx + curDy * curDy);
-            const curAngle = Math.atan2(curDy, curDx);
+            const dx = targetPos.x - carpet.currentX;
+            const dy = targetPos.y - carpet.currentY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            const tgtDx = targetPos.x - centerX;
-            const tgtDy = targetPos.y - centerY;
-            const tgtRadius = Math.sqrt(tgtDx * tgtDx + tgtDy * tgtDy);
-            const tgtAngle = Math.atan2(tgtDy, tgtDx);
-
-            const radiusDiff = tgtRadius - curRadius;
-            let angleDiff = tgtAngle - curAngle;
-            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-            const radiusError = Math.abs(radiusDiff);
-            const arcError = Math.abs(angleDiff) * curRadius;
-
-            if (radiusError < 1 && arcError < 1) {
+            if (dist < 1 && Math.abs(velocity.vx) < 0.1 && Math.abs(velocity.vy) < 0.1) {
                 carpet.currentX = targetPos.x;
                 carpet.currentY = targetPos.y;
                 this.carpetVelocities.set(carpetId, { vx: 0, vy: 0 });
                 continue;
             }
 
-            const moveAmount = CARPET_MAX_VELOCITY * deltaTime;
+            const accel = CARPET_ACCELERATION * deltaTime;
 
-            const radialWeight = Math.min(1, radiusError / 30);
-            const angularWeight = 1 - radialWeight;
+            let desiredVx = 0;
+            let desiredVy = 0;
+            if (dist > 0.01) {
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const stoppingDist = (velocity.vx * velocity.vx + velocity.vy * velocity.vy) / (2 * CARPET_ACCELERATION);
+                const shouldBrake = dist < stoppingDist * 1.2;
 
-            const radialDir = radiusDiff > 0 ? 1 : -1;
-            const radialMove = Math.min(Math.abs(radiusDiff), moveAmount * radialWeight) * radialDir;
+                if (shouldBrake) {
+                    desiredVx = 0;
+                    desiredVy = 0;
+                } else {
+                    desiredVx = dirX * CARPET_MAX_VELOCITY;
+                    desiredVy = dirY * CARPET_MAX_VELOCITY;
+                }
+            }
 
-            const angularDir = angleDiff > 0 ? 1 : -1;
-            const maxAngularMove = moveAmount * angularWeight;
-            const angularMove = Math.min(Math.abs(angleDiff) * curRadius, maxAngularMove) * angularDir / Math.max(1, curRadius);
+            let newVx = velocity.vx;
+            let newVy = velocity.vy;
 
-            const newRadius = curRadius + radialMove;
-            const newAngle = curAngle + angularMove;
+            const dvx = desiredVx - velocity.vx;
+            const dvy = desiredVy - velocity.vy;
+            const dv = Math.sqrt(dvx * dvx + dvy * dvy);
 
-            carpet.currentX = centerX + Math.cos(newAngle) * newRadius;
-            carpet.currentY = centerY + Math.sin(newAngle) * newRadius;
+            if (dv > 0.01) {
+                const change = Math.min(accel, dv);
+                newVx += (dvx / dv) * change;
+                newVy += (dvy / dv) * change;
+            }
 
-            const dx = carpet.currentX - (centerX + Math.cos(curAngle) * curRadius);
-            const dy = carpet.currentY - (centerY + Math.sin(curAngle) * curRadius);
-            this.carpetVelocities.set(carpetId, { vx: dx / deltaTime, vy: dy / deltaTime });
+            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
+            if (speed > CARPET_MAX_VELOCITY) {
+                newVx = (newVx / speed) * CARPET_MAX_VELOCITY;
+                newVy = (newVy / speed) * CARPET_MAX_VELOCITY;
+            }
+
+            carpet.currentX += newVx * deltaTime;
+            carpet.currentY += newVy * deltaTime;
+            this.carpetVelocities.set(carpetId, { vx: newVx, vy: newVy });
         }
     }
 
@@ -622,5 +648,67 @@ export class SeatManager {
     setDimensions(width: number, height: number): void {
         this.canvasWidth = width;
         this.canvasHeight = height;
+    }
+
+    setDebugEnabled(enabled: boolean): void {
+        this.debugEnabled = enabled;
+    }
+
+    renderDebug(): void {
+        if (!this.debugGroup || !this.debugEnabled) {
+            if (this.debugGroup) {
+                while (this.debugGroup.firstChild) {
+                    this.debugGroup.removeChild(this.debugGroup.firstChild);
+                }
+            }
+            return;
+        }
+
+        while (this.debugGroup.firstChild) {
+            this.debugGroup.removeChild(this.debugGroup.firstChild);
+        }
+
+        const timeSinceChange = (performance.now() - this.matchingChangedTime) / 1000;
+        const centerLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        centerLabel.setAttribute('x', String(this.canvasWidth / 2));
+        centerLabel.setAttribute('y', String(this.canvasHeight / 2));
+        centerLabel.setAttribute('fill', '#804000');
+        centerLabel.setAttribute('font-size', '14');
+        centerLabel.setAttribute('font-family', 'monospace');
+        centerLabel.setAttribute('text-anchor', 'middle');
+        centerLabel.textContent = `matching age: ${timeSinceChange.toFixed(1)}s`;
+        this.debugGroup.appendChild(centerLabel);
+
+        for (const [carpetId, seatId] of this.previousMatching) {
+            const carpet = this.carpets.get(carpetId);
+            if (!carpet || carpet.entering || carpet.exiting) continue;
+
+            const seat = this.seats.find(s => s.seatId === seatId);
+            if (seat) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', String(carpet.currentX));
+                line.setAttribute('y1', String(carpet.currentY));
+                line.setAttribute('x2', String(seat.x));
+                line.setAttribute('y2', String(seat.y));
+                line.setAttribute('stroke', '#006040');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('stroke-dasharray', '4,4');
+                this.debugGroup.appendChild(line);
+            }
+
+            const velocity = this.carpetVelocities.get(carpetId);
+            if (velocity) {
+                const speed = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
+                const velLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                velLabel.setAttribute('x', String(carpet.currentX));
+                velLabel.setAttribute('y', String(carpet.currentY - 18));
+                velLabel.setAttribute('fill', '#400080');
+                velLabel.setAttribute('font-size', '10');
+                velLabel.setAttribute('font-family', 'monospace');
+                velLabel.setAttribute('text-anchor', 'middle');
+                velLabel.textContent = `v=${speed.toFixed(1)}`;
+                this.debugGroup.appendChild(velLabel);
+            }
+        }
     }
 }

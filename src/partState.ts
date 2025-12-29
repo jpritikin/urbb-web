@@ -8,6 +8,7 @@ export interface PartBiography {
     relationshipsRevealed: boolean;
     identityRevealed: boolean;
     unburdened: boolean;
+    jobRevealed: boolean;
     jobAppraisalRevealed: boolean;
     jobImpactRevealed: boolean;
     consentedToHelp: boolean;
@@ -58,6 +59,7 @@ export function createPartState(id: string, name: string, options?: {
             relationshipsRevealed: false,
             identityRevealed: false,
             unburdened: false,
+            jobRevealed: false,
             jobAppraisalRevealed: false,
             jobImpactRevealed: false,
             consentedToHelp: false,

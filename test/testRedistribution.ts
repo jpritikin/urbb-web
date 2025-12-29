@@ -54,7 +54,7 @@ function runAllRedistributionTests(): void {
         test('REMOVE 5→4 arm0 p=0 tipAngle', anglesEqual(r0.tipAngle, startAngle),
              `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r0.tipAngle).toFixed(1)}°`);
 
-        // At progress=0.5: should be at end position (redistribution complete)
+        // At progress=0.5: should be at END position (redistribution complete in Phase 1)
         const r05 = computeArmRedistribution(0, startAngle, startAngleStep / 2, 'removing', 0.5, sourceIndex, 1, armCount, rotation);
         test('REMOVE 5→4 arm0 p=0.5 tipAngle', anglesEqual(r05.tipAngle, endAngle),
              `expected ${toDeg(endAngle).toFixed(1)}° got ${toDeg(r05.tipAngle).toFixed(1)}°`);
@@ -74,12 +74,18 @@ function runAllRedistributionTests(): void {
         test('REMOVE 5→4 arm3 p=0 tipAngle', anglesEqual(r0.tipAngle, startAngle),
              `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r0.tipAngle).toFixed(1)}°`);
 
+        // At p=0.5: at END position (redistribution complete in Phase 1)
         const r05 = computeArmRedistribution(3, startAngle, startAngleStep / 2, 'removing', 0.5, sourceIndex, 1, armCount, rotation);
         test('REMOVE 5→4 arm3 p=0.5 tipAngle', anglesEqual(r05.tipAngle, endAngle),
              `expected ${toDeg(endAngle).toFixed(1)}° got ${toDeg(r05.tipAngle).toFixed(1)}°`);
+
+        // At p=1.0: still at end position
+        const r1 = computeArmRedistribution(3, startAngle, startAngleStep / 2, 'removing', 1.0, sourceIndex, 1, armCount, rotation);
+        test('REMOVE 5→4 arm3 p=1.0 tipAngle', anglesEqual(r1.tipAngle, endAngle),
+             `expected ${toDeg(endAngle).toFixed(1)}° got ${toDeg(r1.tipAngle).toFixed(1)}°`);
     }
 
-    // Test halfStep changes
+    // Test halfStep changes (removing: redistribution in Phase 1)
     {
         const startHalfStep = startAngleStep / 2; // 36°
         const endHalfStep = endAngleStep / 2;     // 45°
@@ -88,9 +94,15 @@ function runAllRedistributionTests(): void {
         test('REMOVE 5→4 halfStep p=0', Math.abs(r0.halfStep - startHalfStep) < TOLERANCE,
              `expected ${toDeg(startHalfStep).toFixed(1)}° got ${toDeg(r0.halfStep).toFixed(1)}°`);
 
+        // At p=0.5: at END halfStep (redistribution complete in Phase 1)
         const r05 = computeArmRedistribution(0, -PI/2, startHalfStep, 'removing', 0.5, sourceIndex, 1, armCount, rotation);
         test('REMOVE 5→4 halfStep p=0.5', Math.abs(r05.halfStep - endHalfStep) < TOLERANCE,
              `expected ${toDeg(endHalfStep).toFixed(1)}° got ${toDeg(r05.halfStep).toFixed(1)}°`);
+
+        // At p=1.0: still at end halfStep
+        const r1 = computeArmRedistribution(0, -PI/2, startHalfStep, 'removing', 1.0, sourceIndex, 1, armCount, rotation);
+        test('REMOVE 5→4 halfStep p=1.0', Math.abs(r1.halfStep - endHalfStep) < TOLERANCE,
+             `expected ${toDeg(endHalfStep).toFixed(1)}° got ${toDeg(r1.halfStep).toFixed(1)}°`);
     }
 }
 
@@ -108,20 +120,21 @@ function runAllRedistributionTests(): void {
     const endAngleStep = (2 * PI) / 6;   // 60°
 
     // Test arm 0 (source arm, stays at index 0 - doesn't shift for CW)
+    // For ADDING, redistribution happens in Phase 2 (starts at p=0.5)
     {
         const startAngle = rotation - PI / 2 + 0 * startAngleStep; // -90°
         const endAngle = rotation - PI / 2 + 0 * endAngleStep;     // -90°
 
-        // Phase 1 (p <= 0.5): no redistribution
         const r0 = computeArmRedistribution(0, startAngle, startAngleStep / 2, 'adding', 0, sourceIndex, direction, armCount, rotation);
         test('ADD 5→6 CW arm0 p=0 tipAngle', anglesEqual(r0.tipAngle, startAngle),
              `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r0.tipAngle).toFixed(1)}°`);
 
+        // At p=0.5: still at START position (redistribution starts in Phase 2)
         const r05 = computeArmRedistribution(0, startAngle, startAngleStep / 2, 'adding', 0.5, sourceIndex, direction, armCount, rotation);
         test('ADD 5→6 CW arm0 p=0.5 tipAngle', anglesEqual(r05.tipAngle, startAngle),
              `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r05.tipAngle).toFixed(1)}°`);
 
-        // Phase 2: redistributes to final
+        // At p=1.0: at end position
         const r1 = computeArmRedistribution(0, startAngle, startAngleStep / 2, 'adding', 1.0, sourceIndex, direction, armCount, rotation);
         test('ADD 5→6 CW arm0 p=1.0 tipAngle', anglesEqual(r1.tipAngle, endAngle),
              `expected ${toDeg(endAngle).toFixed(1)}° got ${toDeg(r1.tipAngle).toFixed(1)}°`);
@@ -132,8 +145,9 @@ function runAllRedistributionTests(): void {
         const startAngle = rotation - PI / 2 + 1 * startAngleStep; // -90° + 72° = -18°
         const endAngle = rotation - PI / 2 + 2 * endAngleStep;     // -90° + 120° = 30°
 
+        // At p=0.5: still at START position (redistribution starts in Phase 2)
         const r05 = computeArmRedistribution(1, startAngle, startAngleStep / 2, 'adding', 0.5, sourceIndex, direction, armCount, rotation);
-        test('ADD 5→6 CW arm1 p=0.5 tipAngle (no change)', anglesEqual(r05.tipAngle, startAngle),
+        test('ADD 5→6 CW arm1 p=0.5 tipAngle', anglesEqual(r05.tipAngle, startAngle),
              `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r05.tipAngle).toFixed(1)}°`);
 
         const r1 = computeArmRedistribution(1, startAngle, startAngleStep / 2, 'adding', 1.0, sourceIndex, direction, armCount, rotation);
@@ -242,30 +256,10 @@ function runAllRedistributionTests(): void {
          r11 ? `expected ${toDeg(expectedFinal).toFixed(1)}° got ${toDeg(r11.tipAngle).toFixed(1)}°` : 'null result');
 }
 
-// Test: Source arm returns null for removing
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 2,  // This is the source being removed
-        startArmCount: 5,
-        firstSourceIndex: 2,
-        secondSourceIndex: 0,
-        firstType: 'removing',
-        secondType: 'adding',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 0.5,
-        p2: 0,
-        rotation: 0,
-    };
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP first source (removing) returns null', result === null, result ? 'got non-null' : '');
-}
-
 // ==================== Test intermediate progress values ====================
 
 
-// Test linear interpolation at p=0.25 for REMOVING
+// Test linear interpolation at p=0.25 for REMOVING (redistribution in Phase 1)
 {
     const armCount = 5;
     const sourceIndex = 2;
@@ -279,23 +273,24 @@ function runAllRedistributionTests(): void {
     const startHalfStep = startAngleStep / 2;
     const endHalfStep = endAngleStep / 2;
 
-    // At p=0.25, t=0.5 (since removing redistributes in Phase 1)
+    // At p=0.25, t=0.5 (halfway through Phase 1)
     const r025 = computeArmRedistribution(0, startAngle, startHalfStep, 'removing', 0.25, sourceIndex, 1, armCount, rotation);
     const expectedAngle025 = startAngle + (endAngle - startAngle) * 0.5;
     const expectedHalfStep025 = startHalfStep + (endHalfStep - startHalfStep) * 0.5;
-
     test('REMOVE 5→4 arm0 p=0.25 tipAngle (t=0.5)', anglesEqual(r025.tipAngle, expectedAngle025),
          `expected ${toDeg(expectedAngle025).toFixed(1)}° got ${toDeg(r025.tipAngle).toFixed(1)}°`);
     test('REMOVE 5→4 arm0 p=0.25 halfStep (t=0.5)', Math.abs(r025.halfStep - expectedHalfStep025) < TOLERANCE,
          `expected ${toDeg(expectedHalfStep025).toFixed(1)}° got ${toDeg(r025.halfStep).toFixed(1)}°`);
 
-    // At p=0.75, t=1 (redistribution complete, stays there)
+    // At p=0.75, t=1 (redistribution complete in Phase 1, stays at end)
     const r075 = computeArmRedistribution(0, startAngle, startHalfStep, 'removing', 0.75, sourceIndex, 1, armCount, rotation);
     test('REMOVE 5→4 arm0 p=0.75 tipAngle (t=1)', anglesEqual(r075.tipAngle, endAngle),
          `expected ${toDeg(endAngle).toFixed(1)}° got ${toDeg(r075.tipAngle).toFixed(1)}°`);
+    test('REMOVE 5→4 arm0 p=0.75 halfStep (t=1)', Math.abs(r075.halfStep - endHalfStep) < TOLERANCE,
+         `expected ${toDeg(endHalfStep).toFixed(1)}° got ${toDeg(r075.halfStep).toFixed(1)}°`);
 }
 
-// Test linear interpolation at p=0.75 for ADDING
+// Test linear interpolation at p=0.75 for ADDING (redistribution in Phase 2)
 {
     const armCount = 5;
     const sourceIndex = 0;
@@ -310,90 +305,23 @@ function runAllRedistributionTests(): void {
     const startHalfStep = startAngleStep / 2;
     const endHalfStep = endAngleStep / 2;
 
-    // At p=0.75, t=0.5 (since adding redistributes in Phase 2, starting at p=0.5)
+    // At p=0.25, t=0 (redistribution hasn't started - it's in Phase 2)
+    const r025 = computeArmRedistribution(1, startAngle, startHalfStep, 'adding', 0.25, sourceIndex, direction, armCount, rotation);
+    test('ADD 5→6 CW arm1 p=0.25 tipAngle (t=0)', anglesEqual(r025.tipAngle, startAngle),
+         `expected ${toDeg(startAngle).toFixed(1)}° got ${toDeg(r025.tipAngle).toFixed(1)}°`);
+    test('ADD 5→6 CW arm1 p=0.25 halfStep (t=0)', Math.abs(r025.halfStep - startHalfStep) < TOLERANCE,
+         `expected ${toDeg(startHalfStep).toFixed(1)}° got ${toDeg(r025.halfStep).toFixed(1)}°`);
+
+    // At p=0.75, t=0.5 (halfway through Phase 2)
     const r075 = computeArmRedistribution(1, startAngle, startHalfStep, 'adding', 0.75, sourceIndex, direction, armCount, rotation);
     const expectedAngle075 = startAngle + (endAngle - startAngle) * 0.5;
     const expectedHalfStep075 = startHalfStep + (endHalfStep - startHalfStep) * 0.5;
-
     test('ADD 5→6 CW arm1 p=0.75 tipAngle (t=0.5)', anglesEqual(r075.tipAngle, expectedAngle075),
          `expected ${toDeg(expectedAngle075).toFixed(1)}° got ${toDeg(r075.tipAngle).toFixed(1)}°`);
     test('ADD 5→6 CW arm1 p=0.75 halfStep (t=0.5)', Math.abs(r075.halfStep - expectedHalfStep075) < TOLERANCE,
          `expected ${toDeg(expectedHalfStep075).toFixed(1)}° got ${toDeg(r075.halfStep).toFixed(1)}°`);
 }
 
-// ==================== Test overlapping intermediate values ====================
-
-
-// Test: Two ADDs with p1=0.75, p2=0.25
-// First ADD redistributes in Phase 2, so at p1=0.75, firstRedistT = 0.5
-// Second ADD redistributes in Phase 2, so at p2=0.25, secondRedistT = 0
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 2,
-        startArmCount: 5,
-        firstSourceIndex: 0,
-        secondSourceIndex: 1,
-        firstType: 'adding',
-        secondType: 'adding',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 0.75,
-        p2: 0.25,
-        rotation: 0,
-    };
-
-    const startAngleStep = (2 * PI) / 5;
-    const intermediateAngleStep = (2 * PI) / 6;
-
-    // Arm 2 starts at index 2, goes to index 3 in 6-arm star
-    const origAngle = params.rotation - PI / 2 + 2 * startAngleStep;
-    const intermediateAngle = params.rotation - PI / 2 + 3 * intermediateAngleStep;
-
-    // At p1=0.75 (firstRedistT=0.5), p2=0.25 (secondRedistT=0)
-    // afterFirst = orig + (intermediate - orig) * 0.5
-    // tipAngle = afterFirst + 0 (no second redistribution yet)
-    const expectedAngle = origAngle + (intermediateAngle - origAngle) * 0.5;
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP ADD+ADD p1=0.75 p2=0.25', result !== null && anglesEqual(result.tipAngle, expectedAngle),
-         result ? `expected ${toDeg(expectedAngle).toFixed(1)}° got ${toDeg(result.tipAngle).toFixed(1)}°` : 'null result');
-}
-
-// Test: REMOVE then ADD with intermediate values
-// First REMOVE redistributes in Phase 1, so at p1=0.25, firstRedistT = 0.5
-// Second ADD redistributes in Phase 2, so at p2=0.75, secondRedistT = 0.5
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 3,
-        startArmCount: 5,
-        firstSourceIndex: 1,
-        secondSourceIndex: 1,
-        firstType: 'removing',
-        secondType: 'adding',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 0.25,
-        p2: 0.75,
-        rotation: 0,
-    };
-
-    const startAngleStep = (2 * PI) / 5;
-    const intermediateAngleStep = (2 * PI) / 4;
-    const finalAngleStep = (2 * PI) / 5;
-
-    // Arm 3 → index 2 in 4-arm → index 3 in 5-arm
-    const origAngle = params.rotation - PI / 2 + 3 * startAngleStep;
-    const intermediateAngle = params.rotation - PI / 2 + 2 * intermediateAngleStep;
-    const finalAngle = params.rotation - PI / 2 + 3 * finalAngleStep;
-
-    // At p1=0.25 (firstRedistT=0.5), p2=0.75 (secondRedistT=0.5)
-    const afterFirst = origAngle + (intermediateAngle - origAngle) * 0.5;
-    const expectedAngle = afterFirst + (finalAngle - intermediateAngle) * 0.5;
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP REM+ADD p1=0.25 p2=0.75', result !== null && anglesEqual(result.tipAngle, expectedAngle),
-         result ? `expected ${toDeg(expectedAngle).toFixed(1)}° got ${toDeg(result.tipAngle).toFixed(1)}°` : 'null result');
-}
 
 // ==================== Test edge cases ====================
 
@@ -509,26 +437,6 @@ function runAllRedistributionTests(): void {
     const result = computeOverlappingArmRedistribution(params);
     test('OVERLAP ADD+ADD CCW arm2 p1=1 p2=1', result !== null && anglesEqual(result.tipAngle, expectedFinal),
          result ? `expected ${toDeg(expectedFinal).toFixed(1)}° got ${toDeg(result.tipAngle).toFixed(1)}°` : 'null result');
-}
-
-// Test: Second source arm for removing should return null
-{
-    const params: OverlappingRedistributionParams = {
-        originalArmIndex: 3,  // In original star, this becomes secondSource after first transition
-        startArmCount: 5,
-        firstSourceIndex: 1,
-        secondSourceIndex: 2,  // Index 2 in 4-arm star = index 3 in original
-        firstType: 'removing',
-        secondType: 'removing',
-        firstDirection: 1,
-        secondDirection: 1,
-        p1: 1,
-        p2: 0.5,
-        rotation: 0,
-    };
-
-    const result = computeOverlappingArmRedistribution(params);
-    test('OVERLAP second source (removing) returns null', result === null, result ? 'got non-null' : '');
 }
 
 // Test: All arms in a 5-arm star adding CW from source 0

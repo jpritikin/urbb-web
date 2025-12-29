@@ -38,7 +38,7 @@ function getAdjacentArm(
     );
 
     const innerRadius = getInnerRadiusForArmCount(armCount);
-    return getArmPoints(CENTER_X, CENTER_Y, redist.tipAngle, redist.halfStep, innerRadius, STAR_OUTER_RADIUS);
+    return getArmPoints(CENTER_X, CENTER_Y, redist, innerRadius, STAR_OUTER_RADIUS);
 }
 
 interface TestCase {

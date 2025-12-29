@@ -425,6 +425,18 @@ export class SimulatorView {
         return this.seatManager.getSeats();
     }
 
+    setSeatDebugGroup(group: SVGGElement): void {
+        this.seatManager.setDebugGroup(group);
+    }
+
+    setSeatDebug(enabled: boolean): void {
+        this.seatManager.setDebugEnabled(enabled);
+    }
+
+    renderSeatDebug(): void {
+        this.seatManager.renderDebug();
+    }
+
     syncWithModel(
         oldModel: SimulatorModel | null,
         newModel: SimulatorModel,

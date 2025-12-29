@@ -1,26 +1,12 @@
 export const STAR_OUTER_RADIUS = 20;
+const TIP_ANGLE_OFFSET = -Math.PI / 2;
 
-// Arm geometry:
-// - T (tip): outer point of the arm
-// - b1 (base1): CCW base point on inner circle
-// - b2 (base2): CW base point on inner circle
-//
-// Direction is a signed integer: +1 for CW, -1 for CCW
-// This determines which neighbor the animation targets and which base point is the pivot
+// ============== Geometry Primitives ==============
 
 export interface Point {
     x: number;
     y: number;
 }
-
-export interface ArmPoints {
-    t: Point;
-    b1: Point;
-    b2: Point;
-}
-
-// +1 = clockwise, -1 = counterclockwise
-export type TransitionDirection = 1 | -1;
 
 export function dist(x1: number, y1: number, x2: number, y2: number): number {
     return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
@@ -48,16 +34,49 @@ export function lerp(start: number, end: number, t: number): number {
     return start + (end - start) * t;
 }
 
+export function mod(n: number, m: number): number {
+    return ((n % m) + m) % m;
+}
+
+function polarToPoint(center: Point, radius: number, angle: number): Point {
+    return { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) };
+}
+
+function rotatePointAroundPivot(pivot: Point, radius: number, startAngle: number, rotation: number): Point {
+    return {
+        x: pivot.x + radius * Math.cos(startAngle + rotation),
+        y: pivot.y + radius * Math.sin(startAngle + rotation),
+    };
+}
+
+function getTipAngle(rotation: number, armIndex: number, angleStep: number): number {
+    return rotation + TIP_ANGLE_OFFSET + armIndex * angleStep;
+}
+
+// ============== Arm Geometry ==============
+
+// Arm geometry:
+// - T (tip): outer point of the arm
+// - b1 (base1): CCW base point on inner circle
+// - b2 (base2): CW base point on inner circle
+//
+// Direction is a signed integer: +1 for CW, -1 for CCW
+// This determines which neighbor the animation targets and which base point is the pivot
+
+export interface ArmPoints {
+    t: Point;
+    b1: Point;
+    b2: Point;
+}
+
+export type TransitionDirection = 1 | -1;
+
 export function getAngleStep(armCount: number): number {
     return (2 * Math.PI) / armCount;
 }
 
 export function getInnerRadiusRatio(armCount: number): number {
-    if (armCount <= 4) {
-        return .2;
-    } else {
-        return .4;
-    }
+    return armCount <= 4 ? 0.2 : 0.4;
 }
 
 export function getInnerRadiusForArmCount(armCount: number): number {
@@ -83,68 +102,77 @@ export function getTransitionInnerRadius(
     return lerp(startRatio, endRatio, progress) * outerRadius;
 }
 
-function rotatePoint(pivot: Point, point: Point, radians: number): Point {
-    const d = pointDist(pivot, point);
-    const a = pointAngle(pivot, point) + radians;
-    return { x: pivot.x + d * Math.cos(a), y: pivot.y + d * Math.sin(a) };
+export interface ArmAngleSpec {
+    tipAngle: number;
+    halfStep: number;
 }
 
 export function getArmPoints(
     centerX: number,
     centerY: number,
-    tipAngle: number,
-    halfStep: number,
+    spec: ArmAngleSpec,
     innerR: number,
     outerR: number
 ): ArmPoints {
+    const center = { x: centerX, y: centerY };
+    const { tipAngle, halfStep } = spec;
     return {
-        t: { x: centerX + outerR * Math.cos(tipAngle), y: centerY + outerR * Math.sin(tipAngle) },
-        b1: { x: centerX + innerR * Math.cos(tipAngle - halfStep), y: centerY + innerR * Math.sin(tipAngle - halfStep) },
-        b2: { x: centerX + innerR * Math.cos(tipAngle + halfStep), y: centerY + innerR * Math.sin(tipAngle + halfStep) },
+        t: polarToPoint(center, outerR, tipAngle),
+        b1: polarToPoint(center, innerR, tipAngle - halfStep),
+        b2: polarToPoint(center, innerR, tipAngle + halfStep),
     };
 }
 
-export function mod(n: number, m: number): number {
-    return ((n % m) + m) % m;
+export function buildStaticArmPoints(
+    specs: Map<number, ArmAngleSpec>,
+    centerX: number,
+    centerY: number,
+    innerRadius: number,
+    outerRadius: number
+): Map<number, ArmPoints> {
+    const result = new Map<number, ArmPoints>();
+    for (const [idx, spec] of specs) {
+        result.set(idx, getArmPoints(centerX, centerY, spec, innerRadius, outerRadius));
+    }
+    return result;
 }
 
-// ============== New Minimal Transition System ==============
-
-export interface MinimalTransitionContext {
-    centerX: number;
-    centerY: number;
-    outerRadius: number;
-    innerRadius: number;
-    // Adjacent arm points (SSOT - all geometry derives from this)
-    adjPoints: ArmPoints;
-    // Shared base point (where pivot locks in Phase 2)
-    sharedBase: Point;
-    progress: number;               // 0→1 for adding, 1→0 for removing
-    direction: TransitionDirection;
-    type: 'adding' | 'removing';
+export function buildStaticArms(
+    armCount: number,
+    rotation: number,
+    centerX: number,
+    centerY: number,
+    innerRadius: number,
+    outerRadius: number
+): Map<number, ArmPoints> {
+    const angleStep = getAngleStep(armCount);
+    const halfStep = angleStep / 2;
+    const result = new Map<number, ArmPoints>();
+    for (let i = 0; i < armCount; i++) {
+        const tipAngle = getTipAngle(rotation, i, angleStep);
+        result.set(i, getArmPoints(centerX, centerY, { tipAngle, halfStep }, innerRadius, outerRadius));
+    }
+    return result;
 }
+
+// ============== Base Role Assignment ==============
 
 // Abstraction for base point roles - which base is the pivot vs which swings freely
 interface BaseRoles {
-    pivotBase: Point;     // The base that locks to adjacent's base during Phase 2
-    swingingBase: Point;  // The base that rotates freely around the pivot
+    pivotBase: Point;
+    swingingBase: Point;
 }
 
-// SSOT for determining which base is pivot vs swinging
-// For ADDING: new arm unfolds from adjacent, sharing one base point
-// - ADDING CW: new arm's b1 (CCW base) shares position with adjacent's b2 (CW base)
-// - ADDING CCW: new arm's b2 (CW base) shares position with adjacent's b1 (CCW base)
-// The shared base becomes the pivot in Phase 2
-// - REMOVING is the reverse
+// SSOT for determining which base is pivot vs swinging.
+// For ADDING CW: pivot is b1 (shares with adjacent's b2)
+// For ADDING CCW: pivot is b2 (shares with adjacent's b1)
+// For REMOVING: opposite
 function assignBaseRoles(
     type: 'adding' | 'removing',
     direction: TransitionDirection,
     b1: Point,
     b2: Point
 ): BaseRoles {
-    // For ADDING CW: pivot is b1 (shares with adjacent's b2)
-    // For ADDING CCW: pivot is b2 (shares with adjacent's b1)
-    // For REMOVING: opposite
     const addingPivotIsB1 = direction === 1;
     const pivotIsB1 = type === 'adding' ? addingPivotIsB1 : !addingPivotIsB1;
 
@@ -166,57 +194,53 @@ function unassignBaseRoles(
         : { b1: roles.swingingBase, b2: roles.pivotBase };
 }
 
+// ============== Transition Phase Computation ==============
 
-// Compute the "collapsed" state: arm fully overlapping adjacent arm
-// SSOT: Uses pre-computed adjacent arm points directly
-function getCollapsedState(ctx: MinimalTransitionContext): ArmPoints {
-    // All points come directly from adjacent arm (SSOT)
-    return ctx.adjPoints;
+export interface MinimalTransitionContext {
+    centerX: number;
+    centerY: number;
+    outerRadius: number;
+    innerRadius: number;
+    adjPoints: ArmPoints;
+    pivotBase: Point;
+    swingTargetBase: Point;
+    progress: number;
+    direction: TransitionDirection;
+    type: 'adding' | 'removing';
 }
 
 // Phase 1: Long rotation around tip - bases swing "the long way" (180° < |rotation| < 360°)
 // At t=0: collapsed onto adjacent
-// At t=1: pivot base has swung to the shared base position (for Phase 2)
-// Distances are constant - measured from static arm geometry.
+// At t=1: pivot base has swung to the pivot base position (for Phase 2)
 function computePhase1(
     collapsed: { tip: Point; pivotBase: Point; swingingBase: Point },
-    sharedBase: Point,
     ctx: MinimalTransitionContext,
     t: number
 ): { tip: Point; pivotBase: Point; swingingBase: Point } {
-    const { direction } = ctx;
+    const { direction, pivotBase: targetPivotBase } = ctx;
     const tip = collapsed.tip;
 
-    // Distance from tip to base is constant (from static arm geometry)
     const baseDist = pointDist(tip, collapsed.pivotBase);
-
     const pivotStartAngle = pointAngle(tip, collapsed.pivotBase);
     const swingStartAngle = pointAngle(tip, collapsed.swingingBase);
-    const pivotTargetAngle = pointAngle(tip, sharedBase);
+    const pivotTargetAngle = pointAngle(tip, targetPivotBase);
 
     // Phase 1 rotates the "long way" (>180°) in the transition direction
     const diff = normalizeAngle(pivotTargetAngle - pivotStartAngle);
     const totalRotation = diff + direction * 2 * Math.PI;
-
     const currentRotation = totalRotation * t;
 
-    const pivotBase: Point = {
-        x: tip.x + baseDist * Math.cos(pivotStartAngle + currentRotation),
-        y: tip.y + baseDist * Math.sin(pivotStartAngle + currentRotation),
+    return {
+        tip,
+        pivotBase: rotatePointAroundPivot(tip, baseDist, pivotStartAngle, currentRotation),
+        swingingBase: rotatePointAroundPivot(tip, baseDist, swingStartAngle, currentRotation),
     };
-    const swingingBase: Point = {
-        x: tip.x + baseDist * Math.cos(swingStartAngle + currentRotation),
-        y: tip.y + baseDist * Math.sin(swingStartAngle + currentRotation),
-    };
-
-    return { tip, pivotBase, swingingBase };
 }
 
 // Find the final tip position using circle-circle intersection.
 // The final tip must be:
 // 1. On the outer radius (distance outerRadius from center)
 // 2. At distance edgeDist from pivotBase (sharedBase)
-// Returns the intersection point in the correct direction.
 function computeFinalTipPosition(
     centerX: number,
     centerY: number,
@@ -224,61 +248,44 @@ function computeFinalTipPosition(
     pivotBase: Point,
     edgeDist: number,
     adjTip: Point,
-    direction: TransitionDirection
 ): Point {
     const d = pointDist({ x: centerX, y: centerY }, pivotBase);
 
-    // Check if circles intersect
     if (d > outerRadius + edgeDist || d < Math.abs(outerRadius - edgeDist)) {
-        // No intersection - fall back to keeping tip at edgeDist from pivot
-        const tipAngle = pointAngle(pivotBase, adjTip);
-        return {
-            x: pivotBase.x + edgeDist * Math.cos(tipAngle),
-            y: pivotBase.y + edgeDist * Math.sin(tipAngle),
-        };
+        return polarToPoint(pivotBase, edgeDist, pointAngle(pivotBase, adjTip));
     }
 
-    // Find intersection points using circle-circle intersection formula
     const a = (d * d + outerRadius * outerRadius - edgeDist * edgeDist) / (2 * d);
     const h = Math.sqrt(outerRadius * outerRadius - a * a);
 
-    // Unit vector from center to pivotBase
     const ux = (pivotBase.x - centerX) / d;
     const uy = (pivotBase.y - centerY) / d;
 
-    // Point P on the line between centers, at distance a from center
     const px = centerX + a * ux;
     const py = centerY + a * uy;
 
-    // Two intersection points (perpendicular to the line between centers)
     const ix1 = px + h * (-uy);
     const iy1 = py + h * ux;
     const ix2 = px - h * (-uy);
     const iy2 = py - h * ux;
 
-    // Choose the intersection point that is NOT at adjTip (the Phase 2 START position).
-    // Since both intersection points are at distance edgeDist from pivotBase and on the outer radius,
-    // one of them is at adjTip (Phase 2 start) and the other is the final tip position.
+    // Choose the intersection point that is NOT at adjTip (the Phase 2 START position)
     const dist1ToAdjTip = pointDist({ x: ix1, y: iy1 }, adjTip);
     const dist2ToAdjTip = pointDist({ x: ix2, y: iy2 }, adjTip);
 
-    // Choose the point that is farther from adjTip (i.e., NOT the start position)
     return dist1ToAdjTip > dist2ToAdjTip ? { x: ix1, y: iy1 } : { x: ix2, y: iy2 };
 }
 
-// Phase 2: Rotate around pivot base until arm reaches final position
-// The pivot base stays locked at sharedBase. Tip and swinging base rotate together.
-// Final tip position is computed using circle-circle intersection to ensure it lands on outer radius.
+// Phase 2: Rotate around pivot base until arm reaches final position.
+// The pivot base stays locked. Tip and swinging base rotate together.
 function computePhase2(
     ctx: MinimalTransitionContext,
     t: number
 ): { tip: Point; pivotBase: Point; swingingBase: Point } {
-    const { centerX, centerY, outerRadius, direction, adjPoints, sharedBase } = ctx;
-    const pivotBase = sharedBase;
+    const { centerX, centerY, outerRadius, direction, adjPoints, pivotBase } = ctx;
 
-    // Distances from adjacent arm geometry
-    const edgeDist = pointDist(adjPoints.t, adjPoints.b1);  // tip to base
-    const chordDist = pointDist(adjPoints.b1, adjPoints.b2);  // base to base
+    const edgeDist = pointDist(adjPoints.t, adjPoints.b1);
+    const chordDist = pointDist(adjPoints.b1, adjPoints.b2);
 
     // Compute swingingBase start position from tip using arm triangle geometry
     const cosAngleAtTip = 1 - (chordDist * chordDist) / (2 * edgeDist * edgeDist);
@@ -286,118 +293,57 @@ function computePhase2(
     const tipToPivotAngle = pointAngle(adjPoints.t, pivotBase);
     const tipToSwingStartAngle = tipToPivotAngle - direction * angleAtTip;
 
-    const swingStartPos: Point = {
-        x: adjPoints.t.x + edgeDist * Math.cos(tipToSwingStartAngle),
-        y: adjPoints.t.y + edgeDist * Math.sin(tipToSwingStartAngle),
-    };
+    const swingStartPos = polarToPoint(adjPoints.t, edgeDist, tipToSwingStartAngle);
 
-    // Compute start and end angles for the rotation around pivotBase
     const tipStartAngle = pointAngle(pivotBase, adjPoints.t);
     const swingStartAngle = pointAngle(pivotBase, swingStartPos);
 
-    // Compute final tip position using circle-circle intersection
     const finalTip = computeFinalTipPosition(
-        centerX, centerY, outerRadius, pivotBase, edgeDist, adjPoints.t, direction
+        centerX, centerY, outerRadius, pivotBase, edgeDist, adjPoints.t
     );
     const tipEndAngle = pointAngle(pivotBase, finalTip);
 
-    // Total rotation from start to end angle
     let totalRotation = normalizeAngle(tipEndAngle - tipStartAngle);
-    // Ensure rotation is in the correct direction (short way for adding)
-    // For CW adding, rotation should be positive (CW)
-    // For CCW adding, rotation should be negative (CCW)
     if (direction === 1 && totalRotation < 0) totalRotation += 2 * Math.PI;
     if (direction === -1 && totalRotation > 0) totalRotation -= 2 * Math.PI;
 
     const currentRotation = totalRotation * t;
 
-    const tip: Point = {
-        x: pivotBase.x + edgeDist * Math.cos(tipStartAngle + currentRotation),
-        y: pivotBase.y + edgeDist * Math.sin(tipStartAngle + currentRotation),
+    return {
+        tip: rotatePointAroundPivot(pivotBase, edgeDist, tipStartAngle, currentRotation),
+        pivotBase,
+        swingingBase: rotatePointAroundPivot(pivotBase, chordDist, swingStartAngle, currentRotation),
     };
-
-    const swingingBase: Point = {
-        x: pivotBase.x + chordDist * Math.cos(swingStartAngle + currentRotation),
-        y: pivotBase.y + chordDist * Math.sin(swingStartAngle + currentRotation),
-    };
-
-    return { tip, pivotBase, swingingBase };
 }
 
-// Main transition function using minimal context
 export function computeMinimalTransition(ctx: MinimalTransitionContext): ArmPoints {
-    const collapsed = getCollapsedState(ctx);
-    const { sharedBase, progress, type, direction } = ctx;
+    const collapsed = ctx.adjPoints;
+    const { progress, type, direction } = ctx;
 
-    // Convert b1/b2 bases to pivot/swinging roles based on type and direction
     const collapsedRoles = assignBaseRoles(type, direction, collapsed.b1, collapsed.b2);
 
     let result: { tip: Point; pivotBase: Point; swingingBase: Point };
 
     if (progress <= 0.5) {
-        const t = progress / 0.5;
-        result = computePhase1(
-            { tip: collapsed.t, ...collapsedRoles },
-            sharedBase,
-            ctx,
-            t
-        );
+        result = computePhase1({ tip: collapsed.t, ...collapsedRoles }, ctx, progress / 0.5);
     } else {
-        const t = (progress - 0.5) / 0.5;
-        result = computePhase2(ctx, t);
+        result = computePhase2(ctx, (progress - 0.5) / 0.5);
     }
 
-    // Convert back from roles to b1/b2
-    const bases = unassignBaseRoles(type, direction, { pivotBase: result.pivotBase, swingingBase: result.swingingBase });
+    const bases = unassignBaseRoles(type, direction, {
+        pivotBase: result.pivotBase,
+        swingingBase: result.swingingBase,
+    });
 
     return { t: result.tip, b1: bases.b1, b2: bases.b2 };
 }
 
-// ============== TransitionGeometry Provider Interface ==============
+// ============== Transition Geometry Providers ==============
 
-// Compute point positions from angle spec
-export function computeArmPoints(
-    spec: ArmRenderSpec,
-    centerX: number,
-    centerY: number,
-    innerRadius: number,
-    outerRadius: number
-): ArmPoints {
-    return getArmPoints(centerX, centerY, spec.tipAngle, spec.halfStep, innerRadius, outerRadius);
-}
-
-// Build static arm points from specs - computes positions once
-export function buildStaticArmPoints(
-    specs: Map<number, ArmRenderSpec>,
-    centerX: number,
-    centerY: number,
-    innerRadius: number,
-    outerRadius: number
-): Map<number, ArmPoints> {
-    const result = new Map<number, ArmPoints>();
-    for (const [idx, spec] of specs) {
-        result.set(idx, computeArmPoints(spec, centerX, centerY, innerRadius, outerRadius));
-    }
-    return result;
-}
-
-// Convenience function for tests: build static arm points from basic star parameters
-export function buildStaticArms(
-    armCount: number,
-    rotation: number,
-    centerX: number,
-    centerY: number,
-    innerRadius: number,
-    outerRadius: number
-): Map<number, ArmPoints> {
-    const angleStep = getAngleStep(armCount);
-    const halfStep = angleStep / 2;
-    const result = new Map<number, ArmPoints>();
-    for (let i = 0; i < armCount; i++) {
-        const tipAngle = rotation - Math.PI / 2 + i * angleStep;
-        result.set(i, getArmPoints(centerX, centerY, tipAngle, halfStep, innerRadius, outerRadius));
-    }
-    return result;
+export interface TransitionGeometry {
+    getAdjPoints(): ArmPoints;
+    getPivotBase(): Point;
+    getSwingTargetBase(): Point;
 }
 
 export interface TransitionGeometryParams {
@@ -408,143 +354,86 @@ export interface TransitionGeometryParams {
     direction: TransitionDirection;
 }
 
-export interface TransitionGeometry {
-    getInnerRadius(progress: number): number;
-    // Adjacent arm points (SSOT - all geometry derives from this)
-    getAdjPoints(): ArmPoints;
-    // Shared base point (where pivot locks in Phase 2)
-    getSharedBase(): Point;
-}
-
 export interface SingleTransitionParams extends TransitionGeometryParams {
     type: 'adding' | 'removing';
     sourceArmIndex: number;
     armCount: number;
 }
 
-interface AddingCoordinates {
-    addingArmCount: number;
-    addingDirection: TransitionDirection;
-    addingSourceIndex: number;
+function getAddingDirection(type: 'adding' | 'removing', direction: TransitionDirection): TransitionDirection {
+    return type === 'adding' ? direction : -direction as TransitionDirection;
 }
 
-function toAddingCoordinates(
+function getAdjacentIndex(type: 'adding' | 'removing', sourceIndex: number, armCount: number, direction: TransitionDirection): number {
+    return type === 'adding' ? sourceIndex : mod(sourceIndex + direction, armCount);
+}
+
+function createTransitionGeometryFromAdj(
+    adjPoints: ArmPoints,
+    otherNeighborPoints: ArmPoints,
+    addingDirection: TransitionDirection
+): TransitionGeometry {
+    const pivotBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
+    const swingTargetBase = addingDirection === 1 ? otherNeighborPoints.b2 : otherNeighborPoints.b1;
+    return {
+        getAdjPoints: () => adjPoints,
+        getPivotBase: () => pivotBase,
+        getSwingTargetBase: () => swingTargetBase,
+    };
+}
+
+function createTransitionGeometryCore(
     type: 'adding' | 'removing',
-    sourceArmIndex: number,
+    sourceIndex: number,
     armCount: number,
-    direction: TransitionDirection
-): AddingCoordinates {
-    const addingArmCount = type === 'adding' ? armCount : armCount - 1;
-    const addingDirection: TransitionDirection = type === 'adding' ? direction : -direction as TransitionDirection;
-
-    let addingSourceIndex: number;
-    if (type === 'adding') {
-        addingSourceIndex = sourceArmIndex;
-    } else {
-        // For removing: the adjacent arm in the original star becomes the source for adding
-        // Map its original index to the smaller star's index system
-        const originalAdjIndex = mod(sourceArmIndex + direction, armCount);
-        // Indices after the removed arm shift down by 1
-        addingSourceIndex = originalAdjIndex > sourceArmIndex
-            ? originalAdjIndex - 1
-            : originalAdjIndex;
-    }
-
-    return { addingArmCount, addingDirection, addingSourceIndex };
-}
-
-interface FinalPositionResult {
-    tipAngle: number;
-    halfStep: number;
-}
-
-function computFinalPositionForAdding(
-    addingSourceIndex: number,
-    addingDirection: TransitionDirection,
-    addingArmCount: number,
-    rotation: number
-): FinalPositionResult {
-    const targetArmCount = addingArmCount + 1;
-    const targetAngleStep = getAngleStep(targetArmCount);
-    const finalArmIndex = addingDirection === 1 ? addingSourceIndex + 1 : addingSourceIndex;
-    return {
-        tipAngle: rotation - Math.PI / 2 + finalArmIndex * targetAngleStep,
-        halfStep: targetAngleStep / 2,
-    };
-}
-
-function computeFinalPositionForRemoving(
-    sourceArmIndex: number,
-    armCount: number,
-    rotation: number
-): FinalPositionResult {
-    const angleStep = getAngleStep(armCount);
-    return {
-        tipAngle: rotation - Math.PI / 2 + sourceArmIndex * angleStep,
-        halfStep: angleStep / 2,
-    };
+    direction: TransitionDirection,
+    staticArmPoints: Map<number, ArmPoints>
+): TransitionGeometry {
+    const addingDirection = getAddingDirection(type, direction);
+    const adjIndex = getAdjacentIndex(type, sourceIndex, armCount, direction);
+    const otherNeighborIndex = mod(adjIndex - addingDirection, armCount);
+    return createTransitionGeometryFromAdj(
+        staticArmPoints.get(adjIndex)!,
+        staticArmPoints.get(otherNeighborIndex)!,
+        addingDirection
+    );
 }
 
 export function createSingleTransitionGeometry(
     params: SingleTransitionParams,
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
-    const { type, sourceArmIndex, armCount, direction, outerRadius } = params;
-
-    const { addingArmCount, addingDirection } = toAddingCoordinates(type, sourceArmIndex, armCount, direction);
-
-    // The original index of the adjacent arm (for staticArmPoints lookup)
-    const adjOriginalIndex = type === 'adding' ? sourceArmIndex : mod(sourceArmIndex + direction, armCount);
-
-    // SSOT: Get adjacent arm points directly
-    const adjPoints = staticArmPoints.get(adjOriginalIndex)!;
-
-    // Shared base: where pivot locks in Phase 2
-    // For CW: new arm's b1 shares with adjacent's b2
-    // For CCW: new arm's b2 shares with adjacent's b1
-    const sharedBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
-
-    return {
-        getInnerRadius(progress: number): number {
-            return getTransitionInnerRadius(addingArmCount, 'adding', progress, outerRadius);
-        },
-
-        getAdjPoints(): ArmPoints {
-            return adjPoints;
-        },
-
-        getSharedBase(): Point {
-            return sharedBase;
-        },
-    };
+    return createTransitionGeometryCore(
+        params.type, params.sourceArmIndex, params.armCount, params.direction, staticArmPoints
+    );
 }
 
 export function computeTransitionWithGeometry(
     geom: TransitionGeometry,
     params: TransitionGeometryParams,
     type: 'adding' | 'removing',
-    progress: number
+    progress: number,
+    innerRadius: number
 ): ArmPoints {
     const { centerX, centerY, outerRadius, direction } = params;
-    // SSOT: geometry provider works in "adding" coordinates, so use effectiveProgress
     const effectiveProgress = type === 'adding' ? progress : 1 - progress;
-    // For removing, the geometry was created with opposite direction, so use that in computation
     const effectiveDirection: TransitionDirection = type === 'adding' ? direction : -direction as TransitionDirection;
 
-    const minCtx: MinimalTransitionContext = {
+    return computeMinimalTransition({
         centerX,
         centerY,
         outerRadius,
-        innerRadius: geom.getInnerRadius(effectiveProgress),
+        innerRadius,
         adjPoints: geom.getAdjPoints(),
-        sharedBase: geom.getSharedBase(),
+        pivotBase: geom.getPivotBase(),
+        swingTargetBase: geom.getSwingTargetBase(),
         progress: effectiveProgress,
         direction: effectiveDirection,
-        type: 'adding',  // Always use 'adding' since geometry is in adding coordinates
-    };
-
-    return computeMinimalTransition(minCtx);
+        type: 'adding',
+    });
 }
+
+// ============== Overlapping Transition Geometry ==============
 
 export interface OverlappingTransitionParams extends TransitionGeometryParams {
     firstType: 'adding' | 'removing';
@@ -558,188 +447,122 @@ export interface OverlappingTransitionParams extends TransitionGeometryParams {
 
 export function createFirstTransitionGeometry(
     params: OverlappingTransitionParams,
-    getSecondProgress: (firstProgress: number) => number,
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionGeometry {
-    const {
-        firstType, firstSourceIndex, firstStartArmCount, firstDirection,
-        secondType, secondSourceIndex, secondDirection,
-        outerRadius
-    } = params;
-
-    const { addingArmCount, addingDirection } = toAddingCoordinates(
-        firstType, firstSourceIndex, firstStartArmCount, firstDirection
+    return createTransitionGeometryCore(
+        params.firstType, params.firstSourceIndex, params.firstStartArmCount,
+        params.firstDirection, staticArmPoints
     );
+}
 
-    const targetArmCount = addingArmCount + 1;
+function getInsertIndex(type: 'adding' | 'removing', sourceIndex: number, direction: TransitionDirection): number {
+    return type === 'adding' ? (direction === 1 ? sourceIndex + 1 : sourceIndex) : -1;
+}
 
-    // The original index of the adjacent arm (for staticArmPoints lookup)
-    const adjOriginalIndex = firstType === 'adding' ? firstSourceIndex : mod(firstSourceIndex + firstDirection, firstStartArmCount);
+export function isValidSecondSourceIndex(
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstDirection: TransitionDirection,
+    firstStartArmCount: number,
+    secondType: 'adding' | 'removing',
+    secondSourceIndex: number,
+    secondDirection: TransitionDirection,
+): boolean {
+    const intermediateCount = firstType === 'adding' ? firstStartArmCount + 1 : firstStartArmCount - 1;
 
-    // SSOT: Get adjacent arm points directly
-    const adjPoints = staticArmPoints.get(adjOriginalIndex)!;
+    if (firstType === 'removing') {
+        // For removing, check that both transitions don't use the same adjacent arm.
+        // First transition's adjacent is in original space; second's is in intermediate space.
+        // Map first's adjacent to intermediate space (decrement if >= firstSourceIndex).
+        const firstAdj = mod(firstSourceIndex + firstDirection, firstStartArmCount);
+        const firstAdjInIntermediate = firstAdj > firstSourceIndex ? firstAdj - 1 : firstAdj;
 
-    // Shared base: where pivot locks in Phase 2
-    const sharedBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
+        const addingDirection = getAddingDirection(secondType, secondDirection);
+        const secondAdj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+        const secondOtherNeighbor = mod(secondAdj - addingDirection, intermediateCount);
 
-    const getOriginalProgress = (addingProgress: number): number => {
-        return firstType === 'adding' ? addingProgress : 1 - addingProgress;
-    };
+        return secondAdj !== firstAdjInIntermediate && secondOtherNeighbor !== firstAdjInIntermediate;
+    }
 
-    return {
-        getInnerRadius(addingProgress: number): number {
-            const origP1 = getOriginalProgress(addingProgress);
-            const p2 = getSecondProgress(origP1);
-            return computeOverlappingInnerRadius({
-                firstType,
-                firstProgress: origP1,
-                firstSourceIndex,
-                firstStartArmCount,
-                secondProgress: p2,
-                secondSourceIndex,
-                secondStartArmCount: targetArmCount,
-            });
-        },
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
+    const addingDirection = getAddingDirection(secondType, secondDirection);
+    const adj = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+    const otherNeighbor = mod(adj - addingDirection, intermediateCount);
 
-        getAdjPoints(): ArmPoints {
-            return adjPoints;
-        },
+    return adj !== firstInsertIdx && otherNeighbor !== firstInsertIdx;
+}
 
-        getSharedBase(): Point {
-            return sharedBase;
-        },
-    };
+function mapIntermediateToOriginal(
+    intermediateIdx: number,
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstInsertIdx: number
+): number {
+    if (firstType === 'removing') {
+        return intermediateIdx >= firstSourceIndex ? intermediateIdx + 1 : intermediateIdx;
+    }
+    return intermediateIdx > firstInsertIdx ? intermediateIdx - 1 : intermediateIdx;
 }
 
 export function createSecondTransitionGeometry(
     params: OverlappingTransitionParams,
-    getFirstProgress: (secondProgress: number) => number,
     staticArmPoints: Map<number, ArmPoints>,
-    firstTransitionArm: TransitionArmRenderSpec | null,
-    firstCompleted: boolean
 ): TransitionGeometry {
     const {
         firstType, firstSourceIndex, firstStartArmCount, firstDirection,
         secondType, secondSourceIndex, secondDirection,
-        outerRadius
     } = params;
 
     const intermediateCount = firstType === 'adding' ? firstStartArmCount + 1 : firstStartArmCount - 1;
+    const addingDirection = getAddingDirection(secondType, secondDirection);
+    const adjInIntermediate = getAdjacentIndex(secondType, secondSourceIndex, intermediateCount, secondDirection);
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
 
-    // Convert to adding coordinates using the shared helper
-    const { addingArmCount, addingDirection } = toAddingCoordinates(
-        secondType, secondSourceIndex, intermediateCount, secondDirection
-    );
-
-    const getOriginalProgress = (addingProgress: number): number => {
-        return secondType === 'adding' ? addingProgress : 1 - addingProgress;
-    };
-
-    // The adjacent arm in intermediate star space (not mapped to adding space)
-    // For adding: adjacent = source arm we unfold from
-    // For removing: adjacent = arm in direction we collapse toward
-    const secondAdjIndexInIntermediate = secondType === 'adding'
-        ? secondSourceIndex
-        : mod(secondSourceIndex + secondDirection, intermediateCount);
-
-    // Check if the adjacent arm is the new arm from first transition (prohibited)
-    const firstInsertIdx = firstType === 'adding'
-        ? (firstDirection === 1 ? firstSourceIndex + 1 : firstSourceIndex)
-        : -1;
-    const isSecondAdjNewArm = firstType === 'adding' && secondAdjIndexInIntermediate === firstInsertIdx;
-
-    if (isSecondAdjNewArm) {
+    if (firstType === 'adding' && adjInIntermediate === firstInsertIdx) {
         throw new Error('Second transition adjacent arm cannot be the new arm from first transition');
     }
 
-    // Look up adjacent arm from staticArmPoints
-    // When firstCompleted=true, staticArmPoints is keyed by intermediate indices (direct lookup)
-    // When firstCompleted=false, staticArmPoints is keyed by original indices (need mapping)
-    let adjLookupIndex: number;
-    if (firstCompleted) {
-        adjLookupIndex = secondAdjIndexInIntermediate;
-    } else if (firstType === 'removing') {
-        adjLookupIndex = secondAdjIndexInIntermediate >= firstSourceIndex
-            ? secondAdjIndexInIntermediate + 1
-            : secondAdjIndexInIntermediate;
-    } else {
-        adjLookupIndex = secondAdjIndexInIntermediate > firstInsertIdx
-            ? secondAdjIndexInIntermediate - 1
-            : secondAdjIndexInIntermediate;
-    }
-
+    const adjLookupIndex = mapIntermediateToOriginal(adjInIntermediate, firstType, firstSourceIndex, firstInsertIdx);
     const adjPoints = staticArmPoints.get(adjLookupIndex);
     if (!adjPoints) {
         throw new Error(`Adjacent arm at index ${adjLookupIndex} not found in staticArmPoints`);
     }
 
-    // Shared base: where pivot locks in Phase 2
-    const sharedBase = addingDirection === 1 ? adjPoints.b2 : adjPoints.b1;
-
-    return {
-        getInnerRadius(addingProgress: number): number {
-            const origP2 = getOriginalProgress(addingProgress);
-            const p1 = getFirstProgress(origP2);
-            return computeOverlappingInnerRadius({
-                firstType,
-                firstProgress: p1,
-                firstSourceIndex,
-                firstStartArmCount,
-                secondProgress: origP2,
-                secondSourceIndex,
-                secondStartArmCount: intermediateCount,
-            });
-        },
-
-        getAdjPoints(): ArmPoints {
-            return adjPoints;
-        },
-
-        getSharedBase(): Point {
-            return sharedBase;
-        },
-    };
-}
-
-// ============== Overlapping Transition Support ==============
-
-export interface OverlappingTransitionState {
-    firstType: 'adding' | 'removing';
-    firstProgress: number;
-    firstSourceIndex: number;
-    firstStartArmCount: number;
-    secondProgress: number | null;  // null if second hasn't started
-    secondSourceIndex: number | null;
-    secondStartArmCount: number | null;
-}
-
-export function selectDisjointSourceArm(firstSourceIndex: number, armCount: number): number {
-    const offset = Math.floor(armCount / 2);
-    return (firstSourceIndex + offset) % armCount;
-}
-
-export function computeOverlappingInnerRadius(state: OverlappingTransitionState): number {
-    const startCount = state.firstStartArmCount;
-    const endCount = state.secondStartArmCount !== null
-        ? state.secondStartArmCount + (state.firstType === 'adding' ? 1 : -1)
-        : startCount + (state.firstType === 'adding' ? 1 : -1);
-
-    let combinedProgress: number;
-    if (state.secondProgress !== null) {
-        combinedProgress = (state.firstProgress + state.secondProgress) / 2;
-    } else {
-        combinedProgress = state.firstProgress;
+    const otherNeighborInIntermediate = mod(adjInIntermediate - addingDirection, intermediateCount);
+    if (firstType === 'adding' && otherNeighborInIntermediate === firstInsertIdx) {
+        throw new Error('Second transition other neighbor cannot be the new arm from first transition');
     }
 
-    const startRatio = getInnerRadiusRatio(startCount);
-    const endRatio = getInnerRadiusRatio(endCount);
-    return lerp(startRatio, endRatio, combinedProgress) * STAR_OUTER_RADIUS;
+    const otherNeighborOriginal = mapIntermediateToOriginal(otherNeighborInIntermediate, firstType, firstSourceIndex, firstInsertIdx);
+    const otherNeighborPoints = staticArmPoints.get(otherNeighborOriginal);
+    if (!otherNeighborPoints) {
+        throw new Error(`Other neighbor arm at index ${otherNeighborOriginal} not found in staticArmPoints`);
+    }
+
+    return createTransitionGeometryFromAdj(adjPoints, otherNeighborPoints, addingDirection);
 }
 
+// ============== Arm Redistribution ==============
 
-export interface ArmRedistributionResult {
-    tipAngle: number;
-    halfStep: number;
+function computeRedistributionT(type: 'adding' | 'removing', progress: number): number {
+    return type === 'adding'
+        ? (progress <= 0.5 ? 0 : (progress - 0.5) / 0.5)
+        : Math.min(progress / 0.5, 1);
+}
+
+function computeTargetArmIndex(
+    armIndex: number,
+    transitionType: 'adding' | 'removing',
+    sourceIndex: number,
+    direction: TransitionDirection
+): number {
+    if (transitionType === 'removing') {
+        return armIndex > sourceIndex ? armIndex - 1 : armIndex;
+    }
+    const shouldShift = direction === 1
+        ? (armIndex > sourceIndex)
+        : (armIndex >= sourceIndex);
+    return shouldShift ? armIndex + 1 : armIndex;
 }
 
 export function computeArmRedistribution(
@@ -752,70 +575,26 @@ export function computeArmRedistribution(
     transitionDirection: TransitionDirection,
     currentArmCount: number,
     rotation: number
-): ArmRedistributionResult {
-    // Redistribution has two components:
-    // 1. Angular redistribution: arms move to new angular positions
-    // 2. HalfStep change: arms shrink/expand to make room for new arm
-    //
-    // Phase timing (per star.txt):
-    // - Phase 1: Transitioning arm rotates, other arms only change halfStep (no angular movement)
-    // - Phase 2: Transitioning arm pivots, other arms redistribute angularly
-    //
-    // For ADDING:
-    //   Phase 1: New arm unfolds from adjacent, others stay put (only halfStep shrinks)
-    //   Phase 2: New arm pivots to final position, others redistribute angularly
-    //
-    // For REMOVING:
-    //   Phase 1: Source arm rotates to adjacent tip, others stay put (only halfStep expands)
-    //   Phase 2: Source arm collapses onto adjacent, others redistribute angularly
-
+): ArmAngleSpec {
     const targetArmCount = transitionType === 'adding' ? currentArmCount + 1 : currentArmCount - 1;
     const targetAngleStep = getAngleStep(targetArmCount);
     const targetHalfStep = targetAngleStep / 2;
+    const redistributionT = computeRedistributionT(transitionType, transitionProgress);
 
-    // Phase timing differs for adding vs removing:
-    // - REMOVING: Phase 1 is when other arms redistribute (making room as source collapses)
-    // - ADDING: Phase 2 is when other arms redistribute (spreading apart as new arm extends)
-    // Both angular position and halfStep follow the same phase timing
-    const redistributionT = transitionType === 'removing'
-        ? Math.min(transitionProgress / 0.5, 1)  // Complete by p=0.5
-        : (transitionProgress <= 0.5 ? 0 : (transitionProgress - 0.5) / 0.5);  // Start at p=0.5
+    const targetIdx = computeTargetArmIndex(armIndex, transitionType, transitionSourceIndex, transitionDirection);
+    const targetTipAngle = getTipAngle(rotation, targetIdx, targetAngleStep);
 
-    // Compute target angular position
-    let targetTipAngle: number;
-    if (transitionType === 'removing') {
-        // For removing: arms shift to fill the gap left by source
-        if (armIndex > transitionSourceIndex) {
-            targetTipAngle = rotation - Math.PI / 2 + (armIndex - 1) * targetAngleStep;
-        } else {
-            targetTipAngle = rotation - Math.PI / 2 + armIndex * targetAngleStep;
-        }
-    } else {
-        // For adding: arms shift to make room for new arm
-        // Insert position depends on direction
-        const shouldShift = transitionDirection === 1
-            ? (armIndex > transitionSourceIndex)
-            : (armIndex >= transitionSourceIndex);
-
-        if (shouldShift) {
-            targetTipAngle = rotation - Math.PI / 2 + (armIndex + 1) * targetAngleStep;
-        } else {
-            targetTipAngle = rotation - Math.PI / 2 + armIndex * targetAngleStep;
-        }
-    }
-
-    // Interpolate both angular position and halfStep using the same phase timing
-    const tipAngle = currentTipAngle + (targetTipAngle - currentTipAngle) * redistributionT;
-    const halfStep = currentHalfStep + (targetHalfStep - currentHalfStep) * redistributionT;
-
-    return { tipAngle, halfStep };
+    return {
+        tipAngle: lerp(currentTipAngle, targetTipAngle, redistributionT),
+        halfStep: lerp(currentHalfStep, targetHalfStep, redistributionT),
+    };
 }
 
 export interface OverlappingRedistributionParams {
     originalArmIndex: number;
     startArmCount: number;
     firstSourceIndex: number;
-    secondSourceIndex: number; // index in INTERMEDIATE star
+    secondSourceIndex: number;
     firstType: 'adding' | 'removing';
     secondType: 'adding' | 'removing';
     firstDirection: TransitionDirection;
@@ -825,7 +604,31 @@ export interface OverlappingRedistributionParams {
     rotation: number;
 }
 
-export function computeOverlappingArmRedistribution(params: OverlappingRedistributionParams): ArmRedistributionResult | null {
+function computeGapContribution(
+    armIndex: number,
+    type: 'adding' | 'removing',
+    sourceIndex: number,
+    insertIdx: number,
+    gap: number
+): number {
+    if (type === 'adding') {
+        return armIndex >= insertIdx ? gap : 0;
+    }
+    return armIndex > sourceIndex ? gap : 0;
+}
+
+function mapToIntermediateIndex(
+    originalIdx: number,
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstInsertIdx: number
+): number {
+    if (firstType === 'adding' && originalIdx >= firstInsertIdx) return originalIdx + 1;
+    if (firstType === 'removing' && originalIdx > firstSourceIndex) return originalIdx - 1;
+    return originalIdx;
+}
+
+export function computeOverlappingArmRedistribution(params: OverlappingRedistributionParams): ArmAngleSpec {
     const {
         originalArmIndex: i,
         startArmCount,
@@ -840,115 +643,38 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
         rotation,
     } = params;
 
-    // Skip first source arm only for removing
-    if (firstType === 'removing' && i === firstSourceIndex) return null;
-
-    // Map second source back to original to check if this arm is the second source
-    const firstInsertIdx = firstDirection === 1 ? firstSourceIndex + 1 : firstSourceIndex;
-    let secondSourceOriginal: number;
-    if (firstType === 'removing') {
-        secondSourceOriginal = secondSourceIndex >= firstSourceIndex
-            ? secondSourceIndex + 1
-            : secondSourceIndex;
-    } else {
-        secondSourceOriginal = secondSourceIndex > firstInsertIdx
-            ? secondSourceIndex - 1
-            : secondSourceIndex;
-    }
-    // Skip second source arm only for removing AND only when second transition has started
-    if (secondType === 'removing' && i === secondSourceOriginal && p2 > 0) return null;
-
-    const baseAngleStep = getAngleStep(startArmCount);
+    const firstInsertIdx = getInsertIndex(firstType, firstSourceIndex, firstDirection);
     const intermediateCount = firstType === 'adding' ? startArmCount + 1 : startArmCount - 1;
-    const finalCount = secondType === 'adding' ? intermediateCount + 1 : intermediateCount - 1;
-    const finalAngleStep = getAngleStep(finalCount);
-    const finalHalfStep = finalAngleStep / 2;
 
-    const origTipAngle = rotation - Math.PI / 2 + i * baseAngleStep;
-    const origHalfStep = baseAngleStep / 2;
+    const firstT = computeRedistributionT(firstType, p1);
+    const secondT = computeRedistributionT(secondType, p2);
 
-    // Compute final index directly from original, accounting for both transitions
-    // For each transition: adding shifts indices >= insertIdx up, removing shifts indices > sourceIdx down
-    let finalIndex = i;
+    const firstDelta = firstType === 'adding' ? firstT : -firstT;
+    const secondDelta = secondType === 'adding' ? secondT : -secondT;
+    const totalArmUnits = startArmCount + firstDelta + secondDelta;
+    const anglePerArm = 2 * Math.PI / totalArmUnits;
 
-    // Apply first transition's effect on index
-    if (firstType === 'adding') {
-        if (i >= firstInsertIdx) finalIndex++;
-    } else {
-        if (i > firstSourceIndex) finalIndex--;
-    }
+    const firstGap = anglePerArm * firstDelta;
+    const secondGap = anglePerArm * secondDelta;
 
-    // Apply second transition's effect on index (using intermediate indices)
-    // Need to map secondSourceIndex to where it would insert/remove in the final indexing
-    const secondInsertIdx = secondDirection === 1 ? secondSourceIndex + 1 : secondSourceIndex;
-    if (secondType === 'adding') {
-        if (finalIndex >= secondInsertIdx) finalIndex++;
-    } else {
-        if (finalIndex > secondSourceIndex) finalIndex--;
-    }
+    const secondInsertIdx = secondDirection === 1
+        ? mod(secondSourceIndex + 1, intermediateCount)
+        : secondSourceIndex;
+    const intermediateIdx = mapToIntermediateIndex(i, firstType, firstSourceIndex, firstInsertIdx);
 
-    const finalTipAngle = rotation - Math.PI / 2 + finalIndex * finalAngleStep;
+    const gapsBefore =
+        computeGapContribution(i, firstType, firstSourceIndex, firstInsertIdx, firstGap) +
+        computeGapContribution(intermediateIdx, secondType, secondSourceIndex, secondInsertIdx, secondGap);
 
-    // Compute redistribution progress for each transition:
-    // - REMOVING: redistribution happens in Phase 1 (complete by p=0.5)
-    // - ADDING: redistribution happens in Phase 2 (starts at p=0.5)
-    const firstT = firstType === 'removing'
-        ? Math.min(p1 / 0.5, 1)
-        : (p1 <= 0.5 ? 0 : (p1 - 0.5) / 0.5);
-    const secondT = secondType === 'removing'
-        ? Math.min(p2 / 0.5, 1)
-        : (p2 <= 0.5 ? 0 : (p2 - 0.5) / 0.5);
-
-    // Compute how much of the total angle change comes from each transition
-    const totalAngleChange = finalTipAngle - origTipAngle;
-    const totalHalfStepChange = finalHalfStep - origHalfStep;
-
-    // Determine which portion of the change is due to each transition
-    // by computing what the intermediate position would be
-    let intermediateIndex = i;
-    if (firstType === 'adding') {
-        if (i >= firstInsertIdx) intermediateIndex++;
-    } else {
-        if (i > firstSourceIndex) intermediateIndex--;
-    }
-    const intermediateAngleStep = getAngleStep(intermediateCount);
-    const intermediateTipAngle = rotation - Math.PI / 2 + intermediateIndex * intermediateAngleStep;
-    const intermediateHalfStep = intermediateAngleStep / 2;
-
-    const firstAngleChange = intermediateTipAngle - origTipAngle;
-    const secondAngleChange = finalTipAngle - intermediateTipAngle;
-    const firstHalfStepChange = intermediateHalfStep - origHalfStep;
-    const secondHalfStepChange = finalHalfStep - intermediateHalfStep;
-
-    // Apply each transition's contribution based on its phase timing
-    const tipAngle = origTipAngle + firstAngleChange * firstT + secondAngleChange * secondT;
-    const halfStep = origHalfStep + firstHalfStepChange * firstT + secondHalfStepChange * secondT;
-
-    return { tipAngle, halfStep };
-}
-
-// ============== Overlapping Transition Input Transformation ==============
-
-export interface FirstTransitionState {
-    type: 'adding' | 'removing';
-    direction: TransitionDirection;
-    progress: number;
-    sourceArmIndex: number;
-    startArmCount: number;
+    return {
+        tipAngle: rotation + TIP_ANGLE_OFFSET + i * anglePerArm + gapsBefore,
+        halfStep: anglePerArm / 2,
+    };
 }
 
 // ============== Render Spec System ==============
 
-export interface ArmRenderSpec {
-    tipAngle: number;
-    halfStep: number;
-}
-
-export interface StaticArmPoints extends ArmPoints {
-    armIndex: number;
-}
-
-export interface TransitionArmRenderSpec extends ArmRenderSpec {
+export interface ArmRenderSpec extends ArmAngleSpec {
     tip: Point;
     b1: Point;
     b2: Point;
@@ -956,8 +682,8 @@ export interface TransitionArmRenderSpec extends ArmRenderSpec {
 
 export interface TransitionRenderSpec {
     staticArms: Map<number, ArmRenderSpec>;
-    firstTransitionArm: TransitionArmRenderSpec | null;
-    secondTransitionArm: TransitionArmRenderSpec | null;
+    firstTransitionArm: ArmRenderSpec | null;
+    secondTransitionArm: ArmRenderSpec | null;
     innerRadius: number;
 }
 
@@ -969,11 +695,27 @@ export interface SingleTransitionState {
     startArmCount: number;
 }
 
+export type FirstTransitionState = SingleTransitionState;
+
 export interface PlannedTransitionBundle {
     first: SingleTransitionState;
     second: SingleTransitionState | null;
     overlapStart: number | null;
-    firstCompleted: boolean;
+}
+
+export function computeTransitionProgress(
+    bundleProgress: number,
+    overlapStart: number
+): { p1: number; p2: number } {
+    // Each transition runs at the same speed (0→1 takes the same time)
+    // Bundle completes when second transition finishes
+    // Total duration = 1 + (1 - overlapStart) = 2 - overlapStart
+    const totalDuration = 2 - overlapStart;
+
+    const p1 = Math.min(bundleProgress * totalDuration, 1);
+    const p2 = Math.max(0, Math.min((bundleProgress * totalDuration - overlapStart), 1));
+
+    return { p1, p2 };
 }
 
 export interface RenderSpecParams {
@@ -985,44 +727,29 @@ export interface RenderSpecParams {
     outerRadius: number;
 }
 
-function computeHiddenIndices(
-    bundle: PlannedTransitionBundle,
-    armCount: number
-): Set<number> {
+function computeHiddenIndices(bundle: PlannedTransitionBundle, armCount: number): Set<number> {
     const hidden = new Set<number>();
+    const { first, second } = bundle;
 
-    if (bundle.firstCompleted) {
-        // After first completes, we're in INTERMEDIATE star space
-        // Only hide the second transition's source if still in progress
-        if (bundle.second?.type === 'removing' && bundle.second.progress < 1) {
-            hidden.add(bundle.second.sourceArmIndex);
-        }
-    } else {
-        // In ORIGINAL star space
-        if (bundle.first.type === 'removing' && bundle.first.progress < 1) {
-            hidden.add(bundle.first.sourceArmIndex);
-        }
+    if (first.type === 'removing') {
+        hidden.add(first.sourceArmIndex);
+    }
 
-        // For second transition (if active and in progress), map its intermediate index to original
-        if (bundle.second?.type === 'removing' && bundle.second.progress > 0 && bundle.second.progress < 1) {
-            const { first, second } = bundle;
-            let originalIndex: number;
-            if (first.type === 'removing') {
-                // First is removing: intermediate indices >= first.sourceArmIndex shift up
-                originalIndex = second.sourceArmIndex >= first.sourceArmIndex
-                    ? second.sourceArmIndex + 1
-                    : second.sourceArmIndex;
-            } else {
-                // First is adding: intermediate indices > insertIdx shift down
-                const insertIdx = first.direction === 1
-                    ? first.sourceArmIndex + 1
-                    : first.sourceArmIndex;
-                originalIndex = second.sourceArmIndex > insertIdx
-                    ? second.sourceArmIndex - 1
-                    : second.sourceArmIndex;
-            }
-            hidden.add(originalIndex);
+    if (second?.type === 'removing' && second.progress > 0 && second.progress < 1) {
+        let originalIndex: number;
+        if (first.type === 'removing') {
+            originalIndex = second.sourceArmIndex >= first.sourceArmIndex
+                ? second.sourceArmIndex + 1
+                : second.sourceArmIndex;
+        } else {
+            const insertIdx = first.direction === 1
+                ? first.sourceArmIndex + 1
+                : first.sourceArmIndex;
+            originalIndex = second.sourceArmIndex > insertIdx
+                ? second.sourceArmIndex - 1
+                : second.sourceArmIndex;
         }
+        hidden.add(originalIndex);
     }
 
     return hidden;
@@ -1045,10 +772,10 @@ export function computeStaticArmSpec(
     bundle: PlannedTransitionBundle | null,
     armCount: number,
     rotation: number
-): ArmRenderSpec {
+): ArmAngleSpec {
     const baseAngleStep = getAngleStep(armCount);
-    let tipAngle = rotation - Math.PI / 2 + armIndex * baseAngleStep;
-    let halfStep = baseAngleStep / 2;
+    const tipAngle = getTipAngle(rotation, armIndex, baseAngleStep);
+    const halfStep = baseAngleStep / 2;
 
     if (!bundle) {
         return { tipAngle, halfStep };
@@ -1057,29 +784,9 @@ export function computeStaticArmSpec(
     const { first, second } = bundle;
 
     if (second) {
-        // Both transitions - use overlapping redistribution
-        // Use bundle.first.startArmCount as the authoritative original count
-        const originalArmCount = first.startArmCount;
-
-        // When firstCompleted=true, armIndex is in intermediate space and needs mapping to original
-        let originalArmIndex = armIndex;
-        if (bundle.firstCompleted) {
-            const insertIdx = first.direction === 1 ? first.sourceArmIndex + 1 : first.sourceArmIndex;
-            if (first.type === 'adding') {
-                if (armIndex === insertIdx) {
-                    // This is the newly added arm - no original index, skip it
-                    return { tipAngle, halfStep };
-                }
-                originalArmIndex = armIndex > insertIdx ? armIndex - 1 : armIndex;
-            } else {
-                // Removing: intermediate index maps up past the removed arm
-                originalArmIndex = armIndex >= first.sourceArmIndex ? armIndex + 1 : armIndex;
-            }
-        }
-
-        const result = computeOverlappingArmRedistribution({
-            originalArmIndex,
-            startArmCount: originalArmCount,
+        return computeOverlappingArmRedistribution({
+            originalArmIndex: armIndex,
+            startArmCount: first.startArmCount,
             firstSourceIndex: first.sourceArmIndex,
             secondSourceIndex: second.sourceArmIndex,
             firstType: first.type,
@@ -1090,21 +797,26 @@ export function computeStaticArmSpec(
             p2: second.progress,
             rotation,
         });
-        if (result) {
-            return result;
-        }
-    } else if (!second) {
-        // Only first transition active
-        const result = computeArmRedistribution(
-            armIndex, tipAngle, halfStep,
-            first.type, first.progress,
-            first.sourceArmIndex, first.direction,
-            armCount, rotation
-        );
-        return result;
     }
 
-    return { tipAngle, halfStep };
+    return computeArmRedistribution(
+        armIndex, tipAngle, halfStep,
+        first.type, first.progress,
+        first.sourceArmIndex, first.direction,
+        armCount, rotation
+    );
+}
+
+function armPointsToRenderSpec(arm: ArmPoints, centerX: number, centerY: number): ArmRenderSpec {
+    const b1Angle = angle(centerX, centerY, arm.b1.x, arm.b1.y);
+    const b2Angle = angle(centerX, centerY, arm.b2.x, arm.b2.y);
+    let tipAngle = (b1Angle + b2Angle) / 2;
+    if (Math.abs(b2Angle - b1Angle) > Math.PI) {
+        tipAngle = tipAngle + (tipAngle > 0 ? -Math.PI : Math.PI);
+    }
+    const halfStep = Math.abs(normalizeAngle(b2Angle - b1Angle)) / 2;
+
+    return { tipAngle, halfStep, tip: arm.t, b1: arm.b1, b2: arm.b2 };
 }
 
 interface TransitionComputeParams {
@@ -1112,160 +824,116 @@ interface TransitionComputeParams {
     centerY: number;
     outerRadius: number;
     rotation: number;
+    innerRadius: number;
 }
 
-function computeFirstTransitionArm(
+function buildOverlappingParams(
     bundle: PlannedTransitionBundle,
-    params: TransitionComputeParams,
-    staticArmPoints: Map<number, ArmPoints>
-): TransitionArmRenderSpec | null {
-    const { first, second, overlapStart } = bundle;
-    if (first.progress >= 1) return null;
-
+    params: TransitionComputeParams
+): OverlappingTransitionParams {
+    const { first, second } = bundle;
     const { centerX, centerY, outerRadius, rotation } = params;
-
-    let arm: ArmPoints;
-    if (second) {
-        const overlap = overlapStart ?? 0;
-        const getSecondProgress = (fp: number) => Math.max(0, (fp - overlap) / (1 - overlap));
-
-        const overlappingParams: OverlappingTransitionParams = {
-            centerX, centerY, outerRadius, rotation,
-            direction: first.direction,
-            firstType: first.type,
-            firstSourceIndex: first.sourceArmIndex,
-            firstStartArmCount: first.startArmCount,
-            firstDirection: first.direction,
-            secondType: second.type,
-            secondSourceIndex: second.sourceArmIndex,
-            secondDirection: second.direction,
-        };
-
-        const geom = createFirstTransitionGeometry(overlappingParams, getSecondProgress, staticArmPoints);
-        arm = computeTransitionWithGeometry(
-            geom,
-            { centerX, centerY, outerRadius, rotation, direction: first.direction },
-            first.type,
-            first.progress
-        );
-    } else {
-        const geom = createSingleTransitionGeometry({
-            type: first.type,
-            sourceArmIndex: first.sourceArmIndex,
-            armCount: first.startArmCount,
-            centerX, centerY, outerRadius, rotation,
-            direction: first.direction,
-        }, staticArmPoints);
-        arm = computeTransitionWithGeometry(
-            geom,
-            { centerX, centerY, outerRadius, rotation, direction: first.direction },
-            first.type,
-            first.progress
-        );
-    }
-
-    const b1Angle = angle(centerX, centerY, arm.b1.x, arm.b1.y);
-    const b2Angle = angle(centerX, centerY, arm.b2.x, arm.b2.y);
-    let tipAngle = (b1Angle + b2Angle) / 2;
-    if (Math.abs(b2Angle - b1Angle) > Math.PI) {
-        tipAngle = tipAngle + (tipAngle > 0 ? -Math.PI : Math.PI);
-    }
-    const halfStep = Math.abs(normalizeAngle(b2Angle - b1Angle)) / 2;
-
-    return { tipAngle, halfStep, tip: arm.t, b1: arm.b1, b2: arm.b2 };
-}
-
-function computeSecondTransitionArm(
-    bundle: PlannedTransitionBundle,
-    params: TransitionComputeParams,
-    staticArmPoints: Map<number, ArmPoints>,
-    firstTransitionArm: TransitionArmRenderSpec | null
-): TransitionArmRenderSpec | null {
-    const { first, second, overlapStart } = bundle;
-    if (!second || second.progress <= 0 || second.progress >= 1) return null;
-
-    const { centerX, centerY, outerRadius, rotation } = params;
-    const overlap = overlapStart ?? 0;
-    const getFirstProgress = (sp: number) => overlap + sp * (1 - overlap);
-
-    // staticArmPoints is keyed based on what getRenderSpec builds:
-    // - When !firstCompleted: keyed by original indices (0..startArmCount-1)
-    // - When firstCompleted: keyed by intermediate indices (0..intermediateCount-1)
-    // createSecondTransitionGeometry handles this via the firstCompleted parameter
-
-    const overlappingParams: OverlappingTransitionParams = {
+    return {
         centerX, centerY, outerRadius, rotation,
         direction: first.direction,
         firstType: first.type,
         firstSourceIndex: first.sourceArmIndex,
         firstStartArmCount: first.startArmCount,
         firstDirection: first.direction,
-        secondType: second.type,
-        secondSourceIndex: second.sourceArmIndex,
-        secondDirection: second.direction,
+        secondType: second!.type,
+        secondSourceIndex: second!.sourceArmIndex,
+        secondDirection: second!.direction,
     };
+}
 
-    const geom = createSecondTransitionGeometry(overlappingParams, getFirstProgress, staticArmPoints, firstTransitionArm, bundle.firstCompleted);
+function computeFirstTransitionArm(
+    bundle: PlannedTransitionBundle,
+    params: TransitionComputeParams,
+    staticArmPoints: Map<number, ArmPoints>
+): ArmRenderSpec | null {
+    const { first, second } = bundle;
+    if (!second && first.progress >= 1) return null;
+
+    const { centerX, centerY, outerRadius, rotation, innerRadius } = params;
+    const firstProgress = Math.min(first.progress, 1);
+
+    const geom = second
+        ? createFirstTransitionGeometry(buildOverlappingParams(bundle, params), staticArmPoints)
+        : createSingleTransitionGeometry({
+            type: first.type,
+            sourceArmIndex: first.sourceArmIndex,
+            armCount: first.startArmCount,
+            centerX, centerY, outerRadius, rotation,
+            direction: first.direction,
+        }, staticArmPoints);
+
+    const arm = computeTransitionWithGeometry(
+        geom,
+        { centerX, centerY, outerRadius, rotation, direction: first.direction },
+        first.type,
+        firstProgress,
+        innerRadius
+    );
+
+    return armPointsToRenderSpec(arm, centerX, centerY);
+}
+
+function computeSecondTransitionArm(
+    bundle: PlannedTransitionBundle,
+    params: TransitionComputeParams,
+    staticArmPoints: Map<number, ArmPoints>,
+): ArmRenderSpec | null {
+    const { second } = bundle;
+    if (!second || second.progress <= 0 || second.progress >= 1) return null;
+
+    const { centerX, centerY, outerRadius, rotation, innerRadius } = params;
+
+    const geom = createSecondTransitionGeometry(buildOverlappingParams(bundle, params), staticArmPoints);
     const arm = computeTransitionWithGeometry(
         geom,
         { centerX, centerY, outerRadius, rotation, direction: second.direction },
         second.type,
-        second.progress
+        second.progress,
+        innerRadius
     );
 
-    const b1Angle = angle(centerX, centerY, arm.b1.x, arm.b1.y);
-    const b2Angle = angle(centerX, centerY, arm.b2.x, arm.b2.y);
-    let tipAngle = (b1Angle + b2Angle) / 2;
-    if (Math.abs(b2Angle - b1Angle) > Math.PI) {
-        tipAngle = tipAngle + (tipAngle > 0 ? -Math.PI : Math.PI);
-    }
-    const halfStep = Math.abs(normalizeAngle(b2Angle - b1Angle)) / 2;
+    return armPointsToRenderSpec(arm, centerX, centerY);
+}
 
-    return { tipAngle, halfStep, tip: arm.t, b1: arm.b1, b2: arm.b2 };
+function specToRenderSpec(
+    spec: ArmAngleSpec,
+    centerX: number, centerY: number,
+    innerRadius: number, outerRadius: number
+): ArmRenderSpec {
+    const points = getArmPoints(centerX, centerY, spec, innerRadius, outerRadius);
+    return { ...spec, tip: points.t, b1: points.b1, b2: points.b2 };
 }
 
 export function getRenderSpec(params: RenderSpecParams): TransitionRenderSpec {
     const { bundle, armCount, rotation, centerX, centerY, outerRadius } = params;
 
+    const innerRadius = bundle ? computeBundleInnerRadius(bundle) : getInnerRadiusForArmCount(armCount);
+    const hidden = bundle ? computeHiddenIndices(bundle, armCount) : new Set<number>();
+
+    const allAngleSpecs = new Map<number, ArmAngleSpec>();
+    for (let i = 0; i < armCount; i++) {
+        allAngleSpecs.set(i, computeStaticArmSpec(i, bundle, armCount, rotation));
+    }
+    const allArmPoints = buildStaticArmPoints(allAngleSpecs, centerX, centerY, innerRadius, outerRadius);
+
     const staticArms = new Map<number, ArmRenderSpec>();
-    let innerRadius: number;
-    let firstTransitionArm: TransitionArmRenderSpec | null = null;
-    let secondTransitionArm: TransitionArmRenderSpec | null = null;
-
-    if (!bundle) {
-        innerRadius = getInnerRadiusForArmCount(armCount);
-        const baseAngleStep = getAngleStep(armCount);
-        for (let i = 0; i < armCount; i++) {
-            staticArms.set(i, {
-                tipAngle: rotation - Math.PI / 2 + i * baseAngleStep,
-                halfStep: baseAngleStep / 2,
-            });
-        }
-    } else {
-        innerRadius = computeBundleInnerRadius(bundle);
-        const hidden = computeHiddenIndices(bundle, armCount);
-
-        for (let i = 0; i < armCount; i++) {
-            if (hidden.has(i)) continue;
-
-            const spec = computeStaticArmSpec(i, bundle, armCount, rotation);
-            if (spec) {
-                staticArms.set(i, spec);
-            }
-        }
-
-        // Compute point positions from specs (SSOT - computed once)
-        const staticArmPoints = buildStaticArmPoints(staticArms, centerX, centerY, innerRadius, outerRadius);
-
-        const transitionParams = { centerX, centerY, outerRadius, rotation };
-        firstTransitionArm = computeFirstTransitionArm(bundle, transitionParams, staticArmPoints);
-        secondTransitionArm = computeSecondTransitionArm(bundle, transitionParams, staticArmPoints, firstTransitionArm);
+    for (const [i, spec] of allAngleSpecs) {
+        if (hidden.has(i)) continue;
+        staticArms.set(i, specToRenderSpec(spec, centerX, centerY, innerRadius, outerRadius));
     }
 
-    return {
-        staticArms,
-        firstTransitionArm,
-        secondTransitionArm,
-        innerRadius,
-    };
+    let firstTransitionArm: ArmRenderSpec | null = null;
+    let secondTransitionArm: ArmRenderSpec | null = null;
+    if (bundle) {
+        const transitionParams = { centerX, centerY, outerRadius, rotation, innerRadius };
+        firstTransitionArm = computeFirstTransitionArm(bundle, transitionParams, allArmPoints);
+        secondTransitionArm = computeSecondTransitionArm(bundle, transitionParams, allArmPoints);
+    }
+
+    return { staticArms, firstTransitionArm, secondTransitionArm, innerRadius };
 }

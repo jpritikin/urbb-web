@@ -22,9 +22,9 @@ interface TestResult {
     message: string;
 }
 
-// Test that b1 = CCW base and b2 = CW base are computed correctly
-// For adding CW from source arm S: new arm's b2 locks to adjacent's b1
-// For adding CCW from source arm S: new arm's b1 locks to adjacent's b2
+// Test that b1 = CCW base and b2 = CW base are computed correctly at p=0.5
+// For ADDING at p=0.5: redistribution hasn't started yet (Phase 2 starts at 0.5), so arms are at ORIGINAL positions
+// For REMOVING at p=0.5: redistribution is COMPLETE (Phase 1 ends at 0.5), so arms are at FINAL positions
 function testBaseAnglesCorrect(
     description: string,
     adjB1: number,
@@ -32,11 +32,19 @@ function testBaseAnglesCorrect(
     sourceIndex: number,
     armCount: number,
     direction: TransitionDirection,
-    rotation: number
+    rotation: number,
+    transitionType: 'adding' | 'removing'
 ): TestResult {
-    const angleStep = (2 * Math.PI) / armCount;
+    // For ADDING at p=0.5: arms are still at original positions (armCount)
+    // For REMOVING at p=0.5: arms have redistributed to final count (armCount-1)
+    // This test only runs for 'adding', so we use the original armCount
+    const effectiveArmCount = armCount;
+    const angleStep = (2 * Math.PI) / effectiveArmCount;
     const halfStep = angleStep / 2;
-    const sourceTipAngle = rotation - Math.PI / 2 + sourceIndex * angleStep;
+
+    // Source arm stays at its original index (for adding, new arm inserts next to it)
+    const effectiveSourceIndex = sourceIndex;
+    const sourceTipAngle = rotation - Math.PI / 2 + effectiveSourceIndex * angleStep;
 
     // b1 should be CCW from tip = tipAngle - halfStep
     // b2 should be CW from tip = tipAngle + halfStep
@@ -135,7 +143,7 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
                             },
                             second: null,
                             overlapStart: 0,
-                            firstCompleted: false,
+                            
                         },
                         armCount,
                         rotation,
@@ -156,7 +164,7 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
                     const adjB1 = adjSpec.tipAngle - adjSpec.halfStep;
                     const adjB2 = adjSpec.tipAngle + adjSpec.halfStep;
                     const desc = `adding ${armCount}arms src${sourceIndex} ${direction === 1 ? 'CW' : 'CCW'} rot${toDeg(rotation).toFixed(0)}`;
-                    const result = testBaseAnglesCorrect(desc, adjB1, adjB2, sourceIndex, armCount, direction, rotation);
+                    const result = testBaseAnglesCorrect(desc, adjB1, adjB2, sourceIndex, armCount, direction, rotation, 'adding');
 
                     if (result.passed) {
                         passed++;
@@ -186,7 +194,7 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
                             },
                             second: null,
                             overlapStart: 0,
-                            firstCompleted: false,
+                            
                         },
                         armCount,
                         rotation,

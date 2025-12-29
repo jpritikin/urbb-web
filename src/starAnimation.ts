@@ -1,6 +1,8 @@
 import {
     STAR_OUTER_RADIUS,
     getRenderSpec,
+    computeTransitionProgress,
+    isValidSecondSourceIndex,
     type TransitionDirection,
     type PlannedTransitionBundle,
 } from './starAnimationCore.js';
@@ -12,6 +14,17 @@ import { CoordinateConverter } from './coordinateConverter.js';
 import { LINEAR_INTERPOLATION_SPEED } from './ifsView/types.js';
 
 export { STAR_OUTER_RADIUS };
+
+function scaleFromCenter(p: { x: number; y: number }, centerX: number, centerY: number, scale: number): { x: number; y: number } {
+    return {
+        x: centerX + (p.x - centerX) * scale,
+        y: centerY + (p.y - centerY) * scale,
+    };
+}
+
+function trianglePath(tip: { x: number; y: number }, b1: { x: number; y: number }, b2: { x: number; y: number }): string {
+    return `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} L ${b1.x.toFixed(2)},${b1.y.toFixed(2)} L ${b2.x.toFixed(2)},${b2.y.toFixed(2)} Z`;
+}
 
 type RotationState = 'stationary' | 'rotating_cw' | 'rotating_ccw';
 
@@ -28,36 +41,70 @@ const VALID_ARM_COUNTS = new Set([3, 5, 6, 7]);
 interface TransitionScheduling {
     queuedSecondStart: number | null;
     pendingSecondSourceIndex: number | null;
+    bundleProgress: number;
 }
 
-function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean, armCount: number): PlannedTransitionBundle & TransitionScheduling {
-    let pendingSecondSourceIndex: number | null = null;
-    if (isDouble) {
-        const intermediateCount = first.type === 'adding' ? armCount + 1 : armCount - 1;
-        const offset = Math.floor(intermediateCount / 2);
-        pendingSecondSourceIndex = (first.sourceArmIndex + offset) % intermediateCount;
+function selectValidSecondSourceIndex(
+    first: PlannedTransitionBundle['first'],
+    armCount: number,
+): number {
+    const intermediateCount = first.type === 'adding' ? armCount + 1 : armCount - 1;
+
+    for (let attempt = 0; attempt < 100; attempt++) {
+        const candidate = Math.floor(Math.random() * intermediateCount);
+        if (isValidSecondSourceIndex(
+            first.type, first.sourceArmIndex, first.direction, armCount,
+            first.type, candidate, first.direction
+        )) {
+            return candidate;
+        }
     }
+
+    // Fallback: find any valid index deterministically
+    for (let i = 0; i < intermediateCount; i++) {
+        if (isValidSecondSourceIndex(
+            first.type, first.sourceArmIndex, first.direction, armCount,
+            first.type, i, first.direction
+        )) {
+            return i;
+        }
+    }
+
+    throw new Error('No valid second source index found');
+}
+
+function createBundle(
+    first: PlannedTransitionBundle['first'],
+    isDouble: boolean,
+    armCount: number,
+): PlannedTransitionBundle & TransitionScheduling {
+    let pendingSecondSourceIndex: number | null = null;
+    let queuedSecondStart: number | null = null;
+
+    if (isDouble) {
+        pendingSecondSourceIndex = selectValidSecondSourceIndex(first, armCount);
+        queuedSecondStart = 0.25 + Math.random() * 0.5;
+    }
+
     return {
         first,
         second: null,
         overlapStart: null,
-        firstCompleted: false,
-        queuedSecondStart: isDouble ? 0.25 + Math.random() * 0.5 : null,
+        queuedSecondStart,
         pendingSecondSourceIndex,
+        bundleProgress: 0,
     };
 }
 
-function isBundleComplete(bundle: PlannedTransitionBundle): 'none' | 'first' | 'both' {
-    const firstDone = bundle.first.progress >= 1;
-    const secondDone = !bundle.second || bundle.second.progress >= 1;
-
-    if (firstDone && secondDone) {
-        return 'both';
+function isBundleComplete(bundle: PlannedTransitionBundle & TransitionScheduling): boolean {
+    const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+    if (!isDouble) {
+        return bundle.bundleProgress >= 1;
     }
-    if (firstDone && !bundle.firstCompleted) {
-        return 'first';
-    }
-    return 'none';
+    // For double transitions, complete when second transition finishes (p2 = 1)
+    const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+    const { p2 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
+    return p2 >= 1;
 }
 
 export class AnimatedStar {
@@ -287,24 +334,20 @@ export class AnimatedStar {
         const bundle = this.transitionBundle;
 
         if (bundle) {
-            bundle.first.progress += deltaTime / ARM_TRANSITION_DURATION;
+            const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+            const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+            const totalWork = isDouble ? 2 - overlapStart : 1;
+            bundle.bundleProgress += deltaTime / (ARM_TRANSITION_DURATION * totalWork);
 
             // Check if we should start second overlapping transition
+            const { p1 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
             if (!bundle.second && bundle.queuedSecondStart !== null &&
-                bundle.first.progress >= bundle.queuedSecondStart) {
+                p1 >= bundle.queuedSecondStart) {
                 this.startSecondTransition();
             }
 
-            // Advance second transition if active
-            if (bundle.second) {
-                bundle.second.progress += deltaTime / ARM_TRANSITION_DURATION;
-            }
-
-            // Handle completions
-            const completion = isBundleComplete(bundle);
-            if (completion === 'first' && bundle.second) {
-                this.completeFirstTransition();
-            } else if (completion === 'both' || (completion === 'first' && !bundle.second)) {
+            // Handle completion - only when entire bundle is done
+            if (isBundleComplete(bundle)) {
                 this.completeBundleTransition();
             }
         }
@@ -334,6 +377,10 @@ export class AnimatedStar {
             ? bundle.pendingSecondSourceIndex
             : this.selectDisjointSourceArm(first.sourceArmIndex, intermediateArmCount);
 
+        // Compute p1 at this moment to record as overlapStart
+        const overlapStart = bundle.queuedSecondStart ?? 0;
+        const { p1 } = computeTransitionProgress(bundle.bundleProgress, overlapStart);
+
         bundle.second = {
             type: first.type,
             direction: first.direction,
@@ -341,7 +388,7 @@ export class AnimatedStar {
             sourceArmIndex: secondSourceIndex,
             startArmCount: intermediateArmCount,
         };
-        bundle.overlapStart = first.progress;
+        bundle.overlapStart = p1;
         bundle.queuedSecondStart = null;
         bundle.pendingSecondSourceIndex = null;
 
@@ -403,43 +450,17 @@ export class AnimatedStar {
         this.transitionElements?.createFirst();
     }
 
-    private completeFirstTransition(): void {
-        const bundle = this.transitionBundle;
-        if (!bundle || bundle.firstCompleted) return;
-
-        if (bundle.first.type === 'adding') {
-            this.armCount++;
-        } else {
-            this.armCount--;
-        }
-
-        this.transitionElements?.removeFirst();
-        bundle.firstCompleted = true;
-
-        this.createArmElements();
-    }
 
     private completeBundleTransition(): void {
         const bundle = this.transitionBundle;
         if (!bundle) return;
 
-        // Complete first if not already done
-        if (!bundle.firstCompleted) {
-            if (bundle.first.type === 'adding') {
-                this.armCount++;
-            } else {
-                this.armCount--;
-            }
-        }
-
-        // Complete second if present
+        // Compute final arm count based on transitions
+        let delta = bundle.first.type === 'adding' ? 1 : -1;
         if (bundle.second) {
-            if (bundle.second.type === 'adding') {
-                this.armCount++;
-            } else {
-                this.armCount--;
-            }
+            delta += bundle.second.type === 'adding' ? 1 : -1;
         }
+        this.armCount += delta;
 
         this.transitionElements?.removeAll();
         this.transitionBundle = null;
@@ -451,8 +472,20 @@ export class AnimatedStar {
         const bundle = this.transitionBundle;
         if (!bundle) return null;
 
+        const isDouble = bundle.queuedSecondStart !== null || bundle.second !== null;
+        const overlapStart = bundle.overlapStart ?? bundle.queuedSecondStart ?? 0;
+
+        // Compute p1/p2 from bundleProgress
+        const { p1, p2 } = isDouble
+            ? computeTransitionProgress(bundle.bundleProgress, overlapStart)
+            : { p1: bundle.bundleProgress, p2: 0 };
+
+        // Update first.progress
+        bundle.first.progress = p1;
+
         // Case 1: Second transition is already active
         if (bundle.second) {
+            bundle.second.progress = p2;
             return bundle;
         }
 
@@ -467,17 +500,55 @@ export class AnimatedStar {
                 second: {
                     type: bundle.first.type,
                     direction: bundle.first.direction,
-                    progress: 0,
+                    progress: p2,
                     sourceArmIndex: bundle.pendingSecondSourceIndex,
                     startArmCount: intermediateCount,
                 },
                 overlapStart: bundle.queuedSecondStart,
-                firstCompleted: bundle.firstCompleted,
             };
         }
 
         // Case 3: Single transition only
         return bundle;
+    }
+
+    private renderPulseArm(
+        arm: SVGPathElement,
+        armSpec: { tipAngle: number; halfStep: number },
+        armIndex: number,
+        innerRadius: number,
+        baseOuterRadius: number,
+        tipAngleOffset: number
+    ): void {
+        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[armIndex] || 0;
+        const outerRadius = alternatingOffset !== 0
+            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
+            : baseOuterRadius;
+
+        const baseCenterAngle = armSpec.tipAngle;
+        const tipAngle = baseCenterAngle + tipAngleOffset;
+        const base1Angle = baseCenterAngle - armSpec.halfStep;
+        const base2Angle = baseCenterAngle + armSpec.halfStep;
+
+        const tip = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
+        const base1 = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
+        const base2 = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
+
+        if (tipAngleOffset !== 0) {
+            const straightTip = {
+                x: this.centerX + outerRadius * Math.cos(baseCenterAngle),
+                y: this.centerY + outerRadius * Math.sin(baseCenterAngle)
+            };
+            const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
+            const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
+            arm.setAttribute('d',
+                `M ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
+                `Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
+                `Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
+            );
+        } else {
+            arm.setAttribute('d', trianglePath(tip, base1, base2));
+        }
     }
 
     private updateArms(): void {
@@ -519,47 +590,48 @@ export class AnimatedStar {
                 continue;
             }
 
-            const alternatingOffset = this.transitionBundle ? 0 : (this.pulse.outerAlternatingRadiusOffsets[i] || 0);
-            const outerRadius = alternatingOffset !== 0
-                ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-                : baseOuterRadius;
-
-            const baseCenterAngle = armSpec.tipAngle;
-            let tipAngle = baseCenterAngle;
-            if (tipAngleOffset !== 0) {
-                tipAngle += tipAngleOffset;
-            }
-
-            const base1Angle = baseCenterAngle - armSpec.halfStep;
-            const base2Angle = baseCenterAngle + armSpec.halfStep;
-
-            const tip = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
-            const base1 = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
-            const base2 = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
-
-            if (tipAngleOffset !== 0) {
-                const straightTip = {
-                    x: this.centerX + outerRadius * Math.cos(baseCenterAngle),
-                    y: this.centerY + outerRadius * Math.sin(baseCenterAngle)
-                };
-                const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
-                const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
-                arm.setAttribute('d',
-                    `M ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
-                    `Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
-                    `Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
-                );
+            if (this.transitionBundle) {
+                const tip = scaleFromCenter(armSpec.tip, this.centerX, this.centerY, this.radiusScale);
+                const base1 = scaleFromCenter(armSpec.b1, this.centerX, this.centerY, this.radiusScale);
+                const base2 = scaleFromCenter(armSpec.b2, this.centerX, this.centerY, this.radiusScale);
+                arm.setAttribute('d', trianglePath(tip, base1, base2));
             } else {
-                arm.setAttribute('d',
-                    `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
-                    `L ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
-                    `L ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
-                );
+                this.renderPulseArm(arm, armSpec, i, innerRadius, baseOuterRadius, tipAngleOffset);
             }
         }
 
         this.updateTransitionElements(spec);
         this.updateOutlines(spec, innerRadius, baseOuterRadius, tipAngleOffset);
+    }
+
+    private computeOutlineArmPoints(
+        armSpec: { tipAngle: number; halfStep: number; tip: { x: number; y: number }; b1: { x: number; y: number }; b2: { x: number; y: number } },
+        armIndex: number,
+        innerRadius: number,
+        baseOuterRadius: number,
+        tipAngleOffset: number
+    ): { tip: { x: number; y: number }; base1: { x: number; y: number }; base2: { x: number; y: number } } {
+        if (this.transitionBundle) {
+            return {
+                tip: scaleFromCenter(armSpec.tip, this.centerX, this.centerY, this.radiusScale),
+                base1: scaleFromCenter(armSpec.b1, this.centerX, this.centerY, this.radiusScale),
+                base2: scaleFromCenter(armSpec.b2, this.centerX, this.centerY, this.radiusScale),
+            };
+        }
+
+        const base1Angle = armSpec.tipAngle - armSpec.halfStep;
+        const base2Angle = armSpec.tipAngle + armSpec.halfStep;
+        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[armIndex] || 0;
+        const outerRadius = alternatingOffset !== 0
+            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
+            : baseOuterRadius;
+        const tipAngle = armSpec.tipAngle + tipAngleOffset;
+
+        return {
+            tip: { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) },
+            base1: { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) },
+            base2: { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) },
+        };
     }
 
     private updateOutlines(
@@ -568,9 +640,7 @@ export class AnimatedStar {
         baseOuterRadius: number,
         tipAngleOffset: number
     ): void {
-        // Update static star outline by tracing arms in angular order with arcs between them
         if (this.staticStarOutline && this.coordinateConverter) {
-            // Collect visible arm indices (arms that exist in staticArms)
             const visibleIndices: number[] = [];
             for (let i = 0; i < this.armCount; i++) {
                 if (spec.staticArms.has(i)) visibleIndices.push(i);
@@ -584,53 +654,34 @@ export class AnimatedStar {
                 for (let vi = 0; vi < visibleIndices.length; vi++) {
                     const i = visibleIndices[vi];
                     const armSpec = spec.staticArms.get(i)!;
-
-                    const base1Angle = armSpec.tipAngle - armSpec.halfStep;
-                    const base2Angle = armSpec.tipAngle + armSpec.halfStep;
-                    const base1X = this.centerX + innerRadius * Math.cos(base1Angle);
-                    const base1Y = this.centerY + innerRadius * Math.sin(base1Angle);
-                    const base2X = this.centerX + innerRadius * Math.cos(base2Angle);
-                    const base2Y = this.centerY + innerRadius * Math.sin(base2Angle);
-
-                    const alternatingOffset = this.transitionBundle ? 0 : (this.pulse.outerAlternatingRadiusOffsets[i] || 0);
-                    const outerRadius = alternatingOffset !== 0
-                        ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-                        : baseOuterRadius;
-                    const tipAngle = tipAngleOffset !== 0 ? armSpec.tipAngle + tipAngleOffset : armSpec.tipAngle;
-                    const tipX = this.centerX + outerRadius * Math.cos(tipAngle);
-                    const tipY = this.centerY + outerRadius * Math.sin(tipAngle);
+                    const { tip, base1, base2 } = this.computeOutlineArmPoints(armSpec, i, innerRadius, baseOuterRadius, tipAngleOffset);
 
                     if (vi === 0) {
-                        pathParts.push(`M ${base1X.toFixed(2)},${base1Y.toFixed(2)}`);
+                        pathParts.push(`M ${base1.x.toFixed(2)},${base1.y.toFixed(2)}`);
                     }
 
-                    if (tipAngleOffset !== 0) {
-                        const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
-                        const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
-                        const ctrl1X = (base1X + straightTipX) / 2;
-                        const ctrl1Y = (base1Y + straightTipY) / 2;
-                        pathParts.push(`Q ${ctrl1X.toFixed(2)},${ctrl1Y.toFixed(2)} ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
+                    if (!this.transitionBundle && tipAngleOffset !== 0) {
+                        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[i] || 0;
+                        const outerRadius = alternatingOffset !== 0
+                            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
+                            : baseOuterRadius;
+                        const straightTip = {
+                            x: this.centerX + outerRadius * Math.cos(armSpec.tipAngle),
+                            y: this.centerY + outerRadius * Math.sin(armSpec.tipAngle)
+                        };
+                        const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
+                        const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
+                        pathParts.push(`Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)}`);
+                        pathParts.push(`Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)}`);
                     } else {
-                        pathParts.push(`L ${tipX.toFixed(2)},${tipY.toFixed(2)}`);
+                        pathParts.push(`L ${tip.x.toFixed(2)},${tip.y.toFixed(2)}`);
+                        pathParts.push(`L ${base2.x.toFixed(2)},${base2.y.toFixed(2)}`);
                     }
 
-                    if (tipAngleOffset !== 0) {
-                        const straightTipX = this.centerX + outerRadius * Math.cos(armSpec.tipAngle);
-                        const straightTipY = this.centerY + outerRadius * Math.sin(armSpec.tipAngle);
-                        const ctrl2X = (base2X + straightTipX) / 2;
-                        const ctrl2Y = (base2Y + straightTipY) / 2;
-                        pathParts.push(`Q ${ctrl2X.toFixed(2)},${ctrl2Y.toFixed(2)} ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
-                    } else {
-                        pathParts.push(`L ${base2X.toFixed(2)},${base2Y.toFixed(2)}`);
-                    }
-
-                    // Arc to the next visible arm's base1
                     const nextVi = (vi + 1) % visibleIndices.length;
                     const nextArmSpec = spec.staticArms.get(visibleIndices[nextVi])!;
-                    const nextBase1Angle = nextArmSpec.tipAngle - nextArmSpec.halfStep;
-                    const nextBase1X = this.centerX + innerRadius * Math.cos(nextBase1Angle);
-                    const nextBase1Y = this.centerY + innerRadius * Math.sin(nextBase1Angle);
-                    pathParts.push(`A ${innerRadius.toFixed(2)},${innerRadius.toFixed(2)} 0 0 1 ${nextBase1X.toFixed(2)},${nextBase1Y.toFixed(2)}`);
+                    const nextPoints = this.computeOutlineArmPoints(nextArmSpec, visibleIndices[nextVi], innerRadius, baseOuterRadius, tipAngleOffset);
+                    pathParts.push(`A ${innerRadius.toFixed(2)},${innerRadius.toFixed(2)} 0 0 1 ${nextPoints.base1.x.toFixed(2)},${nextPoints.base1.y.toFixed(2)}`);
                 }
                 pathParts.push('Z');
 
@@ -664,30 +715,18 @@ export class AnimatedStar {
             this.transitionOutlines.push(outline);
         }
 
-        // Update each outline with its corresponding arm
         for (let i = 0; i < armsToRender.length; i++) {
             const arm = armsToRender[i];
             const outline = this.transitionOutlines[i];
             if (!outline) continue;
 
-            const scaledTip = {
-                x: this.centerX + (arm.tip.x - this.centerX) * this.radiusScale,
-                y: this.centerY + (arm.tip.y - this.centerY) * this.radiusScale
-            };
-            const scaledB1 = {
-                x: this.centerX + (arm.b1.x - this.centerX) * this.radiusScale,
-                y: this.centerY + (arm.b1.y - this.centerY) * this.radiusScale
-            };
-            const scaledB2 = {
-                x: this.centerX + (arm.b2.x - this.centerX) * this.radiusScale,
-                y: this.centerY + (arm.b2.y - this.centerY) * this.radiusScale
-            };
+            const tip = scaleFromCenter(arm.tip, this.centerX, this.centerY, this.radiusScale);
+            const b1 = scaleFromCenter(arm.b1, this.centerX, this.centerY, this.radiusScale);
+            const b2 = scaleFromCenter(arm.b2, this.centerX, this.centerY, this.radiusScale);
 
             outline.setAttribute('d',
-                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
-                `L ${scaledB1.x.toFixed(2)},${scaledB1.y.toFixed(2)} ` +
-                `M ${scaledTip.x.toFixed(2)},${scaledTip.y.toFixed(2)} ` +
-                `L ${scaledB2.x.toFixed(2)},${scaledB2.y.toFixed(2)}`
+                `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} L ${b1.x.toFixed(2)},${b1.y.toFixed(2)} ` +
+                `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} L ${b2.x.toFixed(2)},${b2.y.toFixed(2)}`
             );
         }
     }
@@ -695,39 +734,20 @@ export class AnimatedStar {
     private updateTransitionElements(spec: ReturnType<typeof getRenderSpec>): void {
         if (!this.transitionBundle) return;
 
-        const outerScale = this.radiusScale;
-        const innerScale = this.radiusScale;
+        const scale = (p: { x: number; y: number }) => scaleFromCenter(p, this.centerX, this.centerY, this.radiusScale);
 
-        const scaleTip = (p: { x: number; y: number }) => ({
-            x: this.centerX + (p.x - this.centerX) * outerScale,
-            y: this.centerY + (p.y - this.centerY) * outerScale,
-        });
-        const scaleBase = (p: { x: number; y: number }) => ({
-            x: this.centerX + (p.x - this.centerX) * innerScale,
-            y: this.centerY + (p.y - this.centerY) * innerScale,
-        });
-
-        const firstElement = this.transitionElements?.getFirst();
-        if (firstElement && spec.firstTransitionArm) {
-            const { tip, b1, b2 } = spec.firstTransitionArm;
-            const t = scaleTip(tip);
-            const b1s = scaleBase(b1);
-            const b2s = scaleBase(b2);
-            firstElement.setAttribute('points',
-                `${t.x.toFixed(2)},${t.y.toFixed(2)} ${b1s.x.toFixed(2)},${b1s.y.toFixed(2)} ${b2s.x.toFixed(2)},${b2s.y.toFixed(2)}`
+        const updateElement = (element: SVGPolygonElement | null, arm: typeof spec.firstTransitionArm) => {
+            if (!element || !arm) return;
+            const t = scale(arm.tip);
+            const b1 = scale(arm.b1);
+            const b2 = scale(arm.b2);
+            element.setAttribute('points',
+                `${t.x.toFixed(2)},${t.y.toFixed(2)} ${b1.x.toFixed(2)},${b1.y.toFixed(2)} ${b2.x.toFixed(2)},${b2.y.toFixed(2)}`
             );
-        }
+        };
 
-        const secondElement = this.transitionElements?.getSecond();
-        if (secondElement && spec.secondTransitionArm) {
-            const { tip, b1, b2 } = spec.secondTransitionArm;
-            const t = scaleTip(tip);
-            const b1s = scaleBase(b1);
-            const b2s = scaleBase(b2);
-            secondElement.setAttribute('points',
-                `${t.x.toFixed(2)},${t.y.toFixed(2)} ${b1s.x.toFixed(2)},${b1s.y.toFixed(2)} ${b2s.x.toFixed(2)},${b2s.y.toFixed(2)}`
-            );
-        }
+        updateElement(this.transitionElements?.getFirst() ?? null, spec.firstTransitionArm);
+        updateElement(this.transitionElements?.getSecond() ?? null, spec.secondTransitionArm);
     }
 
     setPosition(centerX: number, centerY: number): void {
@@ -813,6 +833,10 @@ export class AnimatedStar {
             console.error(`Invalid secondSourceIndex ${secondSourceIndex} for ${intermediateCount} arms`);
             return;
         }
+        if (!isValidSecondSourceIndex(type, firstSourceIndex, direction, startArmCount, type, secondSourceIndex, direction)) {
+            console.error(`Invalid secondSourceIndex ${secondSourceIndex}: both transitions would use the same adjacent arm`);
+            return;
+        }
 
         this.transitionBundle = {
             first: {
@@ -826,7 +850,7 @@ export class AnimatedStar {
             overlapStart: null,
             queuedSecondStart: overlapProgress,
             pendingSecondSourceIndex: secondSourceIndex,
-            firstCompleted: false,
+            bundleProgress: 0,
         };
         this.transitionElements?.createFirst();
 
@@ -886,67 +910,4 @@ export class AnimatedStar {
         const dirStr = direction || 'random';
         console.log(`Star testPulse: target=${targetStr}, direction=${dirStr}, armCount=${this.armCount}`);
     }
-}
-
-export function createFillColorDebugPanel(star: AnimatedStar): HTMLElement {
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        position: fixed; bottom: 10px; right: 10px; width: 150px; height: 150px;
-        background: #222; border: 2px solid #666; border-radius: 4px;
-        cursor: crosshair; z-index: 9999;
-    `;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 150;
-    canvas.height = 150;
-    panel.appendChild(canvas);
-
-    const ctx = canvas.getContext('2d')!;
-    const color = star.getFillColor();
-
-    for (let y = 0; y < 150; y++) {
-        for (let x = 0; x < 150; x++) {
-            const s = (x / 149) * 100;
-            const l = 100 - (y / 149) * 100;
-            ctx.fillStyle = `hsl(${color.h}, ${s}%, ${l}%)`;
-            ctx.fillRect(x, y, 1, 1);
-        }
-    }
-
-    const marker = document.createElement('div');
-    marker.style.cssText = `
-        position: absolute; width: 10px; height: 10px; border: 2px solid white;
-        border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%);
-        box-shadow: 0 0 2px black;
-    `;
-    panel.appendChild(marker);
-
-    const updateMarker = () => {
-        const c = star.getFillColor();
-        marker.style.left = `${(c.s / 100) * 150}px`;
-        marker.style.top = `${(1 - c.l / 100) * 150}px`;
-    };
-    updateMarker();
-
-    const handleInput = (e: MouseEvent | TouchEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        const x = Math.max(0, Math.min(149, clientX - rect.left));
-        const y = Math.max(0, Math.min(149, clientY - rect.top));
-        const s = (x / 149) * 100;
-        const l = 100 - (y / 149) * 100;
-        star.setFillColor(s, l);
-        updateMarker();
-    };
-
-    let dragging = false;
-    panel.addEventListener('mousedown', (e) => { dragging = true; handleInput(e); });
-    panel.addEventListener('mousemove', (e) => { if (dragging) handleInput(e); });
-    panel.addEventListener('mouseup', () => { dragging = false; });
-    panel.addEventListener('mouseleave', () => { dragging = false; });
-    panel.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); });
-    panel.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); });
-
-    return panel;
 }

@@ -49,7 +49,7 @@ function createBundle(
             startArmCount: intermediateCount,
         },
         overlapStart,
-        firstCompleted: false,
+        
     };
 }
 
@@ -90,10 +90,9 @@ function testOverlappingGeometryInvariants(): { passed: number; failed: number; 
                 secondDirection: tc.secondDir,
             };
 
-            const getSecondProgress = (fp: number) => Math.max(0, (fp - overlapStart) / (1 - overlapStart));
             const innerRadius = getInnerRadiusForArmCount(tc.startArmCount);
             const staticArms = buildStaticArms(tc.startArmCount, 0, CENTER_X, CENTER_Y, innerRadius, STAR_OUTER_RADIUS);
-            const firstGeom = createFirstTransitionGeometry(params, getSecondProgress, staticArms);
+            const firstGeom = createFirstTransitionGeometry(params, staticArms);
 
             // Test first transition at boundary p1=overlapStart (p2=0): should be collapsed onto adjacent
             {
@@ -101,7 +100,8 @@ function testOverlappingGeometryInvariants(): { passed: number; failed: number; 
                     firstGeom,
                     { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation: 0, direction: tc.firstDir },
                     tc.firstType,
-                    overlapStart
+                    overlapStart,
+                    innerRadius
                 );
 
                 const tipToB1 = dist(result.t.x, result.t.y, result.b1.x, result.b1.y);
@@ -127,7 +127,8 @@ function testOverlappingGeometryInvariants(): { passed: number; failed: number; 
                     firstGeom,
                     { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation: 0, direction: tc.firstDir },
                     tc.firstType,
-                    1.0
+                    1.0,
+                    innerRadius
                 );
 
                 const tipToB1 = dist(result.t.x, result.t.y, result.b1.x, result.b1.y);
@@ -232,7 +233,8 @@ function testOverlappingGeometryInvariants(): { passed: number; failed: number; 
                     firstGeom,
                     { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation: 0, direction: tc.firstDir },
                     tc.firstType,
-                    p1
+                    p1,
+                    innerRadius
                 );
 
                 const tipToB1 = dist(firstResult.t.x, firstResult.t.y, firstResult.b1.x, firstResult.b1.y);
@@ -295,7 +297,7 @@ function testOverlappingInitialConditions(): { passed: number; failed: number; f
                 },
                 second: null,
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({
@@ -371,7 +373,7 @@ function testOverlappingInitialConditions(): { passed: number; failed: number; f
                     startArmCount: intermediateCount,
                 },
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({
@@ -484,7 +486,7 @@ function testStaticArmBasePointOrdering(): { passed: number; failed: number; fai
                     startArmCount: intermediateCount,
                 },
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({
@@ -557,8 +559,7 @@ function testSecondTransitionMonotonicity(): { passed: number; failed: number; f
             secondDirection: tc.direction,
         };
 
-        const getFirstProgress = (p2: number) => tc.overlapStart + p2 * (1 - tc.overlapStart);
-        const geom = createSecondTransitionGeometry(overlappingParams, getFirstProgress, staticArms, null, false);
+        const geom = createSecondTransitionGeometry(overlappingParams, staticArms);
 
         let prevTipAngle: number | null = null;
         let expectedSign: number | null = null;
@@ -572,7 +573,8 @@ function testSecondTransitionMonotonicity(): { passed: number; failed: number; f
                 geom,
                 { centerX: CENTER_X, centerY: CENTER_Y, outerRadius: STAR_OUTER_RADIUS, rotation: 0, direction: tc.direction },
                 tc.type,
-                progress
+                progress,
+                intermediateInnerRadius
             );
 
             const tipAngle = pointAngleFromCenter(arm.t);

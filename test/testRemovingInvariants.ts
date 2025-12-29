@@ -60,7 +60,7 @@ function getStartArm(
     const halfStep = angleStep / 2;
     const tipAngle = rotation - Math.PI / 2 + sourceIndex * angleStep;
     const innerRadius = getInnerRadiusForArmCount(armCount);
-    return getArmPoints(CENTER_X, CENTER_Y, tipAngle, halfStep, innerRadius, STAR_OUTER_RADIUS);
+    return getArmPoints(CENTER_X, CENTER_Y, { tipAngle, halfStep }, innerRadius, STAR_OUTER_RADIUS);
 }
 
 function getAdjacentArmForRemoving(
@@ -81,7 +81,7 @@ function getAdjacentArmForRemoving(
     );
 
     const innerRadius = getTransitionInnerRadius(armCount, 'removing', progress);
-    return getArmPoints(CENTER_X, CENTER_Y, redist.tipAngle, redist.halfStep, innerRadius, STAR_OUTER_RADIUS);
+    return getArmPoints(CENTER_X, CENTER_Y, redist, innerRadius, STAR_OUTER_RADIUS);
 }
 
 function testSingleCase(testCase: TestCase): TestResult {
