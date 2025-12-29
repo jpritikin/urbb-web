@@ -97,6 +97,43 @@ const testCases: TestCase[] = [
         expectedValid: true,
         description: 'ADD then REMOVE from disjoint positions',
     },
+
+    // Double-REMOVE: second source cannot be first's adjacent arm
+    {
+        firstType: 'removing',
+        firstSourceIndex: 0,
+        firstDirection: -1,
+        firstStartArmCount: 5,
+        secondType: 'removing',
+        secondSourceIndex: 3,
+        secondDirection: -1,
+        expectedValid: false,
+        description: 'REMOVE CCW from 0 (adj=4), then REMOVE arm 3 (=orig 4) - second source is first adj',
+    },
+    {
+        firstType: 'removing',
+        firstSourceIndex: 2,
+        firstDirection: 1,
+        firstStartArmCount: 5,
+        secondType: 'removing',
+        secondSourceIndex: 2,
+        secondDirection: 1,
+        expectedValid: false,
+        description: 'REMOVE CW from 2 (adj=3), then REMOVE arm 2 (=orig 3) - second source is first adj',
+    },
+
+    // Valid double-REMOVE cases
+    {
+        firstType: 'removing',
+        firstSourceIndex: 0,
+        firstDirection: -1,
+        firstStartArmCount: 7,
+        secondType: 'removing',
+        secondSourceIndex: 2,
+        secondDirection: -1,
+        expectedValid: true,
+        description: 'REMOVE CCW from 0 (7 arms), then REMOVE arm 2 - disjoint',
+    },
 ];
 
 function runTests(): { passed: number; failed: number; failures: string[] } {
