@@ -138,7 +138,13 @@ export class CloudManager {
             this.rng.model as SeededRNG,
             this.rng
         );
-        this.uiManager?.showRecording();
+    }
+
+    getRecordingSession(): RecordedSession | null {
+        return this.recorder.getSession(
+            this.model.toJSON(),
+            this.relationships.toJSON()
+        );
     }
 
     stopRecording(): RecordedSession | null {
@@ -147,7 +153,6 @@ export class CloudManager {
             this.relationships.toJSON()
         );
         this.recorder.clear();
-        this.uiManager?.hideRecording();
         return session;
     }
 

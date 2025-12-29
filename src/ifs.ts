@@ -16,32 +16,50 @@ function downloadSession(cloudManager: CloudManager): void {
     a.download = `ifs-session-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    console.log('[IFS] Recording saved:', a.download);
 }
 
 function getPageVersion(): string {
     return document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
 }
 
+const MAX_RECORDING_MS = 60 * 60 * 1000; // 1 hour
+
 function setupRecordingShortcuts(cloudManager: CloudManager): void {
-    const toggleRecording = () => {
-        if (cloudManager.isRecording()) {
-            downloadSession(cloudManager);
-            console.log('[IFS] Recording stopped and downloaded');
-        } else {
-            cloudManager.startRecording(getPageVersion());
-            console.log('[IFS] Recording started');
+    const downloadCurrentSession = () => {
+        const session = cloudManager.getRecordingSession();
+        if (!session) {
+            console.warn('[IFS] No recording session available');
+            return;
         }
+        const json = sessionToJSON(session);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ifs-session-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
-    cloudManager.setRecordingToggleHandler(toggleRecording);
+    cloudManager.setRecordingToggleHandler(downloadCurrentSession);
 
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === ' ') {
             e.preventDefault();
-            toggleRecording();
+            downloadCurrentSession();
         }
     });
+
+    // Auto-start recording
+    cloudManager.startRecording(getPageVersion());
+
+    // Auto-stop after 1 hour
+    setTimeout(() => {
+        if (cloudManager.isRecording()) {
+            downloadSession(cloudManager);
+            console.log('[IFS] Recording auto-stopped after 1 hour');
+        }
+    }, MAX_RECORDING_MS);
 }
 
 function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Scenario) => void): void {
