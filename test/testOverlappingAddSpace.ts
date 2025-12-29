@@ -68,7 +68,7 @@ function testOverlappingAddStaticArmSpacing(): { passed: number; failed: number;
                 startArmCount: intermediateCount,
             } : null,
             overlapStart,
-            firstCompleted: false,
+            
         };
 
         const spec = getRenderSpec({
@@ -173,7 +173,7 @@ function testSecondTransitionRedistributionTiming(): { passed: number; failed: n
             startArmCount: intermediateCount,
         },
         overlapStart,
-        firstCompleted: false,
+        
     };
 
     const spec = getRenderSpec({
@@ -276,7 +276,7 @@ function testNoExcessiveGapsDuringDoubleAdd(): { passed: number; failed: number;
                         startArmCount: intermediateCount,
                     },
                     overlapStart,
-                    firstCompleted: false,
+                    
                 };
 
                 const spec = getRenderSpec({
@@ -365,7 +365,7 @@ function testAllArmBasePointCoverage(): { passed: number; failed: number; failur
                 startArmCount: intermediateCount,
             },
             overlapStart,
-            firstCompleted: false,
+            
         };
 
         const spec = getRenderSpec({
@@ -484,7 +484,7 @@ function testTransitionArmNoOverlapWithNextArm(): { passed: number; failed: numb
         },
         second: null,
         overlapStart: 0.5,
-        firstCompleted: false,
+        
     };
 
     const spec = getRenderSpec({

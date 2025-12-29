@@ -143,7 +143,7 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
                             },
                             second: null,
                             overlapStart: 0,
-                            firstCompleted: false,
+                            
                         },
                         armCount,
                         rotation,
@@ -194,7 +194,7 @@ export function runGeometryProviderOrderTests(): { passed: number; failed: numbe
                             },
                             second: null,
                             overlapStart: 0,
-                            firstCompleted: false,
+                            
                         },
                         armCount,
                         rotation,

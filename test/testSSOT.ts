@@ -17,15 +17,13 @@ interface TestResult {
     failures: string[];
 }
 
-// Test that computeStaticArmSpec produces continuous results at the firstCompleted boundary
-// At p1=1 (first just completing), the two code paths should produce identical positions
+// Test that computeStaticArmSpec produces continuous results at p1=0.999 vs p1=1.0
+// With the new model, armCount stays constant, so same indices should produce identical positions
 function testFirstCompletedBoundaryContinuity(): TestResult {
     let passed = 0;
     let failed = 0;
     const failures: string[] = [];
 
-    // Only test valid transition combinations: ADD+ADD or REM+REM
-    // Also ensure we don't go below 3 arms
     const testCases = [
         { firstType: 'adding' as const, secondType: 'adding' as const, startCount: 5, src1: 0, src2: 3, dir: 1 as TransitionDirection },
         { firstType: 'adding' as const, secondType: 'adding' as const, startCount: 4, src1: 2, src2: 1, dir: -1 as TransitionDirection },
@@ -35,9 +33,8 @@ function testFirstCompletedBoundaryContinuity(): TestResult {
 
     for (const tc of testCases) {
         const intermediateCount = tc.firstType === 'adding' ? tc.startCount + 1 : tc.startCount - 1;
-        const p2 = 0.5; // Some progress on second transition
+        const p2 = 0.5;
 
-        // Create bundle just BEFORE firstCompleted (p1 = 0.999)
         const bundleBefore: PlannedTransitionBundle = {
             first: {
                 type: tc.firstType,
@@ -54,10 +51,8 @@ function testFirstCompletedBoundaryContinuity(): TestResult {
                 startArmCount: intermediateCount,
             },
             overlapStart: 0.5,
-            firstCompleted: false,
         };
 
-        // Create bundle just AFTER firstCompleted (p1 = 1.0)
         const bundleAfter: PlannedTransitionBundle = {
             first: {
                 type: tc.firstType,
@@ -74,33 +69,12 @@ function testFirstCompletedBoundaryContinuity(): TestResult {
                 startArmCount: intermediateCount,
             },
             overlapStart: 0.5,
-            firstCompleted: true,
         };
 
-        // Test each static arm - map between original and intermediate indices
-        // Before: original indices (0..startCount-1)
-        // After: intermediate indices (0..intermediateCount-1)
-        // Need to compare corresponding arms across the firstCompleted boundary
-
-        const insertIdx = tc.dir === 1 ? tc.src1 + 1 : tc.src1;
-
-        for (let origIdx = 0; origIdx < tc.startCount; origIdx++) {
-            // Skip hidden arms (first source for removing)
-            if (tc.firstType === 'removing' && origIdx === tc.src1) continue;
-
-            // Map original index to intermediate index
-            let interIdx: number;
-            if (tc.firstType === 'adding') {
-                interIdx = origIdx >= insertIdx ? origIdx + 1 : origIdx;
-            } else {
-                interIdx = origIdx > tc.src1 ? origIdx - 1 : origIdx;
-            }
-
-            // Skip if this arm is the second source (hidden for removing)
-            if (tc.secondType === 'removing' && interIdx === tc.src2) continue;
-
-            const specBefore = computeStaticArmSpec(origIdx, bundleBefore, tc.startCount, 0);
-            const specAfter = computeStaticArmSpec(interIdx, bundleAfter, intermediateCount, 0);
+        // With constant armCount, compare same indices
+        for (let idx = 0; idx < tc.startCount; idx++) {
+            const specBefore = computeStaticArmSpec(idx, bundleBefore, tc.startCount, 0);
+            const specAfter = computeStaticArmSpec(idx, bundleAfter, tc.startCount, 0);
 
             if (!specBefore || !specAfter) continue;
 
@@ -112,7 +86,7 @@ function testFirstCompletedBoundaryContinuity(): TestResult {
             } else {
                 failed++;
                 failures.push(
-                    `${tc.firstType}+${tc.secondType} arm${origIdx}->${interIdx}: ` +
+                    `${tc.firstType}+${tc.secondType} arm${idx}: ` +
                     `angleDiff=${angleDiff.toFixed(4)} halfStepDiff=${halfStepDiff.toFixed(4)}`
                 );
             }
@@ -136,7 +110,7 @@ function testSecondArmSmoothness(): void {
     const intermediateCount = config.startArmCount + 1;
 
     console.log('Testing second arm smoothness');
-    console.log('overall\tp1\tp2\tfc\ttipX\ttipY\tdelta');
+    console.log('overall\tp1\tp2\ttipX\ttipY\tdelta');
 
     let prev: { tipX: number; tipY: number } | null = null;
     const numSteps = 100;
@@ -151,8 +125,6 @@ function testSecondArmSmoothness(): void {
             : Math.min(1, (overallProgress - config.overlapStart) / (1 - config.overlapStart));
 
         if (p2 <= 0 || p2 >= 1) continue;
-
-        const firstCompleted = p1 >= 1;
 
         const bundle: PlannedTransitionBundle = {
             first: {
@@ -170,10 +142,10 @@ function testSecondArmSmoothness(): void {
                 startArmCount: intermediateCount,
             },
             overlapStart: config.overlapStart,
-            firstCompleted,
         };
 
-        const armCount = firstCompleted ? intermediateCount : config.startArmCount;
+        // armCount stays at startArmCount throughout the transition
+        const armCount = config.startArmCount;
         const spec = getRenderSpec({
             bundle,
             armCount,
@@ -192,9 +164,8 @@ function testSecondArmSmoothness(): void {
             delta = dist(arm.tip.x, arm.tip.y, prev.tipX, prev.tipY);
         }
 
-        const fc = firstCompleted ? 'Y' : 'N';
         if (delta > 3) {
-            console.log(`${overallProgress.toFixed(3)}\t${p1.toFixed(3)}\t${p2.toFixed(3)}\t${fc}\t${arm.tip.x.toFixed(2)}\t${arm.tip.y.toFixed(2)}\t*** ${delta.toFixed(2)}`);
+            console.log(`${overallProgress.toFixed(3)}\t${p1.toFixed(3)}\t${p2.toFixed(3)}\t${arm.tip.x.toFixed(2)}\t${arm.tip.y.toFixed(2)}\t*** ${delta.toFixed(2)}`);
         }
 
         prev = { tipX: arm.tip.x, tipY: arm.tip.y };

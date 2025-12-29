@@ -89,7 +89,7 @@ function createBundleAtProgress(
             startArmCount: intermediateCount,
         },
         overlapStart: config.overlapStart,
-        firstCompleted,
+        
     };
 
     return { bundle, armCount };

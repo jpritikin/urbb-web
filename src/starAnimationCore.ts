@@ -616,7 +616,6 @@ export function createSecondTransitionGeometry(
     getFirstProgress: (secondProgress: number) => number,
     staticArmPoints: Map<number, ArmPoints>,
     firstTransitionArm: TransitionArmRenderSpec | null,
-    firstCompleted: boolean
 ): TransitionGeometry {
     const {
         firstType, firstSourceIndex, firstStartArmCount, firstDirection,
@@ -653,12 +652,10 @@ export function createSecondTransitionGeometry(
     }
 
     // Look up adjacent arm from staticArmPoints
-    // When firstCompleted=true, staticArmPoints is keyed by intermediate indices (direct lookup)
-    // When firstCompleted=false, staticArmPoints is keyed by original indices (need mapping)
+    // staticArmPoints is always keyed by original indices (armCount stays at original throughout)
+    // Map intermediate index to original
     let adjLookupIndex: number;
-    if (firstCompleted) {
-        adjLookupIndex = secondAdjIndexInIntermediate;
-    } else if (firstType === 'removing') {
+    if (firstType === 'removing') {
         adjLookupIndex = secondAdjIndexInIntermediate >= firstSourceIndex
             ? secondAdjIndexInIntermediate + 1
             : secondAdjIndexInIntermediate;
@@ -976,7 +973,6 @@ export interface PlannedTransitionBundle {
     first: SingleTransitionState;
     second: SingleTransitionState | null;
     overlapStart: number | null;
-    firstCompleted: boolean;
 }
 
 export interface RenderSpecParams {
@@ -993,39 +989,34 @@ function computeHiddenIndices(
     armCount: number
 ): Set<number> {
     const hidden = new Set<number>();
+    const { first, second } = bundle;
 
-    if (bundle.firstCompleted) {
-        // After first completes, we're in INTERMEDIATE star space
-        // Only hide the second transition's source if still in progress
-        if (bundle.second?.type === 'removing' && bundle.second.progress < 1) {
-            hidden.add(bundle.second.sourceArmIndex);
-        }
-    } else {
-        // In ORIGINAL star space
-        if (bundle.first.type === 'removing' && bundle.first.progress < 1) {
-            hidden.add(bundle.first.sourceArmIndex);
-        }
+    // armCount stays at original value throughout the transition
+    // Static arms are always indexed in original space
 
-        // For second transition (if active and in progress), map its intermediate index to original
-        if (bundle.second?.type === 'removing' && bundle.second.progress > 0 && bundle.second.progress < 1) {
-            const { first, second } = bundle;
-            let originalIndex: number;
-            if (first.type === 'removing') {
-                // First is removing: intermediate indices >= first.sourceArmIndex shift up
-                originalIndex = second.sourceArmIndex >= first.sourceArmIndex
-                    ? second.sourceArmIndex + 1
-                    : second.sourceArmIndex;
-            } else {
-                // First is adding: intermediate indices > insertIdx shift down
-                const insertIdx = first.direction === 1
-                    ? first.sourceArmIndex + 1
-                    : first.sourceArmIndex;
-                originalIndex = second.sourceArmIndex > insertIdx
-                    ? second.sourceArmIndex - 1
-                    : second.sourceArmIndex;
-            }
-            hidden.add(originalIndex);
+    // Hide first transition's source arm if removing (throughout the entire bundle)
+    if (first.type === 'removing') {
+        hidden.add(first.sourceArmIndex);
+    }
+
+    // Hide second transition's source arm if removing (map intermediate index to original)
+    if (second?.type === 'removing' && second.progress > 0 && second.progress < 1) {
+        let originalIndex: number;
+        if (first.type === 'removing') {
+            // First is removing: intermediate indices >= first.sourceArmIndex shift up
+            originalIndex = second.sourceArmIndex >= first.sourceArmIndex
+                ? second.sourceArmIndex + 1
+                : second.sourceArmIndex;
+        } else {
+            // First is adding: intermediate indices > insertIdx shift down
+            const insertIdx = first.direction === 1
+                ? first.sourceArmIndex + 1
+                : first.sourceArmIndex;
+            originalIndex = second.sourceArmIndex > insertIdx
+                ? second.sourceArmIndex - 1
+                : second.sourceArmIndex;
         }
+        hidden.add(originalIndex);
     }
 
     return hidden;
@@ -1061,28 +1052,10 @@ export function computeStaticArmSpec(
 
     if (second) {
         // Both transitions - use overlapping redistribution
-        // Use bundle.first.startArmCount as the authoritative original count
-        const originalArmCount = first.startArmCount;
-
-        // When firstCompleted=true, armIndex is in intermediate space and needs mapping to original
-        let originalArmIndex = armIndex;
-        if (bundle.firstCompleted) {
-            const insertIdx = first.direction === 1 ? first.sourceArmIndex + 1 : first.sourceArmIndex;
-            if (first.type === 'adding') {
-                if (armIndex === insertIdx) {
-                    // This is the newly added arm - no original index, skip it
-                    return { tipAngle, halfStep };
-                }
-                originalArmIndex = armIndex > insertIdx ? armIndex - 1 : armIndex;
-            } else {
-                // Removing: intermediate index maps up past the removed arm
-                originalArmIndex = armIndex >= first.sourceArmIndex ? armIndex + 1 : armIndex;
-            }
-        }
-
+        // armCount stays at original value throughout the transition
         const result = computeOverlappingArmRedistribution({
-            originalArmIndex,
-            startArmCount: originalArmCount,
+            originalArmIndex: armIndex,
+            startArmCount: first.startArmCount,
             firstSourceIndex: first.sourceArmIndex,
             secondSourceIndex: second.sourceArmIndex,
             firstType: first.type,
@@ -1096,7 +1069,7 @@ export function computeStaticArmSpec(
         if (result) {
             return result;
         }
-    } else if (!second) {
+    } else {
         // Only first transition active
         const result = computeArmRedistribution(
             armIndex, tipAngle, halfStep,
@@ -1123,7 +1096,12 @@ function computeFirstTransitionArm(
     staticArmPoints: Map<number, ArmPoints>
 ): TransitionArmRenderSpec | null {
     const { first, second, overlapStart } = bundle;
-    if (first.progress >= 1) return null;
+
+    // When there's no second transition and first is complete, return null
+    if (!second && first.progress >= 1) return null;
+
+    // When first is complete but second is still going, cap progress at 1
+    const firstProgress = Math.min(first.progress, 1);
 
     const { centerX, centerY, outerRadius, rotation } = params;
 
@@ -1149,7 +1127,7 @@ function computeFirstTransitionArm(
             geom,
             { centerX, centerY, outerRadius, rotation, direction: first.direction },
             first.type,
-            first.progress
+            firstProgress
         );
     } else {
         const geom = createSingleTransitionGeometry({
@@ -1163,7 +1141,7 @@ function computeFirstTransitionArm(
             geom,
             { centerX, centerY, outerRadius, rotation, direction: first.direction },
             first.type,
-            first.progress
+            firstProgress
         );
     }
 
@@ -1191,10 +1169,7 @@ function computeSecondTransitionArm(
     const overlap = overlapStart ?? 0;
     const getFirstProgress = (sp: number) => overlap + sp * (1 - overlap);
 
-    // staticArmPoints is keyed based on what getRenderSpec builds:
-    // - When !firstCompleted: keyed by original indices (0..startArmCount-1)
-    // - When firstCompleted: keyed by intermediate indices (0..intermediateCount-1)
-    // createSecondTransitionGeometry handles this via the firstCompleted parameter
+    // staticArmPoints is always keyed by original indices (armCount stays at original throughout)
 
     const overlappingParams: OverlappingTransitionParams = {
         centerX, centerY, outerRadius, rotation,
@@ -1208,7 +1183,7 @@ function computeSecondTransitionArm(
         secondDirection: second.direction,
     };
 
-    const geom = createSecondTransitionGeometry(overlappingParams, getFirstProgress, staticArmPoints, firstTransitionArm, bundle.firstCompleted);
+    const geom = createSecondTransitionGeometry(overlappingParams, getFirstProgress, staticArmPoints, firstTransitionArm);
     const arm = computeTransitionWithGeometry(
         geom,
         { centerX, centerY, outerRadius, rotation, direction: second.direction },

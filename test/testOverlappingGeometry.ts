@@ -49,7 +49,7 @@ function createBundle(
             startArmCount: intermediateCount,
         },
         overlapStart,
-        firstCompleted: false,
+        
     };
 }
 
@@ -295,7 +295,7 @@ function testOverlappingInitialConditions(): { passed: number; failed: number; f
                 },
                 second: null,
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({
@@ -371,7 +371,7 @@ function testOverlappingInitialConditions(): { passed: number; failed: number; f
                     startArmCount: intermediateCount,
                 },
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({
@@ -484,7 +484,7 @@ function testStaticArmBasePointOrdering(): { passed: number; failed: number; fai
                     startArmCount: intermediateCount,
                 },
                 overlapStart: tc.overlapStart,
-                firstCompleted: false,
+                
             };
 
             const spec = getRenderSpec({

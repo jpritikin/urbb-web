@@ -32,7 +32,7 @@ function createSingleTransition(
         first: { type, direction, progress, sourceArmIndex, startArmCount },
         second: null,
         overlapStart: null,
-        firstCompleted: false,
+        
     };
 }
 
@@ -44,7 +44,6 @@ function createOverlappingTransition(
     firstProgress: number,
     secondProgress: number,
     overlapStart: number,
-    firstCompleted: boolean,
     direction: TransitionDirection = 1
 ): PlannedTransitionBundle {
     const intermediateCount = type === 'adding' ? startArmCount + 1 : startArmCount - 1;
@@ -52,7 +51,6 @@ function createOverlappingTransition(
         first: { type, direction, progress: firstProgress, sourceArmIndex: firstSourceIndex, startArmCount },
         second: { type, direction, progress: secondProgress, sourceArmIndex: secondSourceIndex, startArmCount: intermediateCount },
         overlapStart,
-        firstCompleted,
     };
 }
 
@@ -111,49 +109,47 @@ function runRenderSpecTests() {
             'firstTransitionArm should be null at progress=1');
     }
 
-    // Test 5: THE BUG CASE - Double removing, first completed
+    // Test 5: Double removing, first completed
     // Scenario: 7→6→5, first removes arm 3, second removes arm 0 (in 6-arm space)
-    // After firstCompleted: armCount=6, should hide only arm 0 (second's source)
+    // With new model: armCount stays at 7, T1 stays visible at final position
     {
         const bundle = createOverlappingTransition(
             'removing', 7, 3, 0,  // start=7, first removes 3, second removes 0
             1.0, 0.5,             // first complete, second in progress
-            0.37,                 // overlap started at 37%
-            true                  // firstCompleted = true
+            0.37
         );
-        const spec = getRenderSpec(createParams(bundle, 6));  // armCount is now 6
+        const spec = getRenderSpec(createParams(bundle, 7));  // armCount stays at 7
 
-        test('Bug case: 5 arms visible after first complete',
+        test('First complete: 5 static arms visible',
             spec.staticArms.size === 5,
-            `expected 5, got ${spec.staticArms.size} (hidden: ${[...Array(6).keys()].filter(i => !spec.staticArms.has(i)).join(',')})`);
+            `expected 5, got ${spec.staticArms.size} (hidden: ${[...Array(7).keys()].filter(i => !spec.staticArms.has(i)).join(',')})`);
 
-        test('Bug case: arm 0 hidden (second source)',
+        test('First complete: arm 0 hidden (second source mapped)',
             !spec.staticArms.has(0),
             'arm 0 should be hidden');
 
-        test('Bug case: arm 3 visible (was first source, now different arm)',
-            spec.staticArms.has(3),
-            'arm 3 should be visible (it is now a different arm in 6-arm space)');
+        test('First complete: arm 3 hidden (first source)',
+            !spec.staticArms.has(3),
+            'arm 3 should be hidden');
 
-        test('Bug case: no first transition arm (complete)',
-            spec.firstTransitionArm === null,
-            'first transition arm should be null');
+        test('First complete: first transition arm present (at final state)',
+            spec.firstTransitionArm !== null,
+            'first transition arm should exist at final position');
 
-        test('Bug case: has second transition arm',
+        test('First complete: second transition arm present',
             spec.secondTransitionArm !== null,
             'second transition arm should exist');
     }
 
-    // Test 6: Double removing, both in progress (before firstCompleted)
+    // Test 6: Double removing, both in progress
     // In original 7-arm space: first removes 3, second removes 0 (maps to original 0)
     {
         const bundle = createOverlappingTransition(
             'removing', 7, 3, 0,  // start=7, first removes 3, second removes 0 in intermediate
             0.8, 0.3,             // both in progress
-            0.37,
-            false                 // firstCompleted = false
+            0.37
         );
-        const spec = getRenderSpec(createParams(bundle, 7));  // armCount is still 7
+        const spec = getRenderSpec(createParams(bundle, 7));  // armCount stays at 7
 
         // Second source 0 in 6-arm space maps to 0 in 7-arm space (0 < 3)
         test('Double removing in progress: 5 arms visible',
@@ -178,8 +174,7 @@ function runRenderSpecTests() {
         const bundle = createOverlappingTransition(
             'adding', 5, 0, 3,
             0.8, 0.3,
-            0.5,
-            false
+            0.5
         );
         const spec = getRenderSpec(createParams(bundle, 5));
 
@@ -188,30 +183,28 @@ function runRenderSpecTests() {
             `expected 5, got ${spec.staticArms.size}`);
     }
 
-    // Test 8: Specific reproduction case from issue
+    // Test 8: Continuity check - arms shouldn't jump when first.progress goes from 0.99 to 1.0
     // star.testOverlappingTransition('removing', 7, 3, 0, 0.37, 1)
     {
         // Before first completes (p1=0.99)
         const bundleBefore = createOverlappingTransition(
             'removing', 7, 3, 0,
             0.99, 0.62 * 0.99,  // second progress proportional
-            0.37,
-            false
+            0.37
         );
         const specBefore = getRenderSpec(createParams(bundleBefore, 7));
 
-        test('Issue case before complete: 5 visible',
+        test('Continuity before: 5 visible',
             specBefore.staticArms.size === 5,
             `expected 5, got ${specBefore.staticArms.size}`);
 
-        // After first completes (p1=1.0, armCount=6)
+        // After first completes (p1=1.0, armCount stays at 7)
         const bundleAfter = createOverlappingTransition(
             'removing', 7, 3, 0,
             1.0, 0.7,
-            0.37,
-            true
+            0.37
         );
-        const specAfter = getRenderSpec(createParams(bundleAfter, 6));
+        const specAfter = getRenderSpec(createParams(bundleAfter, 7));
 
         test('Issue case after complete: 5 visible',
             specAfter.staticArms.size === 5,
@@ -229,94 +222,75 @@ function runRenderSpecTests() {
     }
 
 
-    // Test 11: Static arm positions are continuous across firstCompleted boundary
-    // This is the bug: when firstCompleted changes from false to true, static arm
-    // positions should not jump discontinuously.
+    // Test 11: Static arm positions are continuous across p1=0.99 to p1=1.0
+    // With the new model, armCount stays constant so static arms should not jump.
     {
         const TOLERANCE = 0.01; // radians, about 0.5 degrees
 
-        // ADD+ADD 5→6→7: test continuity at p1=1.0 boundary
+        // ADD+ADD 5→7: test continuity at p1=1.0 boundary
         {
             const overlapStart = 0.5;
-            // Just before first completes: p1=0.999, firstCompleted=false, armCount=5
             const p2Before = (0.999 - overlapStart) / (1 - overlapStart);
             const bundleBefore: PlannedTransitionBundle = {
                 first: { type: 'adding', direction: 1, progress: 0.999, sourceArmIndex: 0, startArmCount: 5 },
                 second: { type: 'adding', direction: 1, progress: p2Before, sourceArmIndex: 3, startArmCount: 6 },
                 overlapStart,
-                firstCompleted: false,
             };
             const specBefore = getRenderSpec(createParams(bundleBefore, 5));
 
-            // Just after first completes: p1=1.0, firstCompleted=true, armCount=6
             const p2After = (1.0 - overlapStart) / (1 - overlapStart);
             const bundleAfter: PlannedTransitionBundle = {
                 first: { type: 'adding', direction: 1, progress: 1.0, sourceArmIndex: 0, startArmCount: 5 },
                 second: { type: 'adding', direction: 1, progress: p2After, sourceArmIndex: 3, startArmCount: 6 },
                 overlapStart,
-                firstCompleted: true,
             };
-            const specAfter = getRenderSpec(createParams(bundleAfter, 6));
+            const specAfter = getRenderSpec(createParams(bundleAfter, 5));  // armCount stays at 5
 
-            // Find common arms and check their positions are continuous
-            // Before: arms 0,1,2,3,4 in 5-arm original space
-            // After: arms 0,1,2,3,4,5 in 6-arm intermediate space
-            // Mapping: original arm i -> intermediate arm (i >= insertIdx ? i+1 : i) where insertIdx=1 for CW
-            // So: orig 0->0, orig 1->2, orig 2->3, orig 3->4, orig 4->5
-            const mapping = [[0, 0], [1, 2], [2, 3], [3, 4], [4, 5]];
-
-            for (const [origIdx, interIdx] of mapping) {
-                const armBefore = specBefore.staticArms.get(origIdx);
-                const armAfter = specAfter.staticArms.get(interIdx);
+            // With constant armCount, same indices should have continuous positions
+            for (let i = 0; i < 5; i++) {
+                const armBefore = specBefore.staticArms.get(i);
+                const armAfter = specAfter.staticArms.get(i);
 
                 if (armBefore && armAfter) {
                     const angleDiff = Math.abs(armBefore.tipAngle - armAfter.tipAngle);
                     const normalizedDiff = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-                    test(`ADD+ADD continuity: arm ${origIdx}->${interIdx} tipAngle`,
+                    test(`ADD+ADD continuity: arm ${i} tipAngle`,
                         normalizedDiff < TOLERANCE,
-                        `jump of ${(normalizedDiff * 180 / Math.PI).toFixed(2)}° at firstCompleted boundary`);
+                        `jump of ${(normalizedDiff * 180 / Math.PI).toFixed(2)}° at p1=1.0`);
                 }
             }
         }
 
-        // REM+REM 7→6→5: test continuity at p1=1.0 boundary
+        // REM+REM 7→5: test continuity at p1=1.0 boundary
         {
             const overlapStart = 0.5;
-            // Just before: p1=0.999, firstCompleted=false, armCount=7
             const p2Before = (0.999 - overlapStart) / (1 - overlapStart);
             const bundleBefore: PlannedTransitionBundle = {
                 first: { type: 'removing', direction: 1, progress: 0.999, sourceArmIndex: 3, startArmCount: 7 },
                 second: { type: 'removing', direction: 1, progress: p2Before, sourceArmIndex: 0, startArmCount: 6 },
                 overlapStart,
-                firstCompleted: false,
             };
             const specBefore = getRenderSpec(createParams(bundleBefore, 7));
 
-            // Just after: p1=1.0, firstCompleted=true, armCount=6
             const p2After = (1.0 - overlapStart) / (1 - overlapStart);
             const bundleAfter: PlannedTransitionBundle = {
                 first: { type: 'removing', direction: 1, progress: 1.0, sourceArmIndex: 3, startArmCount: 7 },
                 second: { type: 'removing', direction: 1, progress: p2After, sourceArmIndex: 0, startArmCount: 6 },
                 overlapStart,
-                firstCompleted: true,
             };
-            const specAfter = getRenderSpec(createParams(bundleAfter, 6));
+            const specAfter = getRenderSpec(createParams(bundleAfter, 7));  // armCount stays at 7
 
-            // Mapping for removing: original arms that survive (not source 3) map to intermediate
-            // orig 0->0, orig 1->1, orig 2->2, (3 removed), orig 4->3, orig 5->4, orig 6->5
-            // But second source is 0 in intermediate space, so arm 0 is hidden in both
-            const mapping = [[1, 1], [2, 2], [4, 3], [5, 4], [6, 5]];
-
-            for (const [origIdx, interIdx] of mapping) {
-                const armBefore = specBefore.staticArms.get(origIdx);
-                const armAfter = specAfter.staticArms.get(interIdx);
+            // Same indices should have continuous positions
+            for (let i = 0; i < 7; i++) {
+                const armBefore = specBefore.staticArms.get(i);
+                const armAfter = specAfter.staticArms.get(i);
 
                 if (armBefore && armAfter) {
                     const angleDiff = Math.abs(armBefore.tipAngle - armAfter.tipAngle);
                     const normalizedDiff = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-                    test(`REM+REM continuity: arm ${origIdx}->${interIdx} tipAngle`,
+                    test(`REM+REM continuity: arm ${i} tipAngle`,
                         normalizedDiff < TOLERANCE,
-                        `jump of ${(normalizedDiff * 180 / Math.PI).toFixed(2)}° at firstCompleted boundary`);
+                        `jump of ${(normalizedDiff * 180 / Math.PI).toFixed(2)}° at p1=1.0`);
                 }
             }
         }

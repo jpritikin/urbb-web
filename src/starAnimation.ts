@@ -41,23 +41,15 @@ function createBundle(first: PlannedTransitionBundle['first'], isDouble: boolean
         first,
         second: null,
         overlapStart: null,
-        firstCompleted: false,
         queuedSecondStart: isDouble ? 0.25 + Math.random() * 0.5 : null,
         pendingSecondSourceIndex,
     };
 }
 
-function isBundleComplete(bundle: PlannedTransitionBundle): 'none' | 'first' | 'both' {
+function isBundleComplete(bundle: PlannedTransitionBundle): boolean {
     const firstDone = bundle.first.progress >= 1;
     const secondDone = !bundle.second || bundle.second.progress >= 1;
-
-    if (firstDone && secondDone) {
-        return 'both';
-    }
-    if (firstDone && !bundle.firstCompleted) {
-        return 'first';
-    }
-    return 'none';
+    return firstDone && secondDone;
 }
 
 export class AnimatedStar {
@@ -300,11 +292,8 @@ export class AnimatedStar {
                 bundle.second.progress += deltaTime / ARM_TRANSITION_DURATION;
             }
 
-            // Handle completions
-            const completion = isBundleComplete(bundle);
-            if (completion === 'first' && bundle.second) {
-                this.completeFirstTransition();
-            } else if (completion === 'both' || (completion === 'first' && !bundle.second)) {
+            // Handle completion - only when entire bundle is done
+            if (isBundleComplete(bundle)) {
                 this.completeBundleTransition();
             }
         }
@@ -403,43 +392,17 @@ export class AnimatedStar {
         this.transitionElements?.createFirst();
     }
 
-    private completeFirstTransition(): void {
-        const bundle = this.transitionBundle;
-        if (!bundle || bundle.firstCompleted) return;
-
-        if (bundle.first.type === 'adding') {
-            this.armCount++;
-        } else {
-            this.armCount--;
-        }
-
-        this.transitionElements?.removeFirst();
-        bundle.firstCompleted = true;
-
-        this.createArmElements();
-    }
 
     private completeBundleTransition(): void {
         const bundle = this.transitionBundle;
         if (!bundle) return;
 
-        // Complete first if not already done
-        if (!bundle.firstCompleted) {
-            if (bundle.first.type === 'adding') {
-                this.armCount++;
-            } else {
-                this.armCount--;
-            }
-        }
-
-        // Complete second if present
+        // Compute final arm count based on transitions
+        let delta = bundle.first.type === 'adding' ? 1 : -1;
         if (bundle.second) {
-            if (bundle.second.type === 'adding') {
-                this.armCount++;
-            } else {
-                this.armCount--;
-            }
+            delta += bundle.second.type === 'adding' ? 1 : -1;
         }
+        this.armCount += delta;
 
         this.transitionElements?.removeAll();
         this.transitionBundle = null;
@@ -472,7 +435,6 @@ export class AnimatedStar {
                     startArmCount: intermediateCount,
                 },
                 overlapStart: bundle.queuedSecondStart,
-                firstCompleted: bundle.firstCompleted,
             };
         }
 
@@ -826,7 +788,6 @@ export class AnimatedStar {
             overlapStart: null,
             queuedSecondStart: overlapProgress,
             pendingSecondSourceIndex: secondSourceIndex,
-            firstCompleted: false,
         };
         this.transitionElements?.createFirst();
 
