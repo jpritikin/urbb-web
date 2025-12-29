@@ -268,6 +268,11 @@ export class CloudManager {
         if (carpetGroup && this.uiGroup.firstChild !== carpetGroup) {
             this.uiGroup.insertBefore(carpetGroup, this.uiGroup.firstChild);
         }
+
+        const seatDebugGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        seatDebugGroup.setAttribute('id', 'seat-debug-group');
+        this.uiGroup.appendChild(seatDebugGroup);
+        this.view.setSeatDebugGroup(seatDebugGroup);
         this.view.setOnSelfRayClick((cloudId, _x, _y, event) => {
             const starPos = this.view.getStarScreenPosition();
             const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
@@ -576,6 +581,10 @@ export class CloudManager {
 
     setCarpetDebug(enabled: boolean): void {
         this.carpetRenderer?.setDebugMode(enabled);
+    }
+
+    setSeatDebug(enabled: boolean): void {
+        this.view.setSeatDebug(enabled);
     }
 
     setZoom(zoomLevel: number): void {
@@ -904,6 +913,7 @@ export class CloudManager {
                 this.carpetRenderer.update(carpetStates, seats, deltaTime);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
+                this.view.renderSeatDebug();
             }
             this.messageOrchestrator?.updateTimers(deltaTime);
             if (!isTransitioning && !this.isPieMenuOpen()) {

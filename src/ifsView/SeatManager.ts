@@ -2,6 +2,7 @@ import { SimulatorModel } from '../ifsModel.js';
 import { CarpetState, SeatInfo, createCarpetVertices, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE } from '../carpetRenderer.js';
 
 export const CARPET_MAX_VELOCITY = 20;
+export const CARPET_ACCELERATION = 1.5;
 export const UPDATE_INTERVAL = 100;
 export const STAR_CLOUD_ID = '*';
 export const UNBLENDED_SEAT_ID = '__unblended__';
@@ -55,7 +56,9 @@ export class SeatManager {
     private dragOffsetX: number = 0;
     private dragOffsetY: number = 0;
     private previousMatching: Map<string, string> = new Map();
+    private matchingChangedTime: number = 0;
     private debugGroup: SVGGElement | null = null;
+    private debugEnabled: boolean = false;
 
     constructor(canvasWidth: number, canvasHeight: number, initialPhase: number = Math.random() * Math.PI * 2) {
         this.canvasWidth = canvasWidth;
@@ -505,6 +508,11 @@ export class SeatManager {
             result.set(carpetId, { x: seat.x, y: seat.y });
         }
 
+        const matchingChanged = newMatching.size !== this.previousMatching.size ||
+            Array.from(newMatching).some(([k, v]) => this.previousMatching.get(k) !== v);
+        if (matchingChanged) {
+            this.matchingChangedTime = performance.now();
+        }
         this.previousMatching = newMatching;
         return result;
     }
@@ -523,55 +531,60 @@ export class SeatManager {
 
             if (carpetId === this.draggingCarpetId) continue;
 
-            const centerX = this.canvasWidth / 2;
-            const centerY = this.canvasHeight / 2;
+            const velocity = this.carpetVelocities.get(carpetId) ?? { vx: 0, vy: 0 };
 
-            const curDx = carpet.currentX - centerX;
-            const curDy = carpet.currentY - centerY;
-            const curRadius = Math.sqrt(curDx * curDx + curDy * curDy);
-            const curAngle = Math.atan2(curDy, curDx);
+            const dx = targetPos.x - carpet.currentX;
+            const dy = targetPos.y - carpet.currentY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            const tgtDx = targetPos.x - centerX;
-            const tgtDy = targetPos.y - centerY;
-            const tgtRadius = Math.sqrt(tgtDx * tgtDx + tgtDy * tgtDy);
-            const tgtAngle = Math.atan2(tgtDy, tgtDx);
-
-            const radiusDiff = tgtRadius - curRadius;
-            let angleDiff = tgtAngle - curAngle;
-            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-            const radiusError = Math.abs(radiusDiff);
-            const arcError = Math.abs(angleDiff) * curRadius;
-
-            if (radiusError < 1 && arcError < 1) {
+            if (dist < 1 && Math.abs(velocity.vx) < 0.1 && Math.abs(velocity.vy) < 0.1) {
                 carpet.currentX = targetPos.x;
                 carpet.currentY = targetPos.y;
                 this.carpetVelocities.set(carpetId, { vx: 0, vy: 0 });
                 continue;
             }
 
-            const moveAmount = CARPET_MAX_VELOCITY * deltaTime;
+            const accel = CARPET_ACCELERATION * deltaTime;
 
-            const radialWeight = Math.min(1, radiusError / 30);
-            const angularWeight = 1 - radialWeight;
+            let desiredVx = 0;
+            let desiredVy = 0;
+            if (dist > 0.01) {
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const stoppingDist = (velocity.vx * velocity.vx + velocity.vy * velocity.vy) / (2 * CARPET_ACCELERATION);
+                const shouldBrake = dist < stoppingDist * 1.2;
 
-            const radialDir = radiusDiff > 0 ? 1 : -1;
-            const radialMove = Math.min(Math.abs(radiusDiff), moveAmount * radialWeight) * radialDir;
+                if (shouldBrake) {
+                    desiredVx = 0;
+                    desiredVy = 0;
+                } else {
+                    desiredVx = dirX * CARPET_MAX_VELOCITY;
+                    desiredVy = dirY * CARPET_MAX_VELOCITY;
+                }
+            }
 
-            const angularDir = angleDiff > 0 ? 1 : -1;
-            const maxAngularMove = moveAmount * angularWeight;
-            const angularMove = Math.min(Math.abs(angleDiff) * curRadius, maxAngularMove) * angularDir / Math.max(1, curRadius);
+            let newVx = velocity.vx;
+            let newVy = velocity.vy;
 
-            const newRadius = curRadius + radialMove;
-            const newAngle = curAngle + angularMove;
+            const dvx = desiredVx - velocity.vx;
+            const dvy = desiredVy - velocity.vy;
+            const dv = Math.sqrt(dvx * dvx + dvy * dvy);
 
-            carpet.currentX = centerX + Math.cos(newAngle) * newRadius;
-            carpet.currentY = centerY + Math.sin(newAngle) * newRadius;
+            if (dv > 0.01) {
+                const change = Math.min(accel, dv);
+                newVx += (dvx / dv) * change;
+                newVy += (dvy / dv) * change;
+            }
 
-            const dx = carpet.currentX - (centerX + Math.cos(curAngle) * curRadius);
-            const dy = carpet.currentY - (centerY + Math.sin(curAngle) * curRadius);
-            this.carpetVelocities.set(carpetId, { vx: dx / deltaTime, vy: dy / deltaTime });
+            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
+            if (speed > CARPET_MAX_VELOCITY) {
+                newVx = (newVx / speed) * CARPET_MAX_VELOCITY;
+                newVy = (newVy / speed) * CARPET_MAX_VELOCITY;
+            }
+
+            carpet.currentX += newVx * deltaTime;
+            carpet.currentY += newVy * deltaTime;
+            this.carpetVelocities.set(carpetId, { vx: newVx, vy: newVy });
         }
     }
 
@@ -635,5 +648,67 @@ export class SeatManager {
     setDimensions(width: number, height: number): void {
         this.canvasWidth = width;
         this.canvasHeight = height;
+    }
+
+    setDebugEnabled(enabled: boolean): void {
+        this.debugEnabled = enabled;
+    }
+
+    renderDebug(): void {
+        if (!this.debugGroup || !this.debugEnabled) {
+            if (this.debugGroup) {
+                while (this.debugGroup.firstChild) {
+                    this.debugGroup.removeChild(this.debugGroup.firstChild);
+                }
+            }
+            return;
+        }
+
+        while (this.debugGroup.firstChild) {
+            this.debugGroup.removeChild(this.debugGroup.firstChild);
+        }
+
+        const timeSinceChange = (performance.now() - this.matchingChangedTime) / 1000;
+        const centerLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        centerLabel.setAttribute('x', String(this.canvasWidth / 2));
+        centerLabel.setAttribute('y', String(this.canvasHeight / 2));
+        centerLabel.setAttribute('fill', '#804000');
+        centerLabel.setAttribute('font-size', '14');
+        centerLabel.setAttribute('font-family', 'monospace');
+        centerLabel.setAttribute('text-anchor', 'middle');
+        centerLabel.textContent = `matching age: ${timeSinceChange.toFixed(1)}s`;
+        this.debugGroup.appendChild(centerLabel);
+
+        for (const [carpetId, seatId] of this.previousMatching) {
+            const carpet = this.carpets.get(carpetId);
+            if (!carpet || carpet.entering || carpet.exiting) continue;
+
+            const seat = this.seats.find(s => s.seatId === seatId);
+            if (seat) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', String(carpet.currentX));
+                line.setAttribute('y1', String(carpet.currentY));
+                line.setAttribute('x2', String(seat.x));
+                line.setAttribute('y2', String(seat.y));
+                line.setAttribute('stroke', '#006040');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('stroke-dasharray', '4,4');
+                this.debugGroup.appendChild(line);
+            }
+
+            const velocity = this.carpetVelocities.get(carpetId);
+            if (velocity) {
+                const speed = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
+                const velLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                velLabel.setAttribute('x', String(carpet.currentX));
+                velLabel.setAttribute('y', String(carpet.currentY - 18));
+                velLabel.setAttribute('fill', '#400080');
+                velLabel.setAttribute('font-size', '10');
+                velLabel.setAttribute('font-family', 'monospace');
+                velLabel.setAttribute('text-anchor', 'middle');
+                velLabel.textContent = `v=${speed.toFixed(1)}`;
+                this.debugGroup.appendChild(velLabel);
+            }
+        }
     }
 }

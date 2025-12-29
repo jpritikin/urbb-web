@@ -82,6 +82,7 @@ function startSimulation(scenario: Scenario): void {
     (window as any).debugHelp = () => {
         console.log('IFS Simulator Debug Commands:');
         console.log('  cloudManager.setCarpetDebug(true)   - Show wind field visualization');
+        console.log('  cloudManager.setSeatDebug(true)     - Show carpet-seat matching debug');
         console.log('  cloudManager.setDebug(true)         - Show cloud debug info');
         console.log('  star.testPulse(target?, dir?)       - Trigger pulse (target: inner|outer|tipAngle|outerAlternating)');
         console.log('  star.testTransition(type, armCount, sourceIdx, dir?)');
