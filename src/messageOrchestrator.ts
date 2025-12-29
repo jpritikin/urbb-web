@@ -151,17 +151,16 @@ export class MessageOrchestrator {
             const dialogues = this.model.parts.getDialogues(blendedId)?.genericBlendedDialogues;
             if (!dialogues || dialogues.length === 0) continue;
 
-            const cooldown = this.genericDialogueCooldowns.get(blendedId) ?? this.GENERIC_DIALOGUE_INTERVAL;
-            const newCooldown = cooldown + deltaTime;
-            this.genericDialogueCooldowns.set(blendedId, newCooldown);
+            let cooldown = this.genericDialogueCooldowns.get(blendedId) ?? this.GENERIC_DIALOGUE_INTERVAL;
+            cooldown += deltaTime;
 
-            if (newCooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
+            while (cooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
                 const text = this.rng.cosmetic.pickRandom(dialogues);
                 this.callbacks.showThoughtBubble(text, blendedId);
                 this.model.parts.addNeedAttention(blendedId, -0.25);
-                this.genericDialogueCooldowns.set(blendedId, 0);
-                break;
+                cooldown -= this.GENERIC_DIALOGUE_INTERVAL;
             }
+            this.genericDialogueCooldowns.set(blendedId, cooldown);
         }
     }
 
