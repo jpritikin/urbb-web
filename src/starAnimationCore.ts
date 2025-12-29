@@ -42,6 +42,13 @@ function polarToPoint(center: Point, radius: number, angle: number): Point {
     return { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) };
 }
 
+function rotatePointAroundPivot(pivot: Point, radius: number, startAngle: number, rotation: number): Point {
+    return {
+        x: pivot.x + radius * Math.cos(startAngle + rotation),
+        y: pivot.y + radius * Math.sin(startAngle + rotation),
+    };
+}
+
 function getTipAngle(rotation: number, armIndex: number, angleStep: number): number {
     return rotation + TIP_ANGLE_OFFSET + armIndex * angleStep;
 }
@@ -225,14 +232,8 @@ function computePhase1(
 
     return {
         tip,
-        pivotBase: {
-            x: tip.x + baseDist * Math.cos(pivotStartAngle + currentRotation),
-            y: tip.y + baseDist * Math.sin(pivotStartAngle + currentRotation),
-        },
-        swingingBase: {
-            x: tip.x + baseDist * Math.cos(swingStartAngle + currentRotation),
-            y: tip.y + baseDist * Math.sin(swingStartAngle + currentRotation),
-        },
+        pivotBase: rotatePointAroundPivot(tip, baseDist, pivotStartAngle, currentRotation),
+        swingingBase: rotatePointAroundPivot(tip, baseDist, swingStartAngle, currentRotation),
     };
 }
 
@@ -251,11 +252,7 @@ function computeFinalTipPosition(
     const d = pointDist({ x: centerX, y: centerY }, pivotBase);
 
     if (d > outerRadius + edgeDist || d < Math.abs(outerRadius - edgeDist)) {
-        const tipAngle = pointAngle(pivotBase, adjTip);
-        return {
-            x: pivotBase.x + edgeDist * Math.cos(tipAngle),
-            y: pivotBase.y + edgeDist * Math.sin(tipAngle),
-        };
+        return polarToPoint(pivotBase, edgeDist, pointAngle(pivotBase, adjTip));
     }
 
     const a = (d * d + outerRadius * outerRadius - edgeDist * edgeDist) / (2 * d);
@@ -296,10 +293,7 @@ function computePhase2(
     const tipToPivotAngle = pointAngle(adjPoints.t, pivotBase);
     const tipToSwingStartAngle = tipToPivotAngle - direction * angleAtTip;
 
-    const swingStartPos: Point = {
-        x: adjPoints.t.x + edgeDist * Math.cos(tipToSwingStartAngle),
-        y: adjPoints.t.y + edgeDist * Math.sin(tipToSwingStartAngle),
-    };
+    const swingStartPos = polarToPoint(adjPoints.t, edgeDist, tipToSwingStartAngle);
 
     const tipStartAngle = pointAngle(pivotBase, adjPoints.t);
     const swingStartAngle = pointAngle(pivotBase, swingStartPos);
@@ -316,15 +310,9 @@ function computePhase2(
     const currentRotation = totalRotation * t;
 
     return {
-        tip: {
-            x: pivotBase.x + edgeDist * Math.cos(tipStartAngle + currentRotation),
-            y: pivotBase.y + edgeDist * Math.sin(tipStartAngle + currentRotation),
-        },
+        tip: rotatePointAroundPivot(pivotBase, edgeDist, tipStartAngle, currentRotation),
         pivotBase,
-        swingingBase: {
-            x: pivotBase.x + chordDist * Math.cos(swingStartAngle + currentRotation),
-            y: pivotBase.y + chordDist * Math.sin(swingStartAngle + currentRotation),
-        },
+        swingingBase: rotatePointAroundPivot(pivotBase, chordDist, swingStartAngle, currentRotation),
     };
 }
 
@@ -583,6 +571,30 @@ export interface OverlappingRedistributionParams {
     rotation: number;
 }
 
+function computeGapContribution(
+    armIndex: number,
+    type: 'adding' | 'removing',
+    sourceIndex: number,
+    insertIdx: number,
+    gap: number
+): number {
+    if (type === 'adding') {
+        return armIndex >= insertIdx ? gap : 0;
+    }
+    return armIndex > sourceIndex ? gap : 0;
+}
+
+function mapToIntermediateIndex(
+    originalIdx: number,
+    firstType: 'adding' | 'removing',
+    firstSourceIndex: number,
+    firstInsertIdx: number
+): number {
+    if (firstType === 'adding' && originalIdx >= firstInsertIdx) return originalIdx + 1;
+    if (firstType === 'removing' && originalIdx > firstSourceIndex) return originalIdx - 1;
+    return originalIdx;
+}
+
 export function computeOverlappingArmRedistribution(params: OverlappingRedistributionParams): ArmAngleSpec {
     const {
         originalArmIndex: i,
@@ -608,35 +620,22 @@ export function computeOverlappingArmRedistribution(params: OverlappingRedistrib
     const secondDelta = secondType === 'adding' ? secondT : -secondT;
     const totalArmUnits = startArmCount + firstDelta + secondDelta;
     const anglePerArm = 2 * Math.PI / totalArmUnits;
-    const halfStep = anglePerArm / 2;
 
     const firstGap = anglePerArm * firstDelta;
     const secondGap = anglePerArm * secondDelta;
 
-    let gapsBefore = 0;
-    if (firstType === 'adding') {
-        if (i >= firstInsertIdx) gapsBefore += firstGap;
-    } else {
-        if (i > firstSourceIndex) gapsBefore += firstGap;
-    }
-
     const secondInsertIdx = secondDirection === 1
         ? mod(secondSourceIndex + 1, intermediateCount)
         : secondSourceIndex;
+    const intermediateIdx = mapToIntermediateIndex(i, firstType, firstSourceIndex, firstInsertIdx);
 
-    let intermediateIdx = i;
-    if (firstType === 'adding' && i >= firstInsertIdx) intermediateIdx++;
-    else if (firstType === 'removing' && i > firstSourceIndex) intermediateIdx--;
-
-    if (secondType === 'adding') {
-        if (intermediateIdx >= secondInsertIdx) gapsBefore += secondGap;
-    } else {
-        if (intermediateIdx > secondSourceIndex) gapsBefore += secondGap;
-    }
+    const gapsBefore =
+        computeGapContribution(i, firstType, firstSourceIndex, firstInsertIdx, firstGap) +
+        computeGapContribution(intermediateIdx, secondType, secondSourceIndex, secondInsertIdx, secondGap);
 
     return {
         tipAngle: rotation + TIP_ANGLE_OFFSET + i * anglePerArm + gapsBefore,
-        halfStep,
+        halfStep: anglePerArm / 2,
     };
 }
 
