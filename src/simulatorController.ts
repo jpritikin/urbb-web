@@ -162,19 +162,14 @@ export class SimulatorController {
         const fields: BiographyField[] = [];
         const isProtector = this.relationships.getProtecting(cloudId).size > 0;
         const isIdentityRevealed = this.model.parts.isIdentityRevealed(cloudId);
-        const isAttacked = this.model.parts.isAttacked(cloudId);
 
-        fields.push('age', 'identity', 'gratitude', 'compassion');
+        fields.push('age', 'identity', 'gratitude', 'compassion', 'apologize');
 
         const showJobQuestions = !isIdentityRevealed || isProtector;
         if (showJobQuestions) {
             fields.push('jobAppraisal', 'jobImpact');
         } else {
             fields.push('whatNeedToKnow');
-        }
-
-        if (isAttacked) {
-            fields.push('apologize');
         }
 
         return fields;
@@ -770,7 +765,14 @@ export class SimulatorController {
 
     private handleApologizeInternal(cloudId: string): string {
         if (!this.model.parts.isAttacked(cloudId)) {
-            return "What are you apologizing for?";
+            this.model.parts.adjustTrust(cloudId, 0.98);
+            const confused = [
+                "For what?",
+                "What are you apologizing for?",
+                "I'm not upset with you.",
+                "You haven't done anything wrong.",
+            ];
+            return this.rng.cosmetic.pickRandom(confused);
         }
 
         const grievanceSenders = this.relationships.getGrievanceSenders(cloudId);

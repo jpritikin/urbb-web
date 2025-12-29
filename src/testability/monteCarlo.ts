@@ -836,8 +836,6 @@ export class RandomWalkRunner {
 
     private getReasonForMissingField(field: string): string {
         switch (field) {
-            case 'apologize':
-                return 'Part must be attacked (requires blended part with grievance + wait for message delivery)';
             case 'whatNeedToKnow':
                 return 'Part must have identity revealed and not be a protector';
             default:
