@@ -656,6 +656,10 @@ export class SimulatorController {
     }
 
     private handleAttackerNoticingVictim(attackerId: string, victimId: string): ControllerActionResult {
+        if (!this.model.parts.isAttacked(victimId)) {
+            return this.handleGenericNotice(attackerId, victimId);
+        }
+
         const victimName = this.getPartName(victimId);
 
         const currentNeedAttention = this.model.parts.getNeedAttention(victimId);
