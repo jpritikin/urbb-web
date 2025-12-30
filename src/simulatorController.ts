@@ -542,6 +542,10 @@ export class SimulatorController {
     }
 
     private handleNoticePart(cloudId: string, targetCloudId: string): ControllerActionResult {
+        if (cloudId === targetCloudId) {
+            return this.handleSelfNotice(cloudId);
+        }
+
         const protectedByMe = this.relationships.getProtecting(cloudId);
         const myProtectors = this.relationships.getProtectedBy(cloudId);
 
@@ -559,6 +563,24 @@ export class SimulatorController {
         }
 
         return this.handleGenericNotice(cloudId, targetCloudId);
+    }
+
+    private handleSelfNotice(cloudId: string): ControllerActionResult {
+        const selfNoticeResponses = [
+            "We've met before.",
+            "Ah yes, my favorite person.",
+            "I knew I'd find me here.",
+        ];
+        return {
+            success: true,
+            stateChanges: [`${cloudId} noticed itself`],
+            uiFeedback: {
+                thoughtBubble: {
+                    text: this.rng.cosmetic.pickRandom(selfNoticeResponses),
+                    cloudId
+                }
+            }
+        };
     }
 
     private handleGenericNotice(cloudId: string, targetCloudId: string): ControllerActionResult {
