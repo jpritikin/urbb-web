@@ -233,6 +233,13 @@ export function formatMonteCarloResults(results: MonteCarloResults): string {
     return lines.join('\n');
 }
 
+interface ActionHistory {
+    actionCounts: Map<string, number>;  // action:cloudId -> count this iteration
+    stateVisits: Map<string, number>;   // stateKey -> count this iteration
+    lastAction?: ValidAction;
+    consecutiveSameState: number;
+}
+
 export class RandomWalkRunner {
     private coverage: CoverageData = this.createEmptyCoverage();
     private actionsEverValid: Set<string> = new Set();
@@ -317,6 +324,12 @@ export class RandomWalkRunner {
             });
 
             let prevStateKey = this.getStateKey(sim);
+            const history: ActionHistory = {
+                actionCounts: new Map(),
+                stateVisits: new Map(),
+                consecutiveSameState: 0,
+            };
+            history.stateVisits.set(prevStateKey, 1);
 
             for (let step = 0; step < config.maxActionsPerIteration; step++) {
                 const validActions = controller.getValidActions();
@@ -334,9 +347,13 @@ export class RandomWalkRunner {
                 if (filtered.length === 0) break;
 
                 const action = config.heuristicScoring
-                    ? this.pickActionWithHeuristic(sim, controller, filtered, rng.model)
+                    ? this.pickActionWithHeuristic(sim, controller, filtered, rng.model, history)
                     : rng.model.pickRandom(filtered, 'random_walk');
                 actions.push(action);
+
+                const actionKey = `${action.action}:${action.cloudId}`;
+                history.actionCounts.set(actionKey, (history.actionCounts.get(actionKey) ?? 0) + 1);
+                history.lastAction = action;
 
                 if (action.action === 'wait') {
                     sim.advanceTime(WAIT_DURATION);
@@ -348,7 +365,14 @@ export class RandomWalkRunner {
                     this.recordCoverage(action, prevStateKey, sim, seed);
                 }
 
-                prevStateKey = this.getStateKey(sim);
+                const newStateKey = this.getStateKey(sim);
+                if (newStateKey === prevStateKey) {
+                    history.consecutiveSameState++;
+                } else {
+                    history.consecutiveSameState = 0;
+                }
+                history.stateVisits.set(newStateKey, (history.stateVisits.get(newStateKey) ?? 0) + 1);
+                prevStateKey = newStateKey;
 
                 if (sim.getModel().isVictoryAchieved()) {
                     return { seed, actions, finalModel: sim.getModelJSON(), victory: true };
@@ -361,49 +385,388 @@ export class RandomWalkRunner {
         }
     }
 
+    private determinePhase(
+        model: ReturnType<HeadlessSimulator['getModel']>,
+        relationships: ReturnType<HeadlessSimulator['getRelationships']>,
+    ): { phase: 'summon' | 'clear_proxies' | 'clear_blended' | 'get_consent' | 'build_trust' | 'victory' | 'unburden' | 'all_trust'; protectorId: string | null; protecteeId: string | null; targetPartId?: string } {
+        const allPartIds = model.getAllPartIds();
+        const blendedParts = model.getBlendedParts();
+        const targets = model.getTargetCloudIds();
+
+        // Find protector/protectee pairs that still need work
+        for (const partId of allPartIds) {
+            const protectedIds = relationships.getProtecting(partId);
+            for (const protectedId of protectedIds) {
+                const protectorId = partId;
+                const protecteeTrust = model.parts.getTrust(protectedId);
+                const isUnburdened = model.parts.isUnburdened(protectorId);
+
+                // Phase: Unburden - protectee trust >= 1 but protector not unburdened yet
+                if (protecteeTrust >= 1 && !isUnburdened) {
+                    return { phase: 'unburden', protectorId, protecteeId: protectedId };
+                }
+
+                // If this pair is done, check next pair
+                if (protecteeTrust >= 1 && isUnburdened) {
+                    continue;
+                }
+
+                // Check if protectee is accessible (in conference)
+                const supporting = model.getAllSupportingParts();
+                const protecteeAccessible = targets.has(protectedId) || supporting.has(protectedId);
+
+                // Phase: Summon - need to get protectee into conference
+                if (!protecteeAccessible) {
+                    return { phase: 'summon', protectorId, protecteeId: protectedId };
+                }
+
+                // Check if protectee has proxies blocking trust building
+                const proxies = relationships.getProxies(protectedId);
+                if (proxies.size > 0) {
+                    return { phase: 'clear_proxies', protectorId, protecteeId: protectedId };
+                }
+
+                // Phase: Clear blended - need to unblend parts so feel_toward creates self-ray
+                if (blendedParts.length > 0) {
+                    return { phase: 'clear_blended', protectorId, protecteeId: protectedId };
+                }
+
+                // Phase: Get consent - need protector consent to avoid backlash
+                if (!model.parts.hasConsentedToHelp(protectorId)) {
+                    return { phase: 'get_consent', protectorId, protecteeId: protectedId };
+                }
+
+                // Phase: Build trust on protectee
+                return { phase: 'build_trust', protectorId, protecteeId: protectedId };
+            }
+        }
+
+        // All protector/protectee pairs done, check if any part needs more trust for victory
+        for (const partId of allPartIds) {
+            const trust = model.parts.getTrust(partId);
+            if (trust <= 0.9) {
+                return { phase: 'all_trust', protectorId: null, protecteeId: null, targetPartId: partId };
+            }
+        }
+
+        // Victory should be achieved - all parts have high trust
+        return { phase: 'victory', protectorId: null, protecteeId: null };
+    }
+
     private pickActionWithHeuristic(
         sim: HeadlessSimulator,
         _controller: SimulatorController,
         actions: ValidAction[],
-        rng: RNG
+        rng: RNG,
+        history: ActionHistory,
     ): ValidAction {
-        const scored: { action: ValidAction; score: number }[] = [];
+        // 10% chance to pick randomly for exploration
+        if (rng.random('explore_random') < 0.1) {
+            return rng.pickRandom(actions, 'random_action');
+        }
+
         const model = sim.getModel();
+        const relationships = sim.getRelationships();
+        const phaseInfo = this.determinePhase(model, relationships);
+        const { phase, protectorId, protecteeId, targetPartId } = phaseInfo;
+
+        const targets = model.getTargetCloudIds();
+        const blendedParts = model.getBlendedParts();
+        const selfRay = model.getSelfRay();
+
+        const scored: { action: ValidAction; score: number }[] = [];
 
         for (const action of actions) {
             let score = 0;
+            const actionKey = `${action.action}:${action.cloudId}`;
+            const timesUsed = history.actionCounts.get(actionKey) ?? 0;
 
-            if (action.action === 'wait') {
-                // Wait is useful when there are blended parts (for grievance messages)
-                const blendedCount = model.getBlendedParts().length;
-                score = blendedCount > 0 ? 1 : -1;
-            } else {
-                // Prefer actions on parts with lower trust (more room to grow)
-                const trust = model.parts.getTrust(action.cloudId);
-                score += (1 - trust) * 2;
+            // Light repetition penalty
+            if (timesUsed > 3) score -= timesUsed;
 
-                // Prefer ray_field_select when self-ray is active (builds trust)
-                if (action.action === 'ray_field_select') score += 3;
+            // Exploration bonus for uncovered ray fields
+            if (action.action === 'ray_field_select' && action.field && !this.coverage.rayFields[action.field]) {
+                score += 10;
+            }
 
-                // Prefer feel_toward (creates self-ray)
-                if (action.action === 'feel_toward') score += 2;
+            // Recovery: no targets
+            if (targets.size === 0 && blendedParts.length === 0) {
+                if (action.action === 'select_a_target' || action.action === 'join_conference') score += 20;
+            }
 
-                // Prefer help_protected and notice_part (key progression actions)
-                if (action.action === 'help_protected') score += 4;
-                if (action.action === 'notice_part') score += 5;
+            // Never blend or step_back the protector - we need it for notice_part
+            if ((action.action === 'blend' || action.action === 'step_back') && action.cloudId === protectorId) {
+                score -= 100;
+            }
 
-                // Penalize step_back (often counterproductive)
-                if (action.action === 'step_back') score -= 1;
+            // Phase-specific scoring
+            if (phase === 'victory') {
+                // Take victory immediately
+                if (action.action === 'notice_part' && action.targetCloudId === protecteeId) {
+                    score += 100;
+                }
+            }
 
-                // Penalize blend (often leads to stuck states)
-                if (action.action === 'blend') score -= 0.5;
+            else if (phase === 'summon') {
+                // Need to summon protectee via job on protector
+                if (action.action === 'job' && action.cloudId === protectorId) {
+                    score += 30;
+                }
+                // Get protector targeted if not already
+                if (action.action === 'select_a_target' && action.cloudId === protectorId) {
+                    score += 25;
+                }
+                if (action.action === 'join_conference' && action.cloudId === protectorId) {
+                    score += 25;
+                }
+            }
+
+            else if (phase === 'clear_proxies') {
+                // Strategy: get proxy into targets, unblend everything, create ray, clear proxy
+                const proxies = relationships.getProxies(protecteeId!);
+                const proxyInTargets = Array.from(proxies).some(p => targets.has(p) || blendedParts.includes(p));
+                const hasSelfRayOnProtectee = selfRay?.targetCloudId === protecteeId;
+
+                if (!proxyInTargets) {
+                    // Step 1: Get proxy blended via who_do_you_see on protectee
+                    if (action.action === 'who_do_you_see' && action.cloudId === protecteeId) {
+                        score += 25;
+                    }
+                    if (action.action === 'join_conference' && action.cloudId === protecteeId) {
+                        score += 20;
+                    }
+                    if (action.action === 'select_a_target' && action.cloudId === protecteeId) {
+                        score += 20;
+                    }
+                } else if (blendedParts.length > 0) {
+                    // Step 2: Unblend everything first (feel_toward won't create ray while things are blended)
+                    if (action.action === 'separate') {
+                        score += 35;  // Highest priority - must unblend
+                    }
+                    if (action.action === 'step_back' && blendedParts.includes(action.cloudId)) {
+                        score += 30;
+                    }
+                } else if (!hasSelfRayOnProtectee) {
+                    // Step 3: Create self-ray on protectee (now that nothing is blended)
+                    if (action.action === 'feel_toward' && action.cloudId === protecteeId) {
+                        score += 30;
+                    }
+                    if (!targets.has(protecteeId!)) {
+                        if (action.action === 'join_conference' && action.cloudId === protecteeId) {
+                            score += 25;
+                        }
+                    }
+                } else {
+                    // Step 4: Use who_do_you_see to clear proxies (95% chance with ray)
+                    if (action.action === 'who_do_you_see' && action.cloudId === protecteeId) {
+                        score += 35;
+                    }
+                }
+            }
+
+            else if (phase === 'clear_blended') {
+                // Need to unblend all parts before feel_toward will create self-ray
+                if (action.action === 'separate') {
+                    score += 30;
+                }
+                // step_back on blended parts also removes them
+                if (action.action === 'step_back' && blendedParts.includes(action.cloudId)) {
+                    score += 25;
+                }
+            }
+
+            else if (phase === 'get_consent') {
+                // Need protector consent before building protectee trust to avoid backlash
+                // help_protected requires protector to be targeted with identity revealed
+                const protectorTargeted = targets.has(protectorId!);
+                const protectorIdentityRevealed = model.parts.isIdentityRevealed(protectorId!);
+
+                if (!protectorTargeted) {
+                    if (action.action === 'join_conference' && action.cloudId === protectorId) {
+                        score += 30;
+                    }
+                    if (action.action === 'select_a_target' && action.cloudId === protectorId) {
+                        score += 30;
+                    }
+                } else if (!protectorIdentityRevealed) {
+                    // Need to reveal identity first via job
+                    if (action.action === 'job' && action.cloudId === protectorId) {
+                        score += 35;
+                    }
+                } else {
+                    // Ask for consent
+                    if (action.action === 'help_protected' && action.cloudId === protectorId) {
+                        score += 40;
+                    }
+                    // Also build protector trust to increase consent chance
+                    if (action.action === 'feel_toward' && action.cloudId === protectorId && !selfRay) {
+                        score += 25;
+                    }
+                    if (action.action === 'ray_field_select' && action.cloudId === protectorId) {
+                        if (action.field === 'gratitude') score += 30;  // Protectors respond to gratitude
+                        else score += 20;
+                    }
+                }
+            }
+
+            else if (phase === 'build_trust') {
+                // Build trust via ray fields on protectee
+                const hasSelfRayOnProtectee = selfRay?.targetCloudId === protecteeId;
+                const protecteeTargeted = targets.has(protecteeId!);
+
+                // Prevent losing focus - don't blend/step_back protectee
+                if ((action.action === 'blend' || action.action === 'step_back') && action.cloudId === protecteeId) {
+                    score -= 50;
+                }
+
+                if (!protecteeTargeted) {
+                    // Need protectee as target
+                    if (action.action === 'join_conference' && action.cloudId === protecteeId) {
+                        score += 30;
+                    }
+                    if (action.action === 'select_a_target' && action.cloudId === protecteeId) {
+                        score += 30;
+                    }
+                } else if (!hasSelfRayOnProtectee) {
+                    // Need self-ray on protectee
+                    if (action.action === 'feel_toward' && action.cloudId === protecteeId) {
+                        score += 35;
+                    }
+                } else {
+                    // Have ray, use trust-building fields
+                    if (action.action === 'ray_field_select' && action.cloudId === protecteeId) {
+                        const openness = model.parts.getOpenness(protecteeId!);
+
+                        // Prioritize building openness first
+                        if (action.field === 'age' && !model.parts.isFieldRevealed(protecteeId!, 'age')) {
+                            score += 40;  // +0.5 openness
+                        } else if (action.field === 'identity' && !model.parts.isIdentityRevealed(protecteeId!)) {
+                            score += 35;  // +0.2 openness
+                        }
+                        // Then trust-building fields (scale with openness)
+                        else if (action.field === 'whatNeedToKnow') {
+                            score += 30 + openness * 10;
+                        } else if (action.field === 'compassion') {
+                            score += 25 + openness * 10;
+                        } else if (action.field === 'gratitude') {
+                            score += 20 + openness * 10;
+                        } else {
+                            score += 15;
+                        }
+                    }
+                }
+
+                // Reduce targets to maximize trust gain (trustGain = openness / targetCount)
+                if (action.action === 'step_back' && targets.size > 1 && action.cloudId !== protecteeId && action.cloudId !== protectorId) {
+                    score += 15;
+                }
+            }
+
+            else if (phase === 'unburden') {
+                // Need to use notice_part on the protector to unburden it
+                if (action.action === 'notice_part' && action.cloudId === protectorId && action.targetCloudId === protecteeId) {
+                    score += 50;
+                }
+                // Ensure protector is targeted
+                if (!targets.has(protectorId!)) {
+                    if (action.action === 'join_conference' && action.cloudId === protectorId) {
+                        score += 35;
+                    }
+                    if (action.action === 'select_a_target' && action.cloudId === protectorId) {
+                        score += 35;
+                    }
+                }
+            }
+
+            else if (phase === 'all_trust') {
+                // Build trust on remaining parts for victory
+                const partId = targetPartId!;
+                const partTargeted = targets.has(partId);
+                const hasSelfRayOnPart = selfRay?.targetCloudId === partId;
+                const proxies = relationships.getProxies(partId);
+                const proxyInTargets = Array.from(proxies).some(p => targets.has(p) || blendedParts.includes(p));
+
+                // Don't blend or step_back the target part
+                if ((action.action === 'blend' || action.action === 'step_back') && action.cloudId === partId) {
+                    score -= 100;
+                }
+
+                // First: ensure part is targeted
+                if (!partTargeted) {
+                    if (action.action === 'join_conference' && action.cloudId === partId) {
+                        score += 40;
+                    }
+                    if (action.action === 'select_a_target' && action.cloudId === partId) {
+                        score += 40;
+                    }
+                }
+                // Then: handle proxies (similar to clear_proxies phase)
+                else if (proxies.size > 0) {
+                    if (!proxyInTargets) {
+                        // Get proxy blended via who_do_you_see
+                        if (action.action === 'who_do_you_see' && action.cloudId === partId) {
+                            score += 35;
+                        }
+                    } else if (blendedParts.length > 0) {
+                        // Unblend before creating ray
+                        if (action.action === 'separate') score += 35;
+                    } else if (!hasSelfRayOnPart) {
+                        // Create ray on part
+                        if (action.action === 'feel_toward' && action.cloudId === partId) {
+                            score += 40;
+                        }
+                    } else {
+                        // Clear proxies with ray
+                        if (action.action === 'who_do_you_see' && action.cloudId === partId) {
+                            score += 45;
+                        }
+                    }
+                }
+                // Then: clear any blended parts
+                else if (blendedParts.length > 0) {
+                    if (action.action === 'separate') score += 35;
+                }
+                // Then: create ray if needed
+                else if (!hasSelfRayOnPart) {
+                    if (action.action === 'feel_toward' && action.cloudId === partId) {
+                        score += 40;
+                    }
+                }
+                // Finally: use ray fields to build trust
+                else {
+                    if (action.action === 'ray_field_select' && action.cloudId === partId) {
+                        const isProtector = relationships.getProtecting(partId).size > 0;
+                        const ageRevealed = model.parts.isFieldRevealed(partId, 'age');
+                        const identityRevealed = model.parts.isIdentityRevealed(partId);
+
+                        // Build openness first (age, identity)
+                        if (action.field === 'age' && !ageRevealed) {
+                            score += 45;  // +0.5 openness, +0.05 trust
+                        } else if (action.field === 'identity' && !identityRevealed) {
+                            score += 40;  // +0.2 openness, +0.05 trust
+                        }
+                        // Use appropriate trust builder based on protector status
+                        else if (isProtector) {
+                            if (action.field === 'gratitude') score += 40;  // Works for protectors
+                        } else {
+                            // Non-protectors: compassion works, gratitude hurts
+                            if (action.field === 'compassion') score += 45;
+                            else if (action.field === 'gratitude') score -= 30;  // Avoid - hurts trust
+                        }
+                    }
+                }
+            }
+
+            // Wait for pending blends
+            if (action.action === 'wait' && model.peekPendingBlend() !== null) {
+                score += 15;
             }
 
             scored.push({ action, score });
         }
 
-        // Softmax selection with temperature
-        const temperature = 0.5;
+        // Low temperature for deterministic selection
+        const temperature = 0.3;
         const maxScore = Math.max(...scored.map(s => s.score));
         const expScores = scored.map(s => ({ action: s.action, exp: Math.exp((s.score - maxScore) / temperature) }));
         const sumExp = expScores.reduce((sum, s) => sum + s.exp, 0);
@@ -471,7 +834,7 @@ export class RandomWalkRunner {
     private getSuggestionForAction(actionId: string): string {
         switch (actionId) {
             case 'notice_part':
-                return 'Requires protector with identity revealed AND protectee with trust >= 1';
+                return 'Any conference part can notice another conference part';
             case 'help_protected':
                 return 'Requires target to be a protector with identity revealed';
             case 'join_conference':
@@ -483,8 +846,6 @@ export class RandomWalkRunner {
 
     private getReasonForMissingField(field: string): string {
         switch (field) {
-            case 'apologize':
-                return 'Part must be attacked (requires blended part with grievance + wait for message delivery)';
             case 'whatNeedToKnow':
                 return 'Part must have identity revealed and not be a protector';
             default:
