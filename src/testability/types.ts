@@ -13,6 +13,7 @@ export interface SerializedModel {
     partStates: Record<string, PartState>;
     thoughtBubbles?: ThoughtBubble[];
     victoryAchieved?: boolean;
+    selfAmplification?: number;
 }
 
 export interface SerializedRelationships {

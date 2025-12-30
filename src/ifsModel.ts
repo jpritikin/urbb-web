@@ -41,6 +41,21 @@ export class SimulatorModel {
     private messageIdCounter: number = 0;
     private thoughtBubbles: ThoughtBubble[] = [];
     private victoryAchieved: boolean = false;
+    private selfAmplification: number = 1;
+
+    getSelfAmplification(): number {
+        return this.selfAmplification;
+    }
+
+    setSelfAmplification(value: number): void {
+        this.selfAmplification = value;
+    }
+
+    changeNeedAttention(cloudId: string, delta: number): void {
+        const current = this.parts.getNeedAttention(cloudId);
+        const amplifiedDelta = delta * this.selfAmplification;
+        this.parts.setNeedAttention(cloudId, Math.max(0, current + amplifiedDelta));
+    }
 
     getTargetCloudIds(): Set<string> {
         return new Set(this.targetCloudIds);
@@ -355,6 +370,7 @@ export class SimulatorModel {
         cloned.messages = this.messages.map(m => ({ ...m }));
         cloned.messageIdCounter = this.messageIdCounter;
         cloned.thoughtBubbles = this.thoughtBubbles.map(b => ({ ...b }));
+        cloned.selfAmplification = this.selfAmplification;
         return cloned;
     }
 
@@ -402,8 +418,7 @@ export class SimulatorModel {
             }
 
             if (rate > 0) {
-                const current = this.parts.getNeedAttention(cloudId);
-                this.parts.setNeedAttention(cloudId, current + deltaTime * rate);
+                this.changeNeedAttention(cloudId, deltaTime * rate);
             }
         }
     }
@@ -503,6 +518,7 @@ export class SimulatorModel {
             partStates: this.parts.toJSON(),
             thoughtBubbles: this.thoughtBubbles.map(b => ({ ...b })),
             victoryAchieved: this.victoryAchieved,
+            selfAmplification: this.selfAmplification,
         };
     }
 
@@ -523,6 +539,7 @@ export class SimulatorModel {
         (model as { parts: PartStateManager }).parts = PartStateManager.fromJSON(json.partStates);
         model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({ ...b }));
         model.victoryAchieved = json.victoryAchieved ?? false;
+        model.selfAmplification = json.selfAmplification ?? 1;
         return model;
     }
 }

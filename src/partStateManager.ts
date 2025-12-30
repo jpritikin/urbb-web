@@ -96,20 +96,6 @@ export class PartStateManager {
         }
     }
 
-    adjustNeedAttention(cloudId: string, multiplier: number): void {
-        const state = this.partStates.get(cloudId);
-        if (state) {
-            state.needAttention *= multiplier;
-        }
-    }
-
-    addNeedAttention(cloudId: string, amount: number): void {
-        const state = this.partStates.get(cloudId);
-        if (state) {
-            state.needAttention = Math.max(0, state.needAttention + amount);
-        }
-    }
-
     markAsProxy(cloudId: string): void {
         const state = this.partStates.get(cloudId);
         if (state) {

@@ -67,7 +67,7 @@ export class MessageOrchestrator {
     onMessageReceived(message: PartMessage): void {
         if (message.type === 'grievance') {
             this.model.parts.adjustTrust(message.targetId, 0.99);
-            this.model.parts.addNeedAttention(message.senderId, -0.25);
+            this.model.changeNeedAttention(message.senderId, -0.25);
             if (message.senderId !== message.targetId) {
                 this.model.parts.setAttacked(message.targetId);
             }
@@ -157,7 +157,7 @@ export class MessageOrchestrator {
             while (cooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
                 const text = this.rng.cosmetic.pickRandom(dialogues);
                 this.callbacks.showThoughtBubble(text, blendedId);
-                this.model.parts.addNeedAttention(blendedId, -0.25);
+                this.model.changeNeedAttention(blendedId, -0.25);
                 cooldown -= this.GENERIC_DIALOGUE_INTERVAL;
             }
             this.genericDialogueCooldowns.set(blendedId, cooldown);

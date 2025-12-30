@@ -560,7 +560,7 @@ export class SimulatorController {
             "I notice you.",
             "I see you there.",
         ];
-        this.model.parts.addNeedAttention(targetCloudId, 0.1);
+        this.model.changeNeedAttention(targetCloudId, 0.1);
         return {
             success: true,
             stateChanges: [outcome(cloudId, OUTCOMES.NOTICED_GENERIC, targetCloudId)],
@@ -655,8 +655,7 @@ export class SimulatorController {
 
         const victimName = this.getPartName(victimId);
 
-        const currentNeedAttention = this.model.parts.getNeedAttention(victimId);
-        this.model.parts.setNeedAttention(victimId, currentNeedAttention + 0.5);
+        this.model.changeNeedAttention(victimId, 0.5);
 
         const recognitionResponses = [
             `I hurt ${victimName}, but I had to.`,
