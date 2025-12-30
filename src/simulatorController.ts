@@ -100,6 +100,8 @@ export class SimulatorController {
         const targetIds = this.model.getTargetCloudIds();
         const selfRay = this.model.getSelfRay();
         const protectedIds = this.relationships.getProtecting(cloudId);
+        const conferenceParts = this.model.getConferenceCloudIds();
+        const inConference = conferenceParts.has(cloudId);
 
         // select_a_target (panorama mode - can target any non-targeted, non-blended part)
         if (!isTarget && !isBlended) {
@@ -117,7 +119,7 @@ export class SimulatorController {
         }
 
         // step_back
-        if ((isTarget || isSupporting || (isBlended && targetIds.size > 0)) && !isSpontaneousBlend) {
+        if (inConference && !isSpontaneousBlend) {
             actions.push({ action: 'step_back', cloudId });
         }
 
@@ -146,46 +148,10 @@ export class SimulatorController {
             actions.push({ action: 'help_protected', cloudId });
         }
 
-        // notice_part: any conference part can notice any other conference part
-        if (isTarget || isSupporting) {
-            const alreadyAdded = new Set<string>();
-
-            // protector noticing protectee (only if not yet unburdened)
-            if (protectedIds.size > 0 && !this.model.parts.isUnburdened(cloudId)) {
-                for (const protectedId of protectedIds) {
-                    actions.push({ action: 'notice_part', cloudId, targetCloudId: protectedId });
-                    alreadyAdded.add(protectedId);
-                }
-            }
-
-            // protectee noticing their protector
-            const myProtectorIds = this.relationships.getProtectedBy(cloudId);
-            for (const protectorId of myProtectorIds) {
-                if (!alreadyAdded.has(protectorId)) {
-                    actions.push({ action: 'notice_part', cloudId, targetCloudId: protectorId });
-                    alreadyAdded.add(protectorId);
-                }
-            }
-
-            // attacker noticing part it has hurt
-            const partsIHurt = this.relationships.getGrievanceTargets(cloudId);
-            for (const victimId of partsIHurt) {
-                if (!alreadyAdded.has(victimId)) {
-                    actions.push({ action: 'notice_part', cloudId, targetCloudId: victimId });
-                    alreadyAdded.add(victimId);
-                }
-            }
-
-            // generic: any other conference part
-            const conferenceParts = new Set([
-                ...targetIds,
-                ...this.model.getAllSupportingParts(),
-                ...this.model.getBlendedParts()
-            ]);
+        // notice_part: any non-blended conference part can notice any other conference part (including self)
+        if (inConference && !isBlended) {
             for (const targetPartId of conferenceParts) {
-                if (targetPartId !== cloudId && !alreadyAdded.has(targetPartId)) {
-                    actions.push({ action: 'notice_part', cloudId, targetCloudId: targetPartId });
-                }
+                actions.push({ action: 'notice_part', cloudId, targetCloudId: targetPartId });
             }
         }
 
