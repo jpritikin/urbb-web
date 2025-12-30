@@ -460,6 +460,11 @@ export class RandomWalkRunner {
         rng: RNG,
         history: ActionHistory,
     ): ValidAction {
+        // 10% chance to pick randomly for exploration
+        if (rng.random('explore_random') < 0.1) {
+            return rng.pickRandom(actions, 'random_action');
+        }
+
         const model = sim.getModel();
         const relationships = sim.getRelationships();
         const phaseInfo = this.determinePhase(model, relationships);
@@ -478,6 +483,11 @@ export class RandomWalkRunner {
 
             // Light repetition penalty
             if (timesUsed > 3) score -= timesUsed;
+
+            // Exploration bonus for uncovered ray fields
+            if (action.action === 'ray_field_select' && action.field && !this.coverage.rayFields[action.field]) {
+                score += 10;
+            }
 
             // Recovery: no targets
             if (targets.size === 0 && blendedParts.length === 0) {
@@ -824,7 +834,7 @@ export class RandomWalkRunner {
     private getSuggestionForAction(actionId: string): string {
         switch (actionId) {
             case 'notice_part':
-                return 'Requires protector with identity revealed AND protectee with trust >= 1';
+                return 'Any conference part can notice another conference part';
             case 'help_protected':
                 return 'Requires target to be a protector with identity revealed';
             case 'join_conference':

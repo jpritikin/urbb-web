@@ -107,7 +107,7 @@ function parseArgs(): Args {
     let iterations = 100;
     let maxActions = 50;
     let verbose = false;
-    let heuristic = false;
+    let heuristic = true;
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];

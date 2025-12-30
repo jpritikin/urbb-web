@@ -146,11 +146,45 @@ export class SimulatorController {
             actions.push({ action: 'help_protected', cloudId });
         }
 
-        // notice_part
-        if (isTarget && protectedIds.size > 0 && !this.model.parts.isUnburdened(cloudId)) {
-            for (const protectedId of protectedIds) {
-                if (this.model.parts.getTrust(protectedId) >= 1) {
+        // notice_part: any conference part can notice any other conference part
+        if (isTarget || isSupporting) {
+            const alreadyAdded = new Set<string>();
+
+            // protector noticing protectee (only if not yet unburdened)
+            if (protectedIds.size > 0 && !this.model.parts.isUnburdened(cloudId)) {
+                for (const protectedId of protectedIds) {
                     actions.push({ action: 'notice_part', cloudId, targetCloudId: protectedId });
+                    alreadyAdded.add(protectedId);
+                }
+            }
+
+            // protectee noticing their protector
+            const myProtectorIds = this.relationships.getProtectedBy(cloudId);
+            for (const protectorId of myProtectorIds) {
+                if (!alreadyAdded.has(protectorId)) {
+                    actions.push({ action: 'notice_part', cloudId, targetCloudId: protectorId });
+                    alreadyAdded.add(protectorId);
+                }
+            }
+
+            // attacker noticing part it has hurt
+            const partsIHurt = this.relationships.getGrievanceTargets(cloudId);
+            for (const victimId of partsIHurt) {
+                if (!alreadyAdded.has(victimId)) {
+                    actions.push({ action: 'notice_part', cloudId, targetCloudId: victimId });
+                    alreadyAdded.add(victimId);
+                }
+            }
+
+            // generic: any other conference part
+            const conferenceParts = new Set([
+                ...targetIds,
+                ...this.model.getAllSupportingParts(),
+                ...this.model.getBlendedParts()
+            ]);
+            for (const targetPartId of conferenceParts) {
+                if (targetPartId !== cloudId && !alreadyAdded.has(targetPartId)) {
+                    actions.push({ action: 'notice_part', cloudId, targetCloudId: targetPartId });
                 }
             }
         }
@@ -507,38 +541,142 @@ export class SimulatorController {
         return { success: true, stateChanges };
     }
 
-    private handleNoticePart(protectorId: string, targetCloudId: string): ControllerActionResult {
-        const protectedIds = this.relationships.getProtecting(protectorId);
-        if (!protectedIds.has(targetCloudId)) {
+    private handleNoticePart(cloudId: string, targetCloudId: string): ControllerActionResult {
+        const protectedByMe = this.relationships.getProtecting(cloudId);
+        const myProtectors = this.relationships.getProtectedBy(cloudId);
+
+        if (protectedByMe.has(targetCloudId)) {
+            return this.handleProtectorNoticingProtectee(cloudId, targetCloudId);
+        }
+
+        if (myProtectors.has(targetCloudId)) {
+            return this.handleProtecteeNoticingProtector(cloudId, targetCloudId);
+        }
+
+        const partsIHurt = this.relationships.getGrievanceTargets(cloudId);
+        if (partsIHurt.has(targetCloudId)) {
+            return this.handleAttackerNoticingVictim(cloudId, targetCloudId);
+        }
+
+        return this.handleGenericNotice(cloudId, targetCloudId);
+    }
+
+    private handleGenericNotice(cloudId: string, targetCloudId: string): ControllerActionResult {
+        const genericResponses = [
+            "We're in this together.",
+            "I notice you.",
+            "I see you there.",
+        ];
+        this.model.parts.addNeedAttention(targetCloudId, 0.1);
+        return {
+            success: true,
+            stateChanges: [`${cloudId} noticed ${targetCloudId}`],
+            uiFeedback: {
+                thoughtBubble: {
+                    text: this.rng.cosmetic.pickRandom(genericResponses),
+                    cloudId
+                }
+            }
+        };
+    }
+
+    private handleProtectorNoticingProtectee(protectorId: string, protecteeId: string): ControllerActionResult {
+        const protecteeName = this.getPartName(protecteeId);
+        const protecteeTrust = this.model.parts.getTrust(protecteeId);
+
+        if (protecteeTrust < 1) {
+            const burdenRecognitionResponses = [
+                `I see how much ${protecteeName} is carrying. My job is so important.`,
+                `${protecteeName} has been through so much. That's why I can't stop.`,
+                `I feel ${protecteeName}'s pain. Someone has to protect them.`,
+                `${protecteeName} is still hurting. I have to keep doing what I do.`,
+                `I can see the burden ${protecteeName} carries. It's why I exist.`,
+            ];
             return {
-                success: false,
-                stateChanges: [],
-                uiFeedback: { thoughtBubble: { text: "That's not a part I protect.", cloudId: protectorId } }
+                success: true,
+                stateChanges: [`${protectorId} recognized ${protecteeId}'s burden`],
+                uiFeedback: {
+                    thoughtBubble: {
+                        text: this.rng.cosmetic.pickRandom(burdenRecognitionResponses),
+                        cloudId: protectorId
+                    }
+                }
             };
         }
 
-        const targetTrust = this.model.parts.getTrust(targetCloudId);
-        if (targetTrust < 1) {
-            return {
-                success: false,
-                stateChanges: [],
-                uiFeedback: { thoughtBubble: { text: "I don't see anything different.", cloudId: protectorId } }
-            };
-        }
-
-        const targetName = this.getPartName(targetCloudId);
         this.model.parts.setUnburdened(protectorId);
         this.model.parts.setNeedAttention(protectorId, 0);
 
         const unburdenedJob = this.model.parts.getDialogues(protectorId)?.unburdenedJob;
         const response = unburdenedJob
-            ? `I see that ${targetName} is okay now. ${unburdenedJob}`
-            : `I see that ${targetName} is okay now. I don't need to protect them anymore.`;
+            ? `I see that ${protecteeName} is okay now. ${unburdenedJob}`
+            : `I see that ${protecteeName} is okay now. I don't need to protect them anymore.`;
 
         return {
             success: true,
             stateChanges: [`${protectorId} unburdened`],
             uiFeedback: { thoughtBubble: { text: response, cloudId: protectorId } }
+        };
+    }
+
+    private handleProtecteeNoticingProtector(protecteeId: string, protectorId: string): ControllerActionResult {
+        const protectorName = this.getPartName(protectorId);
+        const protecteeTrust = this.model.parts.getTrust(protecteeId);
+        const protectorTrust = this.model.parts.getTrust(protectorId);
+
+        const trustDiff = Math.abs(protecteeTrust - protectorTrust);
+        const transferAmount = trustDiff * 0.5;
+
+        if (protecteeTrust > protectorTrust) {
+            this.model.parts.addTrust(protectorId, transferAmount);
+            this.model.parts.addTrust(protecteeId, -transferAmount);
+        } else {
+            this.model.parts.addTrust(protecteeId, transferAmount);
+            this.model.parts.addTrust(protectorId, -transferAmount);
+        }
+
+        const recognitionResponses = [
+            `I see how hard ${protectorName} has been working to keep me safe.`,
+            `${protectorName} has been protecting me all this time.`,
+            `I understand now what ${protectorName} has been doing for me.`,
+            `Thank you, ${protectorName}. I see your effort.`,
+            `${protectorName} carries so much for my sake.`,
+        ];
+
+        return {
+            success: true,
+            stateChanges: [`${protecteeId} recognized ${protectorId}, trust balanced`],
+            uiFeedback: {
+                thoughtBubble: {
+                    text: this.rng.cosmetic.pickRandom(recognitionResponses),
+                    cloudId: protecteeId
+                }
+            }
+        };
+    }
+
+    private handleAttackerNoticingVictim(attackerId: string, victimId: string): ControllerActionResult {
+        const victimName = this.getPartName(victimId);
+
+        const currentNeedAttention = this.model.parts.getNeedAttention(victimId);
+        this.model.parts.setNeedAttention(victimId, currentNeedAttention + 0.5);
+
+        const recognitionResponses = [
+            `I hurt ${victimName}, but I had to.`,
+            `I had to hurt ${victimName} to do my job.`,
+            `I see the pain I caused ${victimName}. It was necessary.`,
+            `${victimName} suffered because of me. I had no choice.`,
+        ];
+
+        return {
+            success: true,
+            stateChanges: [`${attackerId} recognized harm to ${victimId}`],
+            uiFeedback: {
+                thoughtBubble: {
+                    text: this.rng.cosmetic.pickRandom(recognitionResponses),
+                    cloudId: attackerId
+                }
+            }
         };
     }
 
