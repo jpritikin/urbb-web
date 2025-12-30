@@ -11,11 +11,11 @@ import type {
 import type { BiographyField } from '../selfRay.js';
 
 class HeadlessView implements MessageOrchestratorView {
-    private cloudStates: Record<string, unknown> = {};
+    private model: SimulatorModel | null = null;
     private onMessageReceived: ((message: PartMessage) => void) | null = null;
 
-    setViewState(viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
-        this.cloudStates = viewState?.cloudStates ?? {};
+    setModel(model: SimulatorModel): void {
+        this.model = model;
     }
 
     setOnMessageReceived(callback: (message: PartMessage) => void): void {
@@ -25,7 +25,11 @@ class HeadlessView implements MessageOrchestratorView {
     hasActiveSpiralExits(): boolean { return false; }
     isAwaitingArrival(_cloudId: string): boolean { return false; }
     getCloudState(cloudId: string): unknown | null {
-        return this.cloudStates[cloudId] ?? null;
+        if (!this.model) return null;
+        // Return a truthy object if the part is in the conference (targeted or blended)
+        const isTarget = this.model.getTargetCloudIds().has(cloudId);
+        const isBlended = this.model.getBlendedParts().includes(cloudId);
+        return (isTarget || isBlended) ? {} : null;
     }
     startMessage(message: PartMessage, _senderId: string, _targetId: string): void {
         // Immediately deliver message in headless mode
@@ -49,6 +53,7 @@ export class HeadlessSimulator {
         this.controller = this.createController();
         this.effectApplicator = new ActionEffectApplicator(this.model);
         this.headlessView = new HeadlessView();
+        this.headlessView.setModel(this.model);
         this.orchestrator = this.createOrchestrator();
     }
 
@@ -87,6 +92,7 @@ export class HeadlessSimulator {
         sim.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
         sim.controller = sim.createController();
         sim.effectApplicator = new ActionEffectApplicator(sim.model);
+        sim.headlessView.setModel(sim.model);
         sim.orchestrator = sim.createOrchestrator();
         return sim;
     }
@@ -191,7 +197,14 @@ export class HeadlessSimulator {
         return this.orchestrator.getDebugState();
     }
 
-    setViewState(viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
-        this.headlessView.setViewState(viewState);
+    getModelStateSnapshot(): { targets: string[]; blended: string[] } {
+        return {
+            targets: [...this.model.getTargetCloudIds()],
+            blended: this.model.getBlendedParts(),
+        };
+    }
+
+    setViewState(_viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
+        // No-op: HeadlessView now reads directly from the model
     }
 }

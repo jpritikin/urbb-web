@@ -38,6 +38,7 @@ export interface RecordedAction {
     targetCloudId?: string;
     field?: string;
     elapsedTime?: number;  // Seconds since last action (for time-based state changes)
+    waitCount?: number;  // Number of WAIT_DURATION chunks to advance (for proper orchestrator timing)
     thoughtBubble?: { text: string; cloudId: string };
     rngCounts?: { model: number; cosmetic: number };
     rngLog?: string[];  // Model RNG call purposes for this action
@@ -183,22 +184,41 @@ export interface RandomWalkConfig {
     stopOnError?: boolean;
     coverageTracking?: boolean;
     heuristicScoring?: boolean;
-    extractVictoryPaths?: boolean;
+    extractPaths?: boolean;
+    recordHeuristicState?: boolean;
+    seed?: number;  // Fixed seed for reproducibility (only used when iterations=1)
+}
+
+export interface HeuristicState {
+    phase: string;
+    protectorId: string | null;
+    protecteeId: string | null;
+    grievancePath: { attackerId: string; victimId: string; attackerBlended: boolean; victimAttacked: boolean; attackerInConf: boolean; victimInConf: boolean } | null;
+}
+
+export interface RecordedWalkAction {
+    action: string;
+    cloudId: string;
+    targetCloudId?: string;
+    field?: string;
+    heuristic?: HeuristicState;
+    score?: number;
 }
 
 export interface RandomWalkResult {
     seed: number;
-    actions: { action: string; cloudId: string; targetCloudId?: string; field?: string }[];
+    actions: RecordedWalkAction[];
     finalModel: SerializedModel;
     victory: boolean;
     error?: string;
 }
 
-export interface VictoryPath {
+export interface WalkPath {
     seed: number;
     actions: { action: string; cloudId: string; targetCloudId?: string; field?: string }[];
     length: number;
     finalScore: number;
+    victory: boolean;
 }
 
 export interface CoverageGap {
@@ -215,7 +235,7 @@ export interface RandomWalkResults {
     errors: RandomWalkResult[];
     coverage?: CoverageData;
     coverageGaps?: CoverageGap[];
-    victoryPaths?: VictoryPath[];
+    paths?: WalkPath[];
     bestScore?: number;
     timing: { totalMs: number; avgPerIteration: number };
 }

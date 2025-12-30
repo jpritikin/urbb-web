@@ -545,9 +545,6 @@ export class CloudManager {
         for (const instance of this.instances) {
             const assessed = this.relationships.assessNeedAttention(instance.cloud.id);
             this.model.parts.setNeedAttention(instance.cloud.id, assessed);
-            if (this.relationships.getProxyFor(instance.cloud.id).size > 0) {
-                this.model.parts.markAsProxy(instance.cloud.id);
-            }
         }
     }
 

@@ -32,10 +32,7 @@ export class ActionEffectApplicator {
     private reduceBlending(cloudId: string, baseAmount: number): void {
         if (!this.model.isBlended(cloudId)) return;
 
-        const needAttention = this.model.parts.getNeedAttention(cloudId);
-        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
-        const amount = baseAmount * multiplier;
-
+        const amount = this.model.calculateSeparationAmount(cloudId, baseAmount);
         const currentDegree = this.model.getBlendingDegree(cloudId);
         const targetDegree = Math.max(0, currentDegree - amount);
         this.model.setBlendingDegree(cloudId, targetDegree);

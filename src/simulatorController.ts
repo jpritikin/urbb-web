@@ -1,6 +1,7 @@
 import { SimulatorModel } from './ifsModel.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import { DualRNG } from './testability/rng.js';
+import { OUTCOMES, outcome } from './outcomes.js';
 import type { ControllerActionResult } from './testability/types.js';
 import type { BiographyField } from './selfRay.js';
 
@@ -187,12 +188,12 @@ export class SimulatorController {
         switch (actionId) {
             case 'select_a_target':
                 this.model.setTargetCloud(cloudId);
-                stateChanges.push(`${cloudId} selected as target`);
+                stateChanges.push(outcome(cloudId, OUTCOMES.SELECTED_AS_TARGET));
                 return { success: true, stateChanges };
 
             case 'join_conference':
                 this.model.addTargetCloud(cloudId);
-                stateChanges.push(`${cloudId} joined conference`);
+                stateChanges.push(outcome(cloudId, OUTCOMES.JOINED_CONFERENCE));
                 return { success: true, stateChanges };
 
             case 'step_back':
@@ -251,7 +252,7 @@ export class SimulatorController {
             this.model.parts.adjustTrust(cloudId, 0.98);
             return {
                 success: true,
-                stateChanges: [`${cloudId} wanted to watch`],
+                stateChanges: [outcome(cloudId, OUTCOMES.WANTED_TO_WATCH)],
                 uiFeedback: { thoughtBubble: { text: "I want to watch.", cloudId } }
             };
         }
@@ -259,7 +260,7 @@ export class SimulatorController {
         this.model.stepBackPart(cloudId);
         return {
             success: true,
-            stateChanges: [`${cloudId} stepped back`]
+            stateChanges: [outcome(cloudId, OUTCOMES.STEPPED_BACK)]
         };
     }
 
@@ -268,10 +269,13 @@ export class SimulatorController {
             return { success: false, message: 'Not blended', stateChanges: [] };
         }
 
+        const baseAmount = 0.3;
+        const willUnblend = this.model.willUnblendAfterSeparation(cloudId, baseAmount);
+
         return {
             success: true,
-            stateChanges: [`${cloudId} separating`],
-            reduceBlending: { cloudId, amount: 0.3 }
+            stateChanges: [outcome(cloudId, willUnblend ? OUTCOMES.UNBLENDED : OUTCOMES.SEPARATING)],
+            reduceBlending: { cloudId, amount: baseAmount }
         };
     }
 
@@ -280,7 +284,7 @@ export class SimulatorController {
         this.model.addBlendedPart(cloudId, 'therapist');
         return {
             success: true,
-            stateChanges: [`${cloudId} blended`]
+            stateChanges: [outcome(cloudId, OUTCOMES.BLENDED)]
         };
     }
 
@@ -316,7 +320,7 @@ export class SimulatorController {
                 this.model.parts.adjustTrust(cloudId, 0.95);
                 return {
                     success: true,
-                    stateChanges: [`${cloudId} already answered`],
+                    stateChanges: [outcome(cloudId, OUTCOMES.ALREADY_ANSWERED)],
                     uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
                 };
             }
@@ -324,7 +328,7 @@ export class SimulatorController {
 
         const response = this.getJobResponse(cloudId);
         this.model.parts.revealJob(cloudId);
-        const stateChanges = [`${cloudId} revealed job`];
+        const stateChanges = [outcome(cloudId, OUTCOMES.REVEALED_JOB)];
 
         const result: ControllerActionResult = {
             success: true,
@@ -354,7 +358,7 @@ export class SimulatorController {
             return {
                 success: true,
                 message: 'Refused',
-                stateChanges: [`${cloudId} refused to help`],
+                stateChanges: [outcome(cloudId, OUTCOMES.REFUSED_TO_HELP)],
                 uiFeedback: {
                     thoughtBubble: { text: response, cloudId },
                     actionLabel: `Help? ${partName}: refused`
@@ -366,7 +370,7 @@ export class SimulatorController {
         return {
             success: true,
             message: 'Consented',
-            stateChanges: [`${cloudId} consented to help`],
+            stateChanges: [outcome(cloudId, OUTCOMES.CONSENTED_TO_HELP)],
             uiFeedback: {
                 thoughtBubble: { text: "Yes, I'd like that.", cloudId },
                 actionLabel: `Help? ${partName}: consented`
@@ -395,7 +399,7 @@ export class SimulatorController {
                 this.model.parts.revealIdentity(topBlendedId);
                 return {
                     success: true,
-                    stateChanges: [`${topBlendedId} identity revealed`],
+                    stateChanges: [outcome(topBlendedId, OUTCOMES.IDENTITY_REVEALED)],
                     uiFeedback: { thoughtBubble: { text: `I see the ${partName}.`, cloudId } }
                 };
             }
@@ -423,7 +427,7 @@ export class SimulatorController {
                 this.relationships.clearProxies(cloudId);
                 return {
                     success: true,
-                    stateChanges: [`${cloudId} proxies cleared`],
+                    stateChanges: [outcome(cloudId, OUTCOMES.PROXIES_CLEARED)],
                     uiFeedback: { thoughtBubble: { text: this.getSelfRecognitionResponse(cloudId), cloudId } }
                 };
             }
@@ -442,10 +446,11 @@ export class SimulatorController {
 
         this.model.addBlendedPart(proxyId, 'therapist');
         this.model.parts.revealIdentity(proxyId);
+        this.model.parts.markAsProxy(proxyId);
 
         return {
             success: true,
-            stateChanges: [`${proxyId} blended as proxy`],
+            stateChanges: [outcome(proxyId, OUTCOMES.BLENDED_AS_PROXY)],
             uiFeedback: { thoughtBubble: { text: `I see the ${proxyName}.`, cloudId } }
         };
     }
@@ -476,14 +481,14 @@ export class SimulatorController {
             if (!targetIds.has(grievanceId) && !blendedParts.includes(grievanceId) && !isPending) {
                 if (this.model.parts.getTrust(grievanceId) < 0.5) {
                     this.model.enqueuePendingBlend(grievanceId, 'therapist');
-                    stateChanges.push(`${grievanceId} pending blend`);
+                    stateChanges.push(outcome(grievanceId, OUTCOMES.PENDING_BLEND));
                 }
             }
         }
 
         const hasPendingBlends = this.model.peekPendingBlend() !== null;
         this.model.parts.revealRelationships(cloudId);
-        stateChanges.push(`${cloudId} relationships revealed`);
+        stateChanges.push(outcome(cloudId, OUTCOMES.REGARD_PART));
 
         if (blendedParts.length === 0 && !hasPendingBlends) {
             return {
@@ -539,7 +544,7 @@ export class SimulatorController {
         ];
         return {
             success: true,
-            stateChanges: [`${cloudId} noticed itself`],
+            stateChanges: [outcome(cloudId, OUTCOMES.NOTICED_SELF)],
             uiFeedback: {
                 thoughtBubble: {
                     text: this.rng.cosmetic.pickRandom(selfNoticeResponses),
@@ -558,7 +563,7 @@ export class SimulatorController {
         this.model.parts.addNeedAttention(targetCloudId, 0.1);
         return {
             success: true,
-            stateChanges: [`${cloudId} noticed ${targetCloudId}`],
+            stateChanges: [outcome(cloudId, OUTCOMES.NOTICED_GENERIC, targetCloudId)],
             uiFeedback: {
                 thoughtBubble: {
                     text: this.rng.cosmetic.pickRandom(genericResponses),
@@ -582,7 +587,7 @@ export class SimulatorController {
             ];
             return {
                 success: true,
-                stateChanges: [`${protectorId} recognized ${protecteeId}'s burden`],
+                stateChanges: [outcome(protectorId, OUTCOMES.PROTECTOR_RECOGNIZED_BURDEN, protecteeId)],
                 uiFeedback: {
                     thoughtBubble: {
                         text: this.rng.cosmetic.pickRandom(burdenRecognitionResponses),
@@ -602,7 +607,7 @@ export class SimulatorController {
 
         return {
             success: true,
-            stateChanges: [`${protectorId} unburdened`],
+            stateChanges: [outcome(protectorId, OUTCOMES.PROTECTOR_UNBURDENED)],
             uiFeedback: { thoughtBubble: { text: response, cloudId: protectorId } }
         };
     }
@@ -633,7 +638,7 @@ export class SimulatorController {
 
         return {
             success: true,
-            stateChanges: [`${protecteeId} recognized ${protectorId}, trust balanced`],
+            stateChanges: [outcome(protecteeId, OUTCOMES.PROTECTEE_RECOGNIZED_PROTECTOR, protectorId)],
             uiFeedback: {
                 thoughtBubble: {
                     text: this.rng.cosmetic.pickRandom(recognitionResponses),
@@ -662,7 +667,7 @@ export class SimulatorController {
 
         return {
             success: true,
-            stateChanges: [`${attackerId} recognized harm to ${victimId}`],
+            stateChanges: [outcome(attackerId, OUTCOMES.ATTACKER_RECOGNIZED_HARM, victimId)],
             uiFeedback: {
                 thoughtBubble: {
                     text: this.rng.cosmetic.pickRandom(recognitionResponses),
@@ -682,7 +687,7 @@ export class SimulatorController {
             this.model.parts.adjustTrust(cloudId, 0.98);
             return {
                 success: true,
-                stateChanges: [],
+                stateChanges: [outcome(cloudId, OUTCOMES.ALREADY_ANSWERED)],
                 uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
             };
         }
@@ -698,7 +703,7 @@ export class SimulatorController {
             ];
             return {
                 success: true,
-                stateChanges: [`${cloudId} deflected`],
+                stateChanges: [outcome(cloudId, OUTCOMES.DEFLECTED)],
                 uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(deflections), cloudId } }
             };
         }
@@ -803,7 +808,9 @@ export class SimulatorController {
 
         const result: ControllerActionResult = {
             success: true,
-            stateChanges: [`${cloudId} ${field} handled`],
+            stateChanges: backlash
+                ? [outcome(backlash.protectorId, OUTCOMES.TRIGGERED_BACKLASH, backlash.protecteeId)]
+                : [outcome(cloudId, OUTCOMES.BIOGRAPHY_FIELD, field)],
             uiFeedback: response ? { thoughtBubble: { text: response, cloudId } } : undefined,
             trustGain
         };
@@ -940,14 +947,14 @@ export class SimulatorController {
         this.model.partDemandsAttention(cloudId);
         return {
             success: true,
-            stateChanges: [`${cloudId} spontaneously blended`]
+            stateChanges: [outcome(cloudId, OUTCOMES.SPONTANEOUSLY_BLENDED)]
         };
     }
 
     private handleBacklash(protectorId: string, protecteeId: string): ControllerActionResult {
         return {
             success: true,
-            stateChanges: [`${protectorId} triggered backlash on ${protecteeId}`],
+            stateChanges: [outcome(protectorId, OUTCOMES.TRIGGERED_BACKLASH, protecteeId)],
             triggerBacklash: { protectorId, protecteeId }
         };
     }

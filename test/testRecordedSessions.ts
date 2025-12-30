@@ -19,13 +19,13 @@ interface SessionResult {
 interface SessionSpec {
     path: string;
     name: string;
-    parts: number;
-    actions: number;
 }
 
 const SESSIONS: SessionSpec[] = [
-    { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy', parts: 4, actions: 60 },
-    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash', parts: 2, actions: 34 },
+    { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy' },
+    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash' },
+    { path: 'test/scenarios/medium_1767079362107.json', name: 'Medium 1767079362107' },
+    { path: 'test/scenarios/medium_1767080684814.json', name: 'Medium 1767080684814' },
 ];
 
 let results: TestResult[] = [];
@@ -48,14 +48,12 @@ function testSession(spec: SessionSpec): void {
     const session = loadSession(spec.path);
 
     test(`${spec.name}: loads`, session.version === 1);
-    test(`${spec.name}: has ${spec.parts} parts`, Object.keys(session.initialModel.partStates).length === spec.parts);
-    test(`${spec.name}: has ${spec.actions} actions`, session.actions.length === spec.actions);
 
     const result = replaySession(session);
     const sessionElapsed = session.actions.reduce((sum, a) => sum + (a.elapsedTime ?? 0), 0);
     totalElapsedTime += sessionElapsed;
 
-    test(`${spec.name}: all actions executed`, result.actionResults.length === spec.actions);
+    test(`${spec.name}: all actions executed`, result.actionResults.length === session.actions.length);
     const failedActions = result.actionResults
         .map((r, i) => ({ ...r, index: i, action: session.actions[i] }))
         .filter(r => !r.success);

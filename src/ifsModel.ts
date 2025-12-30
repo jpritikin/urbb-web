@@ -183,6 +183,18 @@ export class SimulatorModel {
         return this.blendedParts.get(cloudId)?.degree ?? 0;
     }
 
+    calculateSeparationAmount(cloudId: string, baseAmount: number): number {
+        const needAttention = this.parts.getNeedAttention(cloudId);
+        const multiplier = 1 + 2 * (1 - Math.min(1, needAttention));
+        return baseAmount * multiplier;
+    }
+
+    willUnblendAfterSeparation(cloudId: string, baseAmount: number): boolean {
+        const currentDegree = this.getBlendingDegree(cloudId);
+        const amount = this.calculateSeparationAmount(cloudId, baseAmount);
+        return currentDegree - amount <= 0;
+    }
+
     getBlendReason(cloudId: string): BlendReason | null {
         return this.blendedParts.get(cloudId)?.reason ?? null;
     }

@@ -24,6 +24,6 @@ export type {
     RandomWalkResults,
     CoverageData,
     CoverageEntry,
-    VictoryPath,
+    WalkPath,
     CoverageGap,
 } from './types.js';

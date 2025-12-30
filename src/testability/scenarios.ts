@@ -60,7 +60,14 @@ export function replaySession(session: RecordedSession): ReplayResult {
         }
 
         const rngBeforeAdvance = sim.getRngCounts().model;
-        if (action.elapsedTime && action.elapsedTime > 0) {
+        // Advance time in chunks if waitCount is specified (for proper orchestrator timing)
+        // Otherwise advance all at once (legacy behavior for hand-recorded sessions)
+        if (action.waitCount && action.waitCount > 0) {
+            const WAIT_DURATION = 2.0;
+            for (let w = 0; w < action.waitCount; w++) {
+                sim.advanceTime(WAIT_DURATION);
+            }
+        } else if (action.elapsedTime && action.elapsedTime > 0) {
             sim.advanceTime(action.elapsedTime);
         }
         const rngAfterAdvance = sim.getRngCounts().model;

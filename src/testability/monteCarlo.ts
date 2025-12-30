@@ -7,7 +7,8 @@ import type {
     Scenario, MonteCarloConfig, MonteCarloResults,
     IterationResult, Distribution, MetricDefinition, SerializedModel,
     RandomWalkConfig, RandomWalkResult, RandomWalkResults,
-    CoverageData, CoverageEntry, VictoryPath, CoverageGap
+    CoverageData, CoverageEntry, WalkPath, CoverageGap,
+    HeuristicState, RecordedWalkAction
 } from './types.js';
 
 const WAIT_ACTION: ValidAction = { action: 'wait', cloudId: '' };
@@ -247,7 +248,7 @@ export class RandomWalkRunner {
 
     run(scenario: Scenario, config: RandomWalkConfig): RandomWalkResults {
         const errors: RandomWalkResult[] = [];
-        const victoryPaths: VictoryPath[] = [];
+        const paths: WalkPath[] = [];
         let victories = 0;
         let bestScore = -Infinity;
         const startTime = performance.now();
@@ -258,20 +259,21 @@ export class RandomWalkRunner {
         }
 
         for (let i = 0; i < config.iterations; i++) {
-            const seed = Date.now() + i * 1000 + Math.floor(Math.random() * 1000);
+            const seed = config.seed ?? (Date.now() + i * 1000 + Math.floor(Math.random() * 1000));
             const result = this.runIteration(scenario, seed, config);
 
-            if (result.victory) {
-                victories++;
-                if (config.extractVictoryPaths) {
-                    victoryPaths.push({
-                        seed: result.seed,
-                        actions: result.actions,
-                        length: result.actions.length,
-                        finalScore: this.computeScore(result.finalModel),
-                    });
-                }
+            if (result.victory) victories++;
+
+            if (config.extractPaths) {
+                paths.push({
+                    seed: result.seed,
+                    actions: result.actions,
+                    length: result.actions.length,
+                    finalScore: this.computeScore(result.finalModel),
+                    victory: result.victory,
+                });
             }
+
             if (result.error) {
                 errors.push(result);
                 if (config.stopOnError) break;
@@ -284,7 +286,7 @@ export class RandomWalkRunner {
 
         const totalMs = performance.now() - startTime;
 
-        victoryPaths.sort((a, b) => a.length - b.length);
+        paths.sort((a, b) => a.length - b.length);
 
         const coverageGaps = config.coverageTracking ? this.computeCoverageGaps() : undefined;
 
@@ -295,7 +297,7 @@ export class RandomWalkRunner {
             errors,
             coverage: config.coverageTracking ? this.coverage : undefined,
             coverageGaps,
-            victoryPaths: config.extractVictoryPaths ? victoryPaths.slice(0, 10) : undefined,
+            paths: config.extractPaths ? paths : undefined,
             bestScore: bestScore > -Infinity ? bestScore : undefined,
             timing: {
                 totalMs,
@@ -310,7 +312,7 @@ export class RandomWalkRunner {
         config: RandomWalkConfig
     ): RandomWalkResult {
         const sim = new HeadlessSimulator({ seed });
-        const actions: ValidAction[] = [];
+        const actions: RecordedWalkAction[] = [];
 
         try {
             sim.setupFromScenario(scenario);
@@ -346,23 +348,42 @@ export class RandomWalkRunner {
                     : actionsWithWait;
                 if (filtered.length === 0) break;
 
-                const action = config.heuristicScoring
-                    ? this.pickActionWithHeuristic(sim, controller, filtered, rng.model, history)
-                    : rng.model.pickRandom(filtered, 'random_walk');
-                actions.push(action);
+                let pickedAction: ValidAction;
+                let recordedAction: RecordedWalkAction;
 
-                const actionKey = `${action.action}:${action.cloudId}`;
+                if (config.heuristicScoring) {
+                    const result = this.pickActionWithHeuristic(sim, controller, filtered, rng.model, history);
+                    pickedAction = result.action;
+                    recordedAction = {
+                        action: result.action.action,
+                        cloudId: result.action.cloudId,
+                        targetCloudId: result.action.targetCloudId,
+                        field: result.action.field,
+                        ...(config.recordHeuristicState ? { heuristic: result.heuristic, score: result.score } : {}),
+                    };
+                } else {
+                    pickedAction = rng.model.pickRandom(filtered, 'random_walk');
+                    recordedAction = {
+                        action: pickedAction.action,
+                        cloudId: pickedAction.cloudId,
+                        targetCloudId: pickedAction.targetCloudId,
+                        field: pickedAction.field,
+                    };
+                }
+                actions.push(recordedAction);
+
+                const actionKey = `${pickedAction.action}:${pickedAction.cloudId}`;
                 history.actionCounts.set(actionKey, (history.actionCounts.get(actionKey) ?? 0) + 1);
-                history.lastAction = action;
+                history.lastAction = pickedAction;
 
-                if (action.action === 'wait') {
+                if (pickedAction.action === 'wait') {
                     sim.advanceTime(WAIT_DURATION);
                 } else {
-                    sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
+                    sim.executeAction(pickedAction.action, pickedAction.cloudId, pickedAction.targetCloudId, pickedAction.field);
                 }
 
                 if (config.coverageTracking) {
-                    this.recordCoverage(action, prevStateKey, sim, seed);
+                    this.recordCoverage(pickedAction, prevStateKey, sim, seed);
                 }
 
                 const newStateKey = this.getStateKey(sim);
@@ -453,25 +474,81 @@ export class RandomWalkRunner {
         return { phase: 'victory', protectorId: null, protecteeId: null };
     }
 
+    private findGrievancePath(
+        model: ReturnType<HeadlessSimulator['getModel']>,
+        relationships: ReturnType<HeadlessSimulator['getRelationships']>,
+    ): { attackerId: string; victimId: string } | null {
+        // First priority: find an attacked victim where attacker can still do notice_part
+        // (attacker not blended, victim in conference)
+        const blendedParts = model.getBlendedParts();
+        const conferenceParts = model.getConferenceCloudIds();
+
+        for (const attackerId of model.getAllPartIds()) {
+            const victimIds = relationships.getGrievanceTargets(attackerId);
+            for (const victimId of victimIds) {
+                if (victimId === attackerId) continue;
+                if (model.parts.isAttacked(victimId)) {
+                    // Victim already attacked - can we complete the path?
+                    if (!blendedParts.includes(attackerId) && conferenceParts.has(victimId)) {
+                        return { attackerId, victimId };
+                    }
+                    // Attacker still blended - need to separate first
+                    if (blendedParts.includes(attackerId)) {
+                        return { attackerId, victimId };
+                    }
+                }
+            }
+        }
+
+        // Second priority: find a victim that hasn't been attacked yet
+        for (const attackerId of model.getAllPartIds()) {
+            const victimIds = relationships.getGrievanceTargets(attackerId);
+            for (const victimId of victimIds) {
+                if (victimId === attackerId) continue;
+                if (!model.parts.isAttacked(victimId)) {
+                    return { attackerId, victimId };
+                }
+            }
+        }
+        return null;
+    }
+
     private pickActionWithHeuristic(
         sim: HeadlessSimulator,
         _controller: SimulatorController,
         actions: ValidAction[],
         rng: RNG,
         history: ActionHistory,
-    ): ValidAction {
-        // 10% chance to pick randomly for exploration
-        if (rng.random('explore_random') < 0.1) {
-            return rng.pickRandom(actions, 'random_action');
-        }
-
+    ): { action: ValidAction; heuristic: HeuristicState; score: number } {
         const model = sim.getModel();
         const relationships = sim.getRelationships();
         const phaseInfo = this.determinePhase(model, relationships);
         const { phase, protectorId, protecteeId, targetPartId } = phaseInfo;
+        const grievancePath = this.findGrievancePath(model, relationships);
+        const blendedParts = model.getBlendedParts();
+        const conferenceParts = model.getConferenceCloudIds();
+
+        const heuristic: HeuristicState = {
+            phase,
+            protectorId,
+            protecteeId,
+            grievancePath: grievancePath ? {
+                attackerId: grievancePath.attackerId,
+                victimId: grievancePath.victimId,
+                attackerBlended: blendedParts.includes(grievancePath.attackerId),
+                victimAttacked: model.parts.isAttacked(grievancePath.victimId),
+                attackerInConf: conferenceParts.has(grievancePath.attackerId),
+                victimInConf: conferenceParts.has(grievancePath.victimId),
+            } : null,
+        };
+
+        // 10% chance to pick randomly for exploration
+        if (rng.random('explore_random') < 0.1) {
+            const action = rng.pickRandom(actions, 'random_action');
+            return { action, heuristic, score: 0 };
+        }
 
         const targets = model.getTargetCloudIds();
-        const blendedParts = model.getBlendedParts();
         const selfRay = model.getSelfRay();
 
         const scored: { action: ValidAction; score: number }[] = [];
@@ -494,7 +571,41 @@ export class RandomWalkRunner {
                 if (action.action === 'select_a_target' || action.action === 'join_conference') score += 20;
             }
 
-            // Never blend or step_back the protector - we need it for notice_part
+            // Grievance path exploration (runs alongside main phases)
+            // Uses high scores to override protector penalties when needed
+            if (grievancePath) {
+                const { attackerId, victimId } = grievancePath;
+                const attackerBlended = blendedParts.includes(attackerId);
+                const victimIsAttacked = model.parts.isAttacked(victimId);
+                const conferenceParts = model.getConferenceCloudIds();
+                const attackerInConference = conferenceParts.has(attackerId);
+                const victimInConference = conferenceParts.has(victimId);
+
+                // Step 1: Get attacker into conference
+                if (!attackerInConference && action.action === 'select_a_target' && action.cloudId === attackerId) {
+                    score += 15;
+                }
+                // Step 2: Blend attacker (grievance will summon victim)
+                if (attackerInConference && !attackerBlended && !victimIsAttacked) {
+                    if (action.action === 'blend' && action.cloudId === attackerId) score += 150;
+                }
+                // Step 3: Wait for grievance message (victim gets summoned then attacked)
+                if (attackerBlended && !victimIsAttacked && action.action === 'wait') {
+                    score += 50;
+                }
+                // Step 4: Separate attacker so it can use notice_part
+                if (attackerBlended && victimIsAttacked && action.action === 'separate' && action.cloudId === attackerId) {
+                    score += 60;
+                }
+                // Step 5: notice_part to trigger attacker_recognized_harm
+                if (!attackerBlended && victimIsAttacked && victimInConference) {
+                    if (action.action === 'notice_part' && action.cloudId === attackerId && action.targetCloudId === victimId) {
+                        score += 100;
+                    }
+                }
+            }
+
+            // Penalize blending protector (but grievance path can override)
             if ((action.action === 'blend' || action.action === 'step_back') && action.cloudId === protectorId) {
                 score -= 100;
             }
@@ -765,8 +876,8 @@ export class RandomWalkRunner {
             scored.push({ action, score });
         }
 
-        // Low temperature for deterministic selection
-        const temperature = 0.3;
+        // Higher temperature = more exploration, lower = more exploitation
+        const temperature = 8.0;
         const maxScore = Math.max(...scored.map(s => s.score));
         const expScores = scored.map(s => ({ action: s.action, exp: Math.exp((s.score - maxScore) / temperature) }));
         const sumExp = expScores.reduce((sum, s) => sum + s.exp, 0);
@@ -775,9 +886,14 @@ export class RandomWalkRunner {
         let cumulative = 0;
         for (const s of expScores) {
             cumulative += s.exp;
-            if (r <= cumulative) return s.action;
+            if (r <= cumulative) {
+                const pickedScore = scored.find(x => x.action === s.action)?.score ?? 0;
+                return { action: s.action, heuristic, score: pickedScore };
+            }
         }
-        return expScores[expScores.length - 1].action;
+        const lastAction = expScores[expScores.length - 1].action;
+        const lastScore = scored.find(x => x.action === lastAction)?.score ?? 0;
+        return { action: lastAction, heuristic, score: lastScore };
     }
 
     private computeScore(model: SerializedModel): number {
@@ -893,13 +1009,16 @@ export function formatRandomWalkResults(results: RandomWalkResults): string {
     lines.push(`Errors: ${results.errors.length}`);
     lines.push('');
 
-    if (results.victoryPaths && results.victoryPaths.length > 0) {
-        lines.push(`Victory Paths (${results.victoryPaths.length} found, showing shortest):`);
-        for (const path of results.victoryPaths.slice(0, 3)) {
-            lines.push(`  [${path.length} actions] seed=${path.seed}`);
-            lines.push(`    ${path.actions.map(a => a.field ? `${a.action}:${a.field}` : a.action).join(' -> ')}`);
+    if (results.paths && results.paths.length > 0) {
+        const victoryPaths = results.paths.filter(p => p.victory);
+        if (victoryPaths.length > 0) {
+            lines.push(`Victory Paths (${victoryPaths.length} found, showing shortest):`);
+            for (const path of victoryPaths.slice(0, 3)) {
+                lines.push(`  [${path.length} actions] seed=${path.seed}`);
+                lines.push(`    ${path.actions.map(a => a.field ? `${a.action}:${a.field}` : a.action).join(' -> ')}`);
+            }
+            lines.push('');
         }
-        lines.push('');
     }
 
     if (results.coverage) {

@@ -1,0 +1,586 @@
+{
+  "version": 1,
+  "codeVersion": "generated",
+  "platform": "desktop",
+  "modelSeed": 1767079551768,
+  "timestamp": 1767079362107,
+  "initialModel": {
+    "targetCloudIds": [
+      "inner-critic"
+    ],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": null,
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 0,
+    "partStates": {
+      "inner-critic": {
+        "id": "inner-critic",
+        "name": "Inner Critic",
+        "trust": 0.3,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "criticized": {
+        "id": "criticized",
+        "name": "criticized one",
+        "trust": 0.2,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide."
+          ]
+        }
+      },
+      "toddler": {
+        "id": "toddler",
+        "name": "toddler",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "self-image": {
+        "id": "self-image",
+        "name": "self-image",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?"
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [],
+    "victoryAchieved": false
+  },
+  "initialRelationships": {
+    "protections": [
+      {
+        "protectorId": "inner-critic",
+        "protectedId": "criticized"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "inner-critic"
+        ],
+        "dialogues": [
+          "I'm a terrible person."
+        ]
+      },
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "toddler"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "Don't do anything risky."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "inner-critic",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "criticized",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "toddler",
+        "proxyId": "self-image"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "elapsedTime": 2
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "elapsedTime": 6
+    },
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "elapsedTime": 2
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "elapsedTime": 2
+    },
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "step_back",
+      "cloudId": "toddler",
+      "elapsedTime": 4
+    },
+    {
+      "action": "separate",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "separate",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "self-image",
+      "elapsedTime": 0
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "criticized",
+      "field": "age",
+      "elapsedTime": 0
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "criticized",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 0
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "criticized",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 0
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "criticized",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 0
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "criticized",
+      "field": "compassion",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "elapsedTime": 0
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "toddler",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "toddler",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "inner-critic",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "toddler",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "toddler",
+      "elapsedTime": 0
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "toddler",
+      "elapsedTime": 0
+    }
+  ],
+  "finalModel": {
+    "targetCloudIds": [
+      "inner-critic",
+      "criticized",
+      "self-image"
+    ],
+    "supportingParts": {
+      "inner-critic": []
+    },
+    "blendedParts": {},
+    "pendingBlends": [
+      {
+        "cloudId": "toddler",
+        "reason": "therapist"
+      }
+    ],
+    "selfRay": null,
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 2,
+    "partStates": {
+      "inner-critic": {
+        "id": "inner-critic",
+        "name": "Inner Critic",
+        "trust": 0.6410750000000001,
+        "needAttention": 0,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": true,
+          "jobRevealed": true,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": true
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "criticized": {
+        "id": "criticized",
+        "name": "criticized one",
+        "trust": 0.641075,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide."
+          ]
+        }
+      },
+      "toddler": {
+        "id": "toddler",
+        "name": "toddler",
+        "trust": 0.495,
+        "needAttention": 2.66,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": false,
+        "attacked": true,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "self-image": {
+        "id": "self-image",
+        "name": "self-image",
+        "trust": 0.46118407999999994,
+        "needAttention": 0.38,
+        "agreedWaitUntil": 1767079372106,
+        "wasProxy": true,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?"
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [],
+    "victoryAchieved": false
+  },
+  "finalRelationships": {
+    "protections": [
+      {
+        "protectorId": "inner-critic",
+        "protectedId": "criticized"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "inner-critic"
+        ],
+        "dialogues": [
+          "I'm a terrible person."
+        ]
+      },
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "toddler"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "Don't do anything risky."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "toddler",
+        "proxyId": "self-image"
+      }
+    ]
+  }
+}
