@@ -113,6 +113,7 @@ export class AnimatedStar {
     private armElements: SVGPathElement[] = [];
     private staticStarOutline: SVGPathElement | null = null;
     private transitionOutlines: SVGPathElement[] = [];
+    private borderHidden: boolean = false;
     private centerX: number;
     private centerY: number;
 
@@ -890,6 +891,16 @@ export class AnimatedStar {
 
     getArmCount(): number {
         return this.armCount;
+    }
+
+    setBorderHidden(hidden: boolean): void {
+        this.borderHidden = hidden;
+        if (this.staticStarOutline) {
+            this.staticStarOutline.style.display = hidden ? 'none' : '';
+        }
+        for (const outline of this.transitionOutlines) {
+            outline.style.display = hidden ? 'none' : '';
+        }
     }
 
     setPointerEventsEnabled(enabled: boolean): void {

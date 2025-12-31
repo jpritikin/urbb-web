@@ -6,6 +6,7 @@ import { HelpPanel, HelpData } from './ifsView/HelpPanel.js';
 import { SelfRay, BiographyField, PartContext } from './selfRay.js';
 import { Cloud } from './cloudShape.js';
 import { SeatInfo, CarpetState, CARPET_OFFSCREEN_DISTANCE } from './carpetRenderer.js';
+import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 
 function getOffscreenPosition(fromX: number, fromY: number, canvasWidth: number, canvasHeight: number): { x: number; y: number } {
     const centerX = canvasWidth / 2;
@@ -841,6 +842,22 @@ export class SimulatorView {
     }
 
     getCloudState(cloudId: string): CloudAnimatedState | undefined {
+        if (cloudId === STAR_CLOUD_ID) {
+            const starPos = this.seatManager.getStarPosition();
+            return {
+                cloudId: STAR_CLOUD_ID,
+                x: starPos.x,
+                y: starPos.y,
+                scale: 1,
+                targetScale: 1,
+                opacity: 1,
+                targetOpacity: 1,
+                blendingDegree: 0,
+                targetBlendingDegree: 0,
+                positionTarget: { type: 'absolute', x: starPos.x, y: starPos.y },
+                smoothing: { position: 0, scale: 0, opacity: 0, blendingDegree: 0 },
+            };
+        }
         return this.cloudStates.get(cloudId);
     }
 

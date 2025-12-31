@@ -4,6 +4,7 @@ import { DualRNG } from './testability/rng.js';
 import { OUTCOMES, outcome } from './outcomes.js';
 import type { ControllerActionResult } from './testability/types.js';
 import type { BiographyField } from './selfRay.js';
+import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 
 export interface ControllerDependencies {
     model: SimulatorModel;
@@ -81,10 +82,27 @@ export class SimulatorController {
             }
         }
 
+        // Star actions (available when in foreground with targets)
+        const starActions = this.getValidStarActions();
+        actions.push(...starActions);
+
         const partIds = this.model.getAllPartIds();
         for (const cloudId of partIds) {
             const cloudActions = this.getValidCloudActions(cloudId);
             actions.push(...cloudActions);
+        }
+
+        return actions;
+    }
+
+    private getValidStarActions(): ValidAction[] {
+        const actions: ValidAction[] = [];
+        const targetIds = this.model.getTargetCloudIds();
+        const hasBlendedOrPending = this.model.getBlendedParts().length > 0 || this.model.peekPendingBlend() !== null;
+
+        if (targetIds.size > 0 && !hasBlendedOrPending) {
+            actions.push({ action: 'feel_toward', cloudId: STAR_CLOUD_ID });
+            actions.push({ action: 'expand_deepen', cloudId: STAR_CLOUD_ID });
         }
 
         return actions;
@@ -132,11 +150,6 @@ export class SimulatorController {
         // who_do_you_see
         if (isTarget) {
             actions.push({ action: 'who_do_you_see', cloudId });
-        }
-
-        // feel_toward
-        if (isTarget && selfRay?.targetCloudId !== cloudId) {
-            actions.push({ action: 'feel_toward', cloudId });
         }
 
         // blend
@@ -216,6 +229,9 @@ export class SimulatorController {
 
             case 'feel_toward':
                 return this.handleFeelToward(cloudId);
+
+            case 'expand_deepen':
+                return this.handleExpandDeepen();
 
             case 'notice_part':
                 if (options?.targetCloudId) {
@@ -510,6 +526,11 @@ export class SimulatorController {
         }
 
         return { success: true, stateChanges };
+    }
+
+    private handleExpandDeepen(): ControllerActionResult {
+        // Stub - effects will be implemented later
+        return { success: true, stateChanges: [] };
     }
 
     private handleNoticePart(cloudId: string, targetCloudId: string): ControllerActionResult {

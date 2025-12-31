@@ -15,6 +15,7 @@ import { DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
 import { ActionRecorder } from './testability/recorder.js';
 import type { RecordedSession, RecordedAction, ControllerActionResult } from './testability/types.js';
 import { SimulatorController } from './simulatorController.js';
+import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 import { formatActionLabel } from './actionFormatter.js';
 import { UIManager } from './uiManager.js';
 import { InputHandler } from './inputHandler.js';
@@ -23,6 +24,7 @@ import { FullscreenManager } from './fullscreenManager.js';
 import { AnimationLoop } from './animationLoop.js';
 import { MessageOrchestrator } from './messageOrchestrator.js';
 import { PanoramaInputHandler } from './panoramaInputHandler.js';
+import { ExpandDeepenEffect } from './expandDeepenEffect.js';
 
 export { CloudType };
 export { TherapistAction, THERAPIST_ACTIONS };
@@ -81,6 +83,7 @@ export class CloudManager {
     private recordingToggleHandler: (() => void) | null = null;
     private lastHelpPanelUpdate: number = 0;
     private lastAttentionCheck: number = 0;
+    private expandDeepenEffect: ExpandDeepenEffect | null = null;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -233,6 +236,7 @@ export class CloudManager {
             controller: this.controller!,
         });
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
+        this.pieMenuController.setOnStarActionSelect((action) => this.handleStarActionClick(action));
         this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
         this.pieMenuController.setGetPartContext((cloudId) => ({
             isProtector: this.relationships.getProtecting(cloudId).size > 0,
@@ -258,6 +262,8 @@ export class CloudManager {
                 onTargetActionComplete: (action, sourceCloudId, targetCloudId) => {
                     if (action.id === 'notice_part') {
                         this.handleNoticePart(sourceCloudId, targetCloudId);
+                    } else if (action.id === 'feel_toward') {
+                        this.handleFeelToward(targetCloudId);
                     }
                 },
                 onPendingTargetSet: (text, cloudId) => this.showThoughtBubble(text, cloudId),
@@ -281,8 +287,12 @@ export class CloudManager {
         this.view.setSeatDebugGroup(seatDebugGroup);
         this.view.setOnSelfRayClick((cloudId, _x, _y, event) => {
             const starPos = this.view.getStarScreenPosition();
+            const cloudState = this.view.getCloudState(cloudId);
+            const cloudPos = cloudState ? { x: cloudState.x, y: cloudState.y } : starPos;
+            const menuX = starPos.x + (cloudPos.x - starPos.x) / 3;
+            const menuY = starPos.y + (cloudPos.y - starPos.y) / 3;
             const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
-            this.pieMenuController?.toggleSelfRay(cloudId, starPos.x, starPos.y, touchEvent);
+            this.pieMenuController?.toggleSelfRay(cloudId, menuX, menuY, touchEvent);
         });
         this.view.setOnModeChange((mode) => {
             if (mode === 'panorama') {
@@ -305,6 +315,13 @@ export class CloudManager {
         });
 
         this.createSelfStar();
+
+        this.expandDeepenEffect = new ExpandDeepenEffect();
+        this.expandDeepenEffect.attach(this.container);
+        this.expandDeepenEffect.setDimensions(this.canvasWidth, this.canvasHeight);
+        if (this.animatedStar) {
+            this.expandDeepenEffect.setStarColor(this.animatedStar.getFillColor());
+        }
 
         this.uiManager = new UIManager(this.container, this.svgElement, this.uiGroup, {
             canvasWidth: this.canvasWidth,
@@ -358,6 +375,7 @@ export class CloudManager {
         this.animatedStar?.setPosition(width / 2, height / 2);
         this.carpetRenderer?.setDimensions(width, height);
         this.uiManager?.updateDimensions(width, height);
+        this.expandDeepenEffect?.setDimensions(width, height);
         this.updateViewBox();
     }
 
@@ -369,11 +387,10 @@ export class CloudManager {
 
         this.animatedStar = new AnimatedStar(centerX, centerY);
         this.animatedStar.setOnClick((_x, _y, event) => {
-            const selfRay = this.model.getSelfRay();
-            if (selfRay && this.pieMenuController) {
+            if (this.pieMenuController) {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
-                this.pieMenuController.toggleSelfRay(selfRay.targetCloudId, starPos.x, starPos.y, touchEvent);
+                this.pieMenuController.toggleStar(starPos.x, starPos.y, touchEvent);
             }
         });
         const starElement = this.animatedStar.createElement();
@@ -415,6 +432,29 @@ export class CloudManager {
             this.animationLoop.start();
             this.uiManager?.setAnimationPaused(false);
         }
+    }
+
+    private handleStarActionClick(action: TherapistAction): void {
+        if (!this.controller) return;
+
+        this.selectedAction = action;
+        this.hidePieMenu();
+
+        if (action.id === 'feel_toward') {
+            this.inputHandler?.setPendingTargetAction(action, STAR_CLOUD_ID);
+            this.showThoughtBubble("Which part?", STAR_CLOUD_ID);
+            return;
+        }
+
+        if (action.id === 'expand_deepen') {
+            this.expandDeepenEffect?.start();
+        }
+
+        const rec: RecordedAction = { action: action.id, cloudId: STAR_CLOUD_ID };
+        this.act(rec, () => {
+            const result = this.controller!.executeAction(action.id, STAR_CLOUD_ID);
+            this.applyActionResult(result, STAR_CLOUD_ID);
+        });
     }
 
     private handleActionClick(action: TherapistAction, targetCloud?: Cloud): void {
@@ -663,6 +703,16 @@ export class CloudManager {
         });
     }
 
+    private handleFeelToward(targetCloudId: string): void {
+        if (!this.controller) return;
+
+        this.model.removeThoughtBubblesForCloud(STAR_CLOUD_ID);
+        this.act({ action: 'feel_toward', cloudId: targetCloudId }, () => {
+            const result = this.controller!.executeAction('feel_toward', targetCloudId);
+            this.applyActionResult(result, targetCloudId);
+        });
+    }
+
     private promotePendingBlend(cloudId: string): void {
         if (!this.model.isPendingBlend(cloudId)) return;
 
@@ -811,7 +861,8 @@ export class CloudManager {
 
         this.view.setCloudNames(cloudNames);
         this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions, this.relationships);
-        this.animatedStar?.setPointerEventsEnabled(this.model.hasSelfRay());
+        const noBlendedParts = this.model.getBlendedParts().length === 0 && !this.model.peekPendingBlend();
+        this.animatedStar?.setPointerEventsEnabled(noBlendedParts);
     }
 
     private act(action: string | RecordedAction, fn: () => void): void {
@@ -925,7 +976,17 @@ export class CloudManager {
                 this.checkBlendedPartsAttention();
             }
             this.view.animateMessages(deltaTime);
+
+            // Update and render expand/deepen effect
+            if (this.expandDeepenEffect?.isActive()) {
+                this.expandDeepenEffect.update(deltaTime, this.model);
+                const starPos = this.view.getStarScreenPosition();
+                this.expandDeepenEffect.render(starPos.x, starPos.y);
+                this.animatedStar?.setBorderHidden(this.expandDeepenEffect.shouldHideStarBorder());
+            }
         } else {
+            // Cancel expand/deepen effect when leaving foreground
+            this.expandDeepenEffect?.cancel();
             this.carpetRenderer?.clear();
             // Clear stretch once fully released during panorama
             for (const instance of this.instances) {

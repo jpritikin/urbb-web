@@ -81,6 +81,8 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
         OUTCOMES.PENDING_BLEND,
     ],
 
+    expand_deepen: [],
+
     notice_part: [
         OUTCOMES.NOTICED_SELF,
         OUTCOMES.NOTICED_GENERIC,

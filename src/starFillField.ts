@@ -1,4 +1,5 @@
 import { PerlinNoise } from './perlinNoise.js';
+import { generateSpacedColors } from './sparkleColors.js';
 
 const DOT_COUNT = 400;
 const FIELD_SIZE = 400;
@@ -48,6 +49,8 @@ export class StarFillField {
         this.canvas.height = FIELD_SIZE;
         this.ctx = this.canvas.getContext('2d')!;
 
+        const colors = generateSpacedColors(DOT_COUNT, { h: fillHue, s: fillSaturation, l: fillLightness });
+
         for (let i = 0; i < DOT_COUNT; i++) {
             const x = Math.random() * FIELD_SIZE;
             const y = Math.random() * FIELD_SIZE;
@@ -56,26 +59,10 @@ export class StarFillField {
                 trail.push({ x, y });
             }
 
-            const isWhite = i < DOT_COUNT / 2;
-            const hue = isWhite ? 0 : this.pickSpacedHue();
-            const saturation = isWhite ? 0 : fillSaturation * 1;
-            const lightness = isWhite ? 100 : 85;
+            const color = colors[i];
 
-            this.dots.push({ x, y, trail, noiseOffset: Math.random() * 1000, hue, saturation, lightness });
+            this.dots.push({ x, y, trail, noiseOffset: Math.random() * 1000, hue: color.hue, saturation: color.saturation, lightness: color.lightness });
         }
-    }
-
-    private nextHueIndex = 0;
-
-    private pickSpacedHue(): number {
-        const coloredCount = Math.ceil(DOT_COUNT / 2);
-        const excludeRange = 36; // 10% of 360
-        const availableRange = 360 - excludeRange;
-        const spacing = availableRange / coloredCount;
-        const offset = (this.fillHue + excludeRange / 2) % 360;
-        const hue = (offset + this.nextHueIndex * spacing) % 360;
-        this.nextHueIndex++;
-        return hue;
     }
 
     getSize(): number {

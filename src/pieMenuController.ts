@@ -6,6 +6,7 @@ import { PieMenu, PieMenuItem } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
 import { BiographyField, PartContext } from './selfRay.js';
 import { SimulatorController, ValidAction } from './simulatorController.js';
+import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 
 export interface PieMenuDependencies {
     getCloudById: (id: string) => Cloud | null;
@@ -15,7 +16,7 @@ export interface PieMenuDependencies {
     controller?: SimulatorController;
 }
 
-type MenuMode = 'cloud' | 'selfRay';
+type MenuMode = 'cloud' | 'selfRay' | 'star';
 
 export class PieMenuController {
     private pieMenu: PieMenu | null = null;
@@ -23,6 +24,7 @@ export class PieMenuController {
     private selectedCloudId: string | null = null;
     private menuMode: MenuMode = 'cloud';
     private onActionSelect: ((action: TherapistAction, cloud: Cloud) => void) | null = null;
+    private onStarActionSelect: ((action: TherapistAction) => void) | null = null;
     private onBiographySelect: ((field: BiographyField, cloudId: string) => void) | null = null;
     private onClose: (() => void) | null = null;
     private getPartContext: ((cloudId: string) => PartContext) | null = null;
@@ -43,6 +45,11 @@ export class PieMenuController {
             if (this.menuMode === 'selfRay') {
                 const field = item.id as BiographyField;
                 this.onBiographySelect?.(field, cloudId);
+            } else if (this.menuMode === 'star') {
+                const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
+                if (action) {
+                    this.onStarActionSelect?.(action);
+                }
             } else {
                 const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
                 if (action) {
@@ -64,6 +71,10 @@ export class PieMenuController {
 
     setOnActionSelect(handler: (action: TherapistAction, cloud: Cloud) => void): void {
         this.onActionSelect = handler;
+    }
+
+    setOnStarActionSelect(handler: (action: TherapistAction) => void): void {
+        this.onStarActionSelect = handler;
     }
 
     setOnBiographySelect(handler: (field: BiographyField, cloudId: string) => void): void {
@@ -92,6 +103,10 @@ export class PieMenuController {
 
     toggleSelfRay(cloudId: string, x: number, y: number, touchEvent?: TouchEvent): void {
         this.showMenu('selfRay', cloudId, x, y, this.getItemsForSelfRay(cloudId), touchEvent);
+    }
+
+    toggleStar(x: number, y: number, touchEvent?: TouchEvent): void {
+        this.showMenu('star', STAR_CLOUD_ID, x, y, this.getItemsForStar(), touchEvent);
     }
 
     private showMenu(mode: MenuMode, cloudId: string, x: number, y: number, items: PieMenuItem[], touchEvent?: TouchEvent): void {
@@ -210,6 +225,26 @@ export class PieMenuController {
             }
         }
 
+        return items;
+    }
+
+    private getItemsForStar(): PieMenuItem[] {
+        const { controller } = this.deps;
+        const validActions = controller?.getValidActions() ?? [];
+        const starActions = validActions.filter(a => a.cloudId === STAR_CLOUD_ID);
+
+        const items: PieMenuItem[] = [];
+        for (const validAction of starActions) {
+            const action = THERAPIST_ACTIONS.find(a => a.id === validAction.action);
+            if (action) {
+                items.push({
+                    id: action.id,
+                    label: action.question,
+                    shortName: action.shortName,
+                    category: action.category
+                });
+            }
+        }
         return items;
     }
 

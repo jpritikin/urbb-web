@@ -7,7 +7,8 @@ export interface TherapistAction {
 }
 
 export const THERAPIST_ACTIONS: TherapistAction[] = [
-    { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship' },
+    { id: 'feel_toward', question: 'How do you feel toward this part?', shortName: 'Feel', category: 'relationship', requiresTargetClick: true },
+    { id: 'expand_deepen', question: 'Feel calm and patient. Allow this feeling to expand and deepen.', shortName: 'Expand', category: 'relationship' },
     { id: 'who_do_you_see', question: 'Who do you see when you look at the client?', shortName: 'Who?', category: 'discovery' },
     { id: 'job', question: "What is this part's job?", shortName: 'Job', category: 'role' },
     { id: 'join_conference', question: 'Can this part join the conference?', shortName: 'Join', category: 'relationship' },

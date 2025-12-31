@@ -156,6 +156,9 @@ export class SeatManager {
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
+        if (cloudId === STAR_CLOUD_ID) {
+            return this.getStarPosition();
+        }
         const carpet = this.carpets.get(cloudId);
         if (carpet && !carpet.entering && !carpet.exiting) {
             return { x: carpet.currentX, y: carpet.currentY };
