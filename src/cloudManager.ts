@@ -1,12 +1,11 @@
 import { Cloud, CloudType } from './cloudShape.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
-import { PhysicsEngine } from './physicsEngine.js';
 import { SimulatorModel, PartMessage } from './ifsModel.js';
 import { SimulatorView } from './ifsView.js';
 import { CarpetRenderer } from './carpetRenderer.js';
 import { CloudInstance } from './types.js';
 import { AnimatedStar } from './starAnimation.js';
-import { PanoramaController } from './panoramaController.js';
+import { PanoramaCloudMotion } from './panoramaCloudMotion.js';
 import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
 import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
@@ -60,8 +59,7 @@ export class CloudManager {
     private messageOrchestrator: MessageOrchestrator | null = null;
     private panoramaInputHandler: PanoramaInputHandler | null = null;
 
-    private physicsEngine: PhysicsEngine;
-    private panoramaController: PanoramaController;
+    private panoramaMotion: PanoramaCloudMotion;
     private model: SimulatorModel;
     private view: SimulatorView;
 
@@ -87,16 +85,16 @@ export class CloudManager {
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
-        this.physicsEngine = new PhysicsEngine({
-            torusMajorRadius: 200,
+        this.panoramaMotion = new PanoramaCloudMotion({
+            torusMajorRadiusX: this.canvasWidth * 0.35,
+            torusMajorRadiusY: this.canvasHeight * 0.35,
             torusMinorRadius: 80,
             torusRotationX: Math.PI / 3,
-            friction: 0.6,
-            repulsionStrength: 20,
-            surfaceRepulsionStrength: 20,
-            angularAcceleration: 100
+            maxVelocity: 10,
+            minRetargetInterval: 5,
+            maxRetargetInterval: 30,
+            angularVelocity: -0.1
         });
-        this.panoramaController = new PanoramaController(this.physicsEngine);
 
         this.model = new SimulatorModel();
         this.view = new SimulatorView(800, 600);
@@ -121,6 +119,7 @@ export class CloudManager {
         this.rng = rng;
         this.initController();
         this.messageOrchestrator?.setRNG(rng);
+        this.panoramaMotion.setRandom(() => rng.cosmetic.random('panorama_motion'));
     }
 
     getRNG(): DualRNG {
@@ -285,6 +284,11 @@ export class CloudManager {
         seatDebugGroup.setAttribute('id', 'seat-debug-group');
         this.uiGroup.appendChild(seatDebugGroup);
         this.view.setSeatDebugGroup(seatDebugGroup);
+
+        const panoramaDebugGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        panoramaDebugGroup.setAttribute('id', 'panorama-debug-group');
+        this.zoomGroup.appendChild(panoramaDebugGroup);
+        this.panoramaMotion.setDebugGroup(panoramaDebugGroup);
         this.view.setOnSelfRayClick((cloudId, _x, _y, event) => {
             const starPos = this.view.getStarScreenPosition();
             const cloudState = this.view.getCloudState(cloudId);
@@ -358,7 +362,6 @@ export class CloudManager {
             this.svgElement,
             {
                 getMode: () => this.view.getMode(),
-                getInstances: () => this.instances,
                 getZoom: () => this.view.getPanoramaZoom(),
                 setZoom: (zoom) => this.view.setPanoramaZoom(zoom),
             }
@@ -376,6 +379,7 @@ export class CloudManager {
         this.carpetRenderer?.setDimensions(width, height);
         this.uiManager?.updateDimensions(width, height);
         this.expandDeepenEffect?.setDimensions(width, height);
+        this.panoramaMotion.setDimensions(width, height);
         this.updateViewBox();
     }
 
@@ -532,9 +536,9 @@ export class CloudManager {
     }): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
-        const position = this.physicsEngine.generateTorusPosition();
-
+        const position = this.panoramaMotion.generateInitialPosition();
         const cloud = new Cloud(word, 0, 0, undefined, { id: options?.id });
+        this.panoramaMotion.initializeCloud(cloud.id, position);
         this.model.registerPart(cloud.id, word, {
             trust: options?.trust,
             needAttention: options?.needAttention,
@@ -628,6 +632,14 @@ export class CloudManager {
 
     setSeatDebug(enabled: boolean): void {
         this.view.setSeatDebug(enabled);
+    }
+
+    setPanoramaDebug(enabled: boolean): void {
+        this.panoramaMotion.setDebugEnabled(enabled);
+    }
+
+    finalizePanoramaSetup(): void {
+        this.panoramaMotion.finalizeInitialization(this.instances);
     }
 
     setZoom(zoomLevel: number): void {
@@ -996,15 +1008,16 @@ export class CloudManager {
             }
         }
 
+        if (this.view.getMode() === 'panorama' && !this.view.isTransitioning()) {
+            const userRotation = this.panoramaInputHandler?.consumePendingRotation() ?? 0;
+            this.panoramaMotion.animate(this.instances, deltaTime, userRotation);
+        }
+
         for (let i = 0; i < this.instances.length; i++) {
             const instance = this.instances[i];
 
             if (i % this.partitionCount === this.currentPartition) {
                 instance.cloud.animate(deltaTime * this.partitionCount);
-
-                if (this.view.getMode() === 'panorama' && !this.view.isTransitioning()) {
-                    this.panoramaController.applyPhysics(instance, this.instances, deltaTime * this.partitionCount);
-                }
                 const state = this.model.getPartState(instance.cloud.id);
                 const hovered = this.inputHandler?.getHoveredCloudId() === instance.cloud.id;
                 instance.cloud.updateSVGElements(this.debug, state, hovered);
@@ -1058,7 +1071,12 @@ export class CloudManager {
 
         const inPanorama = this.view.getMode() === 'panorama' && !this.view.isTransitioning();
         if (inPanorama) {
-            this.panoramaController.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
+            this.panoramaMotion.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
+            const debugGroup = this.zoomGroup!.querySelector('#panorama-debug-group');
+            if (debugGroup) {
+                this.zoomGroup!.appendChild(debugGroup);
+            }
+            this.panoramaMotion.renderDebug(this.instances, this.canvasWidth, this.canvasHeight, 600);
         } else {
             // Ensure carpet is at bottom of zoomGroup (clouds render on top)
             if (this.zoomGroup) {

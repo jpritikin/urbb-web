@@ -1,5 +1,3 @@
-import { CloudInstance } from './types.js';
-
 export interface PanoramaInputConfig {
     minZoom: number;
     maxZoom: number;
@@ -9,14 +7,13 @@ export interface PanoramaInputConfig {
 const DEFAULT_CONFIG: PanoramaInputConfig = {
     minZoom: 0.7,
     maxZoom: 1.5,
-    rotationSensitivity: 0.008,
+    rotationSensitivity: 0.01,
 };
 
 export class PanoramaInputHandler {
     private svgElement: SVGSVGElement;
     private config: PanoramaInputConfig;
     private getMode: () => 'panorama' | 'foreground';
-    private getInstances: () => CloudInstance[];
     private getZoom: () => number;
     private setZoom: (zoom: number) => void;
 
@@ -30,11 +27,12 @@ export class PanoramaInputHandler {
     private isMouseDragging: boolean = false;
     private lastMouseX: number = 0;
 
+    private pendingRotation: number = 0;
+
     constructor(
         svgElement: SVGSVGElement,
         options: {
             getMode: () => 'panorama' | 'foreground';
-            getInstances: () => CloudInstance[];
             getZoom: () => number;
             setZoom: (zoom: number) => void;
             config?: Partial<PanoramaInputConfig>;
@@ -42,12 +40,17 @@ export class PanoramaInputHandler {
     ) {
         this.svgElement = svgElement;
         this.getMode = options.getMode;
-        this.getInstances = options.getInstances;
         this.getZoom = options.getZoom;
         this.setZoom = options.setZoom;
         this.config = { ...DEFAULT_CONFIG, ...options.config };
 
         this.setupEventListeners();
+    }
+
+    consumePendingRotation(): number {
+        const rotation = this.pendingRotation;
+        this.pendingRotation = 0;
+        return rotation;
     }
 
     private setupEventListeners(): void {
@@ -128,35 +131,7 @@ export class PanoramaInputHandler {
     private updateDrag(touch: Touch): void {
         const dx = touch.clientX - this.lastDragX;
         this.lastDragX = touch.clientX;
-
-        const angularDelta = dx * this.config.rotationSensitivity;
-        this.applyRotation(angularDelta);
-    }
-
-    private applyRotation(angularDelta: number): void {
-        const instances = this.getInstances();
-        const torusRotationX = Math.PI / 3;
-        const cosRot = Math.cos(torusRotationX);
-        const sinRot = Math.sin(torusRotationX);
-        const cosTheta = Math.cos(angularDelta);
-        const sinTheta = Math.sin(angularDelta);
-
-        for (const instance of instances) {
-            const pos = instance.position;
-
-            // Transform to torus-aligned coordinates (undo torus tilt)
-            const torusY = pos.y * cosRot + pos.z * sinRot;
-            const torusZ = -pos.y * sinRot + pos.z * cosRot;
-
-            // Rotate around the torus axis (y-axis in torus space)
-            const newX = pos.x * cosTheta - torusY * sinTheta;
-            const newTorusY = pos.x * sinTheta + torusY * cosTheta;
-
-            // Transform back to world coordinates (reapply torus tilt)
-            pos.x = newX;
-            pos.y = newTorusY * cosRot - torusZ * sinRot;
-            pos.z = newTorusY * sinRot + torusZ * cosRot;
-        }
+        this.pendingRotation += -dx * this.config.rotationSensitivity;
     }
 
     private handleWheel = (e: WheelEvent): void => {
@@ -189,9 +164,7 @@ export class PanoramaInputHandler {
 
         const dx = e.clientX - this.lastMouseX;
         this.lastMouseX = e.clientX;
-
-        const angularDelta = dx * this.config.rotationSensitivity;
-        this.applyRotation(angularDelta);
+        this.pendingRotation += -dx * this.config.rotationSensitivity;
     };
 
     private handleMouseUp = (): void => {

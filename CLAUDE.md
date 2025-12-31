@@ -31,7 +31,7 @@ Segregate page-specific details from site-wide styles and layouts. Information s
 
 Give each markdown page (and the landing page) a version number. On page load, log the version to console so mobile testers know which version they're testing. Whenever you update code that changes the interactive experience, increment the version number. Don't version typescript files.
 
-Don't add console.log() in animation loops that will generate tons of output.
+Don't assume frame rate. Throttle animation updates by elapsed time. Don't add console.log() in animation loops that will generate tons of output.
 
 We may want to store the IFS simulator state in the future. All state should be serializable to JSON.
 
