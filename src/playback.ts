@@ -56,6 +56,8 @@ export interface PlaybackCallbacks {
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
+    isMobile: () => boolean;
+    getIsFullscreen: () => boolean;
 
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
@@ -589,6 +591,18 @@ export class PlaybackController {
     }
 
     private async waitForCanvasOnScreen(): Promise<void> {
+        if (this.callbacks.isMobile()) {
+            if (this.callbacks.getIsFullscreen()) return;
+            return new Promise<void>((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (this.callbacks.getIsFullscreen()) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
         if (this.isCanvasOnScreen()) return;
 
         return new Promise<void>((resolve) => {

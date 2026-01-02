@@ -1449,6 +1449,8 @@ export class CloudManager {
             }),
             isTransitioning: () => this.view.isTransitioning(),
             hasPendingBlends: () => this.model.getPendingBlends().length > 0,
+            isMobile: () => this.uiManager?.isMobile() ?? false,
+            getIsFullscreen: () => this.uiManager?.getIsFullscreen() ?? false,
             findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
                 const items = this.pieMenuController?.getCurrentMenuItems() ?? [];
                 const sliceIndex = items.findIndex(item => item.id === actionId);
