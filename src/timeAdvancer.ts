@@ -1,7 +1,7 @@
 import type { SimulatorModel } from './ifsModel.js';
 import type { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import type { MessageOrchestrator } from './messageOrchestrator.js';
-import type { DualRNG } from './testability/rng.js';
+import type { RNG } from './testability/rng.js';
 
 const ATTENTION_CHECK_INTERVAL = 0.5;
 
@@ -30,7 +30,7 @@ export class TimeAdvancer {
         getModel: () => SimulatorModel,
         getRelationships: () => CloudRelationshipManager,
         private orchestrator: MessageOrchestrator | null,
-        private rng: DualRNG,
+        private rng: RNG,
         private callbacks: TimeAdvancerCallbacks,
         options?: TimeAdvancerOptions
     ) {
@@ -118,10 +118,10 @@ export class TimeAdvancer {
 
     private checkAttentionDemands(): void {
         const inPanorama = this.callbacks.getMode() === 'panorama';
-        const demand = this.model.checkAttentionDemands(this.relationships, this.rng.model, !inPanorama);
+        const demand = this.model.checkAttentionDemands(this.relationships, this.rng, !inPanorama);
 
         if (demand) {
-            const randomVal = this.rng.model.random('panorama_attention');
+            const randomVal = this.rng.random('panorama_attention');
             const panoramaTriggered = inPanorama && (demand.needAttention - 1) > randomVal;
 
             if (demand.urgent || panoramaTriggered) {

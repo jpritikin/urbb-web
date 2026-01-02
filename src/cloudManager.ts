@@ -10,7 +10,7 @@ import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
 import { TherapistAction } from './therapistActions.js';
 import { createGroup } from './svgHelpers.js';
-import { DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
+import { RNG, createModelRNG, SeededRNG } from './testability/rng.js';
 import { ActionRecorder } from './testability/recorder.js';
 import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel, SerializedRelationships } from './testability/types.js';
 import { SimulatorController } from './simulatorController.js';
@@ -75,7 +75,7 @@ export class CloudManager {
     private resolvingClouds: Set<string> = new Set();
     private carpetRenderer: CarpetRenderer | null = null;
     private messageContainer: SVGGElement | null = null;
-    private rng: DualRNG = createDualRNG();
+    private rng: RNG = createModelRNG();
     private recorder: ActionRecorder = new ActionRecorder();
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
@@ -120,19 +120,19 @@ export class CloudManager {
         this.effectApplicator = new ActionEffectApplicator(() => this.model, this.view);
     }
 
-    setRNG(rng: DualRNG): void {
+    setRNG(rng: RNG): void {
         this.rng = rng;
         this.initController();
         this.messageOrchestrator?.setRNG(rng);
-        this.panoramaMotion.setRandom(() => rng.cosmetic.random('panorama_motion'));
+        this.panoramaMotion.setRandom(() => Math.random());
     }
 
-    getRNG(): DualRNG {
+    getRNG(): RNG {
         return this.rng;
     }
 
     setSeed(seed: number): void {
-        this.setRNG(createDualRNG(seed));
+        this.setRNG(createModelRNG(seed));
     }
 
     restoreFromSession(initialModel: SerializedModel, initialRelationships: SerializedRelationships): void {
@@ -179,9 +179,9 @@ export class CloudManager {
     }
 
     startRecording(codeVersion: string): void {
-        if (!(this.rng.model instanceof SeededRNG)) {
+        if (!(this.rng instanceof SeededRNG)) {
             const seed = Math.floor(Math.random() * 2147483647);
-            this.setRNG(createDualRNG(seed));
+            this.setRNG(createModelRNG(seed));
         }
         const platform = this.uiManager?.isMobile() ? 'mobile' : 'desktop';
         this.recorder.start(
@@ -189,8 +189,7 @@ export class CloudManager {
             this.relationships.toJSON(),
             codeVersion,
             platform,
-            this.rng.model as SeededRNG,
-            this.rng
+            this.rng as SeededRNG
         );
     }
 
@@ -290,7 +289,7 @@ export class CloudManager {
                         }
                     }
                     this.recorder.markSpontaneousBlendTriggered(
-                        this.rng.model.getCallCount(),
+                        this.rng.getCallCount(),
                         lastAttentionCheck
                     );
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
@@ -1595,9 +1594,9 @@ export class CloudManager {
         const parts: string[] = [];
 
         if (action.rngCounts) {
-            const actualModelCount = this.rng.model.getCallCount();
+            const actualModelCount = this.rng.getCallCount();
             if (action.rngCounts.model !== actualModelCount) {
-                const actualLog = this.rng.model.getCallLog();
+                const actualLog = this.rng.getCallLog();
                 console.log('[Sync] RNG mismatch - expected count:', action.rngCounts.model,
                     'actual count:', actualModelCount, 'log:', actualLog);
                 parts.push(`model RNG count: expected ${action.rngCounts.model}, got ${actualModelCount}`);

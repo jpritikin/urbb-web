@@ -1,4 +1,4 @@
-export { RNG, SeededRNG, SystemRNG, DualRNG, createDualRNG, createSeededDualRNG } from './rng.js';
+export { RNG, SeededRNG, SystemRNG, pickRandom, createModelRNG } from './rng.js';
 export { ActionRecorder, sessionToJSON, sessionFromJSON, copySessionToClipboard, pasteSessionFromClipboard } from './recorder.js';
 export { HeadlessSimulator } from './headlessSimulator.js';
 export { runScenario, replaySession, formatScenarioResult } from './scenarios.js';

@@ -1,6 +1,6 @@
 import { SimulatorModel, PartMessage } from './ifsModel.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
-import { DualRNG } from './testability/rng.js';
+import { RNG, pickRandom } from './testability/rng.js';
 
 export interface MessageOrchestratorView {
     hasActiveSpiralExits(): boolean;
@@ -19,7 +19,7 @@ export class MessageOrchestrator {
     private getModel: () => SimulatorModel;
     private view: MessageOrchestratorView;
     private getRelationships: () => CloudRelationshipManager;
-    private rng: DualRNG;
+    private rng: RNG;
     private callbacks: MessageOrchestratorCallbacks;
 
     private messageCooldownTimers: Map<string, number> = new Map();
@@ -34,7 +34,7 @@ export class MessageOrchestrator {
         getModel: () => SimulatorModel,
         view: MessageOrchestratorView,
         getRelationships: () => CloudRelationshipManager,
-        rng: DualRNG,
+        rng: RNG,
         callbacks: MessageOrchestratorCallbacks
     ) {
         this.getModel = getModel;
@@ -52,7 +52,7 @@ export class MessageOrchestrator {
         return this.getRelationships();
     }
 
-    setRNG(rng: DualRNG): void {
+    setRNG(rng: RNG): void {
         this.rng = rng;
     }
 
@@ -107,7 +107,7 @@ export class MessageOrchestrator {
             if (!grievanceTargetId) {
                 if (timeSinceSent < 10) continue;
                 const grievanceTargetArray = Array.from(grievanceTargets);
-                grievanceTargetId = this.rng.model.pickRandom(grievanceTargetArray, 'grievance_target');
+                grievanceTargetId = this.rng.pickRandom(grievanceTargetArray, 'grievance_target');
             }
 
             const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
@@ -126,7 +126,7 @@ export class MessageOrchestrator {
 
             if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
 
-            const text = this.rng.cosmetic.pickRandom(dialogues);
+            const text = pickRandom(dialogues);
             this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
             this.messageCooldownTimers.set(blendedId, 0);
             this.pendingGrievanceTargets.delete(blendedId);
@@ -157,7 +157,7 @@ export class MessageOrchestrator {
             cooldown += deltaTime;
 
             while (cooldown >= this.GENERIC_DIALOGUE_INTERVAL) {
-                const text = this.rng.cosmetic.pickRandom(dialogues);
+                const text = pickRandom(dialogues);
                 this.callbacks.showThoughtBubble(text, blendedId);
                 this.model.changeNeedAttention(blendedId, -0.25);
                 cooldown -= this.GENERIC_DIALOGUE_INTERVAL;

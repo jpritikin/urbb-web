@@ -1,7 +1,7 @@
 import { HeadlessSimulator } from './headlessSimulator.js';
 import { SimulatorController, ValidAction, ALL_RAY_FIELDS } from '../simulatorController.js';
 import { ALL_ACTION_IDS } from '../therapistActions.js';
-import { createDualRNG } from './rng.js';
+import { createModelRNG } from './rng.js';
 import type { RNG } from './rng.js';
 import type {
     Scenario, MonteCarloConfig, MonteCarloResults,
@@ -317,7 +317,7 @@ export class RandomWalkRunner {
         try {
             sim.setupFromScenario(scenario);
 
-            const rng = createDualRNG(seed);
+            const rng = createModelRNG(seed);
             const controller = new SimulatorController({
                 getModel: () => sim.getModel(),
                 getRelationships: () => sim.getRelationships(),
@@ -352,7 +352,7 @@ export class RandomWalkRunner {
                 let recordedAction: RecordedWalkAction;
 
                 if (config.heuristicScoring) {
-                    const result = this.pickActionWithHeuristic(sim, controller, filtered, rng.model, history);
+                    const result = this.pickActionWithHeuristic(sim, controller, filtered, rng, history);
                     pickedAction = result.action;
                     recordedAction = {
                         action: result.action.action,
@@ -362,7 +362,7 @@ export class RandomWalkRunner {
                         ...(config.recordHeuristicState ? { heuristic: result.heuristic, score: result.score } : {}),
                     };
                 } else {
-                    pickedAction = rng.model.pickRandom(filtered, 'random_walk');
+                    pickedAction = rng.pickRandom(filtered, 'random_walk');
                     recordedAction = {
                         action: pickedAction.action,
                         cloudId: pickedAction.cloudId,

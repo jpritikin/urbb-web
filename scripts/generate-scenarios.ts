@@ -191,7 +191,7 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
             sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
 
             // Capture state AFTER action (matching live recording format)
-            const rngCounts = sim.getRngCounts();
+            const rngCount = sim.getRngCount();
             const fullLog = sim.getModelRngLog();
             const rngLog = fullLog.slice(lastRngCount);
             const orchState = sim.getOrchestratorDebugState();
@@ -208,13 +208,13 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
                 field: action.field,
                 elapsedTime: pendingElapsedTime,
                 waitCount,
-                rngCounts,
+                rngCounts: { model: rngCount },
                 rngLog,
                 orchState,
                 modelState,
             } as RecordedAction);
 
-            lastRngCount = rngCounts.model;
+            lastRngCount = rngCount;
             pendingElapsedTime = 0;
         }
     }

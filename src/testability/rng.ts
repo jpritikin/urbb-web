@@ -92,21 +92,11 @@ export class SystemRNG implements RNG {
     }
 }
 
-export interface DualRNG {
-    model: RNG;     // State-affecting decisions (recorded for replay)
-    cosmetic: RNG;  // Presentation-only choices (not recorded)
+export function pickRandom<T>(arr: readonly T[]): T {
+    if (arr.length === 0) throw new Error('Cannot pick from empty array');
+    return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function createDualRNG(modelSeed?: number): DualRNG {
-    return {
-        model: modelSeed !== undefined ? new SeededRNG(modelSeed) : new SystemRNG(),
-        cosmetic: new SystemRNG(),
-    };
-}
-
-export function createSeededDualRNG(modelSeed: number, cosmeticSeed: number): DualRNG {
-    return {
-        model: new SeededRNG(modelSeed),
-        cosmetic: new SeededRNG(cosmeticSeed),
-    };
+export function createModelRNG(seed?: number): RNG {
+    return seed !== undefined ? new SeededRNG(seed) : new SystemRNG();
 }

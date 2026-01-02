@@ -47,7 +47,7 @@ export function replaySession(session: RecordedSession): ReplayResult {
 
     for (let i = 0; i < session.actions.length; i++) {
         const action = session.actions[i];
-        const rngBefore = sim.getRngCounts().model;
+        const rngBefore = sim.getRngCount();
 
         // Handle process_intervals action
         if (action.action === 'process_intervals') {
@@ -125,9 +125,9 @@ export function replaySession(session: RecordedSession): ReplayResult {
         }
 
         if (!firstRngDivergence && action.rngCounts) {
-            const actual = sim.getRngCounts();
-            if (actual.model !== action.rngCounts.model) {
-                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; trace: ${stateTrace.join(' | ')}`;
+            const actual = sim.getRngCount();
+            if (actual !== action.rngCounts.model) {
+                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual} vs ${action.rngCounts.model}; trace: ${stateTrace.join(' | ')}`;
             }
         }
     }

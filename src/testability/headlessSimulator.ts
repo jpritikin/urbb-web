@@ -1,6 +1,6 @@
 import { SimulatorModel, PartMessage } from '../ifsModel.js';
 import { CloudRelationshipManager } from '../cloudRelationshipManager.js';
-import { SeededRNG, DualRNG, createDualRNG, RngLogEntry } from './rng.js';
+import { SeededRNG, RNG, createModelRNG, RngLogEntry } from './rng.js';
 import { SimulatorController } from '../simulatorController.js';
 import { ActionEffectApplicator } from '../actionEffectApplicator.js';
 import { MessageOrchestrator, MessageOrchestratorView } from '../messageOrchestrator.js';
@@ -41,7 +41,7 @@ class HeadlessView implements MessageOrchestratorView {
 export class HeadlessSimulator {
     private model: SimulatorModel;
     private relationships: CloudRelationshipManager;
-    private rng: DualRNG;
+    private rng: RNG;
     private controller: SimulatorController;
     private effectApplicator: ActionEffectApplicator;
     private orchestrator: MessageOrchestrator;
@@ -52,7 +52,7 @@ export class HeadlessSimulator {
     constructor(config?: { seed?: number }) {
         this.model = new SimulatorModel();
         this.relationships = new CloudRelationshipManager();
-        this.rng = createDualRNG(config?.seed);
+        this.rng = createModelRNG(config?.seed);
         this.controller = this.createController();
         this.effectApplicator = new ActionEffectApplicator(() => this.model);
         this.headlessView = new HeadlessView();
@@ -184,7 +184,7 @@ export class HeadlessSimulator {
 
     checkWillingness(cloudId: string): boolean {
         const trust = this.model.parts.getTrust(cloudId);
-        return trust >= this.rng.model.random();
+        return trust >= this.rng.random();
     }
 
     advanceTime(deltaTime: number, compressed: boolean = true): void {
@@ -223,19 +223,15 @@ export class HeadlessSimulator {
     }
 
     getModelRngSeed(): number | undefined {
-        const rng = this.rng.model;
-        return rng instanceof SeededRNG ? rng.getInitialSeed() : undefined;
+        return this.rng instanceof SeededRNG ? this.rng.getInitialSeed() : undefined;
     }
 
-    getRngCounts(): { model: number; cosmetic: number } {
-        return {
-            model: this.rng.model.getCallCount(),
-            cosmetic: this.rng.cosmetic.getCallCount()
-        };
+    getRngCount(): number {
+        return this.rng.getCallCount();
     }
 
     getModelRngLog(): RngLogEntry[] {
-        return this.rng.model.getCallLog();
+        return this.rng.getCallLog();
     }
 
     getOrchestratorDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } {

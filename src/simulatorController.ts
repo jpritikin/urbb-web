@@ -1,6 +1,6 @@
 import { SimulatorModel } from './ifsModel.js';
 import { CloudRelationshipManager } from './cloudRelationshipManager.js';
-import { DualRNG } from './testability/rng.js';
+import { RNG, pickRandom } from './testability/rng.js';
 import { OUTCOMES, outcome } from './outcomes.js';
 import type { ControllerActionResult } from './testability/types.js';
 import type { BiographyField } from './selfRay.js';
@@ -9,7 +9,7 @@ import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 export interface ControllerDependencies {
     getModel: () => SimulatorModel;
     getRelationships: () => CloudRelationshipManager;
-    rng: DualRNG;
+    rng: RNG;
     getPartName: (cloudId: string) => string;
 }
 
@@ -60,7 +60,7 @@ const COMPASSION_RECEIVED_RESPONSES = [
 export class SimulatorController {
     private getModel: () => SimulatorModel;
     private getRelationships: () => CloudRelationshipManager;
-    private rng: DualRNG;
+    private rng: RNG;
     private getPartName: (cloudId: string) => string;
 
     constructor(deps: ControllerDependencies) {
@@ -344,7 +344,7 @@ export class SimulatorController {
                 return {
                     success: true,
                     stateChanges: [outcome(cloudId, OUTCOMES.ALREADY_ANSWERED)],
-                    uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
+                    uiFeedback: { thoughtBubble: { text: pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
                 };
             }
         }
@@ -373,11 +373,11 @@ export class SimulatorController {
         }
 
         const trust = this.model.parts.getTrust(cloudId);
-        const willing = trust >= this.rng.model.random('help_protected:willing');
+        const willing = trust >= this.rng.random('help_protected:willing');
         const partName = this.getPartName(cloudId);
 
         if (!willing) {
-            const response = this.rng.cosmetic.pickRandom(UNWILLING_RESPONSES);
+            const response = pickRandom(UNWILLING_RESPONSES);
             return {
                 success: true,
                 message: 'Refused',
@@ -407,7 +407,7 @@ export class SimulatorController {
             ? ["I feel your beauty.", "I feel your concern."]
             : ["I feel your compassion.", "I feel your warmth."];
         const responses = [...specific, "I see a brilliant star."];
-        return this.rng.cosmetic.pickRandom(responses);
+        return pickRandom(responses);
     }
 
     private handleWhoDoYouSee(cloudId: string): ControllerActionResult {
@@ -446,7 +446,7 @@ export class SimulatorController {
         const availableProxies = Array.from(proxies).filter(id => !targetIds.has(id));
         if (availableProxies.length === 0) {
             const successChance = this.model.getSelfRay()?.targetCloudId === cloudId ? 0.95 : 0.1;
-            if (this.rng.model.random('who_do_you_see:clear_proxies') < successChance) {
+            if (this.rng.random('who_do_you_see:clear_proxies') < successChance) {
                 this.relationships.clearProxies(cloudId);
                 return {
                     success: true,
@@ -462,7 +462,7 @@ export class SimulatorController {
             };
         }
 
-        const proxyId = this.rng.model.pickRandom(availableProxies, 'who_do_you_see:pick_proxy');
+        const proxyId = this.rng.pickRandom(availableProxies, 'who_do_you_see:pick_proxy');
 
         this.model.addBlendedPart(proxyId, 'therapist');
         this.model.parts.revealIdentity(proxyId);
@@ -486,12 +486,12 @@ export class SimulatorController {
             if (this.relationships.hasGrievance(blendedId, cloudId)) {
                 const dialogues = this.relationships.getGrievanceDialogues(blendedId, cloudId);
                 if (dialogues.length > 0) {
-                    blendedResponses.push({ cloudId: blendedId, response: this.rng.cosmetic.pickRandom(dialogues) });
+                    blendedResponses.push({ cloudId: blendedId, response: pickRandom(dialogues) });
                 }
             } else {
                 const dialogues = this.model.parts.getDialogues(blendedId).genericBlendedDialogues;
                 if (dialogues && dialogues.length > 0) {
-                    blendedResponses.push({ cloudId: blendedId, response: this.rng.cosmetic.pickRandom(dialogues) });
+                    blendedResponses.push({ cloudId: blendedId, response: pickRandom(dialogues) });
                 }
             }
         }
@@ -572,7 +572,7 @@ export class SimulatorController {
             stateChanges: [outcome(cloudId, OUTCOMES.NOTICED_SELF)],
             uiFeedback: {
                 thoughtBubble: {
-                    text: this.rng.cosmetic.pickRandom(selfNoticeResponses),
+                    text: pickRandom(selfNoticeResponses),
                     cloudId
                 }
             }
@@ -591,7 +591,7 @@ export class SimulatorController {
             stateChanges: [outcome(cloudId, OUTCOMES.NOTICED_GENERIC, targetCloudId)],
             uiFeedback: {
                 thoughtBubble: {
-                    text: this.rng.cosmetic.pickRandom(genericResponses),
+                    text: pickRandom(genericResponses),
                     cloudId
                 }
             }
@@ -615,7 +615,7 @@ export class SimulatorController {
                 stateChanges: [outcome(protectorId, OUTCOMES.PROTECTOR_RECOGNIZED_BURDEN, protecteeId)],
                 uiFeedback: {
                     thoughtBubble: {
-                        text: this.rng.cosmetic.pickRandom(burdenRecognitionResponses),
+                        text: pickRandom(burdenRecognitionResponses),
                         cloudId: protectorId
                     }
                 }
@@ -666,7 +666,7 @@ export class SimulatorController {
             stateChanges: [outcome(protecteeId, OUTCOMES.PROTECTEE_RECOGNIZED_PROTECTOR, protectorId)],
             uiFeedback: {
                 thoughtBubble: {
-                    text: this.rng.cosmetic.pickRandom(recognitionResponses),
+                    text: pickRandom(recognitionResponses),
                     cloudId: protecteeId
                 }
             }
@@ -694,7 +694,7 @@ export class SimulatorController {
             stateChanges: [outcome(attackerId, OUTCOMES.ATTACKER_RECOGNIZED_HARM, victimId)],
             uiFeedback: {
                 thoughtBubble: {
-                    text: this.rng.cosmetic.pickRandom(recognitionResponses),
+                    text: pickRandom(recognitionResponses),
                     cloudId: attackerId
                 }
             }
@@ -712,12 +712,12 @@ export class SimulatorController {
             return {
                 success: true,
                 stateChanges: [outcome(cloudId, OUTCOMES.ALREADY_ANSWERED)],
-                uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
+                uiFeedback: { thoughtBubble: { text: pickRandom(ALREADY_TOLD_RESPONSES), cloudId } }
             };
         }
 
         const proxies = this.relationships.getProxies(cloudId);
-        if (proxies.size > 0 && this.rng.model.random('ray_field:deflect') < 0.95) {
+        if (proxies.size > 0 && this.rng.random('ray_field:deflect') < 0.95) {
             const deflections = [
                 "I don't trust you.",
                 "Why should I tell you?",
@@ -728,7 +728,7 @@ export class SimulatorController {
             return {
                 success: true,
                 stateChanges: [outcome(cloudId, OUTCOMES.DEFLECTED)],
-                uiFeedback: { thoughtBubble: { text: this.rng.cosmetic.pickRandom(deflections), cloudId } }
+                uiFeedback: { thoughtBubble: { text: pickRandom(deflections), cloudId } }
             };
         }
 
@@ -770,7 +770,7 @@ export class SimulatorController {
                     response = "*Shrug*";
                     trustGain *= 0.25;
                 } else {
-                    response = this.rng.cosmetic.pickRandom(COMPASSION_RECEIVED_RESPONSES);
+                    response = pickRandom(COMPASSION_RECEIVED_RESPONSES);
                 }
                 this.model.parts.addTrust(cloudId, trustGain);
                 break;
@@ -785,7 +785,7 @@ export class SimulatorController {
                         "You're grateful? That's new.",
                         "I've been working so hard for so long. Thank you for noticing.",
                     ];
-                    response = this.rng.cosmetic.pickRandom(gratitudeResponses);
+                    response = pickRandom(gratitudeResponses);
                     trustGain = this.calculateTrustGain(cloudId);
                     this.model.parts.addTrust(cloudId, trustGain);
                 } else {
@@ -827,7 +827,7 @@ export class SimulatorController {
                 return { success: false, message: `Unknown field: ${field}`, stateChanges: [] };
         }
 
-        if (this.rng.model.random('ray_field:clear_ray') < 0.25) {
+        if (this.rng.random('ray_field:clear_ray') < 0.25) {
             this.model.clearSelfRay();
         }
 
@@ -873,7 +873,7 @@ export class SimulatorController {
                 const protectorTrust = this.model.parts.getTrust(protectorId);
                 const newProtectorTrust = protectorTrust - trustGain / 2;
                 this.model.parts.setTrust(protectorId, newProtectorTrust);
-                if (newProtectorTrust < this.rng.model.random('whatNeedToKnow:backlash_check')) {
+                if (newProtectorTrust < this.rng.random('whatNeedToKnow:backlash_check')) {
                     backlash = { protectorId, protecteeId: cloudId };
                     break;
                 }
@@ -891,18 +891,18 @@ export class SimulatorController {
 
         if (!this.model.parts.isIdentityRevealed(cloudId)) {
             this.model.parts.adjustTrust(cloudId, 0.95);
-            return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
+            return pickRandom(NO_JOB_RESPONSES);
         }
 
         const dialogues = partState.dialogues.burdenedJobAppraisal;
         if (!dialogues || dialogues.length === 0) {
             this.model.parts.adjustTrust(cloudId, 0.95);
-            return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
+            return pickRandom(NO_JOB_RESPONSES);
         }
 
         this.model.parts.revealJobAppraisal(cloudId);
         this.model.parts.addTrust(cloudId, 0.05);
-        return this.rng.cosmetic.pickRandom(dialogues);
+        return pickRandom(dialogues);
     }
 
     private handleJobImpactInternal(cloudId: string): string {
@@ -911,18 +911,18 @@ export class SimulatorController {
 
         if (!this.model.parts.isIdentityRevealed(cloudId)) {
             this.model.parts.adjustTrust(cloudId, 0.95);
-            return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
+            return pickRandom(NO_JOB_RESPONSES);
         }
 
         const dialogues = partState.dialogues.burdenedJobImpact;
         if (!dialogues || dialogues.length === 0) {
             this.model.parts.adjustTrust(cloudId, 0.95);
-            return this.rng.cosmetic.pickRandom(NO_JOB_RESPONSES);
+            return pickRandom(NO_JOB_RESPONSES);
         }
 
         this.model.parts.revealJobImpact(cloudId);
         this.model.parts.addTrust(cloudId, 0.05);
-        return this.rng.cosmetic.pickRandom(dialogues);
+        return pickRandom(dialogues);
     }
 
     private handleApologizeInternal(cloudId: string): string {
@@ -934,7 +934,7 @@ export class SimulatorController {
                 "I'm not upset with you.",
                 "You haven't done anything wrong.",
             ];
-            return this.rng.cosmetic.pickRandom(confused);
+            return pickRandom(confused);
         }
 
         const grievanceSenders = this.relationships.getGrievanceSenders(cloudId);
@@ -947,14 +947,14 @@ export class SimulatorController {
         }
 
         const trust = this.model.parts.getTrust(cloudId);
-        if (trust < 0.5 || this.rng.model.random('apologize:accept') > trust) {
+        if (trust < 0.5 || this.rng.random('apologize:accept') > trust) {
             this.model.parts.adjustTrust(cloudId, 0.9);
             const rejections = [
                 "It's going to take more than that.",
                 "Words are easy. Show me you mean it.",
                 "I'm not ready to forgive yet.",
             ];
-            return this.rng.cosmetic.pickRandom(rejections);
+            return pickRandom(rejections);
         }
 
         this.model.parts.clearAttacked(cloudId);
@@ -964,7 +964,7 @@ export class SimulatorController {
             "I can tell you mean it. Thank you.",
             "That means a lot to me.",
         ];
-        return this.rng.cosmetic.pickRandom(acceptances);
+        return pickRandom(acceptances);
     }
 
     private handleSpontaneousBlend(cloudId: string): ControllerActionResult {

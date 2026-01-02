@@ -1,5 +1,5 @@
 import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot } from './types.js';
-import type { DualRNG, SeededRNG, RngLogEntry } from './rng.js';
+import type { RNG, SeededRNG, RngLogEntry } from './rng.js';
 
 export class ActionRecorder {
     private actions: RecordedAction[] = [];
@@ -11,7 +11,7 @@ export class ActionRecorder {
     private startTimestamp: number = 0;
     private sessionStartTime: number = 0;
     private lastActionTime: number = 0;
-    private rng: DualRNG | null = null;
+    private rng: RNG | null = null;
     private lastRngCount: number = 0;
     private pendingSpontaneousBlendTime: number | null = null;
     private pendingSpontaneousBlendRngCount: number | null = null;
@@ -23,15 +23,14 @@ export class ActionRecorder {
         initialRelationships: SerializedRelationships,
         codeVersion: string,
         platform: 'desktop' | 'mobile',
-        modelRng?: SeededRNG,
-        rng?: DualRNG
+        rng?: SeededRNG
     ): void {
         this.actions = [];
         this.initialModel = initialModel;
         this.initialRelationships = initialRelationships;
         this.codeVersion = codeVersion;
         this.platform = platform;
-        this.modelSeed = modelRng?.getInitialSeed() ?? 0;
+        this.modelSeed = rng?.getInitialSeed() ?? 0;
         this.startTimestamp = Date.now();
         this.sessionStartTime = performance.now();
         this.lastActionTime = performance.now();
@@ -67,9 +66,9 @@ export class ActionRecorder {
         let rngCounts: { model: number } | undefined;
         let rngLog: RngLogEntry[] | undefined;
         if (this.rng) {
-            const currentCount = this.rng.model.getCallCount();
+            const currentCount = this.rng.getCallCount();
             rngCounts = { model: currentCount };
-            const fullLog = this.rng.model.getCallLog();
+            const fullLog = this.rng.getCallLog();
             rngLog = fullLog.slice(this.lastRngCount);
             this.lastRngCount = currentCount;
         }
