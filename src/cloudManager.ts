@@ -952,6 +952,13 @@ export class CloudManager {
 
         this.view.setAction(label);
         const oldModel = this.model.clone();
+        // Record intervals BEFORE the action (they happened before user clicked)
+        if (recordedAction && this.recorder.isRecording()) {
+            const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
+            if (intervalCount > 0) {
+                this.recorder.recordIntervals(intervalCount);
+            }
+        }
         this.insideAct = true;
         try {
             fn();
@@ -960,15 +967,11 @@ export class CloudManager {
         }
         this.syncViewWithModel(oldModel);
         if (recordedAction && this.recorder.isRecording()) {
-            // Record any intervals processed since the last action
-            const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
-            if (intervalCount > 0) {
-                this.recorder.recordIntervals(intervalCount);
-            }
             const orchState = this.messageOrchestrator?.getDebugState();
             const selfRay = this.model.getSelfRay();
             const biography: Record<string, { ageRevealed: boolean; identityRevealed: boolean; jobRevealed: boolean; jobAppraisalRevealed: boolean; jobImpactRevealed: boolean }> = {};
             const needAttention: Record<string, number> = {};
+            const trust: Record<string, number> = {};
             for (const cloudId of this.model.getAllPartIds()) {
                 biography[cloudId] = {
                     ageRevealed: this.model.parts.isAgeRevealed(cloudId),
@@ -978,6 +981,7 @@ export class CloudManager {
                     jobImpactRevealed: this.model.parts.isJobImpactRevealed(cloudId),
                 };
                 needAttention[cloudId] = this.model.parts.getNeedAttention(cloudId);
+                trust[cloudId] = this.model.parts.getTrust(cloudId);
             }
             const modelState = {
                 targets: [...this.model.getTargetCloudIds()],
@@ -985,6 +989,7 @@ export class CloudManager {
                 selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
                 biography,
                 needAttention,
+                trust,
             };
             this.recorder.record(recordedAction, orchState, modelState);
         }
@@ -1648,6 +1653,16 @@ export class CloudManager {
                     if (expectedVal !== actualVal) {
                         parts.push(`${getName(cloudId)} ${field}: expected ${expectedVal}, got ${actualVal}`);
                     }
+                }
+            }
+        }
+
+        if (expected.trust) {
+            const getName = (id: string) => this.getCloudById(id)?.text ?? id;
+            for (const [cloudId, expectedTrust] of Object.entries(expected.trust)) {
+                const actualTrust = this.model.parts.getTrust(cloudId);
+                if (Math.abs(expectedTrust - actualTrust) > 0.001) {
+                    parts.push(`${getName(cloudId)} trust: expected ${expectedTrust.toFixed(3)}, got ${actualTrust.toFixed(3)}`);
                 }
             }
         }

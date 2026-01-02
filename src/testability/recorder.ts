@@ -49,10 +49,21 @@ export class ActionRecorder {
 
     recordIntervals(count: number): void {
         if (count <= 0 || !this.initialModel) return;
+        let rngCounts: { model: number } | undefined;
+        let rngLog: RngLogEntry[] | undefined;
+        if (this.rng) {
+            const currentCount = this.rng.getCallCount();
+            rngCounts = { model: currentCount };
+            const fullLog = this.rng.getCallLog();
+            rngLog = fullLog.slice(this.lastRngCount);
+            this.lastRngCount = currentCount;
+        }
         this.actions.push({
             action: 'process_intervals',
             cloudId: '',
             count,
+            rngCounts,
+            rngLog,
         });
     }
 

@@ -112,7 +112,9 @@ export class TimeAdvancer {
             this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
             this.orchestrator?.checkAndSendGrievanceMessages();
             this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
-            this.checkAttentionDemands();
+            if (!this.skipAttentionChecks) {
+                this.checkAttentionDemands();
+            }
         }
     }
 

@@ -43,6 +43,7 @@ export interface ModelSnapshot {
     selfRay: { targetCloudId: string } | null;
     biography?: Record<string, BiographySnapshot>;
     needAttention?: Record<string, number>;
+    trust?: Record<string, number>;
 }
 
 export interface RecordedAction {

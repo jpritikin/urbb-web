@@ -55,6 +55,12 @@ export function replaySession(session: RecordedSession): ReplayResult {
             if (count > 0) {
                 sim.advanceIntervals(count);
             }
+            if (action.rngCounts) {
+                const actual = sim.getRngCount();
+                if (actual !== action.rngCounts.model) {
+                    stateTrace.push(`#${i} process_intervals RNG mismatch: ${actual} vs ${action.rngCounts.model}`);
+                }
+            }
             actionResults.push({ success: true, stateChanges: [`processed ${count} intervals`] });
             continue;
         }
@@ -110,6 +116,14 @@ export function replaySession(session: RecordedSession): ReplayResult {
                     const actual = model.parts.getNeedAttention(cloudId);
                     if (Math.abs(actual - expected) > 0.01) {
                         stateTrace.push(`#${i} needAttention mismatch: ${cloudId} actual=${actual.toFixed(3)} expected=${expected.toFixed(3)}`);
+                    }
+                }
+            }
+            if (action.modelState.trust) {
+                for (const [cloudId, expected] of Object.entries(action.modelState.trust)) {
+                    const actual = model.parts.getTrust(cloudId);
+                    if (Math.abs(actual - expected) > 0.001) {
+                        stateTrace.push(`#${i} trust mismatch: ${cloudId} actual=${actual.toFixed(3)} expected=${expected.toFixed(3)}`);
                     }
                 }
             }

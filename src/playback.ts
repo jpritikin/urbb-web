@@ -205,6 +205,13 @@ export class PlaybackController {
             if (count > 0) {
                 this.callbacks.advanceIntervals(count);
             }
+            if (action.rngCounts) {
+                const verifyResult = this.callbacks.onActionCompleted(action);
+                if (!verifyResult.success) {
+                    this.handleError(verifyResult.error ?? 'Sync verification failed', `action ${this.currentActionIndex}`);
+                    return;
+                }
+            }
             this.currentActionIndex++;
             // Don't wait between interval processing and next action
             this.waitCountdown = 0;

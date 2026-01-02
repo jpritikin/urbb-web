@@ -100,7 +100,8 @@ export class HeadlessSimulator {
                         this.currentMode = 'foreground';
                     }
                 },
-            }
+            },
+            { skipAttentionChecks: true }
         );
     }
 
