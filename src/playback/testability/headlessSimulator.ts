@@ -187,8 +187,8 @@ export class HeadlessSimulator {
         return trust >= this.rng.random();
     }
 
-    advanceTime(deltaTime: number, compressed: boolean = true): void {
-        this.timeAdvancer.advance(deltaTime, compressed);
+    advanceTime(deltaTime: number): void {
+        this.timeAdvancer.advance(deltaTime);
         this.checkBlendedPartsAttention();
     }
 

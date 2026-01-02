@@ -20,7 +20,7 @@ export interface TimeAdvancerOptions {
 }
 
 export class TimeAdvancer {
-    private lastAttentionCheck = 0;
+    private accumulatedTime = 0;
     private intervalCount = 0;
     private getModel: () => SimulatorModel;
     private getRelationships: () => CloudRelationshipManager;
@@ -47,55 +47,22 @@ export class TimeAdvancer {
         return this.getRelationships();
     }
 
-    /**
-     * Advance simulation time by deltaTime seconds.
-     * This handles all time-based effects: needAttention growth, message timers,
-     * grievance messages, generic dialogues, and spontaneous blend checks.
-     *
-     * When compressed=true (for playback), we step through time in ATTENTION_CHECK_INTERVAL
-     * increments to ensure RNG consumption matches real-time playback.
-     */
-    advance(deltaTime: number, compressed: boolean = false): void {
-        if (compressed) {
-            this.advanceCompressed(deltaTime);
-        } else {
-            this.advanceRealtime(deltaTime);
+    advance(deltaTime: number): void {
+        this.accumulatedTime += deltaTime;
+        while (this.accumulatedTime >= ATTENTION_CHECK_INTERVAL) {
+            this.accumulatedTime -= ATTENTION_CHECK_INTERVAL;
+            this.intervalCount++;
+            this.processOneInterval();
+            this.checkAttentionDemands();
         }
     }
 
-    /**
-     * Real-time advancement: accumulates deltaTime and processes in fixed intervals.
-     * This ensures RNG consumption matches compressed playback.
-     */
-    private advanceRealtime(deltaTime: number): void {
-        this.lastAttentionCheck += deltaTime;
-        this.processAccumulatedTime();
-    }
-
-    /**
-     * Compressed advancement: adds full duration and processes in fixed intervals.
-     */
-    private advanceCompressed(deltaTime: number): void {
-        this.lastAttentionCheck += deltaTime;
-        this.processAccumulatedTime();
-    }
-
-    /**
-     * Process accumulated time in fixed ATTENTION_CHECK_INTERVAL chunks.
-     * Both real-time and compressed modes use this to ensure identical RNG patterns.
-     */
-    private processAccumulatedTime(): void {
-        while (this.lastAttentionCheck >= ATTENTION_CHECK_INTERVAL) {
-            this.lastAttentionCheck -= ATTENTION_CHECK_INTERVAL;
-            this.intervalCount++;
-
-            const inConference = this.callbacks.getMode() === 'foreground';
-            this.model.increaseNeedAttention(this.relationships, ATTENTION_CHECK_INTERVAL, inConference);
-            this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
-            this.orchestrator?.checkAndSendGrievanceMessages();
-            this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
-
-            this.checkAttentionDemands();
+    advanceIntervals(count: number): void {
+        for (let i = 0; i < count; i++) {
+            this.processOneInterval();
+            if (!this.skipAttentionChecks) {
+                this.checkAttentionDemands();
+            }
         }
     }
 
@@ -105,17 +72,12 @@ export class TimeAdvancer {
         return count;
     }
 
-    advanceIntervals(count: number): void {
-        for (let i = 0; i < count; i++) {
-            const inConference = this.callbacks.getMode() === 'foreground';
-            this.model.increaseNeedAttention(this.relationships, ATTENTION_CHECK_INTERVAL, inConference);
-            this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
-            this.orchestrator?.checkAndSendGrievanceMessages();
-            this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
-            if (!this.skipAttentionChecks) {
-                this.checkAttentionDemands();
-            }
-        }
+    private processOneInterval(): void {
+        const inConference = this.callbacks.getMode() === 'foreground';
+        this.model.increaseNeedAttention(this.relationships, ATTENTION_CHECK_INTERVAL, inConference);
+        this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
+        this.orchestrator?.checkAndSendGrievanceMessages();
+        this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
     }
 
     private checkAttentionDemands(): void {
@@ -130,7 +92,7 @@ export class TimeAdvancer {
                 this.callbacks.onSpontaneousBlend({
                     cloudId: demand.cloudId,
                     urgent: demand.urgent
-                }, this.lastAttentionCheck);
+                }, this.accumulatedTime);
             }
         }
     }
