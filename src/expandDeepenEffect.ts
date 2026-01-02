@@ -7,6 +7,7 @@ const MAX_SELF_AMPLIFICATION = 10;
 const WAVEFRONT_PERIOD_SEC = 15;
 const SIN_WAVE_EVOLUTION_SEC = 3;
 const FADE_DURATION_SEC = 0.5;
+const BORDER_FADE_DURATION_SEC = 5;
 const LINE_SPACING = 400;
 
 interface Dot {
@@ -66,6 +67,9 @@ export class ExpandDeepenEffect {
     private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
     private clickHandler: ((e: MouseEvent) => void) | null = null;
     private touchHandler: ((e: TouchEvent) => void) | null = null;
+    private audioContext: AudioContext | null = null;
+    private noiseNode: AudioBufferSourceNode | null = null;
+    private gainNode: GainNode | null = null;
 
     constructor() {
         this.width = 800;
@@ -116,6 +120,7 @@ export class ExpandDeepenEffect {
         this.spawnWavefront();
         this.spawnSinWaveInstance();
         this.setupInputTracking();
+        this.startWhiteNoise();
         this.canvas.style.display = 'block';
     }
 
@@ -123,6 +128,7 @@ export class ExpandDeepenEffect {
         if (!this.active || this.isFadingOut) return;
         this.isFadingOut = true;
         this.fadeOutProgress = 0;
+        this.stopWhiteNoise();
     }
 
     isActive(): boolean {
@@ -135,7 +141,7 @@ export class ExpandDeepenEffect {
 
     private setupInputTracking(): void {
         const VELOCITY_WINDOW = 0.1; // 100ms moving average window
-        const VELOCITY_THRESHOLD = 700;
+        const VELOCITY_THRESHOLD = 600;
 
         this.mouseVelocityAvg = 0;
         this.lastMouseTime = performance.now();
@@ -182,6 +188,51 @@ export class ExpandDeepenEffect {
             document.removeEventListener('touchstart', this.touchHandler, true);
             this.touchHandler = null;
         }
+    }
+
+    private startWhiteNoise(): void {
+        if (this.audioContext) return;
+
+        this.audioContext = new AudioContext();
+        const bufferSize = this.audioContext.sampleRate * 2; // 2 seconds of noise
+        const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        this.noiseNode = this.audioContext.createBufferSource();
+        this.noiseNode.buffer = noiseBuffer;
+        this.noiseNode.loop = true;
+
+        this.gainNode = this.audioContext.createGain();
+        this.gainNode.gain.value = 0;
+
+        this.noiseNode.connect(this.gainNode);
+        this.gainNode.connect(this.audioContext.destination);
+        this.noiseNode.start();
+    }
+
+    private stopWhiteNoise(): void {
+        if (this.noiseNode) {
+            this.noiseNode.stop();
+            this.noiseNode.disconnect();
+            this.noiseNode = null;
+        }
+        if (this.gainNode) {
+            this.gainNode.disconnect();
+            this.gainNode = null;
+        }
+        if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
+    }
+
+    private updateWhiteNoiseVolume(): void {
+        if (!this.gainNode) return;
+        const progress = Math.min(1, this.elapsedTime / EFFECT_DURATION_SEC);
+        this.gainNode.gain.value = progress * 0.2;
     }
 
     private getWavefrontInterval(): number {
@@ -283,6 +334,9 @@ export class ExpandDeepenEffect {
 
         // Update sparkles
         this.updateSparkles();
+
+        // Update white noise volume
+        this.updateWhiteNoiseVolume();
 
         // Check for blending cancellation
         if (model.getBlendedParts().length > 0) {
@@ -482,7 +536,9 @@ export class ExpandDeepenEffect {
         this.ctx.globalAlpha = 1;
     }
 
-    shouldHideStarBorder(): boolean {
-        return this.active && !this.isFadingOut;
+    getBorderOpacity(): number {
+        if (!this.active) return 1;
+        // Fade from 1 to 0 over BORDER_FADE_DURATION_SEC
+        return Math.max(0, 1 - this.elapsedTime / BORDER_FADE_DURATION_SEC);
     }
 }

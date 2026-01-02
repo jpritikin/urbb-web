@@ -994,7 +994,10 @@ export class CloudManager {
                 this.expandDeepenEffect.update(deltaTime, this.model);
                 const starPos = this.view.getStarScreenPosition();
                 this.expandDeepenEffect.render(starPos.x, starPos.y);
-                this.animatedStar?.setBorderHidden(this.expandDeepenEffect.shouldHideStarBorder());
+            }
+            // Always sync border opacity (returns 1 when effect inactive)
+            if (this.expandDeepenEffect) {
+                this.animatedStar?.setBorderOpacity(this.expandDeepenEffect.getBorderOpacity());
             }
         } else {
             // Cancel expand/deepen effect when leaving foreground

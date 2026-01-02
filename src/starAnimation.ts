@@ -893,13 +893,14 @@ export class AnimatedStar {
         return this.armCount;
     }
 
-    setBorderHidden(hidden: boolean): void {
-        this.borderHidden = hidden;
+    setBorderOpacity(opacity: number): void {
+        this.borderHidden = opacity === 0;
+        const opacityStr = String(opacity);
         if (this.staticStarOutline) {
-            this.staticStarOutline.style.display = hidden ? 'none' : '';
+            this.staticStarOutline.style.opacity = opacityStr;
         }
         for (const outline of this.transitionOutlines) {
-            outline.style.display = hidden ? 'none' : '';
+            outline.style.opacity = opacityStr;
         }
     }
 
