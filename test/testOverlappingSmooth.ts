@@ -5,7 +5,7 @@ import {
     type RenderSpecParams,
     type TransitionDirection,
     type TransitionArmRenderSpec,
-} from '../src/starAnimationCore.js';
+} from '../src/star/starAnimationCore.js';
 
 interface TransitionConfig {
     firstType: 'adding' | 'removing';

@@ -1,10 +1,10 @@
 #!/usr/bin/env npx tsx
 
 import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
-import { RandomWalkRunner } from '../src/testability/index.js';
-import { HeadlessSimulator } from '../src/testability/headlessSimulator.js';
-import { ACTION_OUTCOMES, parseOutcome } from '../src/outcomes.js';
-import { WAIT_DURATION, type Scenario, type RandomWalkConfig, type RecordedSession, type RecordedAction, type WalkPath } from '../src/testability/types.js';
+import { RandomWalkRunner } from '../src/playback/testability/index.js';
+import { HeadlessSimulator } from '../src/playback/testability/headlessSimulator.js';
+import { ACTION_OUTCOMES, parseOutcome } from '../src/simulator/outcomes.js';
+import { WAIT_DURATION, type Scenario, type RandomWalkConfig, type RecordedSession, type RecordedAction, type WalkPath } from '../src/playback/testability/types.js';
 
 const easyScenario: Scenario = {
     name: 'Easy - Inner Critic',

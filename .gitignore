@@ -3,10 +3,5 @@ public/
 .hugo_build.lock
 *.log
 .DS_Store
-static/js/*.js
-static/js/*.d.ts
-static/js/*.js.map
-static/js/*.d.ts.map
-static/js/ifsView/
-static/js/testability/
+static/js/
 static/css/output.css

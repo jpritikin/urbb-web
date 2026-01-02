@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
-import { replaySession } from '../src/testability/scenarios.js';
-import type { RecordedSession } from '../src/testability/types.js';
+import { replaySession } from '../src/playback/testability/scenarios.js';
+import type { RecordedSession } from '../src/playback/testability/types.js';
 
 interface TestResult {
     name: string;

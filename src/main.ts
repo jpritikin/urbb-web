@@ -1,6 +1,6 @@
-import ImageSlider from './imageSlider.js';
-import ButtonVisibilityManager from './buttonVisibility.js';
-import { initBookNav } from './bookNav.js';
+import ImageSlider from './pages/imageSlider.js';
+import ButtonVisibilityManager from './pages/buttonVisibility.js';
+import { initBookNav } from './pages/bookNav.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize image slider on homepage

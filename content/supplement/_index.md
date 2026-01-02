@@ -152,6 +152,6 @@ We've done the work. We've tracked down the actual papers. We dare you to click 
   <p style="font-style: italic; color: #888;">Bibliography loading...</p>
 </div>
 
-<script src="/js/salmonAnimation.js"></script>
-<script src="/js/bibliographyEffects.js"></script>
-<script src="/js/ifsSimulatorEntrance.js"></script>
+<script src="/js/pages/salmonAnimation.js"></script>
+<script src="/js/pages/bibliographyEffects.js"></script>
+<script src="/js/pages/ifsSimulatorEntrance.js"></script>

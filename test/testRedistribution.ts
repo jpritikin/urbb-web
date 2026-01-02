@@ -3,7 +3,7 @@ import {
     computeOverlappingArmRedistribution,
     TransitionDirection,
     OverlappingRedistributionParams,
-} from '../src/starAnimationCore.js';
+} from '../src/star/starAnimationCore.js';
 
 const TOLERANCE = 0.001;
 const PI = Math.PI;

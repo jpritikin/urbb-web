@@ -5,7 +5,7 @@ version: "v3.42.11"
 
 <link rel="stylesheet" href="/css/animations.css">
 <link rel="stylesheet" href="/css/ifs.css">
-<script type="module" src="/js/ifs.js"></script>
+<script type="module" src="/js/simulator/ifs.js"></script>
 
 <details class="tutorial-expander">
 <summary>Therapist Guide 📖</summary>

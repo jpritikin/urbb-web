@@ -28,4 +28,4 @@ Find the hidden words related to Open Inquiry and Internal Family Systems! 🔍 
     </div>
 </div>
 
-<script type="module" src="/js/wordSearch.js"></script>
+<script type="module" src="/js/pages/wordSearch.js"></script>

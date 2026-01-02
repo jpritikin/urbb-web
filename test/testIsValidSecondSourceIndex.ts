@@ -1,4 +1,4 @@
-import { isValidSecondSourceIndex, type TransitionDirection } from '../src/starAnimationCore.js';
+import { isValidSecondSourceIndex, type TransitionDirection } from '../src/star/starAnimationCore.js';
 
 interface TestCase {
     firstType: 'adding' | 'removing';

@@ -1,6 +1,6 @@
-import { HeadlessSimulator } from '../src/testability/headlessSimulator.js';
-import { runScenario, replaySession } from '../src/testability/scenarios.js';
-import type { Scenario, RecordedSession, SerializedModel } from '../src/testability/types.js';
+import { HeadlessSimulator } from '../src/playback/testability/headlessSimulator.js';
+import { runScenario, replaySession } from '../src/playback/testability/scenarios.js';
+import type { Scenario, RecordedSession, SerializedModel } from '../src/playback/testability/types.js';
 
 interface TestResult {
     name: string;

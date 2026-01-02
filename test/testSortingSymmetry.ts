@@ -6,7 +6,7 @@ import {
     getArmPoints,
     getInnerRadiusForArmCount,
     STAR_OUTER_RADIUS,
-} from '../src/starAnimationCore.js';
+} from '../src/star/starAnimationCore.js';
 
 const CENTER_X = 200;
 const CENTER_Y = 200;

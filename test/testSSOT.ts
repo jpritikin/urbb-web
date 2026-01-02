@@ -5,7 +5,7 @@ import {
     dist,
     type PlannedTransitionBundle,
     type TransitionDirection,
-} from '../src/starAnimationCore.js';
+} from '../src/star/starAnimationCore.js';
 
 const CENTER_X = 100;
 const CENTER_Y = 100;
