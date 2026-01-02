@@ -1,5 +1,6 @@
 import { CloudManager } from './cloudManager.js';
 import { Cloud } from './cloudShape.js';
+import type { RecordedSession } from './testability/types.js';
 
 export interface Scenario {
     id: string;
@@ -8,6 +9,24 @@ export interface Scenario {
     estimatedMinutes: number;
     description: string;
     setup: (cloudManager: CloudManager) => void;
+    recordedSessionPath?: string;
+}
+
+let recordedSessionCache: Map<string, RecordedSession> = new Map();
+
+export async function loadRecordedSession(path: string): Promise<RecordedSession | null> {
+    if (recordedSessionCache.has(path)) {
+        return recordedSessionCache.get(path)!;
+    }
+    try {
+        const response = await fetch(path);
+        if (!response.ok) return null;
+        const session = await response.json() as RecordedSession;
+        recordedSessionCache.set(path, session);
+        return session;
+    } catch {
+        return null;
+    }
 }
 
 interface CoreParts {
@@ -103,6 +122,7 @@ export const SCENARIOS: Scenario[] = [
         estimatedMinutes: 1,
         description: 'A protector-exile pair. Learn the basics of IFS.',
         setup: setupEasyScenario,
+        recordedSessionPath: '/recordings/protectorBacklash.json',
     },
     {
         id: 'medium',
@@ -111,5 +131,6 @@ export const SCENARIOS: Scenario[] = [
         estimatedMinutes: 5,
         description: 'Deal with proxy relationships while addressing the Inner Critic.',
         setup: setupMediumScenario,
+        recordedSessionPath: '/recordings/criticWithProxy.json',
     },
 ];

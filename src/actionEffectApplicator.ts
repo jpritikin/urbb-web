@@ -4,9 +4,13 @@ import { ControllerActionResult } from './testability/types';
 
 export class ActionEffectApplicator {
     constructor(
-        private model: SimulatorModel,
+        private getModel: () => SimulatorModel,
         private view?: SimulatorView
     ) {}
+
+    private get model(): SimulatorModel {
+        return this.getModel();
+    }
 
     apply(result: ControllerActionResult, _cloudId: string): void {
         if (result.uiFeedback?.thoughtBubble && this.view) {

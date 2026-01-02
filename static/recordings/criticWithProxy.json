@@ -1,0 +1,4595 @@
+{
+  "version": 1,
+  "codeVersion": "v3.42.8",
+  "platform": "desktop",
+  "modelSeed": 360840993,
+  "timestamp": 1767340319083,
+  "initialModel": {
+    "targetCloudIds": [],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": null,
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 0,
+    "partStates": {
+      "cloud_1": {
+        "id": "cloud_1",
+        "name": "Inner Critic",
+        "trust": 0.3,
+        "needAttention": 0.5,
+        "agreedWaitUntil": 1767340329069,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job.",
+            "I don't want to criticize, but I have to."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "cloud_2": {
+        "id": "cloud_2",
+        "name": "criticized one",
+        "trust": 0.2,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1767340329071,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide.",
+            "Is it safe?"
+          ]
+        }
+      },
+      "cloud_3": {
+        "id": "cloud_3",
+        "name": "toddler",
+        "trust": 0.5,
+        "needAttention": 0.3,
+        "agreedWaitUntil": 1767340329072,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "cloud_4": {
+        "id": "cloud_4",
+        "name": "self-image",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767340329075,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?",
+            "I should have it together by now."
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [],
+    "victoryAchieved": false,
+    "selfAmplification": 1
+  },
+  "initialRelationships": {
+    "protections": [
+      {
+        "protectorId": "cloud_1",
+        "protectedId": "cloud_2"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_1"
+        ],
+        "dialogues": [
+          "I'm a terrible person.",
+          "I hate myself."
+        ]
+      },
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_3"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "You always make mistakes.",
+          "Don't do anything risky.",
+          "Be careful or you'll embarrass yourself."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "cloud_1",
+        "proxyId": "cloud_4"
+      },
+      {
+        "cloudId": "cloud_2",
+        "proxyId": "cloud_4"
+      },
+      {
+        "cloudId": "cloud_3",
+        "proxyId": "cloud_4"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "select_a_target",
+      "cloudId": "cloud_2",
+      "elapsedTime": 1.668,
+      "effectiveTime": 1.6649999999999996,
+      "waitCount": 0,
+      "cumulativeTime": 1.668,
+      "rngCounts": {
+        "model": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.5750000000000001,
+          "cloud_2": 0.3,
+          "cloud_3": 0.3075,
+          "cloud_4": 0.10750000000000001
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.133,
+      "effectiveTime": 2.1419999999999986,
+      "waitCount": 1,
+      "cumulativeTime": 4.801,
+      "rngCounts": {
+        "model": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.6750000000000002,
+          "cloud_2": 0.3,
+          "cloud_3": 0.3175,
+          "cloud_4": 0.11750000000000002
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "identity",
+      "elapsedTime": 1.714,
+      "effectiveTime": 1.7059999999999993,
+      "waitCount": 0,
+      "cumulativeTime": 6.515,
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:deflect",
+          "value": 0.8995454946998507
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.7750000000000002,
+          "cloud_2": 0.3,
+          "cloud_3": 0.3275,
+          "cloud_4": 0.12750000000000003
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.016,
+      "effectiveTime": 3.018999999999995,
+      "waitCount": 1,
+      "cumulativeTime": 9.531,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:pick_proxy",
+          "value": 0.6951464898884296
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2"
+        ],
+        "blended": [
+          "cloud_4"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.9250000000000004,
+          "cloud_2": 0.3,
+          "cloud_3": 0.3425,
+          "cloud_4": 0.14250000000000004
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 2.456,
+      "effectiveTime": 2.452999999999997,
+      "waitCount": 1,
+      "cumulativeTime": 11.987,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 2
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2"
+        ],
+        "blended": [
+          "cloud_4"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.0250000000000004,
+          "cloud_2": 0.3,
+          "cloud_3": 0.35250000000000004,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_4",
+      "elapsedTime": 1.32,
+      "effectiveTime": 1.3209999999999997,
+      "waitCount": 0,
+      "cumulativeTime": 13.307,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_4": 3.5
+        },
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.1,
+          "cloud_2": 0.3,
+          "cloud_3": 0.36000000000000004,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 11
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 5.423,
+      "effectiveTime": 5.4219999999999935,
+      "waitCount": 2,
+      "cumulativeTime": 18.73,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.3749999999999991,
+          "cloud_2": 0.3,
+          "cloud_3": 0.38750000000000007,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "identity",
+      "elapsedTime": 1.831,
+      "effectiveTime": 1.833999999999999,
+      "waitCount": 0,
+      "cumulativeTime": 20.561,
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:deflect",
+          "value": 0.19499793648719788
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.4749999999999988,
+          "cloud_2": 0.3,
+          "cloud_3": 0.3975000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.533,
+      "effectiveTime": 2.5339999999999976,
+      "waitCount": 1,
+      "cumulativeTime": 23.094,
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.5770850765984505
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.5999999999999983,
+          "cloud_2": 0.3,
+          "cloud_3": 0.4100000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "identity",
+      "elapsedTime": 2.136,
+      "effectiveTime": 2.126999999999998,
+      "waitCount": 1,
+      "cumulativeTime": 25.23,
+      "rngCounts": {
+        "model": 5
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.7572654457762837
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.699999999999998,
+          "cloud_2": 0.3,
+          "cloud_3": 0.4200000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "age",
+      "elapsedTime": 2.024,
+      "effectiveTime": 2.0359999999999983,
+      "waitCount": 1,
+      "cumulativeTime": 27.254,
+      "rngCounts": {
+        "model": 6
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.7835140596143901
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_2",
+          "cloud_4"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.7999999999999976,
+          "cloud_2": 0.3,
+          "cloud_3": 0.4300000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.912,
+      "effectiveTime": 1.9069999999999985,
+      "waitCount": 0,
+      "cumulativeTime": 29.166,
+      "rngCounts": {
+        "model": 8
+      },
+      "rngLog": [
+        {
+          "label": "whatNeedToKnow:backlash_check",
+          "value": 0.48214436369016767
+        },
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.23168148170225322
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4"
+        ],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 2.3374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.4400000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 12
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 6.144,
+      "effectiveTime": 6.138999999999989,
+      "waitCount": 3,
+      "cumulativeTime": 35.31,
+      "rngCounts": {
+        "model": 9
+      },
+      "rngLog": [
+        {
+          "label": "grievance_target",
+          "value": 0.0810369155369699
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 6
+        },
+        "cooldowns": {
+          "cloud_1": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4"
+        ],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 2.0874999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.47000000000000014,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 23
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 11.199,
+      "effectiveTime": 11.202999999999971,
+      "waitCount": 5,
+      "cumulativeTime": 46.509,
+      "rngCounts": {
+        "model": 10
+      },
+      "rngLog": [
+        {
+          "label": "grievance_target",
+          "value": 0.6846066985744983
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 17.5
+        },
+        "cooldowns": {
+          "cloud_1": 2.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 2.0874999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 2
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.263,
+      "effectiveTime": 1.266,
+      "waitCount": 0,
+      "cumulativeTime": 47.772,
+      "rngCounts": {
+        "model": 10
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 18.5
+        },
+        "cooldowns": {
+          "cloud_1": 3.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3"
+        ],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.601,
+      "effectiveTime": 1.598999999999999,
+      "waitCount": 0,
+      "cumulativeTime": 49.373,
+      "rngCounts": {
+        "model": 10
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 20
+        },
+        "cooldowns": {
+          "cloud_1": 5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 14
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 7.074,
+      "effectiveTime": 7.068999999999984,
+      "waitCount": 3,
+      "cumulativeTime": 56.447,
+      "rngCounts": {
+        "model": 10
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 12
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "identity",
+      "elapsedTime": 2.409,
+      "effectiveTime": 2.4179999999999966,
+      "waitCount": 1,
+      "cumulativeTime": 58.856,
+      "rngCounts": {
+        "model": 11
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:deflect",
+          "value": 0.4587619935628027
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 14.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 7
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_3",
+      "elapsedTime": 3.22,
+      "effectiveTime": 3.202999999999998,
+      "waitCount": 1,
+      "cumulativeTime": 62.076,
+      "rngCounts": {
+        "model": 12
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.13454596302472055
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 18
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "identity",
+      "elapsedTime": 3.068,
+      "effectiveTime": 3.0819999999999945,
+      "waitCount": 1,
+      "cumulativeTime": 65.144,
+      "rngCounts": {
+        "model": 13
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.2294735440518707
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 21
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 3.244,
+      "effectiveTime": 3.241999999999995,
+      "waitCount": 1,
+      "cumulativeTime": 68.388,
+      "rngCounts": {
+        "model": 13
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 24
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "age",
+      "elapsedTime": 2.834,
+      "effectiveTime": 2.832999999999995,
+      "waitCount": 1,
+      "cumulativeTime": 71.222,
+      "rngCounts": {
+        "model": 14
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.8088320207316428
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 27
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 2.339,
+      "effectiveTime": 2.348999999999997,
+      "waitCount": 1,
+      "cumulativeTime": 73.561,
+      "rngCounts": {
+        "model": 15
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.09415368107147515
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 29.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_3",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "step_back",
+      "cloudId": "cloud_3",
+      "elapsedTime": 3.418,
+      "effectiveTime": 3.4199999999999937,
+      "waitCount": 1,
+      "cumulativeTime": 76.979,
+      "rngCounts": {
+        "model": 15
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 32.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5000000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 7
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 3.14,
+      "effectiveTime": 3.131999999999995,
+      "waitCount": 1,
+      "cumulativeTime": 80.119,
+      "rngCounts": {
+        "model": 15
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 36
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5070000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 9
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "age",
+      "elapsedTime": 4.391,
+      "effectiveTime": 4.38599999999999,
+      "waitCount": 2,
+      "cumulativeTime": 84.51,
+      "rngCounts": {
+        "model": 16
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:deflect",
+          "value": 0.5926119138021022
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 40.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5160000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.57,
+      "effectiveTime": 2.5739999999999967,
+      "waitCount": 1,
+      "cumulativeTime": 87.08,
+      "rngCounts": {
+        "model": 17
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.873623114079237
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 43
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5210000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 7
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "age",
+      "elapsedTime": 3.631,
+      "effectiveTime": 3.628999999999994,
+      "waitCount": 1,
+      "cumulativeTime": 90.711,
+      "rngCounts": {
+        "model": 18
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.6454018000513315
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 46.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5280000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 13
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobAppraisal",
+      "elapsedTime": 6.652,
+      "effectiveTime": 6.652999999999992,
+      "waitCount": 3,
+      "cumulativeTime": 97.363,
+      "rngCounts": {
+        "model": 19
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.9902708337176591
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 53
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5410000000000001,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobImpact",
+      "elapsedTime": 1.573,
+      "effectiveTime": 1.5719999999999998,
+      "waitCount": 0,
+      "cumulativeTime": 98.936,
+      "rngCounts": {
+        "model": 20
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.4703995392192155
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 54.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5440000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 1.414,
+      "effectiveTime": 1.4149999999999998,
+      "waitCount": 0,
+      "cumulativeTime": 100.35,
+      "rngCounts": {
+        "model": 21
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.926951508037746
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 56
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5470000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.93,
+      "effectiveTime": 2.923999999999997,
+      "waitCount": 1,
+      "cumulativeTime": 103.28,
+      "rngCounts": {
+        "model": 22
+      },
+      "rngLog": [
+        {
+          "label": "help_protected:willing",
+          "value": 0.4403613889589906
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 59
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5530000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.143,
+      "effectiveTime": 3.151999999999996,
+      "waitCount": 1,
+      "cumulativeTime": 106.423,
+      "rngCounts": {
+        "model": 22
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 62
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5590000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.746,
+      "effectiveTime": 2.746999999999996,
+      "waitCount": 1,
+      "cumulativeTime": 109.169,
+      "rngCounts": {
+        "model": 22
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 65
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5650000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "identity",
+      "elapsedTime": 1.817,
+      "effectiveTime": 1.819999999999998,
+      "waitCount": 0,
+      "cumulativeTime": 110.986,
+      "rngCounts": {
+        "model": 22
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 66.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5680000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "age",
+      "elapsedTime": 2.508,
+      "effectiveTime": 2.503999999999997,
+      "waitCount": 1,
+      "cumulativeTime": 113.494,
+      "rngCounts": {
+        "model": 22
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 69
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5730000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 10
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "gratitude",
+      "elapsedTime": 4.862,
+      "effectiveTime": 4.790999999999994,
+      "waitCount": 2,
+      "cumulativeTime": 118.356,
+      "rngCounts": {
+        "model": 23
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.6226298080291599
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 74
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5830000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 7
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 3.46,
+      "effectiveTime": 3.5219999999999945,
+      "waitCount": 1,
+      "cumulativeTime": 121.816,
+      "rngCounts": {
+        "model": 24
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.13035448570735753
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 77.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5900000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.023,
+      "effectiveTime": 3.032999999999998,
+      "waitCount": 1,
+      "cumulativeTime": 124.839,
+      "rngCounts": {
+        "model": 24
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 80.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.5960000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 2.024,
+      "effectiveTime": 2.013999999999999,
+      "waitCount": 1,
+      "cumulativeTime": 126.863,
+      "rngCounts": {
+        "model": 25
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.9437253132928163
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 82.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.6000000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 2.97,
+      "effectiveTime": 2.971999999999996,
+      "waitCount": 1,
+      "cumulativeTime": 129.833,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.1336256752256304
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 85.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.6060000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 15
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_2",
+      "elapsedTime": 7.358,
+      "effectiveTime": 7.364000000000004,
+      "waitCount": 3,
+      "cumulativeTime": 137.191,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 93
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0.3,
+          "cloud_3": 0.6210000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 13
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 6.752,
+      "effectiveTime": 6.750999999999986,
+      "waitCount": 3,
+      "cumulativeTime": 143.943,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 99.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 1.8374999999999972,
+          "cloud_2": 0,
+          "cloud_3": 0.6340000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 12
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "cloud_1",
+      "targetCloudId": "cloud_2",
+      "elapsedTime": 5.792,
+      "effectiveTime": 5.7929999999999975,
+      "waitCount": 2,
+      "cumulativeTime": 149.735,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 105.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6460000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 10
+    },
+    {
+      "action": "step_back",
+      "cloudId": "cloud_2",
+      "elapsedTime": 4.794,
+      "effectiveTime": 4.801999999999993,
+      "waitCount": 2,
+      "cumulativeTime": 154.529,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 110.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6560000000000002,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 9
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.509,
+      "effectiveTime": 4.500999999999997,
+      "waitCount": 2,
+      "cumulativeTime": 159.038,
+      "rngCounts": {
+        "model": 26
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 115
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6650000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 10
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 5.229,
+      "effectiveTime": 5.233999999999994,
+      "waitCount": 2,
+      "cumulativeTime": 164.267,
+      "rngCounts": {
+        "model": 27
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.2517422691453248
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 120
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6750000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 10
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_4",
+      "elapsedTime": 4.95,
+      "effectiveTime": 4.940999999999995,
+      "waitCount": 2,
+      "cumulativeTime": 169.217,
+      "rngCounts": {
+        "model": 27
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 125
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_4"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6850000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 2
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "apologize",
+      "elapsedTime": 1.249,
+      "effectiveTime": 1.26,
+      "waitCount": 0,
+      "cumulativeTime": 170.466,
+      "rngCounts": {
+        "model": 28
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.13126861117780209
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 126
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6870000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 8
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_4",
+      "elapsedTime": 3.556,
+      "effectiveTime": 3.5539999999999963,
+      "waitCount": 1,
+      "cumulativeTime": 174.022,
+      "rngCounts": {
+        "model": 28
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 130
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_4"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6950000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "age",
+      "elapsedTime": 1.608,
+      "effectiveTime": 1.6029999999999993,
+      "waitCount": 0,
+      "cumulativeTime": 175.63,
+      "rngCounts": {
+        "model": 29
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.881710187299177
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 131.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_4"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.6980000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "whatNeedToKnow",
+      "elapsedTime": 1.82,
+      "effectiveTime": 1.815999999999998,
+      "waitCount": 0,
+      "cumulativeTime": 177.45,
+      "rngCounts": {
+        "model": 30
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.4593802741728723
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 133
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_4"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7010000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_4",
+      "field": "compassion",
+      "elapsedTime": 1.754,
+      "effectiveTime": 1.756999999999999,
+      "waitCount": 0,
+      "cumulativeTime": 179.204,
+      "rngCounts": {
+        "model": 31
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.027729523601010442
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 135
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7050000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "mode_change",
+      "cloudId": "",
+      "newMode": "panorama",
+      "elapsedTime": 3.238,
+      "effectiveTime": 3.2349999999999945,
+      "waitCount": 1,
+      "cumulativeTime": 182.442,
+      "rngCounts": {
+        "model": 31
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 138
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_4",
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7110000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 2
+    },
+    {
+      "action": "select_a_target",
+      "cloudId": "cloud_3",
+      "elapsedTime": 2,
+      "effectiveTime": 1.0160000000000007,
+      "waitCount": 1,
+      "cumulativeTime": 184.442,
+      "rngCounts": {
+        "model": 31
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 139
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7130000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "cloud_3",
+      "elapsedTime": 3.227,
+      "effectiveTime": 2.2289999999999974,
+      "waitCount": 1,
+      "cumulativeTime": 187.669,
+      "rngCounts": {
+        "model": 31
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 141.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7130000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "compassion",
+      "elapsedTime": 2.967,
+      "effectiveTime": 2.957999999999997,
+      "waitCount": 1,
+      "cumulativeTime": 190.636,
+      "rngCounts": {
+        "model": 31
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 144.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7130000000000003,
+          "cloud_4": 0
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 10
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_3",
+      "field": "apologize",
+      "elapsedTime": 5.111,
+      "effectiveTime": 5.122999999999991,
+      "waitCount": 2,
+      "cumulativeTime": 195.747,
+      "rngCounts": {
+        "model": 33
+      },
+      "rngLog": [
+        {
+          "label": "apologize:accept",
+          "value": 0.002431618981063366
+        },
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.27518324414268136
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "cloud_1": 149.5
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "cloud_3"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_3"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true,
+            "jobImpactRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_3": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          },
+          "cloud_4": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false,
+            "jobImpactRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0,
+          "cloud_3": 0.7130000000000003,
+          "cloud_4": 0
+        }
+      }
+    }
+  ],
+  "finalModel": {
+    "targetCloudIds": [
+      "cloud_3"
+    ],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": {
+      "targetCloudId": "cloud_3"
+    },
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 2,
+    "partStates": {
+      "cloud_1": {
+        "id": "cloud_1",
+        "name": "Inner Critic",
+        "trust": 1,
+        "needAttention": 0,
+        "agreedWaitUntil": 1767340329069,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": true,
+          "jobRevealed": true,
+          "jobAppraisalRevealed": true,
+          "jobImpactRevealed": true,
+          "consentedToHelp": true
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job.",
+            "I don't want to criticize, but I have to."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "cloud_2": {
+        "id": "cloud_2",
+        "name": "criticized one",
+        "trust": 1,
+        "needAttention": 0,
+        "agreedWaitUntil": 1767340329071,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide.",
+            "Is it safe?"
+          ]
+        }
+      },
+      "cloud_3": {
+        "id": "cloud_3",
+        "name": "toddler",
+        "trust": 1,
+        "needAttention": 0.7130000000000003,
+        "agreedWaitUntil": 1767340329072,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "cloud_4": {
+        "id": "cloud_4",
+        "name": "self-image",
+        "trust": 1,
+        "needAttention": 0,
+        "agreedWaitUntil": 1767340329075,
+        "wasProxy": true,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": true,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": true,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?",
+            "I should have it together by now."
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [
+      {
+        "text": "I can tell you mean it. Thank you.",
+        "cloudId": "cloud_3",
+        "expiresAt": 1767340524829
+      },
+      {
+        "text": "Aren't you going to apologize?",
+        "cloudId": "cloud_3",
+        "expiresAt": 1767340519719
+      }
+    ],
+    "victoryAchieved": true,
+    "selfAmplification": 1
+  },
+  "finalRelationships": {
+    "protections": [
+      {
+        "protectorId": "cloud_1",
+        "protectedId": "cloud_2"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_1"
+        ],
+        "dialogues": [
+          "I'm a terrible person.",
+          "I hate myself."
+        ]
+      },
+      {
+        "cloudId": "cloud_1",
+        "targetIds": [
+          "cloud_3"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "You always make mistakes.",
+          "Don't do anything risky.",
+          "Be careful or you'll embarrass yourself."
+        ]
+      }
+    ],
+    "proxies": []
+  }
+}

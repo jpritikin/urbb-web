@@ -1,5 +1,6 @@
 import type { BlendReason, BlendedPartState, PartMessage, SelfRayState, ThoughtBubble } from '../ifsModel.js';
 import type { PartState, PartBiography, PartDialogues } from '../partState.js';
+import type { RngLogEntry } from './rng.js';
 
 export interface SerializedModel {
     targetCloudIds: string[];
@@ -28,9 +29,20 @@ export interface OrchestratorSnapshot {
     pending: Record<string, string>;
 }
 
+export interface BiographySnapshot {
+    ageRevealed: boolean;
+    identityRevealed: boolean;
+    jobRevealed: boolean;
+    jobAppraisalRevealed: boolean;
+    jobImpactRevealed: boolean;
+}
+
 export interface ModelSnapshot {
     targets: string[];
     blended: string[];
+    selfRay: { targetCloudId: string } | null;
+    biography?: Record<string, BiographySnapshot>;
+    needAttention?: Record<string, number>;
 }
 
 export interface RecordedAction {
@@ -38,13 +50,20 @@ export interface RecordedAction {
     cloudId: string;
     targetCloudId?: string;
     field?: string;
-    elapsedTime?: number;  // Seconds since last action (for time-based state changes)
+    newMode?: 'panorama' | 'foreground';  // For mode_change action: the mode being switched to
+    elapsedTime?: number;  // Wall-clock seconds since last action
+    effectiveTime?: number;  // Seconds of actual time advancement (excluding transitions)
+    cumulativeTime?: number;  // Total seconds since session start (for drift diagnosis)
+    preActionTime?: number;  // For spontaneous_blend: time before the blend (doesn't affect new part's timer)
+    triggerRngCount?: number;  // For spontaneous_blend: RNG count when callback triggered
+    triggerLastAttentionCheck?: number;  // For spontaneous_blend: lastAttentionCheck when callback triggered
     waitCount?: number;  // Number of WAIT_DURATION chunks to advance (for proper orchestrator timing)
+    count?: number;  // For process_intervals action: number of 0.5s intervals to process
     thoughtBubble?: { text: string; cloudId: string };
-    rngCounts?: { model: number; cosmetic: number };
-    rngLog?: string[];  // Model RNG call purposes for this action
-    orchState?: OrchestratorSnapshot;  // Orchestrator state before action
-    modelState?: ModelSnapshot;  // Model state before action
+    rngCounts?: { model: number };
+    rngLog?: RngLogEntry[];  // Model RNG calls with labels and values
+    orchState?: OrchestratorSnapshot;  // Orchestrator state after action
+    modelState?: ModelSnapshot;  // Model state after action
 }
 
 export interface RecordedSession {

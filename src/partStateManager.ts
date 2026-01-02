@@ -158,6 +158,10 @@ export class PartStateManager {
         }
     }
 
+    isAgeRevealed(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.biography.ageRevealed ?? false;
+    }
+
     revealRelationships(cloudId: string): void {
         const state = this.partStates.get(cloudId);
         if (state && !state.biography.relationshipsRevealed) {

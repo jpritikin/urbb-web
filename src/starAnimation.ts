@@ -163,6 +163,11 @@ export class AnimatedStar {
         this.onClick = callback;
     }
 
+    simulateClick(): void {
+        const syntheticEvent = new MouseEvent('click', { bubbles: false, cancelable: true });
+        this.onClick?.(this.centerX, this.centerY, syntheticEvent);
+    }
+
     createElement(): SVGGElement {
         this.wrapperGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.wrapperGroup.style.pointerEvents = 'none';

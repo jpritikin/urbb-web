@@ -53,6 +53,11 @@ export class SelfRay {
         this.onClick = callback;
     }
 
+    simulateClick(): void {
+        const syntheticEvent = new MouseEvent('click', { bubbles: false, cancelable: true });
+        this.onClick?.(this.config.targetCloudId, this.config.startX, this.config.startY, syntheticEvent);
+    }
+
     create(): SVGGElement {
         this.group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.group.setAttribute('class', 'self-ray');

@@ -40,7 +40,6 @@ export function replaySession(session: RecordedSession): ReplayResult {
 
     const actionResults: ActionResult[] = [];
     let firstRngDivergence: string | undefined;
-    let prevModelRngCount = 0;
     const stateTrace: string[] = [];
 
     const model = sim.getModel();
@@ -48,9 +47,26 @@ export function replaySession(session: RecordedSession): ReplayResult {
 
     for (let i = 0; i < session.actions.length; i++) {
         const action = session.actions[i];
+        const rngBefore = sim.getRngCounts().model;
 
-        // Use previous action's modelState to set view state for orchestrator
-        const prevModelState = i > 0 ? session.actions[i - 1].modelState : undefined;
+        // Handle process_intervals action
+        if (action.action === 'process_intervals') {
+            const count = action.count ?? 0;
+            if (count > 0) {
+                sim.advanceIntervals(count);
+            }
+            actionResults.push({ success: true, stateChanges: [`processed ${count} intervals`] });
+            continue;
+        }
+
+        // Use previous non-interval action's modelState to set view state for orchestrator
+        let prevModelState: typeof action.modelState;
+        for (let j = i - 1; j >= 0; j--) {
+            if (session.actions[j].action !== 'process_intervals' && session.actions[j].modelState) {
+                prevModelState = session.actions[j].modelState;
+                break;
+            }
+        }
         if (prevModelState) {
             const cloudStates: Record<string, unknown> = {};
             for (const id of [...prevModelState.targets, ...prevModelState.blended]) {
@@ -59,40 +75,22 @@ export function replaySession(session: RecordedSession): ReplayResult {
             sim.setViewState({ cloudStates });
         }
 
-        const rngBeforeAdvance = sim.getRngCounts().model;
-        // Advance time in chunks if waitCount is specified (for proper orchestrator timing)
-        // Otherwise advance all at once (legacy behavior for hand-recorded sessions)
-        if (action.waitCount && action.waitCount > 0) {
-            const WAIT_DURATION = 2.0;
-            for (let w = 0; w < action.waitCount; w++) {
-                sim.advanceTime(WAIT_DURATION);
-            }
-        } else if (action.elapsedTime && action.elapsedTime > 0) {
-            sim.advanceTime(action.elapsedTime);
+        // Apply mode change
+        if (action.action === 'mode_change' && action.newMode) {
+            sim.setMode(action.newMode);
         }
-        const rngAfterAdvance = sim.getRngCounts().model;
 
         const preState = {
             targets: [...model.getTargetCloudIds()],
             blended: model.getBlendedParts(),
-            proxies: Object.fromEntries(
-                [...model.getTargetCloudIds(), ...model.getBlendedParts()].map(
-                    id => [id, [...relationships.getProxies(id)]]
-                )
-            )
         };
 
-        const result = sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
+        const result = sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field, action.newMode);
         actionResults.push(result);
 
         const postState = {
             targets: [...model.getTargetCloudIds()],
             blended: model.getBlendedParts(),
-            proxies: Object.fromEntries(
-                [...model.getTargetCloudIds(), ...model.getBlendedParts()].map(
-                    id => [id, [...relationships.getProxies(id)]]
-                )
-            )
         };
 
         // Check recorded model state matches headless model state (recorded after action)
@@ -107,12 +105,17 @@ export function replaySession(session: RecordedSession): ReplayResult {
             if (JSON.stringify(actualBlended.sort()) !== JSON.stringify(expectedBlended.sort())) {
                 stateTrace.push(`#${i} model mismatch: blended actual=${JSON.stringify(actualBlended)} expected=${JSON.stringify(expectedBlended)}`);
             }
+            if (action.modelState.needAttention) {
+                for (const [cloudId, expected] of Object.entries(action.modelState.needAttention)) {
+                    const actual = model.parts.getNeedAttention(cloudId);
+                    if (Math.abs(actual - expected) > 0.01) {
+                        stateTrace.push(`#${i} needAttention mismatch: ${cloudId} actual=${actual.toFixed(3)} expected=${expected.toFixed(3)}`);
+                    }
+                }
+            }
         }
 
         // Trace significant state changes for debugging
-        if (JSON.stringify(preState.proxies) !== JSON.stringify(postState.proxies)) {
-            stateTrace.push(`#${i} ${action.action}(${action.cloudId}): proxies ${JSON.stringify(preState.proxies)} -> ${JSON.stringify(postState.proxies)}`);
-        }
         if (JSON.stringify(preState.targets) !== JSON.stringify(postState.targets) || JSON.stringify(preState.blended) !== JSON.stringify(postState.blended)) {
             stateTrace.push(`#${i}: targets ${JSON.stringify(preState.targets)}->${JSON.stringify(postState.targets)}, blended ${JSON.stringify(preState.blended)}->${JSON.stringify(postState.blended)}`);
         }
@@ -124,15 +127,8 @@ export function replaySession(session: RecordedSession): ReplayResult {
         if (!firstRngDivergence && action.rngCounts) {
             const actual = sim.getRngCounts();
             if (actual.model !== action.rngCounts.model) {
-                const fullLog = sim.getModelRngLog();
-                const advanceLog = fullLog.slice(rngBeforeAdvance, rngAfterAdvance);
-                const execLog = fullLog.slice(rngAfterAdvance);
-                const expectedLog = action.rngLog ?? [];
-                const actualOrch = sim.getOrchestratorDebugState();
-                const expectedOrch = action.orchState;
-                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; advanceLog=[${advanceLog.join(', ')}] execLog=[${execLog.join(', ')}] vs expected=[${expectedLog.join(', ')}]; elapsed=${action.elapsedTime}s; actualOrch=${JSON.stringify(actualOrch)} expectedOrch=${JSON.stringify(expectedOrch)}; trace: ${stateTrace.join(' | ')}`;
+                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual.model} vs ${action.rngCounts.model}; trace: ${stateTrace.join(' | ')}`;
             }
-            prevModelRngCount = actual.model;
         }
     }
 

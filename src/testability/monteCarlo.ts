@@ -319,8 +319,8 @@ export class RandomWalkRunner {
 
             const rng = createDualRNG(seed);
             const controller = new SimulatorController({
-                model: sim.getModel(),
-                relationships: sim.getRelationships(),
+                getModel: () => sim.getModel(),
+                getRelationships: () => sim.getRelationships(),
                 rng,
                 getPartName: (id) => sim.getModel().parts.getPartName(id),
             });

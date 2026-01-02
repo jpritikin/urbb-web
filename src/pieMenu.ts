@@ -56,6 +56,10 @@ export class PieMenu {
         this.items = items;
     }
 
+    getItems(): PieMenuItem[] {
+        return this.items;
+    }
+
     setConfig(config: Partial<PieMenuConfig>): void {
         if (config.items) this.items = config.items;
         if (config.radius) this.radius = config.radius;
@@ -72,6 +76,10 @@ export class PieMenu {
 
     isVisible(): boolean {
         return this.visible;
+    }
+
+    getCenter(): { x: number; y: number } {
+        return { x: this.menuCenterX, y: this.menuCenterY };
     }
 
     getTargetCloudId(): string | null {

@@ -7,7 +7,7 @@ export interface UIManagerConfig {
     onFullscreenToggle: () => void;
     onAnimationPauseToggle: () => void;
     onTracePanelToggle: () => void;
-    onRecordingToggle?: () => void;
+    onDownloadSession?: () => void;
 }
 
 export class UIManager {
@@ -79,6 +79,10 @@ export class UIManager {
             ? 'Focus view — click for panorama'
             : 'Panorama view — click to focus';
         this.modeToggleContainer.classList.toggle('focused', isForeground);
+    }
+
+    simulateModeToggleClick(): void {
+        this.modeToggleContainer?.click();
     }
 
     private updateModeTogglePosition(): void {
@@ -297,8 +301,8 @@ export class UIManager {
         let longPressTimer: number | null = null;
         btn.addEventListener('touchstart', () => {
             longPressTimer = window.setTimeout(() => {
-                if (this.config.onRecordingToggle) {
-                    this.config.onRecordingToggle();
+                if (this.config.onDownloadSession) {
+                    this.config.onDownloadSession();
                 }
                 longPressTimer = null;
             }, 2000);
@@ -325,6 +329,11 @@ export class UIManager {
                 this.debugPauseButton.style.background = '#ff6b6b';
             }
         }
+        this.svgElement.classList.toggle('master-paused', paused);
+    }
+
+    isAnimationPaused(): boolean {
+        return this.animationPaused;
     }
 
     // Recording overlay

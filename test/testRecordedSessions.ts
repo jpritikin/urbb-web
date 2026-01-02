@@ -22,10 +22,8 @@ interface SessionSpec {
 }
 
 const SESSIONS: SessionSpec[] = [
-    { path: 'test/scenarios/criticWithProxy.json', name: 'Critic with Proxy' },
-    { path: 'test/scenarios/protectorBacklash.json', name: 'Protector Backlash' },
-    { path: 'test/scenarios/medium_1767079362107.json', name: 'Medium 1767079362107' },
-    { path: 'test/scenarios/medium_1767080684814.json', name: 'Medium 1767080684814' },
+    { path: 'static/recordings/criticWithProxy.json', name: 'Critic with Proxy' },
+    { path: 'static/recordings/protectorBacklash.json', name: 'Protector Backlash' },
 ];
 
 let results: TestResult[] = [];

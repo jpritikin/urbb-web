@@ -953,3 +953,350 @@ body.ifs-fullscreen main {
 .dark .scenario-description {
   color: #aaa;
 }
+
+/* Mode selector for Explore/Playback */
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 200px;
+  background: linear-gradient(135deg, #e5fdff 0%, #f5f0ff 100%);
+  border: 3px dotted #9b59b6;
+  border-radius: 12px;
+}
+
+.dark .mode-selector {
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%);
+  border-color: #b388d4;
+}
+
+.mode-selector h2 {
+  margin: 0 0 0.5rem 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  color: #6b4c8a;
+  font-size: 1.3rem;
+}
+
+.dark .mode-selector h2 {
+  color: #d4a8e8;
+}
+
+.mode-selector .scenario-name {
+  margin: 0 0 1.5rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.dark .mode-selector .scenario-name {
+  color: #aaa;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mode-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  padding: 1.25rem 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-width: 160px;
+}
+
+.dark .mode-btn {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #555;
+}
+
+.mode-btn:hover {
+  transform: translateY(-4px);
+  border-color: #9b59b6;
+  box-shadow: 0 8px 24px rgba(155, 89, 182, 0.3);
+}
+
+.dark .mode-btn:hover {
+  border-color: #b388d4;
+  box-shadow: 0 8px 24px rgba(179, 136, 212, 0.3);
+}
+
+.mode-btn .icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.mode-btn .label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.dark .mode-btn .label {
+  color: #e0e0e0;
+}
+
+.mode-btn .sublabel {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.dark .mode-btn .sublabel {
+  color: #aaa;
+}
+
+.mode-selector .back-btn {
+  margin-top: 1.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid #999;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-selector .back-btn:hover {
+  border-color: #9b59b6;
+  color: #9b59b6;
+}
+
+.dark .mode-selector .back-btn {
+  border-color: #666;
+  color: #aaa;
+}
+
+.dark .mode-selector .back-btn:hover {
+  border-color: #b388d4;
+  color: #b388d4;
+}
+
+/* Playback control panel */
+.playback-control-panel {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 40;
+}
+
+.playback-left-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.playback-frame {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #7b68ee;
+  border-radius: 8px;
+  padding: 0.5rem 0.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 280px;
+}
+
+.dark .playback-frame {
+  background: rgba(35, 35, 50, 0.95);
+  border-color: #9b7eff;
+}
+
+.playback-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #aaa;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playback-btn:hover:not(:disabled) {
+  background: rgba(123, 104, 238, 0.15);
+  border-color: #7b68ee;
+}
+
+.playback-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dark .playback-btn {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #666;
+  color: #e0e0e0;
+}
+
+.dark .playback-btn:hover:not(:disabled) {
+  background: rgba(155, 126, 255, 0.2);
+  border-color: #9b7eff;
+}
+
+.playback-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.playback-display .countdown {
+  font-family: monospace;
+  font-weight: 600;
+  color: #7b68ee;
+  flex-shrink: 0;
+}
+
+.dark .playback-display .countdown {
+  color: #9b7eff;
+}
+
+.playback-display .action {
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark .playback-display .action {
+  color: #b0b0b0;
+}
+
+/* Playback error state */
+.playback-control-panel.error .playback-frame {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.dark .playback-control-panel.error .playback-frame {
+  border-color: #c0392b;
+  background: rgba(192, 57, 43, 0.2);
+}
+
+.playback-control-panel.error .countdown {
+  color: #e74c3c;
+}
+
+.playback-control-panel.error .action {
+  color: #c0392b;
+}
+
+/* Playback confirm mode */
+.playback-control-panel.confirm-mode .playback-frame {
+  border-color: #e67e22;
+  background: rgba(230, 126, 34, 0.1);
+}
+
+.dark .playback-control-panel.confirm-mode .playback-frame {
+  border-color: #d35400;
+  background: rgba(211, 84, 0, 0.2);
+}
+
+.playback-control-panel.confirm-mode .action {
+  color: #e67e22;
+  font-weight: 600;
+}
+
+.dark .playback-control-panel.confirm-mode .action {
+  color: #f39c12;
+}
+
+.playback-btn.dismiss,
+.playback-btn.resume,
+.playback-btn.final-dismiss {
+  position: relative;
+}
+
+.playback-btn.dismiss::after,
+.playback-btn.resume::after,
+.playback-btn.final-dismiss::after {
+  content: attr(title);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.playback-btn.dismiss:hover::after,
+.playback-btn.resume:hover::after,
+.playback-btn.final-dismiss:hover::after {
+  opacity: 1;
+}
+
+.playback-btn.dismiss {
+  color: #666;
+}
+
+.dark .playback-btn.dismiss {
+  color: #aaa;
+}
+
+.playback-btn.final-dismiss {
+  background: rgba(231, 76, 60, 0.15);
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.dark .playback-btn.final-dismiss {
+  background: rgba(192, 57, 43, 0.2);
+  border-color: #c0392b;
+  color: #e74c3c;
+}
+
+.playback-btn.final-dismiss:hover:not(:disabled) {
+  background: rgba(231, 76, 60, 0.3);
+}
+
+.playback-btn.resume {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: #2ecc71;
+  color: #27ae60;
+}
+
+.dark .playback-btn.resume {
+  background: rgba(39, 174, 96, 0.2);
+  border-color: #27ae60;
+  color: #2ecc71;
+}
+
+.playback-btn.resume:hover:not(:disabled) {
+  background: rgba(46, 204, 113, 0.3);
+}
+
+/* Master pause desaturation */
+svg.master-paused {
+  filter: saturate(0.8);
+  transition: filter 0.3s ease;
+}
+
+svg:not(.master-paused) {
+  transition: filter 0.3s ease;
+}

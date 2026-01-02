@@ -1,9 +1,10 @@
 import { SimulatorModel, PartMessage } from '../ifsModel.js';
 import { CloudRelationshipManager } from '../cloudRelationshipManager.js';
-import { SeededRNG, DualRNG, createDualRNG } from './rng.js';
+import { SeededRNG, DualRNG, createDualRNG, RngLogEntry } from './rng.js';
 import { SimulatorController } from '../simulatorController.js';
 import { ActionEffectApplicator } from '../actionEffectApplicator.js';
 import { MessageOrchestrator, MessageOrchestratorView } from '../messageOrchestrator.js';
+import { TimeAdvancer } from '../timeAdvancer.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
     SerializedModel, SerializedRelationships
@@ -45,22 +46,25 @@ export class HeadlessSimulator {
     private effectApplicator: ActionEffectApplicator;
     private orchestrator: MessageOrchestrator;
     private headlessView: HeadlessView;
+    private timeAdvancer: TimeAdvancer;
+    private currentMode: 'panorama' | 'foreground' = 'panorama';
 
     constructor(config?: { seed?: number }) {
         this.model = new SimulatorModel();
         this.relationships = new CloudRelationshipManager();
         this.rng = createDualRNG(config?.seed);
         this.controller = this.createController();
-        this.effectApplicator = new ActionEffectApplicator(this.model);
+        this.effectApplicator = new ActionEffectApplicator(() => this.model);
         this.headlessView = new HeadlessView();
         this.headlessView.setModel(this.model);
         this.orchestrator = this.createOrchestrator();
+        this.timeAdvancer = this.createTimeAdvancer();
     }
 
     private createController(): SimulatorController {
         return new SimulatorController({
-            model: this.model,
-            relationships: this.relationships,
+            getModel: () => this.model,
+            getRelationships: () => this.relationships,
             rng: this.rng,
             getPartName: (id) => this.model.parts.getPartName(id)
         });
@@ -68,9 +72,9 @@ export class HeadlessSimulator {
 
     private createOrchestrator(): MessageOrchestrator {
         const orchestrator = new MessageOrchestrator(
-            this.model,
+            () => this.model,
             this.headlessView,
-            this.relationships,
+            () => this.relationships,
             this.rng,
             {
                 act: (_label, fn) => fn(),
@@ -82,6 +86,24 @@ export class HeadlessSimulator {
         return orchestrator;
     }
 
+    private createTimeAdvancer(): TimeAdvancer {
+        return new TimeAdvancer(
+            () => this.model,
+            () => this.relationships,
+            this.orchestrator,
+            this.rng,
+            {
+                getMode: () => this.currentMode,
+                onSpontaneousBlend: (_event, _lastAttentionCheck) => {
+                    // Mirror live behavior: spontaneous blend switches to foreground
+                    if (this.currentMode === 'panorama') {
+                        this.currentMode = 'foreground';
+                    }
+                },
+            }
+        );
+    }
+
     static fromSession(
         initialModel: SerializedModel,
         initialRelationships: SerializedRelationships,
@@ -91,9 +113,10 @@ export class HeadlessSimulator {
         sim.model = SimulatorModel.fromJSON(initialModel);
         sim.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
         sim.controller = sim.createController();
-        sim.effectApplicator = new ActionEffectApplicator(sim.model);
+        sim.effectApplicator = new ActionEffectApplicator(() => sim.model);
         sim.headlessView.setModel(sim.model);
         sim.orchestrator = sim.createOrchestrator();
+        sim.timeAdvancer = sim.createTimeAdvancer();
         return sim;
     }
 
@@ -132,7 +155,12 @@ export class HeadlessSimulator {
         }
     }
 
-    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string): ActionResult {
+    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground'): ActionResult {
+        if (action === 'mode_change' && newMode) {
+            this.currentMode = newMode;
+            return { success: true, stateChanges: [`mode -> ${newMode}`] };
+        }
+
         const result = this.controller.executeAction(action, cloudId, {
             targetCloudId,
             field: field as BiographyField | undefined,
@@ -141,6 +169,11 @@ export class HeadlessSimulator {
 
         this.effectApplicator.apply(result, cloudId);
         this.model.checkAndSetVictory(this.relationships);
+
+        // Mirror CloudManager: select_a_target switches to foreground mode
+        if (action === 'select_a_target' && result.success) {
+            this.currentMode = 'foreground';
+        }
 
         return {
             success: result.success,
@@ -154,11 +187,23 @@ export class HeadlessSimulator {
         return trust >= this.rng.model.random();
     }
 
-    advanceTime(deltaTime: number): void {
-        this.model.increaseNeedAttention(this.relationships, deltaTime, true);
-        this.orchestrator.updateTimers(deltaTime);
-        this.orchestrator.checkAndSendGrievanceMessages();
-        this.orchestrator.checkAndShowGenericDialogues(deltaTime);
+    advanceTime(deltaTime: number, compressed: boolean = true): void {
+        this.timeAdvancer.advance(deltaTime, compressed);
+        this.checkBlendedPartsAttention();
+    }
+
+    advanceIntervals(count: number): void {
+        this.timeAdvancer.advanceIntervals(count);
+        this.checkBlendedPartsAttention();
+    }
+
+    private checkBlendedPartsAttention(): void {
+        for (const cloudId of this.model.getBlendedParts()) {
+            if (this.model.getBlendReason(cloudId) !== 'spontaneous') continue;
+            if (this.model.parts.getNeedAttention(cloudId) < 0.25) {
+                this.model.promoteBlendedToTarget(cloudId);
+            }
+        }
     }
 
     getModel(): SimulatorModel {
@@ -189,7 +234,7 @@ export class HeadlessSimulator {
         };
     }
 
-    getModelRngLog(): string[] {
+    getModelRngLog(): RngLogEntry[] {
         return this.rng.model.getCallLog();
     }
 
@@ -206,5 +251,13 @@ export class HeadlessSimulator {
 
     setViewState(_viewState: { cloudStates?: Record<string, unknown> } | undefined): void {
         // No-op: HeadlessView now reads directly from the model
+    }
+
+    setMode(mode: 'panorama' | 'foreground'): void {
+        this.currentMode = mode;
+    }
+
+    getMode(): 'panorama' | 'foreground' {
+        return this.currentMode;
     }
 }

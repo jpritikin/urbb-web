@@ -7,8 +7,8 @@ import type { BiographyField } from './selfRay.js';
 import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 
 export interface ControllerDependencies {
-    model: SimulatorModel;
-    relationships: CloudRelationshipManager;
+    getModel: () => SimulatorModel;
+    getRelationships: () => CloudRelationshipManager;
     rng: DualRNG;
     getPartName: (cloudId: string) => string;
 }
@@ -58,23 +58,31 @@ const COMPASSION_RECEIVED_RESPONSES = [
 ];
 
 export class SimulatorController {
-    private model: SimulatorModel;
-    private relationships: CloudRelationshipManager;
+    private getModel: () => SimulatorModel;
+    private getRelationships: () => CloudRelationshipManager;
     private rng: DualRNG;
     private getPartName: (cloudId: string) => string;
 
     constructor(deps: ControllerDependencies) {
-        this.model = deps.model;
-        this.relationships = deps.relationships;
+        this.getModel = deps.getModel;
+        this.getRelationships = deps.getRelationships;
         this.rng = deps.rng;
         this.getPartName = deps.getPartName;
+    }
+
+    private get model(): SimulatorModel {
+        return this.getModel();
+    }
+
+    private get relationships(): CloudRelationshipManager {
+        return this.getRelationships();
     }
 
     getValidActions(): ValidAction[] {
         const actions: ValidAction[] = [];
 
         const selfRay = this.model.getSelfRay();
-        if (selfRay) {
+        if (selfRay && this.model.isTarget(selfRay.targetCloudId)) {
             const cloudId = selfRay.targetCloudId;
             const rayFields = this.getValidRayFields(cloudId);
             for (const field of rayFields) {
@@ -98,9 +106,8 @@ export class SimulatorController {
     private getValidStarActions(): ValidAction[] {
         const actions: ValidAction[] = [];
         const targetIds = this.model.getTargetCloudIds();
-        const hasBlendedOrPending = this.model.getBlendedParts().length > 0 || this.model.peekPendingBlend() !== null;
 
-        if (targetIds.size > 0 && !hasBlendedOrPending) {
+        if (targetIds.size > 0) {
             actions.push({ action: 'feel_toward', cloudId: STAR_CLOUD_ID });
             actions.push({ action: 'expand_deepen', cloudId: STAR_CLOUD_ID });
         }
@@ -727,6 +734,7 @@ export class SimulatorController {
 
         const highTrustFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
         if (highTrustFields.includes(field) && this.model.parts.getTrust(cloudId) >= 0.95) {
+            this.model.parts.setNeedAttention(cloudId, 0);
             return {
                 success: true,
                 stateChanges: [],

@@ -3,6 +3,7 @@ import { BezierSegment, computeSmoothBezierSegments, bezierTangent } from './bez
 import { NormalizedHarmonics, generateHarmonics, getRandomInt } from './harmonics.js';
 import { AnimatedKnot, AnimatedFluffiness } from './animation.js';
 import { LatticeDeformation, AnchorSide } from './latticeDeformation.js';
+import { Vec3 } from './types.js';
 
 export enum CloudType {
     STRATOCUMULUS = 'stratocumulus',
@@ -816,6 +817,22 @@ export class Cloud {
     getActualLatticeOffset(): { x: number; y: number } | null {
         if (!this.latticeDeformation) return null;
         return this.latticeDeformation.getCurrentOffset();
+    }
+
+    getVisualCenter(): { x: number; y: number } {
+        // centerX/centerY are already in external coords (x=0 at text center, y=0 at top)
+        // Without lattice deformation, just offset from cloud position
+        if (!this.latticeDeformation || !this.latticeDeformation.isTugging()) {
+            return { x: this.x + this.centerX, y: this.y + this.centerY };
+        }
+        // With lattice, get displacement at the center point
+        const cloudLeftExtent = -this.textWidth / 2 - this.minHeight / 2 - 5;
+        const latticeX = this.centerX - cloudLeftExtent;
+        const displacement = this.latticeDeformation.getDisplacement(latticeX, this.centerY);
+        return {
+            x: this.x + this.centerX + displacement.x,
+            y: this.y + this.centerY + displacement.y
+        };
     }
 
     private currentStretch: { stretchX: number; stretchY: number; anchorSide: AnchorSide } | null = null;

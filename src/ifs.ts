@@ -1,6 +1,7 @@
 import { CloudManager } from './cloudManager.js';
 import { sessionToJSON } from './testability/recorder.js';
-import { SCENARIOS, Scenario } from './scenarios.js';
+import { SCENARIOS, Scenario, loadRecordedSession } from './scenarios.js';
+import type { RecordedSession } from './testability/types.js';
 
 function downloadSession(cloudManager: CloudManager): void {
     const session = cloudManager.stopRecording();
@@ -41,7 +42,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
         URL.revokeObjectURL(url);
     };
 
-    cloudManager.setRecordingToggleHandler(downloadCurrentSession);
+    cloudManager.setDownloadSessionHandler(downloadCurrentSession);
 
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === ' ') {
@@ -62,7 +63,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
     }, MAX_RECORDING_MS);
 }
 
-function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Scenario) => void): void {
+function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Scenario, playbackMode: boolean) => void): void {
     const selector = document.createElement('div');
     selector.className = 'scenario-selector';
     selector.innerHTML = `
@@ -82,7 +83,11 @@ function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Sce
         `;
         card.addEventListener('click', () => {
             selector.remove();
-            onSelect(scenario);
+            if (scenario.recordedSessionPath) {
+                createModeSelector(container, scenario, onSelect);
+            } else {
+                onSelect(scenario, false);
+            }
         });
         cardsContainer.appendChild(card);
     }
@@ -90,9 +95,72 @@ function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Sce
     container.appendChild(selector);
 }
 
-function startSimulation(scenario: Scenario): void {
+function createModeSelector(
+    container: HTMLElement,
+    scenario: Scenario,
+    onSelect: (scenario: Scenario, playbackMode: boolean) => void
+): void {
+    const selector = document.createElement('div');
+    selector.className = 'mode-selector';
+    selector.innerHTML = `
+        <h2>How would you like to proceed?</h2>
+        <p class="scenario-name">${scenario.name} - ${scenario.difficulty}</p>
+        <div class="mode-buttons"></div>
+        <button class="back-btn">← Choose different scenario</button>
+    `;
+
+    const buttonsContainer = selector.querySelector('.mode-buttons')!;
+
+    const exploreBtn = document.createElement('button');
+    exploreBtn.className = 'mode-btn';
+    exploreBtn.innerHTML = `
+        <span class="icon">🔍</span>
+        <span class="label">Explore</span>
+        <span class="sublabel">Try it yourself</span>
+    `;
+    exploreBtn.addEventListener('click', () => {
+        selector.remove();
+        onSelect(scenario, false);
+    });
+
+    const playbackBtn = document.createElement('button');
+    playbackBtn.className = 'mode-btn';
+    playbackBtn.innerHTML = `
+        <span class="icon">▶️</span>
+        <span class="label">Watch Solution</span>
+        <span class="sublabel">Recorded playback</span>
+    `;
+    playbackBtn.addEventListener('click', () => {
+        selector.remove();
+        onSelect(scenario, true);
+    });
+
+    buttonsContainer.appendChild(exploreBtn);
+    buttonsContainer.appendChild(playbackBtn);
+
+    const backBtn = selector.querySelector('.back-btn')!;
+    backBtn.addEventListener('click', () => {
+        selector.remove();
+        createScenarioSelector(container, onSelect);
+    });
+
+    container.appendChild(selector);
+}
+
+async function startSimulation(scenario: Scenario, playbackMode: boolean = false): Promise<void> {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
+
+    let recordedSession: RecordedSession | null = null;
+    if (playbackMode && scenario.recordedSessionPath) {
+        recordedSession = await loadRecordedSession(scenario.recordedSessionPath);
+        if (!recordedSession) {
+            console.warn(`[IFS] Failed to load recorded session from ${scenario.recordedSessionPath}`);
+            playbackMode = false;
+        } else if (recordedSession.codeVersion !== getPageVersion()) {
+            console.warn(`[IFS] Recording version mismatch: ${recordedSession.codeVersion} vs current ${getPageVersion()}`);
+        }
+    }
 
     const cloudManager = new CloudManager();
     (window as any).cloudManager = cloudManager;
@@ -111,15 +179,29 @@ function startSimulation(scenario: Scenario): void {
     };
     cloudManager.init('cloud-container');
 
-    console.log(`[IFS] Starting scenario: ${scenario.name} (${scenario.difficulty})`);
-    scenario.setup(cloudManager);
+    console.log(`[IFS] Starting scenario: ${scenario.name} (${scenario.difficulty})${playbackMode ? ' [PLAYBACK]' : ''}`);
+    if (playbackMode && recordedSession) {
+        cloudManager.setSeed(recordedSession.modelSeed);
+        cloudManager.restoreFromSession(recordedSession.initialModel, recordedSession.initialRelationships);
+    } else {
+        scenario.setup(cloudManager);
+    }
     cloudManager.finalizePanoramaSetup();
 
     cloudManager.applyAssessedNeedAttention();
+    if (playbackMode && recordedSession) {
+        cloudManager.setPauseTimeEffects(true);
+    }
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
 
     setupRecordingShortcuts(cloudManager);
+
+    if (playbackMode && recordedSession) {
+        setTimeout(() => {
+            cloudManager.startPlayback(recordedSession!);
+        }, 500);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -128,5 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
-    createScenarioSelector(cloudContainer, startSimulation);
+    createScenarioSelector(cloudContainer, (scenario, playbackMode) => {
+        startSimulation(scenario, playbackMode);
+    });
 });

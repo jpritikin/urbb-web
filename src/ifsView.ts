@@ -200,6 +200,11 @@ export class SimulatorView {
         this.onSelfRayClick = callback;
     }
 
+    simulateRayClick(): void {
+        console.log('[IfsView] simulateRayClick - selfRay:', this.selfRay ? 'exists' : 'null');
+        this.selfRay?.simulateClick();
+    }
+
     setOnModeChange(callback: (mode: 'panorama' | 'foreground') => void): void {
         this.events.on('mode-changed', (data) => callback(data.mode));
     }
@@ -454,17 +459,10 @@ export class SimulatorView {
             newModel.clearDisplacedPart(cloudId);
         }
 
-        // If parts were displaced, delay the arrival of NEW parts (not parts that were already visible)
+        // If parts were displaced, delay the arrival of NEW targets (not blended parts)
+        // Blended parts that caused the displacement should appear immediately
         if (hasDisplacements) {
-            const arrivalDelay = 4.0;
-
-            // Only delay parts that weren't already in foreground (i.e., truly new arrivals)
-            // Parts that were displaced are spiraling away; parts NOT displaced were already visible
-            for (const blendedId of newModel.getBlendedParts()) {
-                if (!this.transitionAnimator.isAwaitingArrival(blendedId)) {
-                    this.transitionAnimator.scheduleDelayedArrival(blendedId, arrivalDelay);
-                }
-            }
+            const arrivalDelay = 2.0;
 
             // Delay targets only if they weren't already visible
             for (const targetId of newModel.getTargetCloudIds()) {
@@ -1077,6 +1075,10 @@ export class SimulatorView {
 
     isAwaitingArrival(cloudId: string): boolean {
         return this.transitionAnimator.isAwaitingArrival(cloudId);
+    }
+
+    completeAllDelayedArrivals(isBlended: (cloudId: string) => boolean): void {
+        this.transitionAnimator.completeAllDelayedArrivals(isBlended);
     }
 
     hasActiveSpiralExits(): boolean {

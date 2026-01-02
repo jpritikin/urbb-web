@@ -5,6 +5,8 @@ export const CARPET_MAX_VELOCITY = 20;
 export const CARPET_ACCELERATION = 1.5;
 export const UPDATE_INTERVAL = 100;
 export const STAR_CLOUD_ID = '*';
+export const RAY_CLOUD_ID = '*ray*';
+export const MODE_TOGGLE_CLOUD_ID = '*mode*';
 export const UNBLENDED_SEAT_ID = '__unblended__';
 
 const SEAT_REARRANGEMENT_SPEED = 0.04;

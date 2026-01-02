@@ -16,9 +16,9 @@ export interface MessageOrchestratorCallbacks {
 }
 
 export class MessageOrchestrator {
-    private model: SimulatorModel;
+    private getModel: () => SimulatorModel;
     private view: MessageOrchestratorView;
-    private relationships: CloudRelationshipManager;
+    private getRelationships: () => CloudRelationshipManager;
     private rng: DualRNG;
     private callbacks: MessageOrchestratorCallbacks;
 
@@ -31,17 +31,25 @@ export class MessageOrchestrator {
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
 
     constructor(
-        model: SimulatorModel,
+        getModel: () => SimulatorModel,
         view: MessageOrchestratorView,
-        relationships: CloudRelationshipManager,
+        getRelationships: () => CloudRelationshipManager,
         rng: DualRNG,
         callbacks: MessageOrchestratorCallbacks
     ) {
-        this.model = model;
+        this.getModel = getModel;
         this.view = view;
-        this.relationships = relationships;
+        this.getRelationships = getRelationships;
         this.rng = rng;
         this.callbacks = callbacks;
+    }
+
+    private get model(): SimulatorModel {
+        return this.getModel();
+    }
+
+    private get relationships(): CloudRelationshipManager {
+        return this.getRelationships();
     }
 
     setRNG(rng: DualRNG): void {
@@ -76,8 +84,6 @@ export class MessageOrchestrator {
     }
 
     checkAndSendGrievanceMessages(): void {
-        if (this.view.hasActiveSpiralExits()) return;
-
         const blendedParts = this.model.getBlendedParts();
         const targetIds = this.model.getTargetCloudIds();
 
@@ -86,7 +92,6 @@ export class MessageOrchestrator {
             if (!blendedCloud) continue;
 
             if (this.model.parts.isUnburdened(blendedId)) continue;
-            if (this.view.isAwaitingArrival(blendedId)) continue;
 
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
@@ -129,8 +134,6 @@ export class MessageOrchestrator {
     }
 
     checkAndShowGenericDialogues(deltaTime: number): void {
-        if (this.view.hasActiveSpiralExits()) return;
-
         const blendedParts = this.model.getBlendedParts();
 
         for (const blendedId of this.genericDialogueCooldowns.keys()) {
@@ -140,7 +143,6 @@ export class MessageOrchestrator {
         }
 
         for (const blendedId of blendedParts) {
-            if (this.view.isAwaitingArrival(blendedId)) continue;
 
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;

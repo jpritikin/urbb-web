@@ -3,17 +3,17 @@ import { CloudRelationshipManager } from './cloudRelationshipManager.js';
 import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView } from './ifsView.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
-import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
+import { TherapistAction, CLOUD_MENU_ACTIONS, STAR_MENU_ACTIONS, SELFRAY_MENU_ACTIONS } from './therapistActions.js';
 import { BiographyField, PartContext } from './selfRay.js';
 import { SimulatorController, ValidAction } from './simulatorController.js';
 import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
 
 export interface PieMenuDependencies {
     getCloudById: (id: string) => Cloud | null;
-    model: SimulatorModel;
+    getModel: () => SimulatorModel;
     view: SimulatorView;
-    relationships: CloudRelationshipManager;
-    controller?: SimulatorController;
+    getRelationships: () => CloudRelationshipManager;
+    getController: () => SimulatorController | undefined;
 }
 
 type MenuMode = 'cloud' | 'selfRay' | 'star';
@@ -46,12 +46,12 @@ export class PieMenuController {
                 const field = item.id as BiographyField;
                 this.onBiographySelect?.(field, cloudId);
             } else if (this.menuMode === 'star') {
-                const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
+                const action = STAR_MENU_ACTIONS.find(a => a.id === item.id);
                 if (action) {
                     this.onStarActionSelect?.(action);
                 }
             } else {
-                const action = THERAPIST_ACTIONS.find(a => a.id === item.id);
+                const action = CLOUD_MENU_ACTIONS.find(a => a.id === item.id);
                 if (action) {
                     const cloud = this.deps.getCloudById(cloudId);
                     if (cloud && this.onActionSelect) {
@@ -141,11 +141,22 @@ export class PieMenuController {
         }
     }
 
+    getCurrentMenuItems(): PieMenuItem[] {
+        return this.pieMenu?.getItems() ?? [];
+    }
+
+    getMenuCenter(): { x: number; y: number } | null {
+        if (!this.pieMenu?.isVisible()) return null;
+        return this.pieMenu.getCenter();
+    }
+
     private getItemsForCloud(cloudId: string): PieMenuItem[] {
-        const { model, relationships, controller } = this.deps;
+        const model = this.deps.getModel();
+        const relationships = this.deps.getRelationships();
+        const controller = this.deps.getController();
 
         const validActions = controller?.getValidActions() ?? [];
-        const validForCloud = validActions.filter(a => a.cloudId === cloudId && a.action !== 'ray_field_select');
+        const validForCloud = validActions.filter(a => a.cloudId === cloudId);
 
         const proxyAsTargetId = this.getProxyAsTarget(cloudId);
         const proxyRevealed = proxyAsTargetId && model.parts.isIdentityRevealed(proxyAsTargetId);
@@ -157,14 +168,12 @@ export class PieMenuController {
             if (seenActions.has(validAction.action)) continue;
             seenActions.add(validAction.action);
 
-            const action = THERAPIST_ACTIONS.find(a => a.id === validAction.action);
+            const action = CLOUD_MENU_ACTIONS.find(a => a.id === validAction.action);
             if (!action) continue;
 
             let label = action.question;
 
-            if (action.id === 'feel_toward' && proxyRevealed) {
-                label = "How do you feel toward this part that doesn't know you very well?";
-            } else if (action.id === 'who_do_you_see' && model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
+            if (action.id === 'who_do_you_see' && model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
                 const proxyCloud = this.deps.getCloudById(proxyAsTargetId!);
                 const proxyName = proxyCloud?.text ?? 'the proxy';
                 label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
@@ -192,7 +201,7 @@ export class PieMenuController {
     }
 
     private getItemsForSelfRay(cloudId: string): PieMenuItem[] {
-        const { controller } = this.deps;
+        const controller = this.deps.getController();
         const context = this.getPartContext?.(cloudId) ?? {
             isProtector: false,
             isIdentityRevealed: false,
@@ -204,24 +213,14 @@ export class PieMenuController {
         const rayActions = validActions.filter(a => a.cloudId === cloudId && a.action === 'ray_field_select');
         const validFields = new Set(rayActions.map(a => a.field));
 
-        const fieldLabels: Record<string, { label: string; shortName: string; category: string }> = {
-            age: { label: 'How old are you?', shortName: 'Age', category: 'curiosity' },
-            identity: { label: 'Who are you?', shortName: 'Identity', category: 'curiosity' },
-            jobAppraisal: { label: 'How do you like your job?', shortName: 'Appraisal', category: 'curiosity' },
-            jobImpact: { label: 'How do you understand the impact of your job?', shortName: 'Impact', category: 'curiosity' },
-            whatNeedToKnow: { label: 'What do you need me to know?', shortName: 'Need?', category: 'curiosity' },
-            gratitude: { label: 'Thank you for being here', shortName: 'Gratitude', category: 'gratitude' },
-            compassion: { label: 'I care about you', shortName: 'Compassion', category: 'gratitude' },
-            apologize: { label: `Apologize to ${context.partName} for allowing other parts to attack it`, shortName: 'Apologize', category: 'gratitude' },
-        };
-
-        const fieldOrder = ['age', 'identity', 'jobAppraisal', 'jobImpact', 'whatNeedToKnow', 'gratitude', 'compassion', 'apologize'];
-
         const items: PieMenuItem[] = [];
-        for (const field of fieldOrder) {
-            if (validFields.has(field as BiographyField)) {
-                const info = fieldLabels[field];
-                items.push({ id: field, label: info.label, shortName: info.shortName, category: info.category });
+        for (const action of SELFRAY_MENU_ACTIONS) {
+            if (validFields.has(action.id as BiographyField)) {
+                let label = action.question;
+                if (action.id === 'apologize') {
+                    label = `Apologize to ${context.partName} for allowing other parts to attack it`;
+                }
+                items.push({ id: action.id, label, shortName: action.shortName, category: action.category });
             }
         }
 
@@ -229,13 +228,14 @@ export class PieMenuController {
     }
 
     private getItemsForStar(): PieMenuItem[] {
-        const { controller } = this.deps;
+        const controller = this.deps.getController();
+        const model = this.deps.getModel();
         const validActions = controller?.getValidActions() ?? [];
         const starActions = validActions.filter(a => a.cloudId === STAR_CLOUD_ID);
 
         const items: PieMenuItem[] = [];
         for (const validAction of starActions) {
-            const action = THERAPIST_ACTIONS.find(a => a.id === validAction.action);
+            const action = STAR_MENU_ACTIONS.find(a => a.id === validAction.action);
             if (action) {
                 items.push({
                     id: action.id,
@@ -249,7 +249,8 @@ export class PieMenuController {
     }
 
     private getProxyAsTarget(cloudId: string): string | null {
-        const { model, relationships } = this.deps;
+        const model = this.deps.getModel();
+        const relationships = this.deps.getRelationships();
         const targetIds = model.getTargetCloudIds();
         if (!targetIds.has(cloudId)) return null;
         const proxies = relationships.getProxies(cloudId);

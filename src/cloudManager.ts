@@ -8,13 +8,13 @@ import { AnimatedStar } from './starAnimation.js';
 import { PanoramaCloudMotion } from './panoramaCloudMotion.js';
 import { PieMenuController } from './pieMenuController.js';
 import { PieMenu } from './pieMenu.js';
-import { TherapistAction, THERAPIST_ACTIONS } from './therapistActions.js';
+import { TherapistAction } from './therapistActions.js';
 import { createGroup } from './svgHelpers.js';
 import { DualRNG, createDualRNG, SeededRNG } from './testability/rng.js';
 import { ActionRecorder } from './testability/recorder.js';
-import type { RecordedSession, RecordedAction, ControllerActionResult } from './testability/types.js';
+import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel, SerializedRelationships } from './testability/types.js';
 import { SimulatorController } from './simulatorController.js';
-import { STAR_CLOUD_ID } from './ifsView/SeatManager.js';
+import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from './ifsView/SeatManager.js';
 import { formatActionLabel } from './actionFormatter.js';
 import { UIManager } from './uiManager.js';
 import { InputHandler } from './inputHandler.js';
@@ -24,9 +24,11 @@ import { AnimationLoop } from './animationLoop.js';
 import { MessageOrchestrator } from './messageOrchestrator.js';
 import { PanoramaInputHandler } from './panoramaInputHandler.js';
 import { ExpandDeepenEffect } from './expandDeepenEffect.js';
+import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo } from './playback.js';
+import { TimeAdvancer } from './timeAdvancer.js';
 
 export { CloudType };
-export { TherapistAction, THERAPIST_ACTIONS };
+export { TherapistAction };
 
 
 declare global {
@@ -78,10 +80,13 @@ export class CloudManager {
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
     private insideAct: boolean = false;
-    private recordingToggleHandler: (() => void) | null = null;
+    private downloadSessionHandler: (() => void) | null = null;
     private lastHelpPanelUpdate: number = 0;
-    private lastAttentionCheck: number = 0;
     private expandDeepenEffect: ExpandDeepenEffect | null = null;
+    private playbackController: PlaybackController | null = null;
+    private pauseTimeEffects: boolean = false;
+    private lastActionResult: ActionResult | null = null;
+    private timeAdvancer: TimeAdvancer | null = null;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -107,12 +112,12 @@ export class CloudManager {
 
     private initController(): void {
         this.controller = new SimulatorController({
-            model: this.model,
-            relationships: this.relationships,
+            getModel: () => this.model,
+            getRelationships: () => this.relationships,
             rng: this.rng,
             getPartName: (id) => this.getCloudById(id)?.text ?? id
         });
-        this.effectApplicator = new ActionEffectApplicator(this.model, this.view);
+        this.effectApplicator = new ActionEffectApplicator(() => this.model, this.view);
     }
 
     setRNG(rng: DualRNG): void {
@@ -124,6 +129,53 @@ export class CloudManager {
 
     getRNG(): DualRNG {
         return this.rng;
+    }
+
+    setSeed(seed: number): void {
+        this.setRNG(createDualRNG(seed));
+    }
+
+    restoreFromSession(initialModel: SerializedModel, initialRelationships: SerializedRelationships): void {
+        if (!this.svgElement) throw new Error('SVG element not initialized');
+
+        this.model = SimulatorModel.fromJSON(initialModel);
+        this.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
+
+        for (const [cloudId, partState] of Object.entries(initialModel.partStates)) {
+            const cloud = this.createCloudVisual(partState.name, cloudId);
+            this.updateCloudVisual(cloud);
+        }
+    }
+
+    private createCloudVisual(name: string, id?: string): Cloud {
+        const position = this.panoramaMotion.generateInitialPosition();
+        const cloud = new Cloud(name, 0, 0, undefined, { id });
+        this.panoramaMotion.initializeCloud(cloud.id, position);
+
+        const eventHandlers = this.inputHandler?.createCloudEventHandlers(cloud) ?? {
+            onClick: () => { },
+            onHover: () => { },
+            onLongPressStart: () => { },
+            onLongPressEnd: () => { },
+            onTouchStart: () => { },
+            onTouchEnd: () => { },
+        };
+        const group = cloud.createSVGElements(eventHandlers);
+        this.zoomGroup?.appendChild(group);
+
+        const instance: CloudInstance = {
+            cloud,
+            position,
+            velocity: { x: 0, y: 0, z: 0 }
+        };
+        this.instances.push(instance);
+        this.updateCloudPosition(instance);
+        return cloud;
+    }
+
+    private updateCloudVisual(cloud: Cloud): void {
+        const state = this.model.getPartState(cloud.id);
+        cloud.updateSVGElements(this.debug, state, false);
     }
 
     startRecording(codeVersion: string): void {
@@ -162,8 +214,8 @@ export class CloudManager {
         return this.recorder.isRecording();
     }
 
-    setRecordingToggleHandler(handler: () => void): void {
-        this.recordingToggleHandler = handler;
+    setDownloadSessionHandler(handler: () => void): void {
+        this.downloadSessionHandler = handler;
     }
 
     init(containerId: string): void {
@@ -210,9 +262,9 @@ export class CloudManager {
         this.view.setMessageContainer(this.messageContainer);
 
         this.messageOrchestrator = new MessageOrchestrator(
-            this.model,
+            () => this.model,
             this.view,
-            this.relationships,
+            () => this.relationships,
             this.rng,
             {
                 act: (label, fn) => this.act(label, fn),
@@ -222,6 +274,30 @@ export class CloudManager {
         );
         this.view.setOnMessageReceived((message) => this.messageOrchestrator!.onMessageReceived(message));
 
+        this.timeAdvancer = new TimeAdvancer(
+            () => this.model,
+            () => this.relationships,
+            this.messageOrchestrator,
+            this.rng,
+            {
+                getMode: () => this.view.getMode(),
+                onSpontaneousBlend: (event, lastAttentionCheck) => {
+                    // Record intervals processed before this blend triggered
+                    if (this.recorder.isRecording()) {
+                        const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
+                        if (intervalCount > 0) {
+                            this.recorder.recordIntervals(intervalCount);
+                        }
+                    }
+                    this.recorder.markSpontaneousBlendTriggered(
+                        this.rng.model.getCallCount(),
+                        lastAttentionCheck
+                    );
+                    this.handleSpontaneousBlend(event.cloudId, event.urgent);
+                },
+            }
+        );
+
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container' });
         this.uiGroup.appendChild(thoughtBubbleContainer);
         this.view.setThoughtBubbleContainer(thoughtBubbleContainer);
@@ -229,10 +305,10 @@ export class CloudManager {
 
         this.pieMenuController = new PieMenuController(this.uiGroup, this.pieMenuOverlay, {
             getCloudById: (id) => this.getCloudById(id),
-            model: this.model,
+            getModel: () => this.model,
             view: this.view,
-            relationships: this.relationships,
-            controller: this.controller!,
+            getRelationships: () => this.relationships,
+            getController: () => this.controller ?? undefined,
         });
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
         this.pieMenuController.setOnStarActionSelect((action) => this.handleStarActionClick(action));
@@ -299,12 +375,19 @@ export class CloudManager {
             this.pieMenuController?.toggleSelfRay(cloudId, menuX, menuY, touchEvent);
         });
         this.view.setOnModeChange((mode) => {
-            if (mode === 'panorama') {
-                this.model.clearSelfRay();
+            const applyModeChange = () => {
+                if (mode === 'panorama') {
+                    this.model.clearSelfRay();
+                }
+                this.inputHandler?.clearPendingTargetAction();
+                this.updateUIForMode();
+                this.uiManager?.setMode(mode);
+            };
+            if (this.insideAct) {
+                applyModeChange();
+            } else {
+                this.act({ action: 'mode_change', cloudId: '', newMode: mode }, applyModeChange);
             }
-            this.inputHandler?.clearPendingTargetAction();
-            this.updateUIForMode();
-            this.uiManager?.setMode(mode);
         });
         this.view.on('transition-started', ({ direction }) => {
             this.onTransitionStart(direction);
@@ -334,7 +417,7 @@ export class CloudManager {
             onFullscreenToggle: () => this.toggleFullscreen(),
             onAnimationPauseToggle: () => this.toggleAnimationPause(),
             onTracePanelToggle: () => this.toggleTracePanel(),
-            onRecordingToggle: () => this.recordingToggleHandler?.(),
+            onDownloadSession: () => this.downloadSessionHandler?.(),
         });
         this.uiManager.createAllUI();
 
@@ -391,7 +474,7 @@ export class CloudManager {
 
         this.animatedStar = new AnimatedStar(centerX, centerY);
         this.animatedStar.setOnClick((_x, _y, event) => {
-            if (this.pieMenuController) {
+            if (this.pieMenuController && this.view.getMode() === 'foreground') {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
                 this.pieMenuController.toggleStar(starPos.x, starPos.y, touchEvent);
@@ -408,11 +491,8 @@ export class CloudManager {
 
     private handleModeToggle(isForeground: boolean): void {
         const mode = isForeground ? 'foreground' : 'panorama';
-        this.act(`Mode: ${mode}`, () => {
-            this.view.setMode(mode);
-            this.updateUIForMode();
-            this.uiManager?.setMode(mode);
-        });
+        // mode_change is recorded via setOnModeChange callback when view.setMode emits 'mode-changed'
+        this.view.setMode(mode);
     }
 
     private toggleFullscreen(): void {
@@ -492,6 +572,10 @@ export class CloudManager {
     }
 
     private applyActionResult(result: ControllerActionResult, cloudId: string): void {
+        this.lastActionResult = {
+            success: result.success,
+            error: result.message
+        };
         this.effectApplicator!.apply(result, cloudId);
     }
 
@@ -536,9 +620,8 @@ export class CloudManager {
     }): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
-        const position = this.panoramaMotion.generateInitialPosition();
-        const cloud = new Cloud(word, 0, 0, undefined, { id: options?.id });
-        this.panoramaMotion.initializeCloud(cloud.id, position);
+        const cloud = this.createCloudVisual(word, options?.id);
+
         this.model.registerPart(cloud.id, word, {
             trust: options?.trust,
             needAttention: options?.needAttention,
@@ -547,26 +630,7 @@ export class CloudManager {
             dialogues: options?.dialogues,
         });
 
-        const state = this.model.getPartState(cloud.id);
-        const eventHandlers = this.inputHandler?.createCloudEventHandlers(cloud) ?? {
-            onClick: () => { },
-            onHover: () => { },
-            onLongPressStart: () => { },
-            onLongPressEnd: () => { },
-            onTouchStart: () => { },
-            onTouchEnd: () => { },
-        };
-        const group = cloud.createSVGElements(eventHandlers);
-        this.zoomGroup?.appendChild(group);
-        cloud.updateSVGElements(this.debug, state, false);
-
-        const instance: CloudInstance = {
-            cloud,
-            position,
-            velocity: { x: 0, y: 0, z: 0 }
-        };
-        this.instances.push(instance);
-        this.updateCloudPosition(instance);
+        this.updateCloudVisual(cloud);
         return cloud;
     }
 
@@ -897,10 +961,31 @@ export class CloudManager {
         }
         this.syncViewWithModel(oldModel);
         if (recordedAction && this.recorder.isRecording()) {
+            // Record any intervals processed since the last action
+            const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
+            if (intervalCount > 0) {
+                this.recorder.recordIntervals(intervalCount);
+            }
             const orchState = this.messageOrchestrator?.getDebugState();
+            const selfRay = this.model.getSelfRay();
+            const biography: Record<string, { ageRevealed: boolean; identityRevealed: boolean; jobRevealed: boolean; jobAppraisalRevealed: boolean; jobImpactRevealed: boolean }> = {};
+            const needAttention: Record<string, number> = {};
+            for (const cloudId of this.model.getAllPartIds()) {
+                biography[cloudId] = {
+                    ageRevealed: this.model.parts.isAgeRevealed(cloudId),
+                    identityRevealed: this.model.parts.isIdentityRevealed(cloudId),
+                    jobRevealed: this.model.parts.isJobRevealed(cloudId),
+                    jobAppraisalRevealed: this.model.parts.isJobAppraisalRevealed(cloudId),
+                    jobImpactRevealed: this.model.parts.isJobImpactRevealed(cloudId),
+                };
+                needAttention[cloudId] = this.model.parts.getNeedAttention(cloudId);
+            }
             const modelState = {
                 targets: [...this.model.getTargetCloudIds()],
                 blended: this.model.getBlendedParts(),
+                selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
+                biography,
+                needAttention,
             };
             this.recorder.record(recordedAction, orchState, modelState);
         }
@@ -929,6 +1014,7 @@ export class CloudManager {
     }
 
     private animate(deltaTime: number): void {
+        this.playbackController?.update(deltaTime);
         this.view.animate(deltaTime);
         this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
@@ -981,10 +1067,7 @@ export class CloudManager {
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
                 this.view.renderSeatDebug();
             }
-            this.messageOrchestrator?.updateTimers(deltaTime);
-            if (!isTransitioning && !this.isPieMenuOpen()) {
-                this.messageOrchestrator?.checkAndSendGrievanceMessages();
-                this.messageOrchestrator?.checkAndShowGenericDialogues(deltaTime);
+            if (!this.pauseTimeEffects && !isTransitioning) {
                 this.checkBlendedPartsAttention();
             }
             this.view.animateMessages(deltaTime);
@@ -1029,6 +1112,8 @@ export class CloudManager {
             const cloudState = this.view.getCloudState(instance.cloud.id);
             if (cloudState) {
                 instance.cloud.animatedBlendingDegree = cloudState.blendingDegree;
+                instance.cloud.x = cloudState.x;
+                instance.cloud.y = cloudState.y;
 
                 const group = instance.cloud.getGroupElement();
                 if (group) {
@@ -1041,35 +1126,17 @@ export class CloudManager {
             }
         }
 
-        this.increaseNeedAttention(deltaTime);
+        if (!this.pauseTimeEffects && !this.view.isTransitioning()) {
+            this.timeAdvancer?.advance(deltaTime, false);
+            if (this.recorder.isRecording()) {
+                this.recorder.addEffectiveTime(deltaTime);
+            }
+        }
         this.view.checkVictoryCondition(this.model, this.relationships);
         this.lastHelpPanelUpdate += deltaTime;
         if (this.lastHelpPanelUpdate >= 0.25) {
             this.lastHelpPanelUpdate = 0;
             this.updateHelpPanel();
-        }
-        this.lastAttentionCheck += deltaTime;
-        if (!this.isPieMenuOpen() && this.lastAttentionCheck >= 0.5) {
-            this.lastAttentionCheck = 0;
-            const inPanorama = this.view.getMode() === 'panorama';
-            const demand = this.model.checkAttentionDemands(this.relationships, this.rng.cosmetic, !inPanorama);
-            if (demand) {
-                const randomVal = this.rng.cosmetic.random('panorama_attention');
-                const panoramaTriggered = inPanorama && (demand.needAttention - 1) > randomVal;
-                if (demand.urgent || panoramaTriggered) {
-                    this.act({ action: 'spontaneous_blend', cloudId: demand.cloudId }, () => {
-                        if (demand.urgent) {
-                            this.model.clearTargets();
-                        }
-                        if (inPanorama) {
-                            this.view.setMode('foreground');
-                            this.updateUIForMode();
-                            this.uiManager?.setMode('foreground');
-                        }
-                        this.controller?.executeAction('spontaneous_blend', demand.cloudId);
-                    });
-                }
-            }
         }
 
         const inPanorama = this.view.getMode() === 'panorama' && !this.view.isTransitioning();
@@ -1289,8 +1356,317 @@ export class CloudManager {
         });
     }
 
-    private increaseNeedAttention(deltaTime: number): void {
-        const inConference = this.view.getMode() === 'foreground';
-        this.model.increaseNeedAttention(this.relationships, deltaTime, inConference);
+    private advanceSimulationTime(deltaTime: number): void {
+        this.view.completeAllDelayedArrivals((cloudId) => this.model.isBlended(cloudId));
+        this.timeAdvancer?.advance(deltaTime, true);
+    }
+
+    private handleSpontaneousBlend(cloudId: string, urgent: boolean): void {
+        const inPanorama = this.view.getMode() === 'panorama';
+        this.act({ action: 'spontaneous_blend', cloudId }, () => {
+            if (urgent) {
+                this.model.clearTargets();
+            }
+            if (inPanorama) {
+                this.view.setMode('foreground');
+                this.updateUIForMode();
+                this.uiManager?.setMode('foreground');
+            }
+            this.controller?.executeAction('spontaneous_blend', cloudId);
+        });
+    }
+
+    private executeSpontaneousBlendForPlayback(cloudId: string): void {
+        const inPanorama = this.view.getMode() === 'panorama';
+        const oldModel = this.model.clone();
+        if (inPanorama) {
+            this.view.setMode('foreground');
+            this.updateUIForMode();
+            this.uiManager?.setMode('foreground');
+        }
+        this.controller?.executeAction('spontaneous_blend', cloudId);
+        this.syncViewWithModel(oldModel);
+    }
+
+    // Playback mode methods
+    startPlayback(session: RecordedSession): void {
+        if (!this.container || !this.svgElement) return;
+
+        const callbacks: PlaybackCallbacks = {
+            getCloudPosition: (cloudId) => {
+                if (cloudId === STAR_CLOUD_ID) {
+                    return this.view.getStarScreenPosition();
+                }
+                if (cloudId === RAY_CLOUD_ID) {
+                    const selfRay = this.model.getSelfRay();
+                    if (!selfRay) return null;
+                    const starPos = this.view.getStarScreenPosition();
+                    const cloudState = this.view.getCloudState(selfRay.targetCloudId);
+                    const cloudPos = cloudState ? { x: cloudState.x, y: cloudState.y } : starPos;
+                    return {
+                        x: (starPos.x + cloudPos.x) / 2,
+                        y: (starPos.y + cloudPos.y) / 2
+                    };
+                }
+                if (cloudId === MODE_TOGGLE_CLOUD_ID) {
+                    return { x: this.canvasWidth - 42 + 16, y: 10 + 16 };
+                }
+                const cloud = this.getCloudById(cloudId);
+                if (!cloud) return null;
+                const visualCenter = cloud.getVisualCenter();
+                const mode = this.view.getMode();
+                const transitioning = this.view.isTransitioning();
+                if (mode === 'foreground' || transitioning) {
+                    return visualCenter;
+                }
+                // In panorama mode, clouds are in zoomGroup (need zoom transform)
+                const zoom = this.view.getCurrentZoomFactor();
+                const centerX = this.canvasWidth / 2;
+                const centerY = this.canvasHeight / 2;
+                return {
+                    x: centerX + (visualCenter.x - centerX) * zoom,
+                    y: centerY + (visualCenter.y - centerY) * zoom
+                };
+            },
+            getMenuCenter: () => this.pieMenuController?.getMenuCenter() ?? null,
+            getSlicePosition: (sliceIndex, menuCenter, itemCount) => {
+                const angleStep = (2 * Math.PI) / itemCount;
+                const startAngle = -Math.PI / 2;
+                const angle = startAngle + sliceIndex * angleStep;
+                const radius = 60;
+                return {
+                    x: menuCenter.x + radius * Math.cos(angle),
+                    y: menuCenter.y + radius * Math.sin(angle)
+                };
+            },
+            getMode: () => this.view.getMode(),
+            getPartName: (cloudId) => this.getCloudById(cloudId)?.text ?? cloudId,
+            getLastActionResult: () => this.lastActionResult,
+            clearLastActionResult: () => { this.lastActionResult = null; },
+            getModelState: (): ModelState => ({
+                targets: [...this.model.getTargetCloudIds()],
+                blended: this.model.getBlendedParts()
+            }),
+            isTransitioning: () => this.view.isTransitioning(),
+            hasPendingBlends: () => this.model.getPendingBlends().length > 0,
+            findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
+                const items = this.pieMenuController?.getCurrentMenuItems() ?? [];
+                const sliceIndex = items.findIndex(item => item.id === actionId);
+                if (sliceIndex < 0) return null;
+                return { sliceIndex, itemCount: items.length };
+            },
+            simulateHover: (x, y) => {
+                this.simulateHoverAtPosition(x, y);
+            },
+            simulateClickAtPosition: (x, y) => {
+                return this.simulateClickAtPosition(x, y);
+            },
+            simulateClickOnCloud: (cloudId) => {
+                return this.simulateClickOnCloud(cloudId);
+            },
+            setPauseTimeEffects: (paused) => {
+                this.pauseTimeEffects = paused;
+            },
+            advanceSimulationTime: (deltaTime: number) => {
+                this.advanceSimulationTime(deltaTime);
+            },
+            advanceIntervals: (count: number) => {
+                this.timeAdvancer?.advanceIntervals(count);
+            },
+            executeSpontaneousBlend: (cloudId: string) => {
+                this.executeSpontaneousBlendForPlayback(cloudId);
+            },
+            onActionCompleted: (action: RecordedAction): ActionResult => {
+                return this.verifyPlaybackSync(action);
+            },
+            onPlaybackComplete: () => {
+                this.playbackController = null;
+            },
+            onPlaybackCancelled: () => {
+                this.playbackController = null;
+            },
+            onPlaybackError: () => {
+                this.downloadSessionHandler?.();
+            }
+        };
+
+        this.playbackController = new PlaybackController(this.container, this.svgElement, callbacks);
+        this.playbackController.start(session);
+    }
+
+    private simulateHoverAtPosition(x: number, y: number): void {
+        const { clientX, clientY } = this.svgToScreenCoords(x, y);
+        const element = document.elementFromPoint(clientX, clientY);
+        if (!element) return;
+
+        const mouseEnterEvent = new MouseEvent('mouseenter', {
+            clientX,
+            clientY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        const mouseMoveEvent = new MouseEvent('mousemove', {
+            clientX,
+            clientY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        element.dispatchEvent(mouseEnterEvent);
+        element.dispatchEvent(mouseMoveEvent);
+    }
+
+    private svgToScreenCoords(x: number, y: number): { clientX: number; clientY: number } {
+        if (!this.svgElement) return { clientX: x, clientY: y };
+        const rect = this.svgElement.getBoundingClientRect();
+        const viewBox = this.svgElement.viewBox.baseVal;
+        const scaleX = rect.width / (viewBox.width || this.canvasWidth);
+        const scaleY = rect.height / (viewBox.height || this.canvasHeight);
+        return {
+            clientX: rect.left + x * scaleX,
+            clientY: rect.top + y * scaleY
+        };
+    }
+
+    private simulateClickAtPosition(x: number, y: number, retryCount: number = 0): ActionResult {
+        const { clientX, clientY } = this.svgToScreenCoords(x, y);
+        const starElement = this.animatedStar?.getElement();
+        if (starElement) starElement.style.pointerEvents = 'none';
+        const element = document.elementFromPoint(clientX, clientY);
+        if (starElement) starElement.style.pointerEvents = '';
+        if (!element) {
+            return { success: false, error: `No element at svg(${x.toFixed(0)}, ${y.toFixed(0)}) screen(${clientX.toFixed(0)}, ${clientY.toFixed(0)})` };
+        }
+
+        const clickEvent = new MouseEvent('click', {
+            clientX,
+            clientY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        element.dispatchEvent(clickEvent);
+
+        // If we hit a thought bubble, it gets dismissed - caller should retry after delay
+        if (element.closest('.thought-bubble')) {
+            return { success: true, message: 'thought-bubble-dismissed' };
+        }
+
+        return { success: true };
+    }
+
+    private simulateClickOnCloud(cloudId: string): ActionResult {
+        if (cloudId === STAR_CLOUD_ID) {
+            this.animatedStar?.simulateClick();
+            return { success: true };
+        }
+        if (cloudId === RAY_CLOUD_ID) {
+            this.view.simulateRayClick();
+            return { success: true };
+        }
+        if (cloudId === MODE_TOGGLE_CLOUD_ID) {
+            this.uiManager?.simulateModeToggleClick();
+            return { success: true };
+        }
+        const cloud = this.getCloudById(cloudId);
+        if (!cloud) {
+            return { success: false, error: `Cloud not found: ${cloudId}` };
+        }
+        this.inputHandler?.handleCloudClick(cloud);
+        return { success: true };
+    }
+
+    isInPlaybackMode(): boolean {
+        return this.playbackController !== null && this.playbackController.isPlaying();
+    }
+
+    setPauseTimeEffects(paused: boolean): void {
+        this.pauseTimeEffects = paused;
+    }
+
+    cancelPlayback(): void {
+        this.playbackController?.cancel();
+    }
+
+    private verifyPlaybackSync(action: RecordedAction): ActionResult {
+        const parts: string[] = [];
+
+        if (action.rngCounts) {
+            const actualModelCount = this.rng.model.getCallCount();
+            if (action.rngCounts.model !== actualModelCount) {
+                const actualLog = this.rng.model.getCallLog();
+                console.log('[Sync] RNG mismatch - expected count:', action.rngCounts.model,
+                    'actual count:', actualModelCount, 'log:', actualLog);
+                parts.push(`model RNG count: expected ${action.rngCounts.model}, got ${actualModelCount}`);
+            }
+        }
+
+        const expected = action.modelState;
+        if (!expected) {
+            if (parts.length > 0) {
+                return { success: false, error: `Sync mismatch: ${parts.join('; ')}` };
+            }
+            return { success: true };
+        }
+
+        const actual = {
+            targets: [...this.model.getTargetCloudIds()],
+            blended: this.model.getBlendedParts()
+        };
+
+        const expectedTargets = new Set(expected.targets);
+        const actualTargets = new Set(actual.targets);
+        const expectedBlended = new Set(expected.blended);
+        const actualBlended = new Set(actual.blended);
+
+        const missingTargets = [...expectedTargets].filter(t => !actualTargets.has(t));
+        const extraTargets = [...actualTargets].filter(t => !expectedTargets.has(t));
+        const missingBlended = [...expectedBlended].filter(b => !actualBlended.has(b));
+        const extraBlended = [...actualBlended].filter(b => !expectedBlended.has(b));
+        if (missingTargets.length || extraTargets.length || missingBlended.length || extraBlended.length) {
+            const getName = (id: string) => this.getCloudById(id)?.text ?? id;
+            if (missingTargets.length) parts.push(`missing targets: ${missingTargets.map(getName).join(', ')}`);
+            if (extraTargets.length) parts.push(`extra targets: ${extraTargets.map(getName).join(', ')}`);
+            if (missingBlended.length) parts.push(`missing blended: ${missingBlended.map(getName).join(', ')}`);
+            if (extraBlended.length) parts.push(`extra blended: ${extraBlended.map(getName).join(', ')}`);
+        }
+
+        if (expected.biography) {
+            for (const [cloudId, expectedBio] of Object.entries(expected.biography)) {
+                const actualBio = {
+                    ageRevealed: this.model.parts.isAgeRevealed(cloudId),
+                    identityRevealed: this.model.parts.isIdentityRevealed(cloudId),
+                    jobRevealed: this.model.parts.isJobRevealed(cloudId),
+                    jobAppraisalRevealed: this.model.parts.isJobAppraisalRevealed(cloudId),
+                    jobImpactRevealed: this.model.parts.isJobImpactRevealed(cloudId),
+                };
+                const getName = (id: string) => this.getCloudById(id)?.text ?? id;
+                for (const [field, expectedVal] of Object.entries(expectedBio)) {
+                    const actualVal = actualBio[field as keyof typeof actualBio];
+                    if (expectedVal !== actualVal) {
+                        parts.push(`${getName(cloudId)} ${field}: expected ${expectedVal}, got ${actualVal}`);
+                    }
+                }
+            }
+        }
+
+        const expectedOrch = action.orchState;
+        if (expectedOrch && this.messageOrchestrator) {
+            const actualOrch = this.messageOrchestrator.getDebugState();
+            for (const [cloudId, expectedTime] of Object.entries(expectedOrch.blendTimers)) {
+                const actualTime = actualOrch.blendTimers[cloudId] ?? 0;
+                if (Math.abs(expectedTime - actualTime) > 0.01) {
+                    const getName = (id: string) => this.getCloudById(id)?.text ?? id;
+                    parts.push(`blendTimer ${getName(cloudId)}: expected ${expectedTime.toFixed(2)}, got ${actualTime.toFixed(2)}`);
+                }
+            }
+        }
+
+        if (parts.length > 0) {
+            return { success: false, error: `Sync mismatch: ${parts.join('; ')}` };
+        }
+
+        return { success: true };
     }
 }

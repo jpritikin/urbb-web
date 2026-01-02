@@ -8,12 +8,15 @@ const KNOWN_ACTIONS = new Set([
     'blend',
     'job',
     'feel_toward',
+    'expand_deepen',
     'who_do_you_see',
     'help_protected',
     'notice_part',
     'ray_field_select',
     'spontaneous_blend',
     'backlash',
+    'mode_change',
+    'process_intervals',
 ]);
 
 export function isValidAction(actionId: string): boolean {
@@ -24,7 +27,7 @@ export function validateRecordedAction(action: RecordedAction, knownCloudIds: Se
     if (!isValidAction(action.action)) {
         throw new Error(`Unknown action: ${action.action}`);
     }
-    if (!knownCloudIds.has(action.cloudId)) {
+    if (action.action !== 'mode_change' && !knownCloudIds.has(action.cloudId)) {
         throw new Error(`Unknown cloudId: ${action.cloudId}`);
     }
     if (action.targetCloudId && !knownCloudIds.has(action.targetCloudId)) {
@@ -61,6 +64,9 @@ export function formatActionLabel(
         case 'feel_toward':
             return `Feel toward: ${name}`;
 
+        case 'expand_deepen':
+            return 'Expand and deepen';
+
         case 'who_do_you_see':
             return `Who do you see: ${name}`;
 
@@ -81,6 +87,12 @@ export function formatActionLabel(
 
         case 'backlash':
             return `Backlash: ${name}`;
+
+        case 'mode_change':
+            return `Mode: ${action.newMode ?? 'unknown'}`;
+
+        case 'process_intervals':
+            return '';  // Silent action, not displayed
 
         default:
             throw new Error(`Unknown action: ${action.action}`);

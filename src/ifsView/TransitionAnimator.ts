@@ -236,6 +236,17 @@ export class TransitionAnimator {
         return this.delayedArrivals.has(cloudId);
     }
 
+    completeAllDelayedArrivals(isBlended: (cloudId: string) => boolean): void {
+        for (const [cloudId] of this.delayedArrivals) {
+            const state = this.config.getCloudState(cloudId);
+            if (state) {
+                state.targetOpacity = isBlended(cloudId) ? BLENDED_OPACITY : 1;
+                state.opacity = state.targetOpacity;
+            }
+        }
+        this.delayedArrivals.clear();
+    }
+
     animateDelayedArrivals(isBlended: (cloudId: string) => boolean): void {
         const now = performance.now();
         const toRemove: string[] = [];

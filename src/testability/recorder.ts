@@ -1,5 +1,5 @@
 import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot } from './types.js';
-import type { DualRNG, SeededRNG } from './rng.js';
+import type { DualRNG, SeededRNG, RngLogEntry } from './rng.js';
 
 export class ActionRecorder {
     private actions: RecordedAction[] = [];
@@ -9,9 +9,14 @@ export class ActionRecorder {
     private codeVersion: string = '';
     private platform: 'desktop' | 'mobile' = 'desktop';
     private startTimestamp: number = 0;
+    private sessionStartTime: number = 0;
     private lastActionTime: number = 0;
     private rng: DualRNG | null = null;
     private lastRngCount: number = 0;
+    private pendingSpontaneousBlendTime: number | null = null;
+    private pendingSpontaneousBlendRngCount: number | null = null;
+    private pendingSpontaneousBlendLastAttentionCheck: number | null = null;
+    private accumulatedEffectiveTime: number = 0;
 
     start(
         initialModel: SerializedModel,
@@ -28,27 +33,63 @@ export class ActionRecorder {
         this.platform = platform;
         this.modelSeed = modelRng?.getInitialSeed() ?? 0;
         this.startTimestamp = Date.now();
+        this.sessionStartTime = performance.now();
         this.lastActionTime = performance.now();
         this.rng = rng ?? null;
+    }
+
+    markSpontaneousBlendTriggered(rngCount: number, lastAttentionCheck: number): void {
+        this.pendingSpontaneousBlendTime = performance.now();
+        this.pendingSpontaneousBlendRngCount = rngCount;
+        this.pendingSpontaneousBlendLastAttentionCheck = lastAttentionCheck;
+    }
+
+    addEffectiveTime(deltaTime: number): void {
+        this.accumulatedEffectiveTime += deltaTime;
+    }
+
+    recordIntervals(count: number): void {
+        if (count <= 0 || !this.initialModel) return;
+        this.actions.push({
+            action: 'process_intervals',
+            cloudId: '',
+            count,
+        });
     }
 
     record(action: RecordedAction, orchState?: OrchestratorSnapshot, modelState?: ModelSnapshot): void {
         const now = performance.now();
         const elapsedTime = (now - this.lastActionTime) / 1000;
+        const effectiveTime = this.accumulatedEffectiveTime;
+        this.accumulatedEffectiveTime = 0;
+        const cumulativeTime = (now - this.sessionStartTime) / 1000;
         this.lastActionTime = now;
-        let rngCounts: { model: number; cosmetic: number } | undefined;
-        let rngLog: string[] | undefined;
+        let rngCounts: { model: number } | undefined;
+        let rngLog: RngLogEntry[] | undefined;
         if (this.rng) {
             const currentCount = this.rng.model.getCallCount();
-            rngCounts = {
-                model: currentCount,
-                cosmetic: this.rng.cosmetic.getCallCount()
-            };
+            rngCounts = { model: currentCount };
             const fullLog = this.rng.model.getCallLog();
             rngLog = fullLog.slice(this.lastRngCount);
             this.lastRngCount = currentCount;
         }
-        this.actions.push({ ...action, elapsedTime, rngCounts, rngLog, orchState, modelState });
+
+        let preActionTime: number | undefined;
+        let triggerRngCount: number | undefined;
+        let triggerLastAttentionCheck: number | undefined;
+        if (action.action === 'spontaneous_blend' && this.pendingSpontaneousBlendTime !== null) {
+            preActionTime = (this.pendingSpontaneousBlendTime - (now - elapsedTime * 1000)) / 1000;
+            triggerRngCount = this.pendingSpontaneousBlendRngCount ?? undefined;
+            triggerLastAttentionCheck = this.pendingSpontaneousBlendLastAttentionCheck ?? undefined;
+            this.pendingSpontaneousBlendTime = null;
+            this.pendingSpontaneousBlendRngCount = null;
+            this.pendingSpontaneousBlendLastAttentionCheck = null;
+        }
+
+        const WAIT_DURATION = 2.0;
+        const waitCount = Math.floor(elapsedTime / WAIT_DURATION);
+
+        this.actions.push({ ...action, elapsedTime, effectiveTime, waitCount, cumulativeTime, preActionTime, triggerRngCount, triggerLastAttentionCheck, rngCounts, rngLog, orchState, modelState });
     }
 
     getSession(
