@@ -143,12 +143,26 @@ export class SimulatorView {
         this.pieMenuOverlay = overlay;
     }
 
-    setMessageContainer(container: SVGGElement): void {
+    setMessageContainer(
+        container: SVGGElement,
+        getVisualCenter: (cloudId: string) => { x: number; y: number } | null
+    ): void {
         this.messageRenderer = new MessageRenderer(
             container,
-            (cloudId) => this.getCloudState(cloudId) ?? null,
+            getVisualCenter,
+            (cloudId) => this.isCloudReadyForMessage(cloudId),
             () => ({ width: this.canvasWidth, height: this.canvasHeight })
         );
+    }
+
+    private isCloudReadyForMessage(cloudId: string): boolean {
+        if (this.transitionAnimator.isSpiralExiting(cloudId)) return false;
+        if (this.transitionAnimator.isFlyOutExiting(cloudId)) return false;
+        if (this.transitionAnimator.isAwaitingArrival(cloudId)) return false;
+        if (this.transitionAnimator.isSupportingEntering(cloudId)) return false;
+        const state = this.cloudStates.get(cloudId);
+        if (!state || state.opacity < 0.5) return false;
+        return true;
     }
 
     setOnMessageReceived(callback: (message: PartMessage) => void): void {
@@ -299,7 +313,11 @@ export class SimulatorView {
     }
 
     getCloudPosition(cloudId: string): { x: number; y: number } | undefined {
-        return this.seatManager.getCloudPosition(cloudId);
+        const seatPos = this.seatManager.getCloudPosition(cloudId);
+        if (seatPos) return seatPos;
+        // Fall back to animated state for blended clouds at star
+        const state = this.cloudStates.get(cloudId);
+        return state ? { x: state.x, y: state.y } : undefined;
     }
 
     getStarPosition(): { x: number; y: number } {

@@ -258,7 +258,7 @@ export class CloudManager {
 
         this.messageContainer = createGroup({ id: 'message-container' });
         this.uiGroup.appendChild(this.messageContainer);
-        this.view.setMessageContainer(this.messageContainer);
+        this.view.setMessageContainer(this.messageContainer, (cloudId) => this.getCloudVisualCenter(cloudId));
 
         this.messageOrchestrator = new MessageOrchestrator(
             () => this.model,
@@ -658,6 +658,29 @@ export class CloudManager {
     getCloudById(id: string): Cloud | null {
         const instance = this.instances.find(i => i.cloud.id === id);
         return instance?.cloud ?? null;
+    }
+
+    private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
+        const cloudState = this.view.getCloudState(cloudId);
+        if (!cloudState || cloudState.opacity < 0.1) return null;
+        const mode = this.view.getMode();
+        const transitioning = this.view.isTransitioning();
+        let pos = { x: cloudState.x, y: cloudState.y };
+        if (mode !== 'foreground' && !transitioning) {
+            const zoom = this.view.getCurrentZoomFactor();
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+            pos = {
+                x: centerX + (pos.x - centerX) * zoom,
+                y: centerY + (pos.y - centerY) * zoom
+            };
+        }
+        const margin = 50;
+        if (pos.x < -margin || pos.x > this.canvasWidth + margin ||
+            pos.y < -margin || pos.y > this.canvasHeight + margin) {
+            return null;
+        }
+        return pos;
     }
 
     removeCloud(cloud: Cloud): void {
@@ -1415,22 +1438,7 @@ export class CloudManager {
                 if (cloudId === MODE_TOGGLE_CLOUD_ID) {
                     return { x: this.canvasWidth - 42 + 16, y: 10 + 16 };
                 }
-                const cloud = this.getCloudById(cloudId);
-                if (!cloud) return null;
-                const visualCenter = cloud.getVisualCenter();
-                const mode = this.view.getMode();
-                const transitioning = this.view.isTransitioning();
-                if (mode === 'foreground' || transitioning) {
-                    return visualCenter;
-                }
-                // In panorama mode, clouds are in zoomGroup (need zoom transform)
-                const zoom = this.view.getCurrentZoomFactor();
-                const centerX = this.canvasWidth / 2;
-                const centerY = this.canvasHeight / 2;
-                return {
-                    x: centerX + (visualCenter.x - centerX) * zoom,
-                    y: centerY + (visualCenter.y - centerY) * zoom
-                };
+                return this.getCloudVisualCenter(cloudId);
             },
             getMenuCenter: () => this.pieMenuController?.getMenuCenter() ?? null,
             getSlicePosition: (sliceIndex, menuCenter, itemCount) => {
@@ -1453,6 +1461,7 @@ export class CloudManager {
             }),
             isTransitioning: () => this.view.isTransitioning(),
             hasPendingBlends: () => this.model.getPendingBlends().length > 0,
+            hasActiveSpiralExits: () => this.view.hasActiveSpiralExits(),
             isMobile: () => this.uiManager?.isMobile() ?? false,
             getIsFullscreen: () => this.uiManager?.getIsFullscreen() ?? false,
             findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
@@ -1478,6 +1487,7 @@ export class CloudManager {
             },
             advanceIntervals: (count: number) => {
                 this.timeAdvancer?.advanceIntervals(count);
+                this.checkBlendedPartsAttention();
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.executeSpontaneousBlendForPlayback(cloudId);

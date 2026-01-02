@@ -4,7 +4,7 @@ import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from 
 import { RandomWalkRunner } from '../src/testability/index.js';
 import { HeadlessSimulator } from '../src/testability/headlessSimulator.js';
 import { ACTION_OUTCOMES, parseOutcome } from '../src/outcomes.js';
-import type { Scenario, RandomWalkConfig, RecordedSession, RecordedAction, WalkPath } from '../src/testability/types.js';
+import { WAIT_DURATION, type Scenario, type RandomWalkConfig, type RecordedSession, type RecordedAction, type WalkPath } from '../src/testability/types.js';
 
 const easyScenario: Scenario = {
     name: 'Easy - Inner Critic',
@@ -152,7 +152,7 @@ function showHelp(): void {
 Modes:
   generate  Generate a scenario that increases coverage, add to test/scenarios
   coverage  Show detailed coverage analysis (Monte Carlo)
-  report    Show coverage report for existing test/scenarios/*.json
+  report    Show coverage report for test/scenarios and static/recordings
 
 Options:
   -s, --scenario <easy|medium>  Scenario to run (default: easy)
@@ -170,7 +170,7 @@ Examples:
 `);
 }
 
-const WAIT_DURATION = 2.0;
+const INTERVALS_PER_WAIT = 4;  // WAIT_DURATION (2.0s) / ATTENTION_CHECK_INTERVAL (0.5s)
 
 function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): RecordedSession {
     const sim = new HeadlessSimulator({ seed: path.seed });
@@ -179,35 +179,39 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
     const initialRelationships = sim.getRelationshipsJSON();
 
     const recordedActions: RecordedAction[] = [];
-    let pendingElapsedTime = 0;
+    let pendingIntervals = 0;
     let lastRngCount = 0;
 
     for (const action of path.actions) {
         if (action.action === 'wait') {
-            sim.advanceTime(WAIT_DURATION);
-            pendingElapsedTime += WAIT_DURATION;
+            sim.advanceIntervals(INTERVALS_PER_WAIT);
+            pendingIntervals += INTERVALS_PER_WAIT;
         } else {
-            // Execute action (time already advanced during wait actions above)
+            // Emit process_intervals action if we have pending time
+            if (pendingIntervals > 0) {
+                recordedActions.push({
+                    action: 'process_intervals',
+                    cloudId: '',
+                    count: pendingIntervals,
+                    rngCounts: { model: sim.getRngCount() },
+                } as RecordedAction);
+                lastRngCount = sim.getRngCount();
+                pendingIntervals = 0;
+            }
+
             sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
 
-            // Capture state AFTER action (matching live recording format)
             const rngCount = sim.getRngCount();
             const fullLog = sim.getModelRngLog();
             const rngLog = fullLog.slice(lastRngCount);
             const orchState = sim.getOrchestratorDebugState();
             const modelState = sim.getModelStateSnapshot();
 
-            // Store the number of wait actions that preceded this action
-            // This allows replay to advance time in the same increments
-            const waitCount = Math.round(pendingElapsedTime / WAIT_DURATION);
-
             recordedActions.push({
                 action: action.action,
                 cloudId: action.cloudId,
                 targetCloudId: action.targetCloudId,
                 field: action.field,
-                elapsedTime: pendingElapsedTime,
-                waitCount,
                 rngCounts: { model: rngCount },
                 rngLog,
                 orchState,
@@ -215,7 +219,6 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
             } as RecordedAction);
 
             lastRngCount = rngCount;
-            pendingElapsedTime = 0;
         }
     }
 
@@ -244,15 +247,24 @@ function toCanonicalKey(action: string, outcome: string): string | null {
     return `${baseAction}:${outcome}`;
 }
 
+const SCENARIO_DIRS = ['test/scenarios', 'static/recordings'];
+
+function getScenarioFiles(): { path: string; file: string }[] {
+    const results: { path: string; file: string }[] = [];
+    for (const dir of SCENARIO_DIRS) {
+        if (!existsSync(dir)) continue;
+        const files = readdirSync(dir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+            results.push({ path: `${dir}/${file}`, file });
+        }
+    }
+    return results;
+}
+
 function loadExistingCoverage(): Set<string> {
-    const scenariosDir = 'test/scenarios';
     const covered = new Set<string>();
 
-    if (!existsSync(scenariosDir)) return covered;
-
-    const files = readdirSync(scenariosDir).filter(f => f.endsWith('.json'));
-    for (const file of files) {
-        const path = `${scenariosDir}/${file}`;
+    for (const { path } of getScenarioFiles()) {
         const session: RecordedSession = JSON.parse(readFileSync(path, 'utf-8'));
         const outcomes = replayAndCollectOutcomes(session);
         for (const { action, outcome } of outcomes) {
@@ -486,16 +498,10 @@ function replayAndCollectOutcomes(session: RecordedSession): OutcomeSignature[] 
 }
 
 function runReport(): void {
-    const scenariosDir = 'test/scenarios';
+    const scenarioFiles = getScenarioFiles();
 
-    if (!existsSync(scenariosDir)) {
-        console.log(`No scenarios directory found at ${scenariosDir}`);
-        process.exit(1);
-    }
-
-    const files = readdirSync(scenariosDir).filter(f => f.endsWith('.json'));
-    if (files.length === 0) {
-        console.log('No scenario files found in test/scenarios/');
+    if (scenarioFiles.length === 0) {
+        console.log(`No scenario files found in: ${SCENARIO_DIRS.join(', ')}`);
         process.exit(1);
     }
 
@@ -503,8 +509,7 @@ function runReport(): void {
     const allCovered = new Set<string>();
     const fileContributions: { file: string; unique: number; total: number }[] = [];
 
-    for (const file of files) {
-        const path = `${scenariosDir}/${file}`;
+    for (const { path, file } of scenarioFiles) {
         const session: RecordedSession = JSON.parse(readFileSync(path, 'utf-8'));
         const outcomes = replayAndCollectOutcomes(session);
         const fileOutcomes = new Set<string>();

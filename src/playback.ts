@@ -55,6 +55,7 @@ export interface PlaybackCallbacks {
     getModelState: () => ModelState;
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
+    hasActiveSpiralExits: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
@@ -218,9 +219,11 @@ export class PlaybackController {
             return;
         }
 
-        // For spontaneous_blend: just execute (intervals already processed)
+        // For spontaneous_blend: execute and wait for animation
         if (action.action === 'spontaneous_blend') {
+            this.state = 'executing';
             this.callbacks.executeSpontaneousBlend(action.cloudId);
+            await this.waitForSpiralExits();
             const verifyResult = this.callbacks.onActionCompleted(action);
             console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) executed. Sync check:`, verifyResult);
             if (!verifyResult.success) {
@@ -573,6 +576,19 @@ export class PlaybackController {
         while (this.callbacks.hasPendingBlends()) {
             if (performance.now() - start > maxWait) {
                 console.warn('[Playback] Timeout waiting for pending blends');
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
+    private async waitForSpiralExits(): Promise<void> {
+        if (!this.callbacks.hasActiveSpiralExits()) return;
+        const maxWait = 10000;
+        const start = performance.now();
+        while (this.callbacks.hasActiveSpiralExits()) {
+            if (performance.now() - start > maxWait) {
+                console.warn('[Playback] Timeout waiting for spiral exits');
                 break;
             }
             await this.delay(50);

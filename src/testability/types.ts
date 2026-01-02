@@ -2,6 +2,8 @@ import type { BlendReason, BlendedPartState, PartMessage, SelfRayState, ThoughtB
 import type { PartState, PartBiography, PartDialogues } from '../partState.js';
 import type { RngLogEntry } from './rng.js';
 
+export const WAIT_DURATION = 2.0;
+
 export interface SerializedModel {
     targetCloudIds: string[];
     supportingParts: Record<string, string[]>;

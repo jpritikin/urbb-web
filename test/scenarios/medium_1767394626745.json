@@ -1,0 +1,1466 @@
+{
+  "version": 1,
+  "codeVersion": "generated",
+  "platform": "desktop",
+  "modelSeed": 1767394656127,
+  "timestamp": 1767394626745,
+  "initialModel": {
+    "targetCloudIds": [
+      "inner-critic"
+    ],
+    "supportingParts": {},
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": null,
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 0,
+    "partStates": {
+      "inner-critic": {
+        "id": "inner-critic",
+        "name": "Inner Critic",
+        "trust": 0.3,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "criticized": {
+        "id": "criticized",
+        "name": "criticized one",
+        "trust": 0.2,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide."
+          ]
+        }
+      },
+      "toddler": {
+        "id": "toddler",
+        "name": "toddler",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "self-image": {
+        "id": "self-image",
+        "name": "self-image",
+        "trust": 0.5,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?"
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [],
+    "victoryAchieved": false,
+    "selfAmplification": 1
+  },
+  "initialRelationships": {
+    "protections": [
+      {
+        "protectorId": "inner-critic",
+        "protectedId": "criticized"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "inner-critic"
+        ],
+        "dialogues": [
+          "I'm a terrible person."
+        ]
+      },
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "toddler"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "Don't do anything risky."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "inner-critic",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "criticized",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "toddler",
+        "proxyId": "self-image"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 1
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 2
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 16,
+      "rngCounts": {
+        "model": 1
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 10
+        },
+        "cooldowns": {
+          "inner-critic": 8
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 10
+        },
+        "cooldowns": {
+          "inner-critic": 8
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 2
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {
+          "inner-critic": "toddler"
+        }
+      },
+      "modelState": {
+        "targets": [
+          "toddler"
+        ],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {
+          "inner-critic": "toddler"
+        }
+      },
+      "modelState": {
+        "targets": [
+          "toddler",
+          "inner-critic"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {
+          "inner-critic": "toddler"
+        }
+      },
+      "modelState": {
+        "targets": [
+          "toddler"
+        ],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 2
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 14
+        },
+        "cooldowns": {
+          "inner-critic": 2
+        },
+        "pending": {
+          "inner-critic": "toddler"
+        }
+      },
+      "modelState": {
+        "targets": [
+          "toddler"
+        ],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 2
+      }
+    },
+    {
+      "action": "step_back",
+      "cloudId": "toddler",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 16
+        },
+        "cooldowns": {
+          "inner-critic": 1
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ]
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 2
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:pick_proxy",
+          "value": 0.8666381847579032
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ]
+      }
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "blend",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ]
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.2985570062883198
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "self-image",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "self-image",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "rngCounts": {
+        "model": 4
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 5
+      },
+      "rngLog": [
+        {
+          "label": "help_protected:willing",
+          "value": 0.03654018463566899
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 6
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.406210012268275
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [
+        {
+          "label": "who_do_you_see:clear_proxies",
+          "value": 0.5994472512975335
+        }
+      ],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "step_back",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "self-image"
+        ],
+        "blended": []
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 18
+        },
+        "cooldowns": {
+          "inner-critic": 3
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "self-image",
+          "criticized"
+        ],
+        "blended": []
+      }
+    }
+  ],
+  "finalModel": {
+    "targetCloudIds": [
+      "inner-critic",
+      "self-image",
+      "criticized"
+    ],
+    "supportingParts": {
+      "inner-critic": []
+    },
+    "blendedParts": {},
+    "pendingBlends": [],
+    "selfRay": {
+      "targetCloudId": "*"
+    },
+    "displacedParts": [],
+    "messages": [],
+    "messageIdCounter": 2,
+    "partStates": {
+      "inner-critic": {
+        "id": "inner-critic",
+        "name": "Inner Critic",
+        "trust": 0.2485,
+        "needAttention": 0.6000000000000004,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 8,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": true,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": true
+        },
+        "dialogues": {
+          "burdenedJobAppraisal": [
+            "I'm exhausted with my job."
+          ],
+          "burdenedJobImpact": [
+            "I am harsh, but I help avoid critiques from outside."
+          ],
+          "unburdenedJob": "I help you foresee risks."
+        }
+      },
+      "criticized": {
+        "id": "criticized",
+        "name": "criticized one",
+        "trust": 0.2485,
+        "needAttention": 0.2,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "child",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": true,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Please don't look at me.",
+            "I'm trying to hide."
+          ]
+        }
+      },
+      "toddler": {
+        "id": "toddler",
+        "name": "toddler",
+        "trust": 0.495,
+        "needAttention": 0.19000000000000009,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": false,
+        "attacked": true,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": 3,
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": false,
+          "unburdened": false,
+          "jobRevealed": false,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "Play with me!",
+            "I want attention!",
+            "Why?"
+          ]
+        }
+      },
+      "self-image": {
+        "id": "self-image",
+        "name": "self-image",
+        "trust": 0.43338049999999995,
+        "needAttention": 0.3900000000000001,
+        "agreedWaitUntil": 1767394636745,
+        "wasProxy": true,
+        "attacked": false,
+        "biography": {
+          "ageRevealed": false,
+          "partAge": "adult",
+          "protectsRevealed": false,
+          "selfReaction": null,
+          "relationshipsRevealed": false,
+          "identityRevealed": true,
+          "unburdened": false,
+          "jobRevealed": true,
+          "jobAppraisalRevealed": false,
+          "jobImpactRevealed": false,
+          "consentedToHelp": false
+        },
+        "dialogues": {
+          "genericBlendedDialogues": [
+            "I need to maintain appearances.",
+            "What will people think?"
+          ]
+        }
+      }
+    },
+    "thoughtBubbles": [],
+    "victoryAchieved": false,
+    "selfAmplification": 1
+  },
+  "finalRelationships": {
+    "protections": [
+      {
+        "protectorId": "inner-critic",
+        "protectedId": "criticized"
+      }
+    ],
+    "grievances": [
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "inner-critic"
+        ],
+        "dialogues": [
+          "I'm a terrible person."
+        ]
+      },
+      {
+        "cloudId": "inner-critic",
+        "targetIds": [
+          "toddler"
+        ],
+        "dialogues": [
+          "You got us criticized.",
+          "Don't do anything risky."
+        ]
+      }
+    ],
+    "proxies": [
+      {
+        "cloudId": "inner-critic",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "criticized",
+        "proxyId": "self-image"
+      },
+      {
+        "cloudId": "toddler",
+        "proxyId": "self-image"
+      }
+    ]
+  }
+}

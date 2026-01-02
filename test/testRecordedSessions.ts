@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { replaySession } from '../src/testability/scenarios.js';
 import type { RecordedSession } from '../src/testability/types.js';
 
@@ -21,10 +21,19 @@ interface SessionSpec {
     name: string;
 }
 
-const SESSIONS: SessionSpec[] = [
-    { path: 'static/recordings/criticWithProxy.json', name: 'Critic with Proxy' },
-    { path: 'static/recordings/protectorBacklash.json', name: 'Protector Backlash' },
-];
+const SESSION_DIRS = ['static/recordings', 'test/scenarios'];
+
+function discoverSessions(): SessionSpec[] {
+    const sessions: SessionSpec[] = [];
+    for (const dir of SESSION_DIRS) {
+        if (!existsSync(dir)) continue;
+        const files = readdirSync(dir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+            sessions.push({ path: `${dir}/${file}`, name: file });
+        }
+    }
+    return sessions;
+}
 
 let results: TestResult[] = [];
 let sessionResults: SessionResult[] = [];
@@ -74,7 +83,7 @@ function testSession(spec: SessionSpec): void {
 function runAllRecordedSessionTests(): void {
     results = [];
     sessionResults = [];
-    for (const spec of SESSIONS) {
+    for (const spec of discoverSessions()) {
         testSession(spec);
     }
 }

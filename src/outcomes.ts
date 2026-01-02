@@ -78,7 +78,6 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
 
     feel_toward: [
         OUTCOMES.REGARD_PART,
-        OUTCOMES.PENDING_BLEND,
     ],
 
     expand_deepen: [],

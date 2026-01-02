@@ -70,6 +70,11 @@ export class MessageOrchestrator {
                 this.blendStartTimers.delete(blendedId);
             }
         }
+
+        const arrivedMessages = this.model.advanceMessages(deltaTime);
+        for (const message of arrivedMessages) {
+            this.onMessageReceived(message);
+        }
     }
 
     onMessageReceived(message: PartMessage): void {

@@ -21,6 +21,7 @@ export interface PartMessage {
     senderId: string;
     targetId: string;
     text: string;
+    travelTimeRemaining: number;
 }
 
 export interface ThoughtBubble {
@@ -423,6 +424,8 @@ export class SimulatorModel {
         }
     }
 
+    static readonly MESSAGE_TRAVEL_TIME = 3.0;
+
     sendMessage(senderId: string, targetId: string, text: string, type: MessageType): PartMessage {
         const message: PartMessage = {
             id: this.messageIdCounter++,
@@ -430,9 +433,24 @@ export class SimulatorModel {
             senderId,
             targetId,
             text,
+            travelTimeRemaining: SimulatorModel.MESSAGE_TRAVEL_TIME,
         };
         this.messages.push(message);
         return message;
+    }
+
+    advanceMessages(deltaTime: number): PartMessage[] {
+        const arrived: PartMessage[] = [];
+        for (const message of this.messages) {
+            if (message.travelTimeRemaining > 0) {
+                message.travelTimeRemaining -= deltaTime;
+                if (message.travelTimeRemaining <= 0) {
+                    message.travelTimeRemaining = 0;
+                    arrived.push(message);
+                }
+            }
+        }
+        return arrived;
     }
 
     getMessages(): PartMessage[] {

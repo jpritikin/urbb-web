@@ -32,9 +32,8 @@ class HeadlessView implements MessageOrchestratorView {
         const isBlended = this.model.getBlendedParts().includes(cloudId);
         return (isTarget || isBlended) ? {} : null;
     }
-    startMessage(message: PartMessage, _senderId: string, _targetId: string): void {
-        // Immediately deliver message in headless mode
-        this.onMessageReceived?.(message);
+    startMessage(_message: PartMessage, _senderId: string, _targetId: string): void {
+        // Message delivery is now handled by model.advanceMessages() called from orchestrator.updateTimers()
     }
 }
 

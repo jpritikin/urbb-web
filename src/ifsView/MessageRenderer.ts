@@ -1,4 +1,4 @@
-import { PartMessage } from '../ifsModel.js';
+import { PartMessage, SimulatorModel } from '../ifsModel.js';
 import { createGroup, createRect, createText, TextLine } from '../svgHelpers.js';
 import { MESSAGE_BUBBLE_CONFIG, computeBubbleSize, computeBubblePlacement, wrapText } from './bubblePlacement.js';
 
@@ -8,35 +8,36 @@ interface CloudPosition { x: number; y: number }
 
 interface MessageAnimatedState {
     message: PartMessage;
-    progress: number;
-    duration: number;
     senderCloudId: string;
     targetCloudId: string;
     element: SVGGElement;
-    phase: 'traveling' | 'lingering' | 'fading';
+    phase: 'waiting' | 'loitering' | 'traveling' | 'lingering' | 'fading';
     lingerTime: number;
     lingerDuration: number;
+    cosmeticProgress: number;
 }
 
 export class MessageRenderer {
     private messageStates: Map<number, MessageAnimatedState> = new Map();
     private container: SVGGElement;
-    private onMessageReceived: ((message: PartMessage) => void) | null = null;
     private getCloudPosition: (cloudId: string) => CloudPosition | null;
+    private isCloudReady: (cloudId: string) => boolean;
     private getDimensions: () => { width: number; height: number };
 
     constructor(
         container: SVGGElement,
         getCloudPosition: (cloudId: string) => CloudPosition | null,
+        isCloudReady: (cloudId: string) => boolean,
         getDimensions: () => { width: number; height: number }
     ) {
         this.container = container;
         this.getCloudPosition = getCloudPosition;
+        this.isCloudReady = isCloudReady;
         this.getDimensions = getDimensions;
     }
 
-    setOnMessageReceived(callback: (message: PartMessage) => void): void {
-        this.onMessageReceived = callback;
+    setOnMessageReceived(_callback: (message: PartMessage) => void): void {
+        // No longer used - message delivery is handled by the model
     }
 
     startMessage(
@@ -44,23 +45,19 @@ export class MessageRenderer {
         senderCloudId: string,
         targetCloudId: string
     ): void {
-        const senderPos = this.getCloudPosition(senderCloudId);
-        if (!senderPos) return;
-
         const element = this.createMessageElement(message);
-        element.setAttribute('transform', `translate(${senderPos.x}, ${senderPos.y})`);
+        element.style.display = 'none';
         this.container.appendChild(element);
 
         const state: MessageAnimatedState = {
             message,
-            progress: 0,
-            duration: 3.0,
             senderCloudId,
             targetCloudId,
             element,
-            phase: 'traveling',
+            phase: 'waiting',
             lingerTime: 0,
             lingerDuration: 1.0 + Math.random() * 1.0,
+            cosmeticProgress: 0,
         };
         this.messageStates.set(message.id, state);
     }
@@ -70,16 +67,42 @@ export class MessageRenderer {
         const dims = this.getDimensions();
 
         for (const [id, state] of this.messageStates) {
-            if (state.phase === 'traveling') {
-                state.progress += deltaTime / state.duration;
+            if (state.phase === 'waiting') {
+                const senderPos = this.getCloudPosition(state.senderCloudId);
+                const senderReady = this.isCloudReady(state.senderCloudId);
+                if (senderPos && senderReady) {
+                    state.phase = 'loitering';
+                    state.element.style.display = '';
+                    const { x, y } = this.clampToCanvas(senderPos.x, senderPos.y, state.message.text, dims);
+                    state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                }
+                continue;
+            }
 
-                if (state.progress >= 1) {
-                    state.progress = 1;
+            if (state.phase === 'loitering') {
+                const senderPos = this.getCloudPosition(state.senderCloudId);
+                const targetPos = this.getCloudPosition(state.targetCloudId);
+                const targetReady = this.isCloudReady(state.targetCloudId);
+                if (senderPos) {
+                    const { x, y } = this.clampToCanvas(senderPos.x, senderPos.y, state.message.text, dims);
+                    state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                }
+                if (targetReady && targetPos) {
+                    state.phase = 'traveling';
+                }
+                continue;
+            }
+
+            if (state.phase === 'traveling') {
+                const travelRate = 1 / SimulatorModel.MESSAGE_TRAVEL_TIME;
+                state.cosmeticProgress = Math.min(1, state.cosmeticProgress + deltaTime * travelRate);
+
+                if (state.cosmeticProgress >= 1) {
+                    state.cosmeticProgress = 1;
                     state.phase = 'lingering';
-                    this.onMessageReceived?.(state.message);
                 }
 
-                const { x, y } = this.getMessagePosition(state, dims);
+                const { x, y } = this.getMessagePosition(state, state.cosmeticProgress, dims);
                 state.element.setAttribute('transform', `translate(${x}, ${y})`);
             } else if (state.phase === 'lingering') {
                 state.lingerTime += deltaTime;
@@ -108,13 +131,16 @@ export class MessageRenderer {
         }
     }
 
-    private getMessagePosition(state: MessageAnimatedState, dims: { width: number; height: number }): { x: number; y: number } {
+    private getMessagePosition(state: MessageAnimatedState, progress: number, dims: { width: number; height: number }): { x: number; y: number } {
         const senderPos = this.getCloudPosition(state.senderCloudId);
         const targetPos = this.getCloudPosition(state.targetCloudId);
-        if (!senderPos || !targetPos) return { x: 0, y: 0 };
+        if (!senderPos || !targetPos) {
+            console.warn(`[Message ${state.message.id}] getMessagePosition: missing position - sender=${JSON.stringify(senderPos)}, target=${JSON.stringify(targetPos)}`);
+            return { x: 0, y: 0 };
+        }
 
         if (state.senderCloudId === state.targetCloudId) {
-            const angle = state.progress * 2 * Math.PI;
+            const angle = progress * 2 * Math.PI;
             const radius = 40;
             return this.clampToCanvas(
                 senderPos.x + radius * Math.cos(angle),
@@ -123,7 +149,7 @@ export class MessageRenderer {
                 dims
             );
         }
-        const eased = this.easeInOutCubic(state.progress);
+        const eased = this.easeInOutCubic(progress);
         return this.clampToCanvas(
             senderPos.x + (targetPos.x - senderPos.x) * eased,
             senderPos.y + (targetPos.y - senderPos.y) * eased,

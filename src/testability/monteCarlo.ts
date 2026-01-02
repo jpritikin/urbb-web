@@ -3,16 +3,16 @@ import { SimulatorController, ValidAction, ALL_RAY_FIELDS } from '../simulatorCo
 import { ALL_ACTION_IDS } from '../therapistActions.js';
 import { createModelRNG } from './rng.js';
 import type { RNG } from './rng.js';
-import type {
-    Scenario, MonteCarloConfig, MonteCarloResults,
-    IterationResult, Distribution, MetricDefinition, SerializedModel,
-    RandomWalkConfig, RandomWalkResult, RandomWalkResults,
-    CoverageData, CoverageEntry, WalkPath, CoverageGap,
-    HeuristicState, RecordedWalkAction
+import {
+    WAIT_DURATION,
+    type Scenario, type MonteCarloConfig, type MonteCarloResults,
+    type IterationResult, type Distribution, type MetricDefinition, type SerializedModel,
+    type RandomWalkConfig, type RandomWalkResult, type RandomWalkResults,
+    type CoverageData, type CoverageEntry, type WalkPath, type CoverageGap,
+    type HeuristicState, type RecordedWalkAction
 } from './types.js';
 
 const WAIT_ACTION: ValidAction = { action: 'wait', cloudId: '' };
-const WAIT_DURATION = 2.0;  // Seconds to advance per wait action
 
 export class MonteCarloRunner {
     run(config: MonteCarloConfig): MonteCarloResults {

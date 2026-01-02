@@ -1,4 +1,4 @@
-import type { RecordedAction, RecordedSession, SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot } from './types.js';
+import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type SerializedRelationships, type OrchestratorSnapshot, type ModelSnapshot } from './types.js';
 import type { RNG, SeededRNG, RngLogEntry } from './rng.js';
 
 export class ActionRecorder {
@@ -96,7 +96,6 @@ export class ActionRecorder {
             this.pendingSpontaneousBlendLastAttentionCheck = null;
         }
 
-        const WAIT_DURATION = 2.0;
         const waitCount = Math.floor(elapsedTime / WAIT_DURATION);
 
         this.actions.push({ ...action, elapsedTime, effectiveTime, waitCount, cumulativeTime, preActionTime, triggerRngCount, triggerLastAttentionCheck, rngCounts, rngLog, orchState, modelState });
