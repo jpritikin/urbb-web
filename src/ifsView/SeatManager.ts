@@ -423,7 +423,7 @@ export class SeatManager {
     }
 
     private computeOptimalMatching(): Map<string, { x: number; y: number }> {
-        const REASSIGNMENT_THRESHOLD = 20;
+        const REASSIGNMENT_THRESHOLD = 0.2; // radians
 
         const activeCarpetIds: string[] = [];
         for (const [id, carpet] of this.carpets) {
@@ -439,11 +439,33 @@ export class SeatManager {
             return new Map();
         }
 
-        const distanceToSeat = (carpetId: string, seat: SeatState): number => {
+        const canvasCenterX = this.canvasWidth / 2;
+        const canvasCenterY = this.canvasHeight / 2;
+
+        let carpetCenterX = 0;
+        let carpetCenterY = 0;
+        for (const id of activeCarpetIds) {
+            const carpet = this.carpets.get(id)!;
+            carpetCenterX += carpet.currentX;
+            carpetCenterY += carpet.currentY;
+        }
+        carpetCenterX /= activeCarpetIds.length;
+        carpetCenterY /= activeCarpetIds.length;
+
+        const carpetAngleFromCenter = (carpetId: string): number => {
             const carpet = this.carpets.get(carpetId)!;
-            const dx = seat.x - carpet.currentX;
-            const dy = seat.y - carpet.currentY;
-            return Math.sqrt(dx * dx + dy * dy);
+            return Math.atan2(carpet.currentY - carpetCenterY, carpet.currentX - carpetCenterX);
+        };
+
+        const seatAngleFromCenter = (seat: SeatState): number => {
+            return Math.atan2(seat.y - canvasCenterY, seat.x - canvasCenterX);
+        };
+
+        const angularDistanceToSeat = (carpetId: string, seat: SeatState): number => {
+            const cAngle = carpetAngleFromCenter(carpetId);
+            const sAngle = seatAngleFromCenter(seat);
+            const diff = sAngle - cAngle;
+            return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
         };
 
         const computeGreedyMatching = (carpetIds: string[], seats: SeatState[]): Map<string, string> => {
@@ -458,7 +480,7 @@ export class SeatManager {
 
                 for (const carpetId of remainingCarpets) {
                     for (const seat of remainingSeats) {
-                        const dist = distanceToSeat(carpetId, seat);
+                        const dist = angularDistanceToSeat(carpetId, seat);
                         if (dist < bestDist) {
                             bestDist = dist;
                             bestCarpetId = carpetId;
@@ -478,18 +500,18 @@ export class SeatManager {
             return result;
         };
 
-        const computeTotalDistance = (matching: Map<string, string>): number => {
+        const computeTotalAngularDistance = (matching: Map<string, string>): number => {
             const seatById = new Map(nonStarSeats.map(s => [s.seatId, s]));
             let total = 0;
             for (const [carpetId, seatId] of matching) {
                 const seat = seatById.get(seatId);
-                if (seat) total += distanceToSeat(carpetId, seat);
+                if (seat) total += angularDistanceToSeat(carpetId, seat);
             }
             return total;
         };
 
         const optimalMatching = computeGreedyMatching(activeCarpetIds, nonStarSeats);
-        const optimalDistance = computeTotalDistance(optimalMatching);
+        const optimalDistance = computeTotalAngularDistance(optimalMatching);
 
         const previousStillValid = activeCarpetIds.every(id => {
             const prevSeatId = this.previousMatching.get(id);
@@ -498,7 +520,7 @@ export class SeatManager {
 
         let newMatching: Map<string, string>;
         if (previousStillValid && this.previousMatching.size === activeCarpetIds.length) {
-            const previousDistance = computeTotalDistance(this.previousMatching);
+            const previousDistance = computeTotalAngularDistance(this.previousMatching);
             newMatching = previousDistance - optimalDistance > REASSIGNMENT_THRESHOLD
                 ? optimalMatching
                 : this.previousMatching;
