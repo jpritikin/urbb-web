@@ -448,17 +448,14 @@ export class SimulatorController {
                 };
             }
             const proxyIds = Array.from(proxies);
-            const proxyId = this.rng.cosmetic.pickRandom(proxyIds);
-            const proxyName = this.getPartName(proxyId);
             return {
                 success: true,
                 stateChanges: [],
-                uiFeedback: { thoughtBubble: { text: `I see the ${proxyName}.`, cloudId } }
+                uiFeedback: {}
             };
         }
 
         const proxyId = this.rng.model.pickRandom(availableProxies, 'who_do_you_see:pick_proxy');
-        const proxyName = this.getPartName(proxyId);
 
         this.model.addBlendedPart(proxyId, 'therapist');
         this.model.parts.revealIdentity(proxyId);
@@ -467,7 +464,7 @@ export class SimulatorController {
         return {
             success: true,
             stateChanges: [outcome(proxyId, OUTCOMES.BLENDED_AS_PROXY)],
-            uiFeedback: { thoughtBubble: { text: `I see the ${proxyName}.`, cloudId } }
+            uiFeedback: {}
         };
     }
 
