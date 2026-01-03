@@ -465,7 +465,8 @@ export class SeatManager {
             const cAngle = carpetAngleFromCenter(carpetId);
             const sAngle = seatAngleFromCenter(seat);
             const diff = sAngle - cAngle;
-            return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
+            const angularDist = Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
+            return angularDist * angularDist;
         };
 
         const computeGreedyMatching = (carpetIds: string[], seats: SeatState[]): Map<string, string> => {
