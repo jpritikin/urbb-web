@@ -54,7 +54,8 @@ export interface PlaybackModelAccess {
 }
 
 export interface PlaybackTimeControl {
-    setPauseTimeEffects: (paused: boolean) => void;
+    pausePlayback: () => void;
+    resumePlayback: () => void;
     advanceIntervals: (count: number) => void;
     executeSpontaneousBlend: (cloudId: string) => void;
 }
@@ -116,20 +117,20 @@ export class PlaybackController {
         this.reticle.create();
         this.createControlPanel();
         this.updateControlPanel();
-        this.callbacks.setPauseTimeEffects(true);
+        this.callbacks.pausePlayback();
     }
 
     pause(): void {
         if (this.state !== 'waiting' && this.state !== 'executing') return;
         this.state = 'paused';
-        this.callbacks.setPauseTimeEffects(false);
+        // Keep time effects paused to prevent blend timer drift
         this.updateControlPanel();
     }
 
     resume(): void {
         if (this.state !== 'paused' || !this.canResume) return;
         this.state = 'waiting';
-        this.callbacks.setPauseTimeEffects(true);
+        // Time effects should already be paused
         this.updateControlPanel();
     }
 
@@ -444,7 +445,7 @@ export class PlaybackController {
     private handleError(error: string, context: string): void {
         this.state = 'error';
         this.errorMessage = `${error} - ${context}`;
-        this.callbacks.setPauseTimeEffects(false);
+        this.callbacks.resumePlayback();
 
         console.error('[Playback Error]', this.errorMessage);
         console.error('[Playback] Current action:', this.actions[this.currentActionIndex]);
@@ -723,6 +724,6 @@ export class PlaybackController {
             this.controlPanel = null;
         }
 
-        this.callbacks.setPauseTimeEffects(false);
+        this.callbacks.resumePlayback();
     }
 }

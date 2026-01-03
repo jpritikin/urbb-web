@@ -93,7 +93,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
 
     cloudManager.applyAssessedNeedAttention();
     if (playbackMode && recordedSession) {
-        cloudManager.setPauseTimeEffects(true);
+        cloudManager.pausePlayback();
     }
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
@@ -101,7 +101,6 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     setupRecordingShortcuts(cloudManager);
 
     if (playbackMode && recordedSession) {
-        cloudManager.setPauseTimeEffects(true);
         setTimeout(() => {
             cloudManager.startPlayback(recordedSession!);
         }, 500);

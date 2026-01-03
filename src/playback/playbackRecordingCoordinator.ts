@@ -52,7 +52,7 @@ export class PlaybackRecordingCoordinator {
     private recorder: ActionRecorder = new ActionRecorder();
     private playbackController: PlaybackController | null = null;
     private rng: RNG = createModelRNG();
-    private pauseTimeEffects: boolean = false;
+    private playing: boolean = false;
     private lastActionResult: ActionResult | null = null;
     private downloadSessionHandler: (() => void) | null = null;
 
@@ -196,12 +196,16 @@ export class PlaybackRecordingCoordinator {
         return this.playbackController !== null && this.playbackController.isPlaying();
     }
 
-    isPauseTimeEffects(): boolean {
-        return this.pauseTimeEffects;
+    isPlaying(): boolean {
+        return this.playing;
     }
 
-    setPauseTimeEffects(paused: boolean): void {
-        this.pauseTimeEffects = paused;
+    pausePlayback(): void {
+        this.playing = true;
+    }
+
+    resumePlayback(): void {
+        this.playing = false;
     }
 
     cancelPlayback(): void {
@@ -279,8 +283,11 @@ export class PlaybackRecordingCoordinator {
             simulateClickOnCloud: (cloudId) => {
                 return this.simulateClickOnCloud(cloudId);
             },
-            setPauseTimeEffects: (paused) => {
-                this.pauseTimeEffects = paused;
+            pausePlayback: () => {
+                this.playing = true;
+            },
+            resumePlayback: () => {
+                this.playing = false;
             },
             advanceIntervals: (count: number) => {
                 this.deps.getTimeAdvancer()?.advanceIntervals(count);

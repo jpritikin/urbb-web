@@ -1058,7 +1058,7 @@ export class CloudManager {
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
                 this.view.renderSeatDebug();
             }
-            if (!this.playbackRecording.isPauseTimeEffects() && !isTransitioning) {
+            if (!this.playbackRecording.isPlaying() && !isTransitioning) {
                 this.checkBlendedPartsAttention();
             }
             this.view.animateMessages(deltaTime);
@@ -1117,7 +1117,7 @@ export class CloudManager {
             }
         }
 
-        if (!this.playbackRecording.isPauseTimeEffects() && !this.view.isTransitioning()) {
+        if (!this.playbackRecording.isPlaying() && !this.view.isTransitioning()) {
             this.timeAdvancer?.advance(deltaTime);
             this.playbackRecording.addEffectiveTime(deltaTime);
         }
@@ -1381,8 +1381,8 @@ export class CloudManager {
         return this.playbackRecording.isInPlaybackMode();
     }
 
-    setPauseTimeEffects(paused: boolean): void {
-        this.playbackRecording.setPauseTimeEffects(paused);
+    pausePlayback(): void {
+        this.playbackRecording.pausePlayback();
     }
 
     cancelPlayback(): void {
