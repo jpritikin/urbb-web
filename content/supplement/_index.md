@@ -1,10 +1,7 @@
 ---
 title: "Online Supplement"
-version: "v1.4.2"
+version: "v1.4.4"
 ---
-
-<link rel="stylesheet" href="/css/animations.css">
-<link rel="stylesheet" href="/css/supplement.css">
 
 ## What is This?
 
@@ -152,6 +149,3 @@ We've done the work. We've tracked down the actual papers. We dare you to click 
   <p style="font-style: italic; color: #888;">Bibliography loading...</p>
 </div>
 
-<script src="/js/pages/salmonAnimation.js"></script>
-<script src="/js/pages/bibliographyEffects.js"></script>
-<script src="/js/pages/ifsSimulatorEntrance.js"></script>

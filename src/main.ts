@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initialize book navigation
-  if (document.querySelector('.book-content')) {
+  if (document.querySelector('.book-page')) {
     initBookNav();
   }
 

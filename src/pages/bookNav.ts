@@ -1,5 +1,5 @@
 export function initBookNav(): void {
-  const content = document.querySelector('.book-content');
+  const content = document.querySelector('.book-page');
   const navList = document.getElementById('book-nav-list');
 
   if (!content || !navList) return;

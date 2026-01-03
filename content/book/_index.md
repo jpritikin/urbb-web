@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.0.0"
+version: "v1.0.1"
 ---
 
 ## Acclaim
