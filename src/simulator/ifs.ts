@@ -101,6 +101,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     setupRecordingShortcuts(cloudManager);
 
     if (playbackMode && recordedSession) {
+        cloudManager.setPauseTimeEffects(true);
         setTimeout(() => {
             cloudManager.startPlayback(recordedSession!);
         }, 500);
