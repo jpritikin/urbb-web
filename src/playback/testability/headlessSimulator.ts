@@ -7,9 +7,23 @@ import { MessageOrchestrator, MessageOrchestratorView } from '../../simulator/me
 import { TimeAdvancer } from '../../simulator/timeAdvancer.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
-    SerializedModel, SerializedRelationships
+    SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot
 } from './types.js';
 import type { BiographyField } from '../../star/selfRay.js';
+
+export interface TestableSimulator {
+    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground'): ActionResult;
+    advanceIntervals(count: number): void;
+    getModelStateSnapshot(): ModelSnapshot;
+    getMode(): 'panorama' | 'foreground';
+    setMode(mode: 'panorama' | 'foreground'): void;
+}
+
+export interface SimulatorDiagnostics {
+    getRngCount(): number;
+    getModelRngLog(): RngLogEntry[];
+    getOrchestratorDebugState(): OrchestratorSnapshot;
+}
 
 class HeadlessView implements MessageOrchestratorView {
     private model: SimulatorModel | null = null;
@@ -37,7 +51,7 @@ class HeadlessView implements MessageOrchestratorView {
     }
 }
 
-export class HeadlessSimulator {
+export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostics {
     private model: SimulatorModel;
     private relationships: CloudRelationshipManager;
     private rng: RNG;
@@ -93,8 +107,7 @@ export class HeadlessSimulator {
             this.rng,
             {
                 getMode: () => this.currentMode,
-                onSpontaneousBlend: (_event, _lastAttentionCheck) => {
-                    // Mirror live behavior: spontaneous blend switches to foreground
+                onSpontaneousBlend: (_event, _accumulatedTime) => {
                     if (this.currentMode === 'panorama') {
                         this.currentMode = 'foreground';
                     }
@@ -234,14 +247,15 @@ export class HeadlessSimulator {
         return this.rng.getCallLog();
     }
 
-    getOrchestratorDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } {
+    getOrchestratorDebugState(): OrchestratorSnapshot {
         return this.orchestrator.getDebugState();
     }
 
-    getModelStateSnapshot(): { targets: string[]; blended: string[] } {
+    getModelStateSnapshot(): ModelSnapshot {
         return {
             targets: [...this.model.getTargetCloudIds()],
             blended: this.model.getBlendedParts(),
+            selfRay: this.model.getSelfRay()?.targetCloudId ? { targetCloudId: this.model.getSelfRay()!.targetCloudId } : null,
         };
     }
 

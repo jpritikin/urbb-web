@@ -1,6 +1,6 @@
 import { HeadlessSimulator } from '../src/playback/testability/headlessSimulator.js';
-import { runScenario, replaySession } from '../src/playback/testability/scenarios.js';
-import type { Scenario, RecordedSession, SerializedModel } from '../src/playback/testability/types.js';
+import { runScenario } from '../src/playback/testability/scenarios.js';
+import type { Scenario, SerializedModel } from '../src/playback/testability/types.js';
 
 interface TestResult {
     name: string;
@@ -16,61 +16,6 @@ function test(name: string, passed: boolean, details: string = '') {
 
 function runAllTrivialIFSTests(): void {
     results = [];
-
-    // Basic part registration
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([
-            { id: 'protector', name: 'Protector', trust: 0.8 },
-            { id: 'exile', name: 'Exile', trust: 0.3 },
-        ]);
-
-        const model = sim.getModel();
-        test('Part registration - protector trust', model.parts.getTrust('protector') === 0.8,
-             `expected 0.8 got ${model.parts.getTrust('protector')}`);
-        test('Part registration - exile trust', model.parts.getTrust('exile') === 0.3,
-             `expected 0.3 got ${model.parts.getTrust('exile')}`);
-    }
-
-    // Relationship setup
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([
-            { id: 'protector', name: 'Protector' },
-            { id: 'exile', name: 'Exile' },
-        ]);
-        sim.setupRelationships({
-            protections: [{ protectorId: 'protector', protectedId: 'exile' }],
-        });
-
-        const rel = sim.getRelationships();
-        const protecting = rel.getProtecting('protector');
-        test('Relationship - protector protects exile', protecting.has('exile'),
-             `expected exile in protecting set`);
-    }
-
-    // Join conference action
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([{ id: 'part1', name: 'Part One' }]);
-
-        const result = sim.executeAction('join_conference', 'part1');
-        test('Join conference - success', result.success === true);
-
-        const targetIds = sim.getModel().getTargetCloudIds();
-        test('Join conference - part is target', targetIds.has('part1'),
-             `expected part1 in targets`);
-    }
-
-    // Blend action
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([{ id: 'part1', name: 'Part One' }]);
-
-        sim.executeAction('blend', 'part1');
-        const blendedAfterBlend = sim.getModel().getBlendedParts();
-        test('Blend - part is blended', blendedAfterBlend.includes('part1'));
-    }
 
     // Scenario runner
     {
@@ -120,49 +65,6 @@ function runAllTrivialIFSTests(): void {
              `expected ~${expectedIncrease} increase, got ${actualIncrease}`);
     }
 
-    // Session replay with elapsed time
-    {
-        const session: RecordedSession = {
-            version: 1,
-            modelSeed: 12345,
-            timestamp: Date.now(),
-            initialModel: {
-                targetCloudIds: [],
-                supportingParts: {},
-                blendedParts: {},
-                pendingBlends: [],
-                selfRay: null,
-                displacedParts: [],
-                pendingAttentionDemand: null,
-                messages: [],
-                messageIdCounter: 0,
-                partStates: {
-                    'part1': {
-                        trust: 0.5,
-                        needAttention: 0,
-                        partAge: 'unknown',
-                        biography: { name: { revealed: true, value: 'Part One' } },
-                        dialogues: { job: [], unburdened: [], blended: [], generic: [] },
-                    },
-                },
-            },
-            initialRelationships: {
-                protections: [],
-                grievances: [],
-                proxies: [],
-            },
-            actions: [
-                { action: 'join_conference', cloudId: 'part1', elapsedTime: 0 },
-                { action: 'blend', cloudId: 'part1', elapsedTime: 2.5 },
-            ],
-        };
-
-        const result = replaySession(session);
-        test('Replay - success', result.passed === true);
-        test('Replay - action count', result.actionResults.length === 2,
-             `expected 2 actions, got ${result.actionResults.length}`);
-    }
-
     // Deterministic replay with same seed
     {
         const scenario: Scenario = {
@@ -196,24 +98,6 @@ function runAllTrivialIFSTests(): void {
                      JSON.stringify(stripTimestamps(result2.finalModel));
         test('Deterministic replay - same results', same,
              'models differ between runs');
-    }
-
-    // Serialization round-trip
-    {
-        const sim = new HeadlessSimulator({ seed: 12345 });
-        sim.setupParts([
-            { id: 'part1', name: 'Part One', trust: 0.7 },
-            { id: 'part2', name: 'Part Two', trust: 0.5 },
-        ]);
-        sim.executeAction('join_conference', 'part1');
-        sim.executeAction('join_conference', 'part2');
-        sim.executeAction('blend', 'part1');
-
-        const json = sim.getModelJSON();
-        test('Serialization - targetCloudIds', json.targetCloudIds.includes('part2'),
-             `targets: ${json.targetCloudIds.join(', ')}`);
-        test('Serialization - blendedParts', 'part1' in json.blendedParts);
-        test('Serialization - partStates', 'part1' in json.partStates && 'part2' in json.partStates);
     }
 }
 

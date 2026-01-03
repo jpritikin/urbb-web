@@ -280,8 +280,7 @@ export class CloudManager {
             this.rng,
             {
                 getMode: () => this.view.getMode(),
-                onSpontaneousBlend: (event, lastAttentionCheck) => {
-                    // Record intervals processed before this blend triggered
+                onSpontaneousBlend: (event, accumulatedTime) => {
                     if (this.recorder.isRecording()) {
                         const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
                         if (intervalCount > 0) {
@@ -290,7 +289,7 @@ export class CloudManager {
                     }
                     this.recorder.markSpontaneousBlendTriggered(
                         this.rng.getCallCount(),
-                        lastAttentionCheck
+                        accumulatedTime
                     );
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
                 },
@@ -1383,11 +1382,6 @@ export class CloudManager {
         });
     }
 
-    private advanceSimulationTime(deltaTime: number): void {
-        this.view.completeAllDelayedArrivals((cloudId) => this.model.isBlended(cloudId));
-        this.timeAdvancer?.advance(deltaTime);
-    }
-
     private handleSpontaneousBlend(cloudId: string, urgent: boolean): void {
         const inPanorama = this.view.getMode() === 'panorama';
         this.act({ action: 'spontaneous_blend', cloudId }, () => {
@@ -1481,9 +1475,6 @@ export class CloudManager {
             },
             setPauseTimeEffects: (paused) => {
                 this.pauseTimeEffects = paused;
-            },
-            advanceSimulationTime: (deltaTime: number) => {
-                this.advanceSimulationTime(deltaTime);
             },
             advanceIntervals: (count: number) => {
                 this.timeAdvancer?.advanceIntervals(count);

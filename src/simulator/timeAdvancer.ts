@@ -12,7 +12,7 @@ export interface SpontaneousBlendEvent {
 
 export interface TimeAdvancerCallbacks {
     getMode: () => 'panorama' | 'foreground';
-    onSpontaneousBlend: (event: SpontaneousBlendEvent, lastAttentionCheck: number) => void;
+    onSpontaneousBlend: (event: SpontaneousBlendEvent, accumulatedTime: number) => void;
 }
 
 export interface TimeAdvancerOptions {

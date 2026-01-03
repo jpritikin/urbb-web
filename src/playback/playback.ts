@@ -2,31 +2,14 @@ import type { RecordedAction, RecordedSession } from './testability/types.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { isStarMenuAction } from '../simulator/therapistActions.js';
+import { PlaybackReticle } from './playbackReticle.js';
 
-const RETICLE_TOP_HAND_X_OFFSET = -10;
-const RETICLE_BOTTOM_HAND_X_OFFSET = 10;
-
-const RETICLE_FADE_MS = 600;
 const HOVER_PAUSE_MS = 0;
 const SLICE_HOVER_PAUSE_MS = 1500;
 const MOVE_BASE_DURATION_MS = 900;
-const MOVE_BASE_DISTANCE = 300; // pixels - distance that takes base duration
-const HUG_DURATION_MS = 400;
+const MOVE_BASE_DISTANCE = 300;
 const INTER_ACTION_DELAY_MS = 1000;
 const INTRA_ACTION_DELAY_MS = 800;
-const KISS_DURATION_MS = 1500;
-const KISS_SPEED = 25; // pixels per second
-
-interface DriftingKiss {
-    element: SVGTextElement;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    rotation: number;
-    angularVelocity: number;
-    age: number;
-}
 
 export interface ActionResult {
     success: boolean;
@@ -44,35 +27,51 @@ export interface MenuSliceInfo {
     itemCount: number;
 }
 
-export interface PlaybackCallbacks {
+export interface PlaybackViewState {
     getCloudPosition: (cloudId: string) => { x: number; y: number } | null;
     getMenuCenter: () => { x: number; y: number } | null;
     getSlicePosition: (sliceIndex: number, menuCenter: { x: number; y: number }, itemCount: number) => { x: number; y: number };
-    getMode: () => 'panorama' | 'foreground';
-    getPartName: (cloudId: string) => string;
-    getLastActionResult: () => ActionResult | null;
-    clearLastActionResult: () => void;
-    getModelState: () => ModelState;
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
     hasActiveSpiralExits: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
+}
 
+export interface PlaybackInputSimulator {
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
     simulateClickOnCloud: (cloudId: string) => ActionResult;
+}
 
+export interface PlaybackModelAccess {
+    getMode: () => 'panorama' | 'foreground';
+    getPartName: (cloudId: string) => string;
+    getModelState: () => ModelState;
+    getLastActionResult: () => ActionResult | null;
+    clearLastActionResult: () => void;
+}
+
+export interface PlaybackTimeControl {
     setPauseTimeEffects: (paused: boolean) => void;
-    advanceSimulationTime: (deltaTime: number) => void;
     advanceIntervals: (count: number) => void;
     executeSpontaneousBlend: (cloudId: string) => void;
+}
+
+export interface PlaybackLifecycle {
     onActionCompleted: (action: RecordedAction) => ActionResult;
     onPlaybackComplete: () => void;
     onPlaybackCancelled: () => void;
     onPlaybackError: () => void;
 }
+
+export interface PlaybackCallbacks extends
+    PlaybackViewState,
+    PlaybackInputSimulator,
+    PlaybackModelAccess,
+    PlaybackTimeControl,
+    PlaybackLifecycle {}
 
 type PlaybackState = 'idle' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
 
@@ -84,22 +83,7 @@ export class PlaybackController {
     private actions: RecordedAction[] = [];
     private callbacks: PlaybackCallbacks;
     private errorMessage: string = '';
-
-    private reticleGroup: SVGGElement | null = null;
-    private reticleOpacity: number = 0;
-    private reticleX: number = 0;
-    private reticleY: number = 0;
-    private reticleTargetX: number = 0;
-    private reticleTargetY: number = 0;
-    private reticleVisible: boolean = false;
-    private reticleTilt: number = 0; // stochastic +/- 20 degree tilt
-    private reticleFadeDirection: 'in' | 'out' | 'none' = 'none';
-    private hugAnimating: boolean = false;
-    private hugProgress: number = 0; // 0→1 over HUG_DURATION_MS
-    private hugRelaxFactor: number = 1; // random 0.5-1, determines post-click hand distance
-    private fadeProgress: number = 0; // 0 = folded/far, 1 = open/close
-    private fadeOutArcAngle: number = 0; // random 10-20 degrees, set when fade out starts
-    private kisses: DriftingKiss[] = [];
+    private reticle: PlaybackReticle;
 
     private controlPanel: HTMLDivElement | null = null;
     private countdownDisplay: HTMLSpanElement | null = null;
@@ -118,6 +102,7 @@ export class PlaybackController {
         callbacks: PlaybackCallbacks
     ) {
         this.callbacks = callbacks;
+        this.reticle = new PlaybackReticle(svgElement);
     }
 
     start(session: RecordedSession): void {
@@ -128,7 +113,7 @@ export class PlaybackController {
         this.canResume = true;
         this.waitCountdown = INTER_ACTION_DELAY_MS / 1000;
 
-        this.createReticle();
+        this.reticle.create();
         this.createControlPanel();
         this.updateControlPanel();
         this.callbacks.setPauseTimeEffects(true);
@@ -180,7 +165,7 @@ export class PlaybackController {
     update(deltaTime: number): void {
         if (this.state === 'complete' || this.state === 'error') return;
 
-        this.animateReticle(deltaTime);
+        this.reticle.update(deltaTime);
 
         if (this.state === 'waiting') {
             this.waitCountdown -= deltaTime;
@@ -302,7 +287,7 @@ export class PlaybackController {
     private async executeSelectTarget(action: RecordedAction): Promise<void> {
         await this.toggleToPanorama();
         await this.hoverAndClickCloud(action.cloudId);
-        await this.fadeOutReticle();
+        await this.reticle.fadeOut();
     }
 
     private async executeCloudAction(action: RecordedAction): Promise<void> {
@@ -328,7 +313,7 @@ export class PlaybackController {
 
         if (needsTargetClick) {
             await this.hoverAndClickCloud(action.targetCloudId!, `${action.action} target ${action.targetCloudId}`, true);
-            await this.fadeOutReticle();
+            await this.reticle.fadeOut();
         }
     }
 
@@ -348,7 +333,7 @@ export class PlaybackController {
         // Star menu actions require clicking target cloud
         const targetCloudId = action.targetCloudId ?? action.cloudId;
         await this.hoverAndClickCloud(targetCloudId, `${action.action} target ${targetCloudId}`, true);
-        await this.fadeOutReticle();
+        await this.reticle.fadeOut();
     }
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
@@ -364,7 +349,7 @@ export class PlaybackController {
         if (!selectSuccess) return;
 
         if (fadeOut) {
-            await this.fadeOutReticle();
+            await this.reticle.fadeOut();
         }
     }
 
@@ -386,43 +371,36 @@ export class PlaybackController {
         await this.showReticleAtCloud(cloudId);
         const pos = this.callbacks.getCloudPosition(cloudId);
         if (pos) this.callbacks.simulateHover(pos.x, pos.y);
-        await this.trackingDelay(HOVER_PAUSE_MS, cloudId);
+        await this.trackCloudDelay(HOVER_PAUSE_MS, cloudId);
         return this.clickOnCloud(cloudId, context, expectAction);
     }
 
-    private async trackingDelay(ms: number, cloudId?: string): Promise<void> {
-        if (!cloudId) {
-            await this.delay(ms);
-            return;
-        }
+    private async trackCloudDelay(ms: number, cloudId: string): Promise<void> {
         const interval = 50;
         let remaining = ms;
         while (remaining > 0) {
             await this.delay(Math.min(interval, remaining));
             remaining -= interval;
             const pos = this.callbacks.getCloudPosition(cloudId);
-            if (pos) {
-                this.reticleTargetX = pos.x;
-                this.reticleTargetY = pos.y;
-            }
+            if (pos) this.reticle.setTarget(pos.x, pos.y);
         }
     }
 
     private async hoverOnSlice(x: number, y: number): Promise<void> {
-        await this.moveReticleTo(x, y);
+        await this.reticle.moveTo(x, y);
         this.callbacks.simulateHover(x, y);
         await this.delay(SLICE_HOVER_PAUSE_MS);
     }
 
     private async clickAtPosition(x: number, y: number, context?: string, expectAction: boolean = false, retryCount: number = 0): Promise<boolean> {
         await this.waitForCanvasOnScreen();
-        await this.animateHug();
+        await this.reticle.animateHug();
         this.callbacks.clearLastActionResult();
 
         if (this.controlPanel) this.controlPanel.style.pointerEvents = 'none';
         const clickResult = this.callbacks.simulateClickAtPosition(x, y);
         if (this.controlPanel) this.controlPanel.style.pointerEvents = '';
-        this.spawnKisses(x, y);
+        this.reticle.spawnKisses(x, y);
 
         if (clickResult.message === 'thought-bubble-dismissed' && retryCount < 3) {
             await this.delay(100);
@@ -434,22 +412,14 @@ export class PlaybackController {
 
     private async clickOnCloud(cloudId: string, context?: string, expectAction: boolean = false): Promise<boolean> {
         await this.waitForCanvasOnScreen();
-        await this.animateHug();
+        await this.reticle.animateHug();
         this.callbacks.clearLastActionResult();
 
         const pos = this.callbacks.getCloudPosition(cloudId);
         const clickResult = this.callbacks.simulateClickOnCloud(cloudId);
-        if (pos) this.spawnKisses(pos.x, pos.y);
+        if (pos) this.reticle.spawnKisses(pos.x, pos.y);
 
         return this.handleClickResult(clickResult, context ?? cloudId, expectAction);
-    }
-
-    private async animateHug(): Promise<void> {
-        this.hugAnimating = true;
-        this.hugProgress = 0;
-        this.hugRelaxFactor = 0.5 + Math.random() * 0.5;
-        await this.delay(HUG_DURATION_MS);
-        this.hugAnimating = false;
     }
 
     private async handleClickResult(clickResult: ActionResult, context: string, expectAction: boolean): Promise<boolean> {
@@ -486,7 +456,7 @@ export class PlaybackController {
     private async toggleToPanorama(): Promise<void> {
         if (this.callbacks.getMode() === 'panorama') return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, 'mode toggle');
-        await this.fadeOutReticle();
+        await this.reticle.fadeOut();
         await this.delay(INTRA_ACTION_DELAY_MS);
     }
 
@@ -494,62 +464,13 @@ export class PlaybackController {
         const targetMode = action.newMode;
         if (!targetMode || this.callbacks.getMode() === targetMode) return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
-        await this.fadeOutReticle();
+        await this.reticle.fadeOut();
     }
 
     private async showReticleAtCloud(cloudId: string): Promise<void> {
         const pos = this.callbacks.getCloudPosition(cloudId);
         if (!pos) return;
-
-        if (this.reticleVisible) {
-            // Animate to new position if already visible
-            await this.moveReticleTo(pos.x, pos.y);
-        } else {
-            // Fade in at position
-            this.reticleX = pos.x;
-            this.reticleY = pos.y;
-            this.reticleTargetX = pos.x;
-            this.reticleTargetY = pos.y;
-            this.reticleVisible = true;
-            this.reticleTilt = 40 + (Math.random() - 0.5) * 60;
-            this.reticleFadeDirection = 'in';
-            this.fadeProgress = 0;
-            await this.trackingDelay(RETICLE_FADE_MS, cloudId);
-        }
-    }
-
-    private reticleMoveProgress: number = 1;
-    private reticleMoveDuration: number = 0;
-    private reticleMoveStartX: number = 0;
-    private reticleMoveStartY: number = 0;
-    private reticleMoveEndX: number = 0;
-    private reticleMoveEndY: number = 0;
-
-    private async moveReticleTo(x: number, y: number): Promise<void> {
-        const dx = x - this.reticleX;
-        const dy = y - this.reticleY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const duration = MOVE_BASE_DURATION_MS * (distance / MOVE_BASE_DISTANCE);
-
-        this.reticleMoveStartX = this.reticleX;
-        this.reticleMoveStartY = this.reticleY;
-        this.reticleMoveEndX = x;
-        this.reticleMoveEndY = y;
-        this.reticleMoveProgress = 0;
-        this.reticleMoveDuration = duration;
-        this.reticleTargetX = x;
-        this.reticleTargetY = y;
-
-        await this.delay(duration);
-    }
-
-    private async fadeOutReticle(): Promise<void> {
-        this.reticleFadeDirection = 'out';
-        this.fadeOutArcAngle = -(10 + Math.random() * 10) * Math.PI / 180;
-        await this.delay(RETICLE_FADE_MS);
-        this.reticleVisible = false;
-        this.reticleOpacity = 0;
-        this.fadeProgress = 0;
+        await this.reticle.showAt(pos.x, pos.y, cloudId, (id) => this.callbacks.getCloudPosition(id));
     }
 
     private delay(ms: number): Promise<void> {
@@ -657,203 +578,6 @@ export class PlaybackController {
                 }
             }, 100);
         });
-    }
-
-    private animateReticle(deltaTime: number): void {
-        if (!this.reticleGroup) return;
-
-        // Fade and rotation/position animation
-        const fadeRate = deltaTime / (RETICLE_FADE_MS / 1000);
-        if (this.reticleFadeDirection === 'in') {
-            this.fadeProgress = Math.min(1, this.fadeProgress + fadeRate);
-            this.reticleOpacity = Math.min(1, this.reticleOpacity + fadeRate);
-            if (this.fadeProgress >= 1) {
-                this.reticleFadeDirection = 'none';
-            }
-        } else if (this.reticleFadeDirection === 'out') {
-            this.fadeProgress = Math.max(0, this.fadeProgress - fadeRate);
-            this.reticleOpacity = Math.max(0, this.reticleOpacity - fadeRate);
-        }
-
-        // Position animation with quadratic ease-in-out
-        if (this.reticleMoveProgress < 1 && this.reticleMoveDuration > 0) {
-            this.reticleMoveProgress = Math.min(1, this.reticleMoveProgress + deltaTime / (this.reticleMoveDuration / 1000));
-            const t = this.reticleMoveProgress;
-            const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-            this.reticleX = this.reticleMoveStartX + (this.reticleMoveEndX - this.reticleMoveStartX) * eased;
-            this.reticleY = this.reticleMoveStartY + (this.reticleMoveEndY - this.reticleMoveStartY) * eased;
-        } else {
-            // Fallback smoothing for tracking moving clouds
-            const positionSmoothing = 10;
-            this.reticleX += (this.reticleTargetX - this.reticleX) * Math.min(1, deltaTime * positionSmoothing);
-            this.reticleY += (this.reticleTargetY - this.reticleY) * Math.min(1, deltaTime * positionSmoothing);
-        }
-
-        // Hug animation - single 0→1 cycle, easing creates 0→1→0 squeeze
-        if (this.hugAnimating) {
-            this.hugProgress = Math.min(1, this.hugProgress + deltaTime / (HUG_DURATION_MS / 1000));
-        }
-        this.updateHugHands(this.hugProgress);
-
-        this.reticleGroup.setAttribute('transform', `translate(${this.reticleX}, ${this.reticleY}) rotate(${this.reticleTilt})`);
-        this.reticleGroup.setAttribute('opacity', String(this.reticleOpacity));
-        this.reticleGroup.style.display = this.reticleVisible ? '' : 'none';
-
-        // Update drifting kisses
-        this.updateKisses(deltaTime);
-    }
-
-    private topHand: SVGTextElement | null = null;
-    private bottomHand: SVGTextElement | null = null;
-    private haloCircle: SVGCircleElement | null = null;
-
-    private static readonly HALO_RADIUS_OPEN = 45;
-    private static readonly HALO_RADIUS_CLICK = 4;
-    private static readonly HALO_OPACITY_OPEN = 0.2;
-    private static readonly HALO_OPACITY_CLICK = 1;
-    private static readonly HALO_COLOR = '#E6B3CC'; // pastel pink
-
-    private createReticle(): void {
-        this.reticleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        this.reticleGroup.setAttribute('class', 'playback-reticle');
-        this.reticleGroup.style.display = 'none';
-        this.reticleGroup.style.pointerEvents = 'none';
-
-        // Halo circle (behind hands)
-        this.haloCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        this.haloCircle.setAttribute('cx', '0');
-        this.haloCircle.setAttribute('cy', '0');
-        this.haloCircle.setAttribute('r', String(PlaybackController.HALO_RADIUS_OPEN));
-        this.haloCircle.setAttribute('fill', PlaybackController.HALO_COLOR);
-        this.haloCircle.setAttribute('opacity', String(PlaybackController.HALO_OPACITY_OPEN));
-        this.reticleGroup.appendChild(this.haloCircle);
-
-        // Top hand emoji 🫳
-        this.topHand = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        this.topHand.setAttribute('font-size', '28');
-        this.topHand.setAttribute('text-anchor', 'middle');
-        this.topHand.setAttribute('dominant-baseline', 'middle');
-        this.topHand.textContent = '🫳';
-        this.reticleGroup.appendChild(this.topHand);
-
-        // Bottom hand emoji 🫴
-        this.bottomHand = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        this.bottomHand.setAttribute('font-size', '28');
-        this.bottomHand.setAttribute('text-anchor', 'middle');
-        this.bottomHand.setAttribute('dominant-baseline', 'middle');
-        this.bottomHand.textContent = '🫴';
-        this.reticleGroup.appendChild(this.bottomHand);
-
-        this.updateHugHands(0);
-
-        this.svgElement.appendChild(this.reticleGroup);
-    }
-
-    private updateHugHands(progress: number): void {
-        // progress: 0→1 over full animation
-        // Convert to squeeze: 0→1→0 (peak at progress=0.5)
-        const triangle = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
-        // Apply quartic ease-in-out for smooth acceleration/deceleration
-        const easedSqueeze = triangle < 0.5
-            ? 8 * triangle * triangle * triangle * triangle
-            : 1 - Math.pow(-2 * triangle + 2, 4) / 2;
-        const baseSpread = 35;
-        const hugSpread = 12;
-        // After click, hands relax to a random position between hugSpread and baseSpread
-        const relaxTarget = hugSpread + (baseSpread - hugSpread) * this.hugRelaxFactor;
-        const targetSpread = progress < 0.5 ? baseSpread : relaxTarget;
-        const spread = targetSpread - (targetSpread - hugSpread) * easedSqueeze;
-
-        // During fade in/out: hands rotate and move from farther position
-        // fadeProgress: 0 = folded (180°) and far, 1 = open (0°) and at target
-        // Ease-out: starts fast, slows down as it approaches target
-        const easeOut = 1 - Math.pow(1 - this.fadeProgress, 2);
-        const rotation = 90 * (1 - this.fadeProgress);
-        const extraDistance = 100 * (1 - easeOut);
-
-        // Parabolic path during fade out: hands curve outward, starting curved then straightening
-        // fadeOutT goes 0→1 as hands move away (fadeProgress 1→0)
-        const fadeOutT = 1 - this.fadeProgress;
-        // At click point (fadeOutT=0): angle=0, hands centered. As they move away: curve out then straighten
-        const pathAngle = this.fadeOutArcAngle * fadeOutT * (1 - fadeOutT) * 4;
-        const distance = spread + extraDistance;
-        const pathX = Math.sin(pathAngle) * distance;
-
-        const topY = -Math.cos(pathAngle) * distance;
-        const bottomY = Math.cos(pathAngle) * distance;
-
-        // Top hand rotates CW (positive), bottom hand rotates CCW (negative)
-        // Use translate in transform instead of x/y attributes for consistent positioning
-        // Apply lateral offset to each hand, reducing to half during squeeze
-        const offsetScale = this.fadeProgress * (1 - 0.5 * easedSqueeze);
-        const topOffset = RETICLE_TOP_HAND_X_OFFSET * offsetScale;
-        const bottomOffset = RETICLE_BOTTOM_HAND_X_OFFSET * offsetScale;
-        this.topHand?.setAttribute('transform', `translate(${-pathX + topOffset}, ${topY}) rotate(${rotation})`);
-
-        this.bottomHand?.setAttribute('transform', `translate(${pathX + bottomOffset}, ${bottomY}) scale(-1, 1) rotate(${-rotation})`);
-
-        // Animate halo: shrinks and becomes more opaque on click
-        if (this.haloCircle) {
-            const { HALO_RADIUS_OPEN, HALO_RADIUS_CLICK, HALO_OPACITY_OPEN, HALO_OPACITY_CLICK } = PlaybackController;
-            const radius = HALO_RADIUS_OPEN - (HALO_RADIUS_OPEN - HALO_RADIUS_CLICK) * easedSqueeze;
-            const opacity = HALO_OPACITY_OPEN + (HALO_OPACITY_CLICK - HALO_OPACITY_OPEN) * easedSqueeze;
-            this.haloCircle.setAttribute('r', String(radius));
-            this.haloCircle.setAttribute('opacity', String(opacity));
-        }
-    }
-
-    private spawnKisses(x: number, y: number): void {
-        const r = Math.random();
-        const count = r < 0.6 ? 1 : r < 0.9 ? 2 : 3;
-        const emojis = ['💋', '🎉', '🎊', '🪄', '💎', '🔑', '❤️', '💥', '💦'];
-        const rotatedEmojis = new Set(['💋', '🔑']);
-        for (let i = 0; i < count; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = KISS_SPEED * (0.5 + Math.random() * 0.5);
-            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-            const shouldRotate = rotatedEmojis.has(emoji);
-
-            const kiss = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            kiss.setAttribute('font-size', '16');
-            kiss.setAttribute('text-anchor', 'middle');
-            kiss.setAttribute('dominant-baseline', 'middle');
-            kiss.textContent = emoji;
-            kiss.style.pointerEvents = 'none';
-            this.svgElement.appendChild(kiss);
-
-            this.kisses.push({
-                element: kiss,
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                rotation: shouldRotate ? 45 : 0,
-                angularVelocity: shouldRotate ? (Math.random() - 0.5) * 400 : 0,
-                age: 0
-            });
-        }
-    }
-
-    private updateKisses(deltaTime: number): void {
-        for (let i = this.kisses.length - 1; i >= 0; i--) {
-            const kiss = this.kisses[i];
-            kiss.age += deltaTime * 1000;
-            kiss.x += kiss.vx * deltaTime;
-            kiss.y += kiss.vy * deltaTime;
-            kiss.rotation += kiss.angularVelocity * deltaTime;
-
-            const progress = kiss.age / KISS_DURATION_MS;
-            const opacity = 1 - progress;
-            const scale = 1 + progress;
-
-            kiss.element.setAttribute('transform', `translate(${kiss.x}, ${kiss.y}) rotate(${kiss.rotation}) scale(${scale})`);
-            kiss.element.setAttribute('opacity', String(Math.max(0, opacity)));
-
-            if (kiss.age >= KISS_DURATION_MS) {
-                kiss.element.remove();
-                this.kisses.splice(i, 1);
-            }
-        }
     }
 
     private createControlPanel(): void {
@@ -991,20 +715,12 @@ export class PlaybackController {
     }
 
     private cleanup(): void {
-        if (this.reticleGroup) {
-            this.reticleGroup.remove();
-            this.reticleGroup = null;
-        }
+        this.reticle.destroy();
 
         if (this.controlPanel) {
             this.controlPanel.remove();
             this.controlPanel = null;
         }
-
-        for (const kiss of this.kisses) {
-            kiss.element.remove();
-        }
-        this.kisses = [];
 
         this.callbacks.setPauseTimeEffects(false);
     }
