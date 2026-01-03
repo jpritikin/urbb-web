@@ -209,6 +209,7 @@ export class PlaybackController {
             this.state = 'executing';
             this.callbacks.executeSpontaneousBlend(action.cloudId);
             await this.waitForSpiralExits();
+            if (this.state !== 'executing') return;
             const verifyResult = this.callbacks.onActionCompleted(action);
             console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) executed. Sync check:`, verifyResult);
             if (!verifyResult.success) {
@@ -225,7 +226,7 @@ export class PlaybackController {
 
         await this.executeAction(action);
 
-        if (this.state as PlaybackState === 'error') return;
+        if (this.state !== 'executing') return;
 
         const verifyResult = this.callbacks.onActionCompleted(action);
         console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) completed. Sync check:`, verifyResult);
