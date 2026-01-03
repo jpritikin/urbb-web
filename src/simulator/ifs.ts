@@ -3,12 +3,7 @@ import { sessionToJSON } from '../playback/testability/recorder.js';
 import { SCENARIOS, Scenario, loadRecordedSession } from './scenarios.js';
 import type { RecordedSession } from '../playback/testability/types.js';
 
-function downloadSession(cloudManager: CloudManager): void {
-    const session = cloudManager.stopRecording();
-    if (!session) {
-        console.warn('[IFS] No recording in progress');
-        return;
-    }
+function downloadSessionAsJson(session: RecordedSession): void {
     const json = sessionToJSON(session);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -32,14 +27,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
             console.warn('[IFS] No recording session available');
             return;
         }
-        const json = sessionToJSON(session);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ifs-session-${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadSessionAsJson(session);
     };
 
     cloudManager.setDownloadSessionHandler(downloadCurrentSession);

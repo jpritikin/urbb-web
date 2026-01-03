@@ -10,11 +10,11 @@ import { PieMenuController } from '../menu/pieMenuController.js';
 import { PieMenu } from '../menu/pieMenu.js';
 import type { TherapistAction } from '../simulator/therapistActions.js';
 import { createGroup } from '../utils/svgHelpers.js';
-import { RNG, createModelRNG, SeededRNG } from '../playback/testability/rng.js';
-import { ActionRecorder } from '../playback/testability/recorder.js';
+import type { RNG } from '../playback/testability/rng.js';
+import { createModelRNG } from '../playback/testability/rng.js';
 import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel, SerializedRelationships } from '../playback/testability/types.js';
 import { SimulatorController } from '../simulator/simulatorController.js';
-import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
+import { STAR_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { UIManager } from '../simulator/uiManager.js';
 import { InputHandler } from '../simulator/inputHandler.js';
@@ -24,8 +24,9 @@ import { AnimationLoop } from '../utils/animationLoop.js';
 import { MessageOrchestrator } from '../simulator/messageOrchestrator.js';
 import { PanoramaInputHandler } from './panoramaInputHandler.js';
 import { ExpandDeepenEffect } from './expandDeepenEffect.js';
-import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo } from '../playback/playback.js';
+import type { ActionResult } from '../playback/playback.js';
 import { TimeAdvancer } from '../simulator/timeAdvancer.js';
+import { PlaybackRecordingCoordinator } from '../playback/playbackRecordingCoordinator.js';
 
 export { CloudType };
 export type { TherapistAction };
@@ -75,18 +76,13 @@ export class CloudManager {
     private resolvingClouds: Set<string> = new Set();
     private carpetRenderer: CarpetRenderer | null = null;
     private messageContainer: SVGGElement | null = null;
-    private rng: RNG = createModelRNG();
-    private recorder: ActionRecorder = new ActionRecorder();
     private controller: SimulatorController | null = null;
     private effectApplicator: ActionEffectApplicator | null = null;
     private insideAct: boolean = false;
-    private downloadSessionHandler: (() => void) | null = null;
     private lastHelpPanelUpdate: number = 0;
     private expandDeepenEffect: ExpandDeepenEffect | null = null;
-    private playbackController: PlaybackController | null = null;
-    private pauseTimeEffects: boolean = false;
-    private lastActionResult: ActionResult | null = null;
     private timeAdvancer: TimeAdvancer | null = null;
+    private playbackRecording: PlaybackRecordingCoordinator;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -107,6 +103,33 @@ export class CloudManager {
             this.view.setConferenceRotationPaused(visible);
             this.view.setHelpPanelVisible(!visible);
         });
+
+        this.playbackRecording = new PlaybackRecordingCoordinator({
+            getModel: () => this.model,
+            getRelationships: () => this.relationships,
+            getCloudById: (id) => this.getCloudById(id),
+            getCloudVisualCenter: (cloudId) => this.getCloudVisualCenter(cloudId),
+            getView: () => this.view,
+            getPendingBlendsCount: () => this.model.getPendingBlends().length,
+            getTimeAdvancer: () => this.timeAdvancer,
+            getMessageOrchestrator: () => this.messageOrchestrator,
+            getPieMenuController: () => this.pieMenuController,
+            getAnimatedStar: () => this.animatedStar,
+            getInputHandler: () => this.inputHandler,
+            getUIManager: () => this.uiManager,
+            getContainer: () => this.container,
+            getSvgElement: () => this.svgElement,
+            getCanvasDimensions: () => ({ width: this.canvasWidth, height: this.canvasHeight }),
+            simulateRayClick: () => this.view.simulateRayClick(),
+            executeSpontaneousBlendForPlayback: (cloudId) => this.executeSpontaneousBlendForPlayback(cloudId),
+            checkBlendedPartsAttention: () => this.checkBlendedPartsAttention(),
+            onRngChanged: (rng) => {
+                this.initController();
+                this.messageOrchestrator?.setRNG(rng);
+                this.panoramaMotion.setRandom(() => Math.random());
+            },
+        });
+
         this.initController();
     }
 
@@ -114,25 +137,22 @@ export class CloudManager {
         this.controller = new SimulatorController({
             getModel: () => this.model,
             getRelationships: () => this.relationships,
-            rng: this.rng,
+            rng: this.playbackRecording.getRNG(),
             getPartName: (id) => this.getCloudById(id)?.text ?? id
         });
         this.effectApplicator = new ActionEffectApplicator(() => this.model, this.view);
     }
 
     setRNG(rng: RNG): void {
-        this.rng = rng;
-        this.initController();
-        this.messageOrchestrator?.setRNG(rng);
-        this.panoramaMotion.setRandom(() => Math.random());
+        this.playbackRecording.setRNG(rng);
     }
 
     getRNG(): RNG {
-        return this.rng;
+        return this.playbackRecording.getRNG();
     }
 
     setSeed(seed: number): void {
-        this.setRNG(createModelRNG(seed));
+        this.playbackRecording.setSeed(seed);
     }
 
     restoreFromSession(initialModel: SerializedModel, initialRelationships: SerializedRelationships): void {
@@ -141,7 +161,7 @@ export class CloudManager {
         this.model = SimulatorModel.fromJSON(initialModel);
         this.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
 
-        for (const [cloudId, partState] of Object.entries(initialModel.partStates)) {
+        for (const [cloudId, partState] of Object.entries(initialModel.partStates) as [string, { name: string }][]) {
             const cloud = this.createCloudVisual(partState.name, cloudId);
             this.updateCloudVisual(cloud);
         }
@@ -179,42 +199,23 @@ export class CloudManager {
     }
 
     startRecording(codeVersion: string): void {
-        if (!(this.rng instanceof SeededRNG)) {
-            const seed = Math.floor(Math.random() * 2147483647);
-            this.setRNG(createModelRNG(seed));
-        }
-        const platform = this.uiManager?.isMobile() ? 'mobile' : 'desktop';
-        this.recorder.start(
-            this.model.toJSON(),
-            this.relationships.toJSON(),
-            codeVersion,
-            platform,
-            this.rng as SeededRNG
-        );
+        this.playbackRecording.startRecording(codeVersion, this.uiManager?.isMobile() ?? false);
     }
 
     getRecordingSession(): RecordedSession | null {
-        return this.recorder.getSession(
-            this.model.toJSON(),
-            this.relationships.toJSON()
-        );
+        return this.playbackRecording.getRecordingSession();
     }
 
     stopRecording(): RecordedSession | null {
-        const session = this.recorder.getSession(
-            this.model.toJSON(),
-            this.relationships.toJSON()
-        );
-        this.recorder.clear();
-        return session;
+        return this.playbackRecording.stopRecording();
     }
 
     isRecording(): boolean {
-        return this.recorder.isRecording();
+        return this.playbackRecording.isRecording();
     }
 
     setDownloadSessionHandler(handler: () => void): void {
-        this.downloadSessionHandler = handler;
+        this.playbackRecording.setDownloadSessionHandler(handler);
     }
 
     init(containerId: string): void {
@@ -264,7 +265,7 @@ export class CloudManager {
             () => this.model,
             this.view,
             () => this.relationships,
-            this.rng,
+            this.playbackRecording.getRNG(),
             {
                 act: (label, fn) => this.act(label, fn),
                 showThoughtBubble: (text, cloudId) => this.showThoughtBubble(text, cloudId),
@@ -277,20 +278,12 @@ export class CloudManager {
             () => this.model,
             () => this.relationships,
             this.messageOrchestrator,
-            this.rng,
+            this.playbackRecording.getRNG(),
             {
                 getMode: () => this.view.getMode(),
                 onSpontaneousBlend: (event, accumulatedTime) => {
-                    if (this.recorder.isRecording()) {
-                        const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
-                        if (intervalCount > 0) {
-                            this.recorder.recordIntervals(intervalCount);
-                        }
-                    }
-                    this.recorder.markSpontaneousBlendTriggered(
-                        this.rng.getCallCount(),
-                        accumulatedTime
-                    );
+                    this.playbackRecording.recordIntervals();
+                    this.playbackRecording.markSpontaneousBlendTriggered(accumulatedTime);
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
                 },
             }
@@ -415,7 +408,7 @@ export class CloudManager {
             onFullscreenToggle: () => this.toggleFullscreen(),
             onAnimationPauseToggle: () => this.toggleAnimationPause(),
             onTracePanelToggle: () => this.toggleTracePanel(),
-            onDownloadSession: () => this.downloadSessionHandler?.(),
+            onDownloadSession: () => this.playbackRecording.triggerDownload(),
         });
         this.uiManager.createAllUI();
 
@@ -570,10 +563,10 @@ export class CloudManager {
     }
 
     private applyActionResult(result: ControllerActionResult, cloudId: string): void {
-        this.lastActionResult = {
+        this.playbackRecording.setLastActionResult({
             success: result.success,
             error: result.message
-        };
+        });
         this.effectApplicator!.apply(result, cloudId);
     }
 
@@ -974,12 +967,8 @@ export class CloudManager {
 
         this.view.setAction(label);
         const oldModel = this.model.clone();
-        // Record intervals BEFORE the action (they happened before user clicked)
-        if (recordedAction && this.recorder.isRecording()) {
-            const intervalCount = this.timeAdvancer?.getAndResetIntervalCount() ?? 0;
-            if (intervalCount > 0) {
-                this.recorder.recordIntervals(intervalCount);
-            }
+        if (recordedAction) {
+            this.playbackRecording.recordIntervals();
         }
         this.insideAct = true;
         try {
@@ -988,32 +977,8 @@ export class CloudManager {
             this.insideAct = false;
         }
         this.syncViewWithModel(oldModel);
-        if (recordedAction && this.recorder.isRecording()) {
-            const orchState = this.messageOrchestrator?.getDebugState();
-            const selfRay = this.model.getSelfRay();
-            const biography: Record<string, { ageRevealed: boolean; identityRevealed: boolean; jobRevealed: boolean; jobAppraisalRevealed: boolean; jobImpactRevealed: boolean }> = {};
-            const needAttention: Record<string, number> = {};
-            const trust: Record<string, number> = {};
-            for (const cloudId of this.model.getAllPartIds()) {
-                biography[cloudId] = {
-                    ageRevealed: this.model.parts.isAgeRevealed(cloudId),
-                    identityRevealed: this.model.parts.isIdentityRevealed(cloudId),
-                    jobRevealed: this.model.parts.isJobRevealed(cloudId),
-                    jobAppraisalRevealed: this.model.parts.isJobAppraisalRevealed(cloudId),
-                    jobImpactRevealed: this.model.parts.isJobImpactRevealed(cloudId),
-                };
-                needAttention[cloudId] = this.model.parts.getNeedAttention(cloudId);
-                trust[cloudId] = this.model.parts.getTrust(cloudId);
-            }
-            const modelState = {
-                targets: [...this.model.getTargetCloudIds()],
-                blended: this.model.getBlendedParts(),
-                selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
-                biography,
-                needAttention,
-                trust,
-            };
-            this.recorder.record(recordedAction, orchState, modelState);
+        if (recordedAction) {
+            this.playbackRecording.recordAction(recordedAction);
         }
         if (this.uiManager?.isTracePanelVisible()) {
             this.uiManager.updateTrace(this.view.getTrace());
@@ -1040,7 +1005,7 @@ export class CloudManager {
     }
 
     private animate(deltaTime: number): void {
-        this.playbackController?.update(deltaTime);
+        this.playbackRecording.updatePlayback(deltaTime);
         this.view.animate(deltaTime);
         this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
@@ -1093,7 +1058,7 @@ export class CloudManager {
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
                 this.view.renderSeatDebug();
             }
-            if (!this.pauseTimeEffects && !isTransitioning) {
+            if (!this.playbackRecording.isPauseTimeEffects() && !isTransitioning) {
                 this.checkBlendedPartsAttention();
             }
             this.view.animateMessages(deltaTime);
@@ -1152,11 +1117,9 @@ export class CloudManager {
             }
         }
 
-        if (!this.pauseTimeEffects && !this.view.isTransitioning()) {
+        if (!this.playbackRecording.isPauseTimeEffects() && !this.view.isTransitioning()) {
             this.timeAdvancer?.advance(deltaTime);
-            if (this.recorder.isRecording()) {
-                this.recorder.addEffectiveTime(deltaTime);
-            }
+            this.playbackRecording.addEffectiveTime(deltaTime);
         }
         this.view.checkVictoryCondition(this.model, this.relationships);
         this.lastHelpPanelUpdate += deltaTime;
@@ -1411,279 +1374,22 @@ export class CloudManager {
 
     // Playback mode methods
     startPlayback(session: RecordedSession): void {
-        if (!this.container || !this.svgElement) return;
-
-        const callbacks: PlaybackCallbacks = {
-            getCloudPosition: (cloudId) => {
-                if (cloudId === STAR_CLOUD_ID) {
-                    return this.view.getStarScreenPosition();
-                }
-                if (cloudId === RAY_CLOUD_ID) {
-                    const selfRay = this.model.getSelfRay();
-                    if (!selfRay) return null;
-                    const starPos = this.view.getStarScreenPosition();
-                    const cloudState = this.view.getCloudState(selfRay.targetCloudId);
-                    const cloudPos = cloudState ? { x: cloudState.x, y: cloudState.y } : starPos;
-                    return {
-                        x: (starPos.x + cloudPos.x) / 2,
-                        y: (starPos.y + cloudPos.y) / 2
-                    };
-                }
-                if (cloudId === MODE_TOGGLE_CLOUD_ID) {
-                    return { x: this.canvasWidth - 42 + 16, y: 10 + 16 };
-                }
-                return this.getCloudVisualCenter(cloudId);
-            },
-            getMenuCenter: () => this.pieMenuController?.getMenuCenter() ?? null,
-            getSlicePosition: (sliceIndex, menuCenter, itemCount) => {
-                const angleStep = (2 * Math.PI) / itemCount;
-                const startAngle = -Math.PI / 2;
-                const angle = startAngle + sliceIndex * angleStep;
-                const radius = 60;
-                return {
-                    x: menuCenter.x + radius * Math.cos(angle),
-                    y: menuCenter.y + radius * Math.sin(angle)
-                };
-            },
-            getMode: () => this.view.getMode(),
-            getPartName: (cloudId) => this.getCloudById(cloudId)?.text ?? cloudId,
-            getLastActionResult: () => this.lastActionResult,
-            clearLastActionResult: () => { this.lastActionResult = null; },
-            getModelState: (): ModelState => ({
-                targets: [...this.model.getTargetCloudIds()],
-                blended: this.model.getBlendedParts()
-            }),
-            isTransitioning: () => this.view.isTransitioning(),
-            hasPendingBlends: () => this.model.getPendingBlends().length > 0,
-            hasActiveSpiralExits: () => this.view.hasActiveSpiralExits(),
-            isMobile: () => this.uiManager?.isMobile() ?? false,
-            getIsFullscreen: () => this.uiManager?.getIsFullscreen() ?? false,
-            findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
-                const items = this.pieMenuController?.getCurrentMenuItems() ?? [];
-                const sliceIndex = items.findIndex(item => item.id === actionId);
-                if (sliceIndex < 0) return null;
-                return { sliceIndex, itemCount: items.length };
-            },
-            simulateHover: (x, y) => {
-                this.simulateHoverAtPosition(x, y);
-            },
-            simulateClickAtPosition: (x, y) => {
-                return this.simulateClickAtPosition(x, y);
-            },
-            simulateClickOnCloud: (cloudId) => {
-                return this.simulateClickOnCloud(cloudId);
-            },
-            setPauseTimeEffects: (paused) => {
-                this.pauseTimeEffects = paused;
-            },
-            advanceIntervals: (count: number) => {
-                this.timeAdvancer?.advanceIntervals(count);
-                this.checkBlendedPartsAttention();
-            },
-            executeSpontaneousBlend: (cloudId: string) => {
-                this.executeSpontaneousBlendForPlayback(cloudId);
-            },
-            onActionCompleted: (action: RecordedAction): ActionResult => {
-                return this.verifyPlaybackSync(action);
-            },
-            onPlaybackComplete: () => {
-                this.playbackController = null;
-            },
-            onPlaybackCancelled: () => {
-                this.playbackController = null;
-            },
-            onPlaybackError: () => {
-                this.downloadSessionHandler?.();
-            }
-        };
-
-        this.playbackController = new PlaybackController(this.container, this.svgElement, callbacks);
-        this.playbackController.start(session);
-    }
-
-    private simulateHoverAtPosition(x: number, y: number): void {
-        const { clientX, clientY } = this.svgToScreenCoords(x, y);
-        const element = document.elementFromPoint(clientX, clientY);
-        if (!element) return;
-
-        const mouseEnterEvent = new MouseEvent('mouseenter', {
-            clientX,
-            clientY,
-            bubbles: true,
-            cancelable: true
-        });
-
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-            clientX,
-            clientY,
-            bubbles: true,
-            cancelable: true
-        });
-
-        element.dispatchEvent(mouseEnterEvent);
-        element.dispatchEvent(mouseMoveEvent);
-    }
-
-    private svgToScreenCoords(x: number, y: number): { clientX: number; clientY: number } {
-        if (!this.svgElement) return { clientX: x, clientY: y };
-        const rect = this.svgElement.getBoundingClientRect();
-        const viewBox = this.svgElement.viewBox.baseVal;
-        const scaleX = rect.width / (viewBox.width || this.canvasWidth);
-        const scaleY = rect.height / (viewBox.height || this.canvasHeight);
-        return {
-            clientX: rect.left + x * scaleX,
-            clientY: rect.top + y * scaleY
-        };
-    }
-
-    private simulateClickAtPosition(x: number, y: number, retryCount: number = 0): ActionResult {
-        const { clientX, clientY } = this.svgToScreenCoords(x, y);
-        const starElement = this.animatedStar?.getElement();
-        if (starElement) starElement.style.pointerEvents = 'none';
-        const element = document.elementFromPoint(clientX, clientY);
-        if (starElement) starElement.style.pointerEvents = '';
-        if (!element) {
-            return { success: false, error: `No element at svg(${x.toFixed(0)}, ${y.toFixed(0)}) screen(${clientX.toFixed(0)}, ${clientY.toFixed(0)})` };
-        }
-
-        const clickEvent = new MouseEvent('click', {
-            clientX,
-            clientY,
-            bubbles: true,
-            cancelable: true
-        });
-
-        element.dispatchEvent(clickEvent);
-
-        // If we hit a thought bubble, it gets dismissed - caller should retry after delay
-        if (element.closest('.thought-bubble')) {
-            return { success: true, message: 'thought-bubble-dismissed' };
-        }
-
-        return { success: true };
-    }
-
-    private simulateClickOnCloud(cloudId: string): ActionResult {
-        if (cloudId === STAR_CLOUD_ID) {
-            this.animatedStar?.simulateClick();
-            return { success: true };
-        }
-        if (cloudId === RAY_CLOUD_ID) {
-            this.view.simulateRayClick();
-            return { success: true };
-        }
-        if (cloudId === MODE_TOGGLE_CLOUD_ID) {
-            this.uiManager?.simulateModeToggleClick();
-            return { success: true };
-        }
-        const cloud = this.getCloudById(cloudId);
-        if (!cloud) {
-            return { success: false, error: `Cloud not found: ${cloudId}` };
-        }
-        this.inputHandler?.handleCloudClick(cloud);
-        return { success: true };
+        this.playbackRecording.startPlayback(session);
     }
 
     isInPlaybackMode(): boolean {
-        return this.playbackController !== null && this.playbackController.isPlaying();
+        return this.playbackRecording.isInPlaybackMode();
     }
 
     setPauseTimeEffects(paused: boolean): void {
-        this.pauseTimeEffects = paused;
+        this.playbackRecording.setPauseTimeEffects(paused);
     }
 
     cancelPlayback(): void {
-        this.playbackController?.cancel();
+        this.playbackRecording.cancelPlayback();
     }
 
-    private verifyPlaybackSync(action: RecordedAction): ActionResult {
-        const parts: string[] = [];
-
-        if (action.rngCounts) {
-            const actualModelCount = this.rng.getCallCount();
-            if (action.rngCounts.model !== actualModelCount) {
-                const actualLog = this.rng.getCallLog();
-                console.log('[Sync] RNG mismatch - expected count:', action.rngCounts.model,
-                    'actual count:', actualModelCount, 'log:', actualLog);
-                parts.push(`model RNG count: expected ${action.rngCounts.model}, got ${actualModelCount}`);
-            }
-        }
-
-        const expected = action.modelState;
-        if (!expected) {
-            if (parts.length > 0) {
-                return { success: false, error: `Sync mismatch: ${parts.join('; ')}` };
-            }
-            return { success: true };
-        }
-
-        const actual = {
-            targets: [...this.model.getTargetCloudIds()],
-            blended: this.model.getBlendedParts()
-        };
-
-        const expectedTargets = new Set(expected.targets);
-        const actualTargets = new Set(actual.targets);
-        const expectedBlended = new Set(expected.blended);
-        const actualBlended = new Set(actual.blended);
-
-        const missingTargets = [...expectedTargets].filter(t => !actualTargets.has(t));
-        const extraTargets = [...actualTargets].filter(t => !expectedTargets.has(t));
-        const missingBlended = [...expectedBlended].filter(b => !actualBlended.has(b));
-        const extraBlended = [...actualBlended].filter(b => !expectedBlended.has(b));
-        if (missingTargets.length || extraTargets.length || missingBlended.length || extraBlended.length) {
-            const getName = (id: string) => this.getCloudById(id)?.text ?? id;
-            if (missingTargets.length) parts.push(`missing targets: ${missingTargets.map(getName).join(', ')}`);
-            if (extraTargets.length) parts.push(`extra targets: ${extraTargets.map(getName).join(', ')}`);
-            if (missingBlended.length) parts.push(`missing blended: ${missingBlended.map(getName).join(', ')}`);
-            if (extraBlended.length) parts.push(`extra blended: ${extraBlended.map(getName).join(', ')}`);
-        }
-
-        if (expected.biography) {
-            for (const [cloudId, expectedBio] of Object.entries(expected.biography)) {
-                const actualBio = {
-                    ageRevealed: this.model.parts.isAgeRevealed(cloudId),
-                    identityRevealed: this.model.parts.isIdentityRevealed(cloudId),
-                    jobRevealed: this.model.parts.isJobRevealed(cloudId),
-                    jobAppraisalRevealed: this.model.parts.isJobAppraisalRevealed(cloudId),
-                    jobImpactRevealed: this.model.parts.isJobImpactRevealed(cloudId),
-                };
-                const getName = (id: string) => this.getCloudById(id)?.text ?? id;
-                for (const [field, expectedVal] of Object.entries(expectedBio)) {
-                    const actualVal = actualBio[field as keyof typeof actualBio];
-                    if (expectedVal !== actualVal) {
-                        parts.push(`${getName(cloudId)} ${field}: expected ${expectedVal}, got ${actualVal}`);
-                    }
-                }
-            }
-        }
-
-        if (expected.trust) {
-            const getName = (id: string) => this.getCloudById(id)?.text ?? id;
-            for (const [cloudId, expectedTrust] of Object.entries(expected.trust)) {
-                const actualTrust = this.model.parts.getTrust(cloudId);
-                if (Math.abs(expectedTrust - actualTrust) > 0.001) {
-                    parts.push(`${getName(cloudId)} trust: expected ${expectedTrust.toFixed(3)}, got ${actualTrust.toFixed(3)}`);
-                }
-            }
-        }
-
-        const expectedOrch = action.orchState;
-        if (expectedOrch && this.messageOrchestrator) {
-            const actualOrch = this.messageOrchestrator.getDebugState();
-            for (const [cloudId, expectedTime] of Object.entries(expectedOrch.blendTimers)) {
-                const actualTime = actualOrch.blendTimers[cloudId] ?? 0;
-                if (Math.abs(expectedTime - actualTime) > 0.01) {
-                    const getName = (id: string) => this.getCloudById(id)?.text ?? id;
-                    parts.push(`blendTimer ${getName(cloudId)}: expected ${expectedTime.toFixed(2)}, got ${actualTime.toFixed(2)}`);
-                }
-            }
-        }
-
-        if (parts.length > 0) {
-            return { success: false, error: `Sync mismatch: ${parts.join('; ')}` };
-        }
-
-        return { success: true };
+    setLastActionResult(result: ActionResult): void {
+        this.playbackRecording.setLastActionResult(result);
     }
 }
