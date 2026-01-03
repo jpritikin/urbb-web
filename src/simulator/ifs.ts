@@ -1,6 +1,7 @@
 import { CloudManager } from '../cloud/cloudManager.js';
 import { sessionToJSON } from '../playback/testability/recorder.js';
-import { SCENARIOS, Scenario, loadRecordedSession } from './scenarios.js';
+import { loadRecordedSession, Scenario } from './scenarios.js';
+import { ScenarioSelector } from './scenarioSelector.js';
 import type { RecordedSession } from '../playback/testability/types.js';
 
 function downloadSessionAsJson(session: RecordedSession): void {
@@ -39,100 +40,14 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
         }
     });
 
-    // Auto-start recording
     cloudManager.startRecording(getPageVersion());
 
-    // Auto-stop after 1 hour
     setTimeout(() => {
         if (cloudManager.isRecording()) {
             cloudManager.stopRecording();
             console.log('[IFS] Recording auto-stopped after 1 hour');
         }
     }, MAX_RECORDING_MS);
-}
-
-function createScenarioSelector(container: HTMLElement, onSelect: (scenario: Scenario, playbackMode: boolean) => void): void {
-    const selector = document.createElement('div');
-    selector.className = 'scenario-selector';
-    selector.innerHTML = `
-        <h2>Select your next client</h2>
-        <div class="scenario-cards"></div>
-    `;
-
-    const cardsContainer = selector.querySelector('.scenario-cards')!;
-
-    for (const scenario of SCENARIOS) {
-        const card = document.createElement('div');
-        card.className = 'scenario-card';
-        card.innerHTML = `
-            <span class="scenario-difficulty ${scenario.difficulty.toLowerCase()}">${scenario.difficulty} (~${scenario.estimatedMinutes} min)</span>
-            <h3>${scenario.name}</h3>
-            <p class="scenario-description">${scenario.description}</p>
-        `;
-        card.addEventListener('click', () => {
-            selector.remove();
-            if (scenario.recordedSessionPath) {
-                createModeSelector(container, scenario, onSelect);
-            } else {
-                onSelect(scenario, false);
-            }
-        });
-        cardsContainer.appendChild(card);
-    }
-
-    container.appendChild(selector);
-}
-
-function createModeSelector(
-    container: HTMLElement,
-    scenario: Scenario,
-    onSelect: (scenario: Scenario, playbackMode: boolean) => void
-): void {
-    const selector = document.createElement('div');
-    selector.className = 'mode-selector';
-    selector.innerHTML = `
-        <h2>How would you like to proceed?</h2>
-        <p class="scenario-name">${scenario.name} - ${scenario.difficulty}</p>
-        <div class="mode-buttons"></div>
-        <button class="back-btn">← Choose different scenario</button>
-    `;
-
-    const buttonsContainer = selector.querySelector('.mode-buttons')!;
-
-    const exploreBtn = document.createElement('button');
-    exploreBtn.className = 'mode-btn';
-    exploreBtn.innerHTML = `
-        <span class="icon">🔍</span>
-        <span class="label">Explore</span>
-        <span class="sublabel">Try it yourself</span>
-    `;
-    exploreBtn.addEventListener('click', () => {
-        selector.remove();
-        onSelect(scenario, false);
-    });
-
-    const playbackBtn = document.createElement('button');
-    playbackBtn.className = 'mode-btn';
-    playbackBtn.innerHTML = `
-        <span class="icon">▶️</span>
-        <span class="label">Watch Solution</span>
-        <span class="sublabel">Recorded playback</span>
-    `;
-    playbackBtn.addEventListener('click', () => {
-        selector.remove();
-        onSelect(scenario, true);
-    });
-
-    buttonsContainer.appendChild(exploreBtn);
-    buttonsContainer.appendChild(playbackBtn);
-
-    const backBtn = selector.querySelector('.back-btn')!;
-    backBtn.addEventListener('click', () => {
-        selector.remove();
-        createScenarioSelector(container, onSelect);
-    });
-
-    container.appendChild(selector);
 }
 
 async function startSimulation(scenario: Scenario, playbackMode: boolean = false): Promise<void> {
@@ -198,7 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
-    createScenarioSelector(cloudContainer, (scenario, playbackMode) => {
+    const selector = new ScenarioSelector(cloudContainer, (scenario, playbackMode) => {
         startSimulation(scenario, playbackMode);
     });
+    selector.start();
 });
