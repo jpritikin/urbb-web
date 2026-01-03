@@ -2,14 +2,14 @@ import { SimulatorModel } from '../ifsModel.js';
 import { CarpetState, SeatInfo, createCarpetVertices, CARPET_START_SCALE, CARPET_ENTRY_STAGGER, CARPET_OFFSCREEN_DISTANCE } from '../../star/carpetRenderer.js';
 
 export const CARPET_MAX_VELOCITY = 20;
-export const CARPET_ACCELERATION = 1.5;
+export const CARPET_ACCELERATION = 2;
 export const UPDATE_INTERVAL = 100;
 export const STAR_CLOUD_ID = '*';
 export const RAY_CLOUD_ID = '*ray*';
 export const MODE_TOGGLE_CLOUD_ID = '*mode*';
 export const UNBLENDED_SEAT_ID = '__unblended__';
 
-const SEAT_REARRANGEMENT_SPEED = 0.04;
+const SEAT_REARRANGEMENT_SPEED = 0.08;
 
 function getOffscreenPosition(fromX: number, fromY: number, canvasWidth: number, canvasHeight: number): { x: number; y: number } {
     const centerX = canvasWidth / 2;
@@ -126,9 +126,11 @@ export class SeatManager {
     }
 
     private getTargetRadiusScale(seatCount: number): number {
-        if (seatCount <= 2) return 0.6;
-        if (seatCount >= 7) return 1;
-        return 0.6 + 0.4 * (seatCount - 2) / 5;
+        const min1 = 0.4;
+        const grow = 0.4;
+        if (seatCount <= 2) return min1;
+        if (seatCount >= 7) return min1 + grow;
+        return min1 + grow * (seatCount - 2) / 5;
     }
 
     getConferenceTableRadii(seatCount?: number): { rx: number; ry: number } {
@@ -288,71 +290,65 @@ export class SeatManager {
         }
 
         const existingSeats = new Map(this.seats.map(s => [s.seatId, s]));
-        const newSeats: SeatState[] = [];
-        const usedAngles = new Set<number>();
-
-        const existingSeatIds = seatIds.filter(id => existingSeats.has(id));
-        const distances: { seatId: string; angleIndex: number; distance: number }[] = [];
-
-        for (const seatId of existingSeatIds) {
-            const seat = existingSeats.get(seatId)!;
-            for (let i = 0; i < targetAngles.length; i++) {
-                const diff = Math.atan2(
-                    Math.sin(targetAngles[i] - seat.angle),
-                    Math.cos(targetAngles[i] - seat.angle)
-                );
-                distances.push({ seatId, angleIndex: i, distance: Math.abs(diff) });
-            }
-        }
-
-        distances.sort((a, b) => a.distance - b.distance);
-        const assignedSeats = new Set<string>();
-
-        for (const { seatId, angleIndex } of distances) {
-            if (assignedSeats.has(seatId) || usedAngles.has(angleIndex)) continue;
-            assignedSeats.add(seatId);
-            usedAngles.add(angleIndex);
-
-            const oldSeat = existingSeats.get(seatId)!;
-            newSeats.push({
-                seatId,
-                angle: oldSeat.angle,
-                targetAngle: targetAngles[angleIndex],
-                x: oldSeat.x,
-                y: oldSeat.y
-            });
-        }
-
-        const newSeatIds = seatIds.filter(id => !existingSeats.has(id));
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         const { rx, ry } = this.getConferenceTableRadii();
 
-        for (const seatId of newSeatIds) {
-            let bestAngleIndex = -1;
-            for (let i = 0; i < targetAngles.length; i++) {
-                if (!usedAngles.has(i)) {
-                    bestAngleIndex = i;
-                    break;
-                }
+        const allSeatData: { seatId: string; angle: number; x: number; y: number }[] = [];
+        for (const seatId of seatIds) {
+            const existing = existingSeats.get(seatId);
+            if (existing) {
+                allSeatData.push({ seatId, angle: existing.angle, x: existing.x, y: existing.y });
+            } else {
+                const spawnAngle = this.findLargestGap(allSeatData);
+                allSeatData.push({
+                    seatId,
+                    angle: spawnAngle,
+                    x: centerX + rx * Math.cos(spawnAngle),
+                    y: centerY + ry * Math.sin(spawnAngle)
+                });
             }
-            if (bestAngleIndex === -1) continue;
+        }
 
-            usedAngles.add(bestAngleIndex);
-            const angle = this.findLargestGap(newSeats);
+        const sortedSeats = [...allSeatData].sort((a, b) => a.angle - b.angle);
+        const sortedTargets = [...targetAngles].sort((a, b) => a - b);
+
+        let bestRotation = 0;
+        let bestTotalDistance = Infinity;
+        for (let rotation = 0; rotation < totalSeats; rotation++) {
+            let totalDistance = 0;
+            for (let i = 0; i < totalSeats; i++) {
+                const targetIndex = (i + rotation) % totalSeats;
+                const diff = Math.atan2(
+                    Math.sin(sortedTargets[targetIndex] - sortedSeats[i].angle),
+                    Math.cos(sortedTargets[targetIndex] - sortedSeats[i].angle)
+                );
+                totalDistance += diff * diff;
+            }
+            if (totalDistance < bestTotalDistance) {
+                bestTotalDistance = totalDistance;
+                bestRotation = rotation;
+            }
+        }
+
+        const newSeats: SeatState[] = [];
+        for (let i = 0; i < totalSeats; i++) {
+            const targetIndex = (i + bestRotation) % totalSeats;
+            const seat = sortedSeats[i];
             newSeats.push({
-                seatId,
-                angle,
-                targetAngle: targetAngles[bestAngleIndex],
-                x: centerX + rx * Math.cos(angle),
-                y: centerY + ry * Math.sin(angle)
+                seatId: seat.seatId,
+                angle: seat.angle,
+                targetAngle: sortedTargets[targetIndex],
+                x: seat.x,
+                y: seat.y
             });
         }
 
         this.seats = newSeats;
+        this.targetRadiusScale = this.getTargetRadiusScale(totalSeats);
     }
 
-    private findLargestGap(seats: SeatState[]): number {
+    private findLargestGap(seats: { angle: number }[]): number {
         if (seats.length === 0) return this.conferencePhaseShift;
 
         const sorted = [...seats].sort((a, b) => a.angle - b.angle);
@@ -422,16 +418,33 @@ export class SeatManager {
         }
     }
 
+    private getActiveCarpetIds(): string[] {
+        const ids: string[] = [];
+        for (const [id, carpet] of this.carpets) {
+            if (!carpet.entering && !carpet.exiting) {
+                ids.push(id);
+            }
+        }
+        return ids;
+    }
+
+    private computeCentroid(activeCarpetIds: string[]): { x: number; y: number } {
+        const starPos = this.getStarPosition();
+        const numPoints = activeCarpetIds.length + 1; // +1 for star
+        let cx = starPos.x;
+        let cy = starPos.y;
+        for (const id of activeCarpetIds) {
+            const carpet = this.carpets.get(id)!;
+            cx += carpet.currentX;
+            cy += carpet.currentY;
+        }
+        return { x: cx / numPoints, y: cy / numPoints };
+    }
+
     private computeOptimalMatching(): Map<string, { x: number; y: number }> {
         const REASSIGNMENT_THRESHOLD = 0.2; // radians
 
-        const activeCarpetIds: string[] = [];
-        for (const [id, carpet] of this.carpets) {
-            if (!carpet.entering && !carpet.exiting) {
-                activeCarpetIds.push(id);
-            }
-        }
-
+        const activeCarpetIds = this.getActiveCarpetIds();
         const nonStarSeats = this.seats.filter(s => s.seatId !== STAR_CLOUD_ID);
 
         if (activeCarpetIds.length === 0 || nonStarSeats.length === 0) {
@@ -441,20 +454,11 @@ export class SeatManager {
 
         const canvasCenterX = this.canvasWidth / 2;
         const canvasCenterY = this.canvasHeight / 2;
-
-        let carpetCenterX = 0;
-        let carpetCenterY = 0;
-        for (const id of activeCarpetIds) {
-            const carpet = this.carpets.get(id)!;
-            carpetCenterX += carpet.currentX;
-            carpetCenterY += carpet.currentY;
-        }
-        carpetCenterX /= activeCarpetIds.length;
-        carpetCenterY /= activeCarpetIds.length;
+        const centroid = this.computeCentroid(activeCarpetIds);
 
         const carpetAngleFromCenter = (carpetId: string): number => {
             const carpet = this.carpets.get(carpetId)!;
-            return Math.atan2(carpet.currentY - carpetCenterY, carpet.currentX - carpetCenterX);
+            return Math.atan2(carpet.currentY - centroid.y, carpet.currentX - centroid.x);
         };
 
         const seatAngleFromCenter = (seat: SeatState): number => {
@@ -696,7 +700,48 @@ export class SeatManager {
             this.debugGroup.removeChild(this.debugGroup.firstChild);
         }
 
+        const canvasCenterX = this.canvasWidth / 2;
+        const canvasCenterY = this.canvasHeight / 2;
+        const activeCarpetIds = this.getActiveCarpetIds();
+        const centroid = this.computeCentroid(activeCarpetIds);
+        const carpetCenterX = centroid.x;
+        const carpetCenterY = centroid.y;
+
+        const noPointer = (el: SVGElement) => el.setAttribute('pointer-events', 'none');
+
+        const centroidMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        centroidMarker.setAttribute('cx', String(carpetCenterX));
+        centroidMarker.setAttribute('cy', String(carpetCenterY));
+        centroidMarker.setAttribute('r', '8');
+        centroidMarker.setAttribute('fill', 'none');
+        centroidMarker.setAttribute('stroke', '#c04000');
+        centroidMarker.setAttribute('stroke-width', '2');
+        noPointer(centroidMarker);
+        this.debugGroup.appendChild(centroidMarker);
+
+        const crossSize = 6;
+        const crossH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        crossH.setAttribute('x1', String(carpetCenterX - crossSize));
+        crossH.setAttribute('y1', String(carpetCenterY));
+        crossH.setAttribute('x2', String(carpetCenterX + crossSize));
+        crossH.setAttribute('y2', String(carpetCenterY));
+        crossH.setAttribute('stroke', '#c04000');
+        crossH.setAttribute('stroke-width', '2');
+        noPointer(crossH);
+        this.debugGroup.appendChild(crossH);
+
+        const crossV = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        crossV.setAttribute('x1', String(carpetCenterX));
+        crossV.setAttribute('y1', String(carpetCenterY - crossSize));
+        crossV.setAttribute('x2', String(carpetCenterX));
+        crossV.setAttribute('y2', String(carpetCenterY + crossSize));
+        crossV.setAttribute('stroke', '#c04000');
+        crossV.setAttribute('stroke-width', '2');
+        noPointer(crossV);
+        this.debugGroup.appendChild(crossV);
+
         const timeSinceChange = (performance.now() - this.matchingChangedTime) / 1000;
+        const { rx, ry } = this.getConferenceTableRadii();
         const centerLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         centerLabel.setAttribute('x', String(this.canvasWidth / 2));
         centerLabel.setAttribute('y', String(this.canvasHeight / 2));
@@ -704,7 +749,8 @@ export class SeatManager {
         centerLabel.setAttribute('font-size', '14');
         centerLabel.setAttribute('font-family', 'monospace');
         centerLabel.setAttribute('text-anchor', 'middle');
-        centerLabel.textContent = `matching age: ${timeSinceChange.toFixed(1)}s`;
+        centerLabel.textContent = `matching age: ${timeSinceChange.toFixed(1)}s  rx=${rx.toFixed(0)} ry=${ry.toFixed(0)}`;
+        noPointer(centerLabel);
         this.debugGroup.appendChild(centerLabel);
 
         for (const [carpetId, seatId] of this.previousMatching) {
@@ -721,22 +767,38 @@ export class SeatManager {
                 line.setAttribute('stroke', '#006040');
                 line.setAttribute('stroke-width', '2');
                 line.setAttribute('stroke-dasharray', '4,4');
+                noPointer(line);
                 this.debugGroup.appendChild(line);
             }
 
-            const velocity = this.carpetVelocities.get(carpetId);
-            if (velocity) {
-                const speed = Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy);
-                const velLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                velLabel.setAttribute('x', String(carpet.currentX));
-                velLabel.setAttribute('y', String(carpet.currentY - 18));
-                velLabel.setAttribute('fill', '#400080');
-                velLabel.setAttribute('font-size', '10');
-                velLabel.setAttribute('font-family', 'monospace');
-                velLabel.setAttribute('text-anchor', 'middle');
-                velLabel.textContent = `v=${speed.toFixed(1)}`;
-                this.debugGroup.appendChild(velLabel);
+            if (seat) {
+                const seatDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                seatDot.setAttribute('cx', String(seat.x));
+                seatDot.setAttribute('cy', String(seat.y));
+                seatDot.setAttribute('r', '4');
+                seatDot.setAttribute('fill', '#0080c0');
+                noPointer(seatDot);
+                this.debugGroup.appendChild(seatDot);
             }
+
+            const velocity = this.carpetVelocities.get(carpetId);
+            const carpetAngle = Math.atan2(carpet.currentY - carpetCenterY, carpet.currentX - carpetCenterX);
+            const carpetAngleDeg = (carpetAngle * 180 / Math.PI).toFixed(0);
+
+            const seatAngle = seat ? Math.atan2(seat.y - canvasCenterY, seat.x - canvasCenterX) : 0;
+            const seatAngleDeg = seat ? (seatAngle * 180 / Math.PI).toFixed(0) : '?';
+
+            const speed = velocity ? Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy) : 0;
+            const debugLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            debugLabel.setAttribute('x', String(carpet.currentX));
+            debugLabel.setAttribute('y', String(carpet.currentY - 18));
+            debugLabel.setAttribute('fill', '#400080');
+            debugLabel.setAttribute('font-size', '10');
+            debugLabel.setAttribute('font-family', 'monospace');
+            debugLabel.setAttribute('text-anchor', 'middle');
+            debugLabel.textContent = `v=${speed.toFixed(1)} θc=${carpetAngleDeg}° θs=${seatAngleDeg}°`;
+            noPointer(debugLabel);
+            this.debugGroup.appendChild(debugLabel);
         }
     }
 }
