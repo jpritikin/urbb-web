@@ -3,7 +3,7 @@ import { createForeignObject } from '../utils/svgHelpers.js';
 export interface UIManagerConfig {
     canvasWidth: number;
     canvasHeight: number;
-    onModeToggle: (isForeground: boolean) => void;
+    setMode: (mode: 'panorama' | 'foreground') => void;
     onFullscreenToggle: () => void;
     onAnimationPauseToggle: () => void;
     onTracePanelToggle: () => void;
@@ -64,7 +64,7 @@ export class UIManager {
         this.modeToggleContainer.title = 'Panorama view — click to focus';
         this.modeToggleContainer.addEventListener('click', () => {
             const isForeground = this.modeToggleContainer?.classList.contains('focused');
-            this.config.onModeToggle(!isForeground);
+            this.config.setMode(isForeground ? 'panorama' : 'foreground');
         });
 
         foreignObject.appendChild(this.modeToggleContainer);

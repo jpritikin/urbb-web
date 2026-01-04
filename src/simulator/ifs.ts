@@ -85,7 +85,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     console.log(`[IFS] Starting scenario: ${scenario.name} (${scenario.difficulty})${playbackMode ? ' [PLAYBACK]' : ''}`);
     if (playbackMode && recordedSession) {
         cloudManager.setSeed(recordedSession.modelSeed);
-        cloudManager.restoreFromSession(recordedSession.initialModel, recordedSession.initialRelationships);
+        cloudManager.restoreFromSession(recordedSession.initialModel);
     } else {
         scenario.setup(cloudManager);
     }

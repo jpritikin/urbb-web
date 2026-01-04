@@ -1,7 +1,7 @@
 import { ActionRecorder, sessionToJSON } from './testability/recorder.js';
 import { RNG, createModelRNG, SeededRNG } from './testability/rng.js';
 import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo } from './playback.js';
-import type { RecordedSession, RecordedAction, SerializedModel, SerializedRelationships } from './testability/types.js';
+import type { RecordedSession, RecordedAction, SerializedModel } from './testability/types.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 
 export interface PlaybackRecordingDependencies {
@@ -12,6 +12,8 @@ export interface PlaybackRecordingDependencies {
         getBlendedParts(): string[];
         getSelfRay(): { targetCloudId: string } | null;
         getAllPartIds(): string[];
+        getMode(): 'panorama' | 'foreground';
+        setSelfRay(cloudId: string): void;
         parts: {
             isAgeRevealed(cloudId: string): boolean;
             isIdentityRevealed(cloudId: string): boolean;
@@ -22,11 +24,10 @@ export interface PlaybackRecordingDependencies {
             getTrust(cloudId: string): number;
         };
     };
-    getRelationships: () => { toJSON(): SerializedRelationships };
     getCloudById: (id: string) => { text: string } | null;
     getCloudVisualCenter: (cloudId: string) => { x: number; y: number } | null;
     getView: () => {
-        getMode(): 'panorama' | 'foreground';
+        getVisualMode(): 'panorama' | 'foreground';
         getStarScreenPosition(): { x: number; y: number };
         getCloudState(cloudId: string): { x: number; y: number } | undefined;
         isTransitioning(): boolean;
@@ -79,7 +80,6 @@ export class PlaybackRecordingCoordinator {
         const platform = isMobile ? 'mobile' : 'desktop';
         this.recorder.start(
             this.deps.getModel().toJSON(),
-            this.deps.getRelationships().toJSON(),
             codeVersion,
             platform,
             this.rng as SeededRNG
@@ -88,15 +88,13 @@ export class PlaybackRecordingCoordinator {
 
     getRecordingSession(): RecordedSession | null {
         return this.recorder.getSession(
-            this.deps.getModel().toJSON(),
-            this.deps.getRelationships().toJSON()
+            this.deps.getModel().toJSON()
         );
     }
 
     stopRecording(): RecordedSession | null {
         const session = this.recorder.getSession(
-            this.deps.getModel().toJSON(),
-            this.deps.getRelationships().toJSON()
+            this.deps.getModel().toJSON()
         );
         this.recorder.clear();
         return session;
@@ -252,7 +250,7 @@ export class PlaybackRecordingCoordinator {
                     y: menuCenter.y + radius * Math.sin(angle)
                 };
             },
-            getMode: () => this.deps.getView().getMode(),
+            getMode: () => this.deps.getModel().getMode(),
             getPartName: (cloudId) => this.deps.getCloudById(cloudId)?.text ?? cloudId,
             getLastActionResult: () => this.lastActionResult,
             clearLastActionResult: () => { this.lastActionResult = null; },
@@ -467,6 +465,15 @@ export class PlaybackRecordingCoordinator {
                     parts.push(`${getName(cloudId)} trust: expected ${expectedTrust.toFixed(3)}, got ${actualTrust.toFixed(3)}`);
                 }
             }
+        }
+
+        const expectedSelfRay = expected.selfRay;
+        const actualSelfRay = model.getSelfRay();
+        if (expectedSelfRay?.targetCloudId !== actualSelfRay?.targetCloudId) {
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            const expectedName = expectedSelfRay?.targetCloudId ? getName(expectedSelfRay.targetCloudId) : 'null';
+            const actualName = actualSelfRay?.targetCloudId ? getName(actualSelfRay.targetCloudId) : 'null';
+            parts.push(`selfRay: expected ${expectedName}, got ${actualName}`);
         }
 
         const expectedOrch = action.orchState;

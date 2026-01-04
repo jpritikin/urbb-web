@@ -1,10 +1,9 @@
-import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type SerializedRelationships, type OrchestratorSnapshot, type ModelSnapshot } from './types.js';
+import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type OrchestratorSnapshot, type ModelSnapshot } from './types.js';
 import type { RNG, SeededRNG, RngLogEntry } from './rng.js';
 
 export class ActionRecorder {
     private actions: RecordedAction[] = [];
     private initialModel: SerializedModel | null = null;
-    private initialRelationships: SerializedRelationships | null = null;
     private modelSeed: number = 0;
     private codeVersion: string = '';
     private platform: 'desktop' | 'mobile' = 'desktop';
@@ -20,14 +19,12 @@ export class ActionRecorder {
 
     start(
         initialModel: SerializedModel,
-        initialRelationships: SerializedRelationships,
         codeVersion: string,
         platform: 'desktop' | 'mobile',
         rng?: SeededRNG
     ): void {
         this.actions = [];
         this.initialModel = initialModel;
-        this.initialRelationships = initialRelationships;
         this.codeVersion = codeVersion;
         this.platform = platform;
         this.modelSeed = rng?.getInitialSeed() ?? 0;
@@ -102,10 +99,9 @@ export class ActionRecorder {
     }
 
     getSession(
-        finalModel?: SerializedModel,
-        finalRelationships?: SerializedRelationships
+        finalModel?: SerializedModel
     ): RecordedSession | null {
-        if (!this.initialModel || !this.initialRelationships) {
+        if (!this.initialModel) {
             return null;
         }
         return {
@@ -115,10 +111,8 @@ export class ActionRecorder {
             modelSeed: this.modelSeed,
             timestamp: this.startTimestamp,
             initialModel: this.initialModel,
-            initialRelationships: this.initialRelationships,
             actions: [...this.actions],
             finalModel,
-            finalRelationships,
         };
     }
 
@@ -129,7 +123,6 @@ export class ActionRecorder {
     clear(): void {
         this.actions = [];
         this.initialModel = null;
-        this.initialRelationships = null;
         this.modelSeed = 0;
         this.codeVersion = '';
         this.startTimestamp = 0;

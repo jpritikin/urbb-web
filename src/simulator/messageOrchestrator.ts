@@ -1,5 +1,5 @@
 import { SimulatorModel, PartMessage } from './ifsModel.js';
-import { CloudRelationshipManager } from '../cloud/cloudRelationshipManager.js';
+import { PartStateManager } from '../cloud/partStateManager.js';
 import { RNG, pickRandom } from '../playback/testability/rng.js';
 
 export interface MessageOrchestratorView {
@@ -13,12 +13,13 @@ export interface MessageOrchestratorCallbacks {
     act: (label: string, fn: () => void) => void;
     showThoughtBubble: (text: string, cloudId: string) => void;
     getCloudById: (id: string) => { id: string } | null;
+    getTime: () => number;
 }
 
 export class MessageOrchestrator {
     private getModel: () => SimulatorModel;
     private view: MessageOrchestratorView;
-    private getRelationships: () => CloudRelationshipManager;
+    private getRelationships: () => PartStateManager;
     private rng: RNG;
     private callbacks: MessageOrchestratorCallbacks;
 
@@ -33,7 +34,7 @@ export class MessageOrchestrator {
     constructor(
         getModel: () => SimulatorModel,
         view: MessageOrchestratorView,
-        getRelationships: () => CloudRelationshipManager,
+        getRelationships: () => PartStateManager,
         rng: RNG,
         callbacks: MessageOrchestratorCallbacks
     ) {
@@ -48,7 +49,7 @@ export class MessageOrchestrator {
         return this.getModel();
     }
 
-    private get relationships(): CloudRelationshipManager {
+    private get relationships(): PartStateManager {
         return this.getRelationships();
     }
 
@@ -82,7 +83,7 @@ export class MessageOrchestrator {
             this.model.parts.adjustTrust(message.targetId, 0.99);
             this.model.changeNeedAttention(message.senderId, -0.25);
             if (message.senderId !== message.targetId) {
-                this.model.parts.setAttacked(message.targetId);
+                this.model.parts.setAttackedBy(message.targetId, message.senderId);
             }
         }
         this.model.removeMessage(message.id);
@@ -195,6 +196,7 @@ export class MessageOrchestrator {
         });
         if (message) {
             this.view.startMessage(message, senderId, targetId);
+            this.model.parts.setUtterance(senderId, text, this.callbacks.getTime());
         }
     }
 }

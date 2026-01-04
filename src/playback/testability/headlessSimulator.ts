@@ -1,5 +1,5 @@
 import { SimulatorModel, PartMessage } from '../../simulator/ifsModel.js';
-import { CloudRelationshipManager } from '../../cloud/cloudRelationshipManager.js';
+import { PartStateManager } from '../../cloud/partStateManager.js';
 import { SeededRNG, RNG, createModelRNG, RngLogEntry } from './rng.js';
 import { SimulatorController } from '../../simulator/simulatorController.js';
 import { ActionEffectApplicator } from '../../simulator/actionEffectApplicator.js';
@@ -7,7 +7,7 @@ import { MessageOrchestrator, MessageOrchestratorView } from '../../simulator/me
 import { TimeAdvancer } from '../../simulator/timeAdvancer.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
-    SerializedModel, SerializedRelationships, OrchestratorSnapshot, ModelSnapshot
+    SerializedModel, OrchestratorSnapshot, ModelSnapshot
 } from './types.js';
 import type { BiographyField } from '../../star/selfRay.js';
 
@@ -53,18 +53,15 @@ class HeadlessView implements MessageOrchestratorView {
 
 export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostics {
     private model: SimulatorModel;
-    private relationships: CloudRelationshipManager;
     private rng: RNG;
     private controller: SimulatorController;
     private effectApplicator: ActionEffectApplicator;
     private orchestrator: MessageOrchestrator;
     private headlessView: HeadlessView;
     private timeAdvancer: TimeAdvancer;
-    private currentMode: 'panorama' | 'foreground' = 'panorama';
 
     constructor(config?: { seed?: number }) {
         this.model = new SimulatorModel();
-        this.relationships = new CloudRelationshipManager();
         this.rng = createModelRNG(config?.seed);
         this.controller = this.createController();
         this.effectApplicator = new ActionEffectApplicator(() => this.model);
@@ -77,9 +74,10 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
     private createController(): SimulatorController {
         return new SimulatorController({
             getModel: () => this.model,
-            getRelationships: () => this.relationships,
+            getRelationships: () => this.model.parts,
             rng: this.rng,
-            getPartName: (id) => this.model.parts.getPartName(id)
+            getPartName: (id) => this.model.parts.getPartName(id),
+            getTime: () => this.timeAdvancer?.getTime() ?? 0
         });
     }
 
@@ -87,12 +85,17 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         const orchestrator = new MessageOrchestrator(
             () => this.model,
             this.headlessView,
-            () => this.relationships,
+            () => this.model.parts,
             this.rng,
             {
                 act: (_label, fn) => fn(),
-                showThoughtBubble: () => {},
+                showThoughtBubble: (text, cloudId) => {
+                    if (this.model.isBlended(cloudId)) {
+                        this.model.parts.setUtterance(cloudId, text, this.timeAdvancer?.getTime() ?? 0);
+                    }
+                },
                 getCloudById: (id) => this.model.getPartState(id) ? { id } : null,
+                getTime: () => this.timeAdvancer?.getTime() ?? 0,
             }
         );
         this.headlessView.setOnMessageReceived((message) => orchestrator.onMessageReceived(message));
@@ -102,16 +105,11 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
     private createTimeAdvancer(): TimeAdvancer {
         return new TimeAdvancer(
             () => this.model,
-            () => this.relationships,
             this.orchestrator,
             this.rng,
             {
-                getMode: () => this.currentMode,
-                onSpontaneousBlend: (_event, _accumulatedTime) => {
-                    if (this.currentMode === 'panorama') {
-                        this.currentMode = 'foreground';
-                    }
-                },
+                getMode: () => this.model.getMode(),
+                onSpontaneousBlend: () => {},
             },
             { skipAttentionChecks: true }
         );
@@ -119,12 +117,10 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
 
     static fromSession(
         initialModel: SerializedModel,
-        initialRelationships: SerializedRelationships,
         seed?: number
     ): HeadlessSimulator {
         const sim = new HeadlessSimulator({ seed });
         sim.model = SimulatorModel.fromJSON(initialModel);
-        sim.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
         sim.controller = sim.createController();
         sim.effectApplicator = new ActionEffectApplicator(() => sim.model);
         sim.headlessView.setModel(sim.model);
@@ -146,13 +142,13 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
 
     setupRelationships(config: RelationshipConfig): void {
         for (const p of config.protections ?? []) {
-            this.relationships.addProtection(p.protectorId, p.protectedId);
+            this.model.parts.addProtection(p.protectorId, p.protectedId);
         }
         for (const g of config.grievances ?? []) {
-            this.relationships.setGrievance(g.cloudId, g.targetIds, g.dialogues);
+            this.model.parts.setGrievance(g.cloudId, g.targetIds, g.dialogues);
         }
         for (const p of config.proxies ?? []) {
-            this.relationships.addProxy(p.cloudId, p.proxyId);
+            this.model.parts.addProxy(p.cloudId, p.proxyId);
         }
     }
 
@@ -170,7 +166,7 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
 
     executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground'): ActionResult {
         if (action === 'mode_change' && newMode) {
-            this.currentMode = newMode;
+            this.model.setMode(newMode);
             return { success: true, stateChanges: [`mode -> ${newMode}`] };
         }
 
@@ -181,12 +177,7 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         });
 
         this.effectApplicator.apply(result, cloudId);
-        this.model.checkAndSetVictory(this.relationships);
-
-        // Mirror CloudManager: select_a_target switches to foreground mode
-        if (action === 'select_a_target' && result.success) {
-            this.currentMode = 'foreground';
-        }
+        this.model.checkAndSetVictory();
 
         return {
             success: result.success,
@@ -223,16 +214,16 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         return this.model;
     }
 
-    getRelationships(): CloudRelationshipManager {
-        return this.relationships;
+    getRelationships(): PartStateManager {
+        return this.model.parts;
+    }
+
+    getTime(): number {
+        return this.timeAdvancer.getTime();
     }
 
     getModelJSON(): SerializedModel {
         return this.model.toJSON();
-    }
-
-    getRelationshipsJSON(): SerializedRelationships {
-        return this.relationships.toJSON();
     }
 
     getModelRngSeed(): number | undefined {
@@ -264,10 +255,10 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
     }
 
     setMode(mode: 'panorama' | 'foreground'): void {
-        this.currentMode = mode;
+        this.model.setMode(mode);
     }
 
     getMode(): 'panorama' | 'foreground' {
-        return this.currentMode;
+        return this.model.getMode();
     }
 }

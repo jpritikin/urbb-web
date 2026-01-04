@@ -176,7 +176,6 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
     const sim = new HeadlessSimulator({ seed: path.seed });
     sim.setupFromScenario(baseScenario);
     const initialModel = sim.getModelJSON();
-    const initialRelationships = sim.getRelationshipsJSON();
 
     const recordedActions: RecordedAction[] = [];
     let pendingIntervals = 0;
@@ -229,10 +228,8 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
         modelSeed: path.seed,
         timestamp: Date.now(),
         initialModel,
-        initialRelationships,
         actions: recordedActions,
         finalModel: sim.getModelJSON(),
-        finalRelationships: sim.getRelationshipsJSON(),
     };
 }
 
@@ -463,7 +460,6 @@ function extractOutcome(stateChanges: string[], message?: string): string {
 function replayAndCollectOutcomes(session: RecordedSession): OutcomeSignature[] {
     const sim = HeadlessSimulator.fromSession(
         session.initialModel,
-        session.initialRelationships,
         session.modelSeed
     );
 

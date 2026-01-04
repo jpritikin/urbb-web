@@ -1,5 +1,4 @@
 import type { SimulatorModel } from './ifsModel.js';
-import type { CloudRelationshipManager } from '../cloud/cloudRelationshipManager.js';
 import type { MessageOrchestrator } from './messageOrchestrator.js';
 import type { RNG } from '../playback/testability/rng.js';
 
@@ -22,20 +21,18 @@ export interface TimeAdvancerOptions {
 export class TimeAdvancer {
     private accumulatedTime = 0;
     private intervalCount = 0;
+    private cumulativeTime = 0;
     private getModel: () => SimulatorModel;
-    private getRelationships: () => CloudRelationshipManager;
     private skipAttentionChecks: boolean;
 
     constructor(
         getModel: () => SimulatorModel,
-        getRelationships: () => CloudRelationshipManager,
         private orchestrator: MessageOrchestrator | null,
         private rng: RNG,
         private callbacks: TimeAdvancerCallbacks,
         options?: TimeAdvancerOptions
     ) {
         this.getModel = getModel;
-        this.getRelationships = getRelationships;
         this.skipAttentionChecks = options?.skipAttentionChecks ?? false;
     }
 
@@ -43,18 +40,19 @@ export class TimeAdvancer {
         return this.getModel();
     }
 
-    private get relationships(): CloudRelationshipManager {
-        return this.getRelationships();
-    }
-
     advance(deltaTime: number): void {
         this.accumulatedTime += deltaTime;
+        this.cumulativeTime += deltaTime;
         while (this.accumulatedTime >= ATTENTION_CHECK_INTERVAL) {
             this.accumulatedTime -= ATTENTION_CHECK_INTERVAL;
             this.intervalCount++;
             this.processOneInterval();
             this.checkAttentionDemands();
         }
+    }
+
+    getTime(): number {
+        return this.cumulativeTime;
     }
 
     advanceIntervals(count: number): void {
@@ -74,7 +72,7 @@ export class TimeAdvancer {
 
     private processOneInterval(): void {
         const inConference = this.callbacks.getMode() === 'foreground';
-        this.model.increaseNeedAttention(this.relationships, ATTENTION_CHECK_INTERVAL, inConference);
+        this.model.increaseNeedAttention(ATTENTION_CHECK_INTERVAL, inConference);
         this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndSendGrievanceMessages();
         this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
@@ -82,7 +80,7 @@ export class TimeAdvancer {
 
     private checkAttentionDemands(): void {
         const inPanorama = this.callbacks.getMode() === 'panorama';
-        const demand = this.model.checkAttentionDemands(this.relationships, this.rng, !inPanorama);
+        const demand = this.model.checkAttentionDemands(this.rng, !inPanorama);
 
         if (demand) {
             const randomVal = this.rng.random('panorama_attention');

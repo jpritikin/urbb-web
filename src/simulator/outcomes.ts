@@ -13,6 +13,7 @@ export const OUTCOMES = {
     BLENDED: 'blended',
     SEPARATING: 'separating',
     SPONTANEOUSLY_BLENDED: 'spontaneously_blended',
+    ACCOMPANIED: 'accompanied',
 
     // Help/consent
     CONSENTED_TO_HELP: 'consented_to_help',
@@ -52,6 +53,10 @@ export const OUTCOMES = {
 
     // Separate outcomes
     UNBLENDED: 'unblended',
+
+    // Validate outcomes
+    VALIDATED: 'validated',
+    VALIDATE_FAILED: 'validate_failed',
 } as const;
 
 export type Outcome = typeof OUTCOMES[keyof typeof OUTCOMES];
@@ -63,6 +68,7 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
     step_back: [OUTCOMES.STEPPED_BACK, OUTCOMES.WANTED_TO_WATCH],
     blend: [OUTCOMES.BLENDED],
     separate: [OUTCOMES.SEPARATING, OUTCOMES.UNBLENDED],
+    be_with: [OUTCOMES.ACCOMPANIED],
     spontaneous_blend: [OUTCOMES.SPONTANEOUSLY_BLENDED],
 
     job: [OUTCOMES.REVEALED_JOB, OUTCOMES.ALREADY_ANSWERED],
@@ -96,6 +102,11 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
         OUTCOMES.DEFLECTED,
         OUTCOMES.ALREADY_ANSWERED,
         OUTCOMES.TRIGGERED_BACKLASH,
+    ],
+
+    validate: [
+        OUTCOMES.VALIDATED,
+        OUTCOMES.VALIDATE_FAILED,
     ],
 };
 

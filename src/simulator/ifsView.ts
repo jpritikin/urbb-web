@@ -230,7 +230,7 @@ export class SimulatorView {
         this.transitionAnimator.setDimensions(width, height);
     }
 
-    getMode(): 'panorama' | 'foreground' {
+    getVisualMode(): 'panorama' | 'foreground' {
         return this.mode;
     }
 
@@ -464,10 +464,7 @@ export class SimulatorView {
     syncWithModel(
         oldModel: SimulatorModel | null,
         newModel: SimulatorModel,
-        instances: CloudInstance[],
-        panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
-        relationships: { getProtecting: (id: string) => Set<string> }
-    ): void {
+        instances: CloudInstance[]): void {
         // Check for displaced parts and start spiral exits
         const displacedParts = newModel.getDisplacedParts();
         const hasDisplacements = displacedParts.size > 0;
@@ -495,20 +492,28 @@ export class SimulatorView {
         this.updateCloudStateTargets(newModel, instances);
         this.syncSelfRay(newModel);
         this.syncThoughtBubbles(newModel);
+        this.syncMode(newModel);
 
         this.generateTraceEntries(oldModel, newModel);
 
-        this.checkVictoryCondition(newModel, relationships);
+        this.checkVictoryCondition(newModel);
     }
 
-    checkVictoryCondition(model: SimulatorModel, relationships: { getProtecting: (id: string) => Set<string> }): void {
+    private syncMode(model: SimulatorModel): void {
+        const modelMode = model.getMode();
+        if (modelMode !== this.mode) {
+            this.setMode(modelMode);
+        }
+    }
+
+    checkVictoryCondition(model: SimulatorModel): void {
         if (this.victoryBanner.isShown() || !this.htmlContainer) return;
 
         const now = Date.now();
         if (now - this.lastVictoryCheck < 1000) return;
         this.lastVictoryCheck = now;
 
-        if (model.checkAndSetVictory(relationships)) {
+        if (model.checkAndSetVictory()) {
             this.victoryBanner.show(this.htmlContainer);
             this.events.emit('victory-achieved', {});
         }

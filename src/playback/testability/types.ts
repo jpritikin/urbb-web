@@ -14,15 +14,14 @@ export interface SerializedModel {
     messages: PartMessage[];
     messageIdCounter: number;
     partStates: Record<string, PartState>;
-    thoughtBubbles?: ThoughtBubble[];
-    victoryAchieved?: boolean;
-    selfAmplification?: number;
-}
-
-export interface SerializedRelationships {
     protections: { protectorId: string; protectedId: string }[];
     grievances: { cloudId: string; targetIds: string[]; dialogues: string[] }[];
     proxies: { cloudId: string; proxyId: string }[];
+    attackedBy: { victimId: string; attackerIds: string[] }[];
+    thoughtBubbles?: ThoughtBubble[];
+    victoryAchieved?: boolean;
+    selfAmplification?: number;
+    mode?: 'panorama' | 'foreground';
 }
 
 export interface OrchestratorSnapshot {
@@ -76,10 +75,8 @@ export interface RecordedSession {
     modelSeed: number;
     timestamp: number;
     initialModel: SerializedModel;
-    initialRelationships: SerializedRelationships;
     actions: RecordedAction[];
     finalModel?: SerializedModel;
-    finalRelationships?: SerializedRelationships;
 }
 
 export interface PartConfig {

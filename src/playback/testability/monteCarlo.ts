@@ -323,6 +323,7 @@ export class RandomWalkRunner {
                 getRelationships: () => sim.getRelationships(),
                 rng,
                 getPartName: (id) => sim.getModel().parts.getPartName(id),
+                getTime: () => sim.getTime(),
             });
 
             let prevStateKey = this.getStateKey(sim);

@@ -6,7 +6,6 @@ export { runScenario, replaySession, formatScenarioResult } from './scenarios.js
 export { MonteCarloRunner, formatMonteCarloResults, RandomWalkRunner, formatRandomWalkResults } from './monteCarlo.js';
 export type {
     SerializedModel,
-    SerializedRelationships,
     RecordedAction,
     RecordedSession,
     PartConfig,

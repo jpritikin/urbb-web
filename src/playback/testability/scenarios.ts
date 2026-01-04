@@ -34,11 +34,11 @@ export interface ReplayResult extends ScenarioResult {
 export function replaySession(session: RecordedSession): ReplayResult {
     const sim = HeadlessSimulator.fromSession(
         session.initialModel,
-        session.initialRelationships,
         session.modelSeed
     );
 
     const actionResults: ActionResult[] = [];
+    const differences: string[] = [];
     let firstRngDivergence: string | undefined;
     const stateTrace: string[] = [];
 
@@ -106,16 +106,16 @@ export function replaySession(session: RecordedSession): ReplayResult {
             const expectedTargets = action.modelState.targets;
             const expectedBlended = action.modelState.blended;
             if (JSON.stringify(actualTargets.sort()) !== JSON.stringify(expectedTargets.sort())) {
-                stateTrace.push(`#${i} model mismatch: targets actual=${JSON.stringify(actualTargets)} expected=${JSON.stringify(expectedTargets)}`);
+                differences.push(`#${i} targets: ${JSON.stringify(actualTargets)} vs ${JSON.stringify(expectedTargets)}`);
             }
             if (JSON.stringify(actualBlended.sort()) !== JSON.stringify(expectedBlended.sort())) {
-                stateTrace.push(`#${i} model mismatch: blended actual=${JSON.stringify(actualBlended)} expected=${JSON.stringify(expectedBlended)}`);
+                differences.push(`#${i} blended: ${JSON.stringify(actualBlended)} vs ${JSON.stringify(expectedBlended)}`);
             }
             if (action.modelState.needAttention) {
                 for (const [cloudId, expected] of Object.entries(action.modelState.needAttention)) {
                     const actual = model.parts.getNeedAttention(cloudId);
                     if (Math.abs(actual - expected) > 0.01) {
-                        stateTrace.push(`#${i} needAttention mismatch: ${cloudId} actual=${actual.toFixed(3)} expected=${expected.toFixed(3)}`);
+                        differences.push(`#${i} ${cloudId}.needAttention: ${actual.toFixed(3)} vs ${expected.toFixed(3)}`);
                     }
                 }
             }
@@ -123,7 +123,7 @@ export function replaySession(session: RecordedSession): ReplayResult {
                 for (const [cloudId, expected] of Object.entries(action.modelState.trust)) {
                     const actual = model.parts.getTrust(cloudId);
                     if (Math.abs(actual - expected) > 0.001) {
-                        stateTrace.push(`#${i} trust mismatch: ${cloudId} actual=${actual.toFixed(3)} expected=${expected.toFixed(3)}`);
+                        differences.push(`#${i} ${cloudId}.trust: ${actual.toFixed(3)} vs ${expected.toFixed(3)}`);
                     }
                 }
             }
@@ -147,9 +147,9 @@ export function replaySession(session: RecordedSession): ReplayResult {
     }
 
     const actualModel = sim.getModelJSON();
-    const differences = session.finalModel
-        ? compareModels(actualModel, session.finalModel)
-        : [];
+    if (session.finalModel) {
+        differences.push(...compareModels(actualModel, session.finalModel));
+    }
 
     if (firstRngDivergence) {
         differences.unshift(firstRngDivergence);

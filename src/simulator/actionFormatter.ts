@@ -5,6 +5,8 @@ const KNOWN_ACTIONS = new Set([
     'join_conference',
     'step_back',
     'separate',
+    'be_with',
+    'validate',
     'blend',
     'job',
     'feel_toward',
@@ -87,6 +89,12 @@ export function formatActionLabel(
 
         case 'backlash':
             return `Backlash: ${name}`;
+
+        case 'be_with':
+            return `Be with: ${name}`;
+
+        case 'validate':
+            return `Validate: ${name}`;
 
         case 'mode_change':
             return `Mode: ${action.newMode ?? 'unknown'}`;

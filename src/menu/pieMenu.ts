@@ -23,6 +23,7 @@ export class PieMenu {
     private group: SVGGElement | null = null;
     private visible: boolean = false;
     private targetCloudId: string | null = null;
+    private targetName: string | null = null;
     private items: PieMenuItem[] = [];
     private radius: number = 75;
     private innerRadius: number = 20;
@@ -84,6 +85,10 @@ export class PieMenu {
 
     getTargetCloudId(): string | null {
         return this.targetCloudId;
+    }
+
+    setTargetName(name: string | null): void {
+        this.targetName = name;
     }
 
     show(x: number, y: number, cloudId: string): void {
@@ -466,6 +471,10 @@ export class PieMenu {
         this.hideTooltip();
 
         if (!this.group) return;
+
+        if (this.targetName) {
+            label = label.replace(/\$PART/g, this.targetName);
+        }
 
         this.tooltipElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.tooltipElement.setAttribute('class', 'pie-menu-tooltip');

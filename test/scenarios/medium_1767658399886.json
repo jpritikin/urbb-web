@@ -2,8 +2,8 @@
   "version": 1,
   "codeVersion": "generated",
   "platform": "desktop",
-  "modelSeed": 1767394656127,
-  "timestamp": 1767394626745,
+  "modelSeed": 1767658428904,
+  "timestamp": 1767658399886,
   "initialModel": {
     "targetCloudIds": [
       "inner-critic"
@@ -21,9 +21,8 @@
         "name": "Inner Critic",
         "trust": 0.3,
         "needAttention": 0.1,
-        "agreedWaitUntil": 1767394636745,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": 8,
@@ -52,9 +51,8 @@
         "name": "criticized one",
         "trust": 0.2,
         "needAttention": 0.1,
-        "agreedWaitUntil": 1767394636745,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": "child",
@@ -80,9 +78,8 @@
         "name": "toddler",
         "trust": 0.5,
         "needAttention": 0.1,
-        "agreedWaitUntil": 1767394636745,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": 3,
@@ -109,9 +106,8 @@
         "name": "self-image",
         "trust": 0.5,
         "needAttention": 0.1,
-        "agreedWaitUntil": 1767394636745,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": "adult",
@@ -133,11 +129,6 @@
         }
       }
     },
-    "thoughtBubbles": [],
-    "victoryAchieved": false,
-    "selfAmplification": 1
-  },
-  "initialRelationships": {
     "protections": [
       {
         "protectorId": "inner-critic",
@@ -178,7 +169,12 @@
         "cloudId": "toddler",
         "proxyId": "self-image"
       }
-    ]
+    ],
+    "attackedBy": [],
+    "thoughtBubbles": [],
+    "victoryAchieved": false,
+    "selfAmplification": 1,
+    "mode": "panorama"
   },
   "actions": [
     {
@@ -197,7 +193,28 @@
         "targets": [],
         "blended": [
           "inner-critic"
-        ]
+        ],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "validate",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 0
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ],
+        "selfRay": null
       }
     },
     {
@@ -209,7 +226,33 @@
       }
     },
     {
-      "action": "job",
+      "action": "select_a_target",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 2
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {
+          "inner-critic": "toddler"
+        }
+      },
+      "modelState": {
+        "targets": [
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "select_a_target",
       "cloudId": "inner-critic",
       "rngCounts": {
         "model": 1
@@ -222,44 +265,16 @@
         "cooldowns": {
           "inner-critic": 0
         },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "inner-critic"
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 16,
-      "rngCounts": {
-        "model": 1
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 1
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 10
-        },
-        "cooldowns": {
-          "inner-critic": 8
-        },
-        "pending": {}
+        "pending": {
+          "inner-critic": "toddler"
+        }
       },
       "modelState": {
         "targets": [
           "inner-critic"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": null
       }
     },
     {
@@ -271,164 +286,92 @@
       "rngLog": [],
       "orchState": {
         "blendTimers": {
-          "inner-critic": 10
-        },
-        "cooldowns": {
-          "inner-critic": 8
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "inner-critic"
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 4,
-      "rngCounts": {
-        "model": 2
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 2
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 12
-        },
-        "cooldowns": {
-          "inner-critic": 0
-        },
-        "pending": {
-          "inner-critic": "toddler"
-        }
-      },
-      "modelState": {
-        "targets": [
-          "toddler"
-        ],
-        "blended": [
-          "inner-critic"
-        ]
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 2
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 12
-        },
-        "cooldowns": {
-          "inner-critic": 0
-        },
-        "pending": {
-          "inner-critic": "toddler"
-        }
-      },
-      "modelState": {
-        "targets": [
-          "toddler",
-          "inner-critic"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "blend",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 2
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 12
-        },
-        "cooldowns": {
-          "inner-critic": 0
-        },
-        "pending": {
-          "inner-critic": "toddler"
-        }
-      },
-      "modelState": {
-        "targets": [
-          "toddler"
-        ],
-        "blended": [
-          "inner-critic"
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 4,
-      "rngCounts": {
-        "model": 2
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 2
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 14
-        },
-        "cooldowns": {
           "inner-critic": 2
         },
+        "cooldowns": {
+          "inner-critic": 0
+        },
         "pending": {
           "inner-critic": "toddler"
         }
       },
       "modelState": {
-        "targets": [
-          "toddler"
-        ],
+        "targets": [],
         "blended": [
           "inner-critic"
-        ]
+        ],
+        "selfRay": null
       }
     },
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 4,
+      "count": 12,
       "rngCounts": {
-        "model": 2
+        "model": 1
       }
     },
     {
-      "action": "step_back",
-      "cloudId": "toddler",
+      "action": "select_a_target",
+      "cloudId": "self-image",
       "rngCounts": {
-        "model": 2
+        "model": 1
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {
-          "inner-critic": 16
+          "inner-critic": 8
         },
         "cooldowns": {
-          "inner-critic": 1
+          "inner-critic": 0
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "select_a_target",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 8
+        },
+        "cooldowns": {
+          "inner-critic": 0
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "blend",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 8
+        },
+        "cooldowns": {
+          "inner-critic": 0
         },
         "pending": {}
       },
@@ -436,30 +379,55 @@
         "targets": [],
         "blended": [
           "inner-critic"
-        ]
+        ],
+        "selfRay": null
       }
     },
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 4,
+      "count": 8,
       "rngCounts": {
-        "model": 2
+        "model": 1
       }
     },
     {
       "action": "separate",
       "cloudId": "inner-critic",
       "rngCounts": {
-        "model": 2
+        "model": 1
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {
-          "inner-critic": 18
+          "inner-critic": 12
         },
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "inner-critic"
+        ],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
         },
         "pending": {}
       },
@@ -467,22 +435,47 @@
         "targets": [
           "inner-critic"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic"
+        ],
+        "blended": [],
+        "selfRay": null
       }
     },
     {
       "action": "join_conference",
       "cloudId": "criticized",
       "rngCounts": {
-        "model": 2
+        "model": 1
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {
-          "inner-critic": 18
+          "inner-critic": 12
         },
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 4
         },
         "pending": {}
       },
@@ -491,27 +484,28 @@
           "inner-critic",
           "criticized"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": null
       }
     },
     {
       "action": "who_do_you_see",
       "cloudId": "criticized",
       "rngCounts": {
-        "model": 3
+        "model": 2
       },
       "rngLog": [
         {
           "label": "who_do_you_see:pick_proxy",
-          "value": 0.8666381847579032
+          "value": 0.6815010770224035
         }
       ],
       "orchState": {
         "blendTimers": {
-          "inner-critic": 18
+          "inner-critic": 12
         },
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 4
         },
         "pending": {}
       },
@@ -522,7 +516,443 @@
         ],
         "blended": [
           "self-image"
-        ]
+        ],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "step_back",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized"
+        ],
+        "blended": [
+          "self-image"
+        ],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "who_do_you_see",
+      "cloudId": "self-image",
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "inner-critic": 12
+        },
+        "cooldowns": {
+          "inner-critic": 4
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 2
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [
+        {
+          "label": "help_protected:willing",
+          "value": 0.548424540553242
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": null
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "expand_deepen",
+      "cloudId": "*",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "inner-critic",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "criticized",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "criticized",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
@@ -533,63 +963,9 @@
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized"
-        ],
-        "blended": [
-          "self-image"
-        ]
-      }
-    },
-    {
-      "action": "separate",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 3
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized"
-        ],
-        "blended": [
-          "self-image"
-        ]
-      }
-    },
-    {
-      "action": "separate",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 3
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -599,74 +975,23 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
-      "action": "blend",
-      "cloudId": "self-image",
+      "action": "expand_deepen",
+      "cloudId": "*",
       "rngCounts": {
         "model": 3
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized"
-        ],
-        "blended": [
-          "self-image"
-        ]
-      }
-    },
-    {
-      "action": "separate",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 3
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized"
-        ],
-        "blended": [
-          "self-image"
-        ]
-      }
-    },
-    {
-      "action": "separate",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 3
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -676,7 +1001,90 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "criticized",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "inner-critic",
+      "targetCloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "self-image",
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
@@ -688,15 +1096,13 @@
       "rngLog": [
         {
           "label": "who_do_you_see:clear_proxies",
-          "value": 0.2985570062883198
+          "value": 0.005057430127635598
         }
       ],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -706,264 +1112,10 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "inner-critic",
-      "targetCloudId": "self-image",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "criticized",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "criticized",
-      "targetCloudId": "inner-critic",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "inner-critic",
-      "targetCloudId": "criticized",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "criticized",
-      "targetCloudId": "self-image",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "self-image",
-      "targetCloudId": "inner-critic",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "criticized",
-      "targetCloudId": "criticized",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "criticized",
-      "targetCloudId": "criticized",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "rngCounts": {
-        "model": 4
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
@@ -975,15 +1127,13 @@
       "rngLog": [
         {
           "label": "help_protected:willing",
-          "value": 0.03654018463566899
+          "value": 0.6204065119381994
         }
       ],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -993,27 +1143,28 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
-      "action": "who_do_you_see",
+      "action": "help_protected",
       "cloudId": "inner-critic",
       "rngCounts": {
         "model": 6
       },
       "rngLog": [
         {
-          "label": "who_do_you_see:clear_proxies",
-          "value": 0.406210012268275
+          "label": "help_protected:willing",
+          "value": 0.7190503855235875
         }
       ],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -1023,27 +1174,28 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
-      "action": "who_do_you_see",
+      "action": "help_protected",
       "cloudId": "inner-critic",
       "rngCounts": {
         "model": 7
       },
       "rngLog": [
         {
-          "label": "who_do_you_see:clear_proxies",
-          "value": 0.5994472512975335
+          "label": "help_protected:willing",
+          "value": 0.04075860255397856
         }
       ],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -1053,22 +1205,50 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
-      "action": "job",
+      "action": "notice_part",
+      "cloudId": "self-image",
+      "targetCloudId": "inner-critic",
+      "rngCounts": {
+        "model": 7
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {
+          "inner-critic": 6
+        },
+        "pending": {}
+      },
+      "modelState": {
+        "targets": [
+          "inner-critic",
+          "criticized",
+          "self-image"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
+      }
+    },
+    {
+      "action": "step_back",
       "cloudId": "self-image",
       "rngCounts": {
         "model": 7
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -1078,7 +1258,10 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
@@ -1090,11 +1273,9 @@
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -1104,58 +1285,10 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
-      }
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "self-image",
-      "targetCloudId": "criticized",
-      "rngCounts": {
-        "model": 7
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "step_back",
-      "cloudId": "self-image",
-      "rngCounts": {
-        "model": 7
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "criticized",
-          "self-image"
-        ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
@@ -1166,11 +1299,9 @@
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
@@ -1180,112 +1311,44 @@
           "criticized",
           "self-image"
         ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     },
     {
       "action": "step_back",
-      "cloudId": "criticized",
-      "rngCounts": {
-        "model": 7
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "job",
-      "cloudId": "inner-critic",
-      "rngCounts": {
-        "model": 7
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "self-image"
-        ],
-        "blended": []
-      }
-    },
-    {
-      "action": "who_do_you_see",
       "cloudId": "self-image",
       "rngCounts": {
         "model": 7
       },
       "rngLog": [],
       "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
+        "blendTimers": {},
         "cooldowns": {
-          "inner-critic": 3
+          "inner-critic": 6
         },
         "pending": {}
       },
       "modelState": {
         "targets": [
           "inner-critic",
+          "criticized",
           "self-image"
         ],
-        "blended": []
-      }
-    },
-    {
-      "action": "join_conference",
-      "cloudId": "criticized",
-      "rngCounts": {
-        "model": 7
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "inner-critic": 18
-        },
-        "cooldowns": {
-          "inner-critic": 3
-        },
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "inner-critic",
-          "self-image",
-          "criticized"
-        ],
-        "blended": []
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "*"
+        }
       }
     }
   ],
   "finalModel": {
     "targetCloudIds": [
       "inner-critic",
-      "self-image",
-      "criticized"
+      "criticized",
+      "self-image"
     ],
     "supportingParts": {
       "inner-critic": []
@@ -1297,16 +1360,15 @@
     },
     "displacedParts": [],
     "messages": [],
-    "messageIdCounter": 2,
+    "messageIdCounter": 1,
     "partStates": {
       "inner-critic": {
         "id": "inner-critic",
         "name": "Inner Critic",
-        "trust": 0.2485,
-        "needAttention": 0.6000000000000004,
-        "agreedWaitUntil": 1767394636745,
+        "trust": 0.195,
+        "needAttention": 0.30000000000000004,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": 8,
@@ -1333,11 +1395,10 @@
       "criticized": {
         "id": "criticized",
         "name": "criticized one",
-        "trust": 0.2485,
-        "needAttention": 0.2,
-        "agreedWaitUntil": 1767394636745,
+        "trust": 0.195,
+        "needAttention": 0.1,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": "child",
@@ -1362,10 +1423,9 @@
         "id": "toddler",
         "name": "toddler",
         "trust": 0.495,
-        "needAttention": 0.19000000000000009,
-        "agreedWaitUntil": 1767394636745,
+        "needAttention": 0.15515000000000004,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": false,
-        "attacked": true,
         "biography": {
           "ageRevealed": false,
           "partAge": 3,
@@ -1390,11 +1450,10 @@
       "self-image": {
         "id": "self-image",
         "name": "self-image",
-        "trust": 0.43338049999999995,
-        "needAttention": 0.3900000000000001,
-        "agreedWaitUntil": 1767394636745,
+        "trust": 0.4381248759999999,
+        "needAttention": 0.3600000000000001,
+        "agreedWaitUntil": 1767658409886,
         "wasProxy": true,
-        "attacked": false,
         "biography": {
           "ageRevealed": false,
           "partAge": "adult",
@@ -1416,11 +1475,6 @@
         }
       }
     },
-    "thoughtBubbles": [],
-    "victoryAchieved": false,
-    "selfAmplification": 1
-  },
-  "finalRelationships": {
     "protections": [
       {
         "protectorId": "inner-critic",
@@ -1454,13 +1508,21 @@
         "proxyId": "self-image"
       },
       {
-        "cloudId": "criticized",
-        "proxyId": "self-image"
-      },
-      {
         "cloudId": "toddler",
         "proxyId": "self-image"
       }
-    ]
+    ],
+    "attackedBy": [
+      {
+        "victimId": "toddler",
+        "attackerIds": [
+          "inner-critic"
+        ]
+      }
+    ],
+    "thoughtBubbles": [],
+    "victoryAchieved": false,
+    "selfAmplification": 1,
+    "mode": "foreground"
   }
 }

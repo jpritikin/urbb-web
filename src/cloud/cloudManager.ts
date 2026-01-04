@@ -1,5 +1,5 @@
 import { Cloud, CloudType } from './cloudShape.js';
-import { CloudRelationshipManager } from './cloudRelationshipManager.js';
+import { PartStateManager } from './partStateManager.js';
 import { SimulatorModel, PartMessage } from '../simulator/ifsModel.js';
 import { SimulatorView } from '../simulator/ifsView.js';
 import { CarpetRenderer } from '../star/carpetRenderer.js';
@@ -12,7 +12,7 @@ import type { TherapistAction } from '../simulator/therapistActions.js';
 import { createGroup } from '../utils/svgHelpers.js';
 import type { RNG } from '../playback/testability/rng.js';
 import { createModelRNG } from '../playback/testability/rng.js';
-import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel, SerializedRelationships } from '../playback/testability/types.js';
+import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel } from '../playback/testability/types.js';
 import { SimulatorController } from '../simulator/simulatorController.js';
 import { STAR_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
@@ -44,7 +44,6 @@ export class CloudManager {
     private svgElement: SVGSVGElement | null = null;
     private container: HTMLElement | null = null;
     private debug: boolean = false;
-    private relationships: CloudRelationshipManager = new CloudRelationshipManager();
     private canvasWidth: number = 800;
     private canvasHeight: number = 600;
     private panX: number = 0;
@@ -106,7 +105,6 @@ export class CloudManager {
 
         this.playbackRecording = new PlaybackRecordingCoordinator({
             getModel: () => this.model,
-            getRelationships: () => this.relationships,
             getCloudById: (id) => this.getCloudById(id),
             getCloudVisualCenter: (cloudId) => this.getCloudVisualCenter(cloudId),
             getView: () => this.view,
@@ -136,9 +134,10 @@ export class CloudManager {
     private initController(): void {
         this.controller = new SimulatorController({
             getModel: () => this.model,
-            getRelationships: () => this.relationships,
+            getRelationships: () => this.model.parts,
             rng: this.playbackRecording.getRNG(),
-            getPartName: (id) => this.getCloudById(id)?.text ?? id
+            getPartName: (id) => this.getCloudById(id)?.text ?? id,
+            getTime: () => this.timeAdvancer?.getTime() ?? 0
         });
         this.effectApplicator = new ActionEffectApplicator(() => this.model, this.view);
     }
@@ -155,11 +154,10 @@ export class CloudManager {
         this.playbackRecording.setSeed(seed);
     }
 
-    restoreFromSession(initialModel: SerializedModel, initialRelationships: SerializedRelationships): void {
+    restoreFromSession(initialModel: SerializedModel): void {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
         this.model = SimulatorModel.fromJSON(initialModel);
-        this.relationships = CloudRelationshipManager.fromJSON(initialRelationships);
 
         for (const [cloudId, partState] of Object.entries(initialModel.partStates) as [string, { name: string }][]) {
             const cloud = this.createCloudVisual(partState.name, cloudId);
@@ -264,24 +262,24 @@ export class CloudManager {
         this.messageOrchestrator = new MessageOrchestrator(
             () => this.model,
             this.view,
-            () => this.relationships,
+            () => this.model.parts,
             this.playbackRecording.getRNG(),
             {
                 act: (label, fn) => this.act(label, fn),
                 showThoughtBubble: (text, cloudId) => this.showThoughtBubble(text, cloudId),
                 getCloudById: (id) => this.getCloudById(id),
+                getTime: () => this.timeAdvancer?.getTime() ?? 0,
             }
         );
         this.view.setOnMessageReceived((message) => this.messageOrchestrator!.onMessageReceived(message));
 
         this.timeAdvancer = new TimeAdvancer(
             () => this.model,
-            () => this.relationships,
             this.messageOrchestrator,
             this.playbackRecording.getRNG(),
             {
-                getMode: () => this.view.getMode(),
-                onSpontaneousBlend: (event, accumulatedTime) => {
+                getMode: () => this.model.getMode(),
+                onSpontaneousBlend: (event: { cloudId: string; urgent: boolean }, accumulatedTime: number) => {
                     this.playbackRecording.recordIntervals();
                     this.playbackRecording.markSpontaneousBlendTriggered(accumulatedTime);
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
@@ -298,18 +296,23 @@ export class CloudManager {
             getCloudById: (id) => this.getCloudById(id),
             getModel: () => this.model,
             view: this.view,
-            getRelationships: () => this.relationships,
+            getRelationships: () => this.model.parts,
             getController: () => this.controller ?? undefined,
         });
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
         this.pieMenuController.setOnStarActionSelect((action) => this.handleStarActionClick(action));
         this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
-        this.pieMenuController.setGetPartContext((cloudId) => ({
-            isProtector: this.relationships.getProtecting(cloudId).size > 0,
-            isIdentityRevealed: this.model.parts.isIdentityRevealed(cloudId),
-            isAttacked: this.model.parts.isAttacked(cloudId),
-            partName: this.model.parts.getPartName(cloudId),
-        }));
+        this.pieMenuController.setGetPartContext((cloudId) => {
+            const attackers = this.model.parts.getAttackers(cloudId);
+            const firstAttacker = attackers.size > 0 ? [...attackers][0] : null;
+            return {
+                isProtector: this.model.parts.getProtecting(cloudId).size > 0,
+                isIdentityRevealed: this.model.parts.isIdentityRevealed(cloudId),
+                isAttacked: this.model.parts.isAttacked(cloudId),
+                partName: this.model.parts.getPartName(cloudId),
+                attackerName: firstAttacker ? this.model.parts.getPartName(firstAttacker) : null,
+            };
+        });
         this.pieMenuController.setOnClose(() => {
             this.inputHandler?.setHoveredCloud(null);
             this.updateAllCloudStyles();
@@ -317,7 +320,7 @@ export class CloudManager {
 
         this.inputHandler = new InputHandler(
             {
-                model: this.model,
+                getModel: () => this.model,
                 view: this.view,
                 pieMenuController: this.pieMenuController,
                 getCloudById: (id) => this.getCloudById(id),
@@ -365,20 +368,15 @@ export class CloudManager {
             const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
             this.pieMenuController?.toggleSelfRay(cloudId, menuX, menuY, touchEvent);
         });
-        this.view.setOnModeChange((mode) => {
-            const applyModeChange = () => {
-                if (mode === 'panorama') {
-                    this.model.clearSelfRay();
-                }
-                this.inputHandler?.clearPendingTargetAction();
-                this.updateUIForMode();
-                this.uiManager?.setMode(mode);
-            };
-            if (this.insideAct) {
-                applyModeChange();
-            } else {
-                this.act({ action: 'mode_change', cloudId: '', newMode: mode }, applyModeChange);
+        this.model.setOnModeChange((mode) => {
+            if (!this.insideAct) {
+                this.act({ action: 'mode_change', cloudId: '', newMode: mode }, () => {});
             }
+        });
+        this.view.setOnModeChange((mode) => {
+            this.inputHandler?.clearPendingTargetAction();
+            this.updateUIForMode();
+            this.uiManager?.setMode(mode);
         });
         this.view.on('transition-started', ({ direction }) => {
             this.onTransitionStart(direction);
@@ -404,7 +402,10 @@ export class CloudManager {
         this.uiManager = new UIManager(this.container, this.svgElement, this.uiGroup, {
             canvasWidth: this.canvasWidth,
             canvasHeight: this.canvasHeight,
-            onModeToggle: (isForeground) => this.handleModeToggle(isForeground),
+            setMode: (mode) => {
+                this.model.setMode(mode);
+                this.syncViewWithModel();
+            },
             onFullscreenToggle: () => this.toggleFullscreen(),
             onAnimationPauseToggle: () => this.toggleAnimationPause(),
             onTracePanelToggle: () => this.toggleTracePanel(),
@@ -435,7 +436,7 @@ export class CloudManager {
         this.panoramaInputHandler = new PanoramaInputHandler(
             this.svgElement,
             {
-                getMode: () => this.view.getMode(),
+                getMode: () => this.model.getMode(),
                 getZoom: () => this.view.getPanoramaZoom(),
                 setZoom: (zoom) => this.view.setPanoramaZoom(zoom),
             }
@@ -465,7 +466,7 @@ export class CloudManager {
 
         this.animatedStar = new AnimatedStar(centerX, centerY);
         this.animatedStar.setOnClick((_x, _y, event) => {
-            if (this.pieMenuController && this.view.getMode() === 'foreground') {
+            if (this.pieMenuController && this.model.getMode() === 'foreground') {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
                 this.pieMenuController.toggleStar(starPos.x, starPos.y, touchEvent);
@@ -478,12 +479,6 @@ export class CloudManager {
 
         // Expose star for console testing: star.testTransition('removing', 6, 5)
         (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
-    }
-
-    private handleModeToggle(isForeground: boolean): void {
-        const mode = isForeground ? 'foreground' : 'panorama';
-        // mode_change is recorded via setOnModeChange callback when view.setMode emits 'mode-changed'
-        this.view.setMode(mode);
     }
 
     private toggleFullscreen(): void {
@@ -580,6 +575,10 @@ export class CloudManager {
 
     private showThoughtBubble(text: string, cloudId: string): void {
         this.model.addThoughtBubble(text, cloudId);
+        if (this.model.isBlended(cloudId)) {
+            const time = this.timeAdvancer?.getTime() ?? 0;
+            this.model.parts.setUtterance(cloudId, text, time);
+        }
     }
 
     private hideThoughtBubble(): void {
@@ -636,13 +635,13 @@ export class CloudManager {
         }
     }
 
-    getRelationships(): CloudRelationshipManager {
-        return this.relationships;
+    getRelationships(): PartStateManager {
+        return this.model.parts;
     }
 
     applyAssessedNeedAttention(): void {
         for (const instance of this.instances) {
-            const assessed = this.relationships.assessNeedAttention(instance.cloud.id);
+            const assessed = this.model.parts.assessNeedAttention(instance.cloud.id);
             this.model.parts.setNeedAttention(instance.cloud.id, assessed);
         }
     }
@@ -655,7 +654,7 @@ export class CloudManager {
     private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
         const cloudState = this.view.getCloudState(cloudId);
         if (!cloudState || cloudState.opacity < 0.1) return null;
-        const mode = this.view.getMode();
+        const mode = this.view.getVisualMode();
         const transitioning = this.view.isTransitioning();
         let pos = { x: cloudState.x, y: cloudState.y };
         if (mode !== 'foreground' && !transitioning) {
@@ -686,7 +685,7 @@ export class CloudManager {
                 this.svgElement.removeChild(group);
             }
             this.instances.splice(index, 1);
-            this.relationships.removeCloud(cloud.id);
+            this.model.parts.removeCloud(cloud.id);
         }
     }
 
@@ -746,7 +745,7 @@ export class CloudManager {
             if (group) {
                 this.svgElement.removeChild(group);
             }
-            this.relationships.removeCloud(instance.cloud.id);
+            this.model.parts.removeCloud(instance.cloud.id);
         }
         this.instances = [];
     }
@@ -776,11 +775,10 @@ export class CloudManager {
     }
 
     private handlePanoramaSelect(cloud: Cloud): void {
+        console.log('[CloudManager] handlePanoramaSelect', cloud.id, 'model:', this.model);
         this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
             this.model.setTargetCloud(cloud.id);
-            this.view.setMode('foreground');
-            this.updateUIForMode();
-            this.uiManager?.setMode('foreground');
+            console.log('[CloudManager] after setTargetCloud, model.getMode():', this.model.getMode(), 'model:', this.model);
         });
     }
 
@@ -799,7 +797,9 @@ export class CloudManager {
         this.model.removeThoughtBubblesForCloud(STAR_CLOUD_ID);
         this.act({ action: 'feel_toward', cloudId: targetCloudId }, () => {
             const result = this.controller!.executeAction('feel_toward', targetCloudId);
+            console.log('[CloudManager] feel_toward result:', result);
             this.applyActionResult(result, targetCloudId);
+            console.log('[CloudManager] after apply, selfRay:', this.model.getSelfRay());
         });
     }
 
@@ -950,9 +950,22 @@ export class CloudManager {
         }
 
         this.view.setCloudNames(cloudNames);
-        this.view.syncWithModel(oldModel, this.model, this.instances, panoramaPositions, this.relationships);
+        this.view.syncWithModel(oldModel, this.model, this.instances);
         const noBlendedParts = this.model.getBlendedParts().length === 0 && !this.model.peekPendingBlend();
         this.animatedStar?.setPointerEventsEnabled(noBlendedParts);
+
+        this.dismissPieMenuIfPartLeft();
+    }
+
+    private dismissPieMenuIfPartLeft(): void {
+        if (!this.pieMenuController?.isOpen()) return;
+        const selectedId = this.pieMenuController.getSelectedCloudId();
+        if (!selectedId) return;
+        const isInConference = this.model.getTargetCloudIds().has(selectedId) ||
+            this.model.getBlendedParts().includes(selectedId);
+        if (!isInConference) {
+            this.hidePieMenu();
+        }
     }
 
     private act(action: string | RecordedAction, fn: () => void): void {
@@ -986,7 +999,7 @@ export class CloudManager {
     }
 
     private updateUIForMode(): void {
-        const mode = this.view.getMode();
+        const mode = this.model.getMode();
 
         if (mode !== 'foreground') {
             this.hideThoughtBubble();
@@ -1010,7 +1023,7 @@ export class CloudManager {
         this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
 
-        const mode = this.view.getMode();
+        const mode = this.view.getVisualMode();
         const isTransitioning = this.view.isTransitioning();
 
         if (isTransitioning) {
@@ -1085,7 +1098,7 @@ export class CloudManager {
             }
         }
 
-        if (this.view.getMode() === 'panorama' && !this.view.isTransitioning()) {
+        if (this.view.getVisualMode() === 'panorama' && !this.view.isTransitioning()) {
             const userRotation = this.panoramaInputHandler?.consumePendingRotation() ?? 0;
             this.panoramaMotion.animate(this.instances, deltaTime, userRotation);
         }
@@ -1121,14 +1134,14 @@ export class CloudManager {
             this.timeAdvancer?.advance(deltaTime);
             this.playbackRecording.addEffectiveTime(deltaTime);
         }
-        this.view.checkVictoryCondition(this.model, this.relationships);
+        this.view.checkVictoryCondition(this.model);
         this.lastHelpPanelUpdate += deltaTime;
         if (this.lastHelpPanelUpdate >= 0.25) {
             this.lastHelpPanelUpdate = 0;
             this.updateHelpPanel();
         }
 
-        const inPanorama = this.view.getMode() === 'panorama' && !this.view.isTransitioning();
+        const inPanorama = this.view.getVisualMode() === 'panorama' && !this.view.isTransitioning();
         if (inPanorama) {
             this.panoramaMotion.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
             const debugGroup = this.zoomGroup!.querySelector('#panorama-debug-group');
@@ -1155,7 +1168,7 @@ export class CloudManager {
         const inZoomGroup = starElement?.parentNode === this.zoomGroup;
         const isReverseTransition = this.view.getTransitionDirection() === 'reverse';
 
-        if (this.view.getMode() === 'foreground') {
+        if (this.view.getVisualMode() === 'foreground') {
             // Foreground mode: scale based on part count
             const targetIds = this.model.getTargetCloudIds();
             const blendedParts = this.model.getBlendedParts();
@@ -1293,7 +1306,7 @@ export class CloudManager {
     private finalizeCloudGroups(): void {
         if (!this.zoomGroup || !this.uiGroup) return;
 
-        const mode = this.view.getMode();
+        const mode = this.view.getVisualMode();
         const foregroundCloudIds = this.view.getForegroundCloudIds();
 
         if (mode === 'foreground') {
@@ -1346,28 +1359,16 @@ export class CloudManager {
     }
 
     private handleSpontaneousBlend(cloudId: string, urgent: boolean): void {
-        const inPanorama = this.view.getMode() === 'panorama';
         this.act({ action: 'spontaneous_blend', cloudId }, () => {
             if (urgent) {
                 this.model.clearTargets();
-            }
-            if (inPanorama) {
-                this.view.setMode('foreground');
-                this.updateUIForMode();
-                this.uiManager?.setMode('foreground');
             }
             this.controller?.executeAction('spontaneous_blend', cloudId);
         });
     }
 
     private executeSpontaneousBlendForPlayback(cloudId: string): void {
-        const inPanorama = this.view.getMode() === 'panorama';
         const oldModel = this.model.clone();
-        if (inPanorama) {
-            this.view.setMode('foreground');
-            this.updateUIForMode();
-            this.uiManager?.setMode('foreground');
-        }
         this.controller?.executeAction('spontaneous_blend', cloudId);
         this.syncViewWithModel(oldModel);
     }

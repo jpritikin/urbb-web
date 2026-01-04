@@ -1,7 +1,7 @@
 import type { RecordedAction, RecordedSession } from './testability/types.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
-import { isStarMenuAction } from '../simulator/therapistActions.js';
+import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
 
 const HOVER_PAUSE_MS = 0;
@@ -260,19 +260,6 @@ export class PlaybackController {
                 await this.executeSelectTarget(action);
                 break;
 
-            case 'feel_toward':
-            case 'notice_part':
-            case 'who_do_you_see':
-            case 'job':
-            case 'separate':
-            case 'blend':
-            case 'help_protected':
-            case 'step_back':
-            case 'expand_deepen':
-            case 'join_conference':
-                await this.executeCloudAction(action);
-                break;
-
             case 'ray_field_select':
                 await this.executeRayFieldAction(action);
                 break;
@@ -282,7 +269,11 @@ export class PlaybackController {
                 break;
 
             default:
-                console.warn(`[Playback] Unknown action: ${action.action}`);
+                if (isCloudMenuAction(action.action) || isStarMenuAction(action.action)) {
+                    await this.executeCloudAction(action);
+                } else {
+                    console.warn(`[Playback] Unknown action: ${action.action}`);
+                }
         }
     }
 

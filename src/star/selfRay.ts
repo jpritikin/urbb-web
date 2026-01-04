@@ -11,6 +11,7 @@ export interface PartContext {
     isIdentityRevealed: boolean;
     isAttacked: boolean;
     partName: string;
+    attackerName: string | null;
 }
 
 export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize';

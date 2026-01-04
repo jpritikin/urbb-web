@@ -30,7 +30,6 @@ export interface PartState {
     needAttention: number;
     agreedWaitUntil: number;
     wasProxy: boolean;
-    attacked: boolean;
     biography: PartBiography;
     dialogues: PartDialogues;
 }
@@ -50,7 +49,6 @@ export function createPartState(id: string, name: string, options?: {
         needAttention: options?.needAttention ?? 0.1,
         agreedWaitUntil: Date.now() + waitDuration * 1000,
         wasProxy: false,
-        attacked: false,
         biography: {
             ageRevealed: false,
             partAge: options?.partAge ?? null,

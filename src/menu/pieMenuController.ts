@@ -1,5 +1,5 @@
 import { Cloud } from '../cloud/cloudShape.js';
-import { CloudRelationshipManager } from '../cloud/cloudRelationshipManager.js';
+import { PartStateManager } from '../cloud/partStateManager.js';
 import { SimulatorModel } from '../simulator/ifsModel.js';
 import { SimulatorView } from '../simulator/ifsView.js';
 import { PieMenu, PieMenuItem } from './pieMenu.js';
@@ -13,7 +13,7 @@ export interface PieMenuDependencies {
     getCloudById: (id: string) => Cloud | null;
     getModel: () => SimulatorModel;
     view: SimulatorView;
-    getRelationships: () => CloudRelationshipManager;
+    getRelationships: () => PartStateManager;
     getController: () => SimulatorController | undefined;
 }
 
@@ -126,6 +126,8 @@ export class PieMenuController {
 
         this.menuMode = mode;
         this.pieMenu.setItems(items);
+        const cloud = this.deps.getCloudById(cloudId);
+        this.pieMenu.setTargetName(cloud?.text ?? null);
         if (touchEvent && touchEvent.touches.length > 0) {
             const touch = touchEvent.touches[0];
             this.pieMenu.showWithTouch(x, y, cloudId, touch.clientX, touch.clientY);
@@ -180,13 +182,14 @@ export class PieMenuController {
                 label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
             } else if (action.id === 'separate') {
                 label = "Can you make a little space for client?";
-            } else if (action.id === 'help_protected') {
+            }
+
+            if (label.includes('$PROTECTED')) {
                 const protectedIds = relationships.getProtecting(cloudId);
                 if (protectedIds.size > 0) {
                     const protectedId = Array.from(protectedIds)[0];
-                    const protectedCloud = this.deps.getCloudById(protectedId);
-                    const protectedName = protectedCloud?.text ?? 'that';
-                    label = label.replace('$PART', protectedName);
+                    const protectedName = this.deps.getCloudById(protectedId)?.text ?? 'the part';
+                    label = label.replace(/\$PROTECTED/g, protectedName);
                 }
             }
 
@@ -207,7 +210,8 @@ export class PieMenuController {
             isProtector: false,
             isIdentityRevealed: false,
             isAttacked: false,
-            partName: ''
+            partName: '',
+            attackerName: null
         };
 
         const validActions = controller?.getValidActions() ?? [];
@@ -219,7 +223,8 @@ export class PieMenuController {
             if (validFields.has(action.id as BiographyField)) {
                 let label = action.question;
                 if (action.id === 'apologize') {
-                    label = `Apologize to ${context.partName} for allowing other parts to attack it`;
+                    const attackerPart = context.attackerName ?? 'other parts';
+                    label = `Apologize to ${context.partName} for allowing ${attackerPart} to attack`;
                 }
                 items.push({ id: action.id, label, shortName: action.shortName, category: action.category });
             }

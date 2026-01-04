@@ -1,5 +1,5 @@
 import { SimulatorModel } from './ifsModel.js';
-import { CloudRelationshipManager } from '../cloud/cloudRelationshipManager.js';
+import { PartStateManager } from '../cloud/partStateManager.js';
 import { RNG, pickRandom } from '../playback/testability/rng.js';
 import { OUTCOMES, outcome } from './outcomes.js';
 import type { ControllerActionResult } from '../playback/testability/types.js';
@@ -8,9 +8,10 @@ import { STAR_CLOUD_ID } from './view/SeatManager.js';
 
 export interface ControllerDependencies {
     getModel: () => SimulatorModel;
-    getRelationships: () => CloudRelationshipManager;
+    getRelationships: () => PartStateManager;
     rng: RNG;
     getPartName: (cloudId: string) => string;
+    getTime: () => number;
 }
 
 export interface ActionOptions {
@@ -57,24 +58,33 @@ const COMPASSION_RECEIVED_RESPONSES = [
     "I feel a little warmer inside.",
 ];
 
+const VALIDATE_FAILURE_RESPONSES = [
+    "That doesn't resonate.",
+    "What are you talking about?",
+    "That's not what I meant.",
+    "You're not listening.",
+];
+
 export class SimulatorController {
     private getModel: () => SimulatorModel;
-    private getRelationships: () => CloudRelationshipManager;
+    private getRelationships: () => PartStateManager;
     private rng: RNG;
     private getPartName: (cloudId: string) => string;
+    private getTime: () => number;
 
     constructor(deps: ControllerDependencies) {
         this.getModel = deps.getModel;
         this.getRelationships = deps.getRelationships;
         this.rng = deps.rng;
         this.getPartName = deps.getPartName;
+        this.getTime = deps.getTime;
     }
 
     private get model(): SimulatorModel {
         return this.getModel();
     }
 
-    private get relationships(): CloudRelationshipManager {
+    private get relationships(): PartStateManager {
         return this.getRelationships();
     }
 
@@ -142,6 +152,16 @@ export class SimulatorController {
         // separate
         if (isBlended) {
             actions.push({ action: 'separate', cloudId });
+        }
+
+        // be_with
+        if (isBlended) {
+            actions.push({ action: 'be_with', cloudId });
+        }
+
+        // validate
+        if (isBlended) {
+            actions.push({ action: 'validate', cloudId });
         }
 
         // step_back
@@ -222,6 +242,9 @@ export class SimulatorController {
             case 'separate':
                 return this.handleSeparate(cloudId, options?.isBlended ?? this.model.isBlended(cloudId));
 
+            case 'be_with':
+                return this.handleBeWith(cloudId);
+
             case 'blend':
                 return this.handleBlend(cloudId);
 
@@ -265,6 +288,9 @@ export class SimulatorController {
                 }
                 return { success: false, message: 'No target specified', stateChanges: [] };
 
+            case 'validate':
+                return this.handleValidate(cloudId);
+
             default:
                 return { success: false, message: `Unknown action: ${actionId}`, stateChanges: [] };
         }
@@ -299,6 +325,25 @@ export class SimulatorController {
             success: true,
             stateChanges: [outcome(cloudId, willUnblend ? OUTCOMES.UNBLENDED : OUTCOMES.SEPARATING)],
             reduceBlending: { cloudId, amount: baseAmount }
+        };
+    }
+
+    private handleBeWith(cloudId: string): ControllerActionResult {
+        if (this.model.parts.isBeWithUsed(cloudId)) {
+            return {
+                success: true,
+                stateChanges: [outcome(cloudId, OUTCOMES.NO_CHANGE)],
+                uiFeedback: { thoughtBubble: { text: "*Shrug*", cloudId } }
+            };
+        }
+
+        this.model.parts.markBeWithUsed(cloudId);
+        this.model.parts.addTrust(cloudId, 0.1);
+        const currentNeed = this.model.parts.getNeedAttention(cloudId);
+        this.model.parts.setNeedAttention(cloudId, currentNeed * 0.9);
+        return {
+            success: true,
+            stateChanges: [outcome(cloudId, OUTCOMES.ACCOMPANIED)]
         };
     }
 
@@ -957,7 +1002,7 @@ export class SimulatorController {
             return pickRandom(rejections);
         }
 
-        this.model.parts.clearAttacked(cloudId);
+        this.model.parts.clearAttackedBy(cloudId);
         this.model.parts.addTrust(cloudId, 0.2);
         const acceptances = [
             "Thank you. I appreciate that.",
@@ -968,7 +1013,6 @@ export class SimulatorController {
     }
 
     private handleSpontaneousBlend(cloudId: string): ControllerActionResult {
-        this.model.parts.setNeedAttention(cloudId, 0.95);
         this.model.partDemandsAttention(cloudId);
         return {
             success: true,
@@ -981,6 +1025,32 @@ export class SimulatorController {
             success: true,
             stateChanges: [outcome(protectorId, OUTCOMES.TRIGGERED_BACKLASH, protecteeId)],
             triggerBacklash: { protectorId, protecteeId }
+        };
+    }
+
+    private handleValidate(cloudId: string): ControllerActionResult {
+        const utterance = this.model.parts.getUtterance(cloudId, this.getTime());
+
+        if (utterance === null) {
+            this.model.parts.addTrust(cloudId, -0.1);
+            return {
+                success: true,
+                stateChanges: [outcome(cloudId, OUTCOMES.VALIDATE_FAILED)],
+                uiFeedback: {
+                    thoughtBubble: { text: pickRandom(VALIDATE_FAILURE_RESPONSES), cloudId }
+                }
+            };
+        }
+
+        this.model.parts.clearUtterance(cloudId);
+        const trust = this.model.parts.getTrust(cloudId);
+        const trustGain = 0.2 * (1 - trust);
+        this.model.parts.addTrust(cloudId, trustGain);
+
+        return {
+            success: true,
+            stateChanges: [outcome(cloudId, OUTCOMES.VALIDATED)],
+            trustGain
         };
     }
 }

@@ -5,7 +5,7 @@ import { PieMenuController } from '../menu/pieMenuController.js';
 import type { TherapistAction } from './therapistActions.js';
 
 export interface InputHandlerDependencies {
-    model: SimulatorModel;
+    getModel: () => SimulatorModel;
     view: SimulatorView;
     pieMenuController: PieMenuController;
     getCloudById: (id: string) => Cloud | null;
@@ -43,7 +43,7 @@ export class InputHandler {
     }
 
     startLongPress(cloudId: string): void {
-        if (this.deps.view.getMode() !== 'foreground') return;
+        if (this.deps.getModel().getMode() !== 'foreground') return;
         this.cancelLongPress();
         this.longPressStartTime = performance.now();
         this.longPressTimer = window.setTimeout(() => {
@@ -88,7 +88,7 @@ export class InputHandler {
         this.hoveredCloudId = null;
         this.deps.updateAllCloudStyles();
 
-        if (this.deps.view.getMode() !== 'foreground') return;
+        if (this.deps.getModel().getMode() !== 'foreground') return;
         if (this.pendingTargetAction) return;
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
@@ -100,7 +100,7 @@ export class InputHandler {
 
     handleCloudTouchEnd(cloud: Cloud): void {
         if (!this.pendingTargetAction) return;
-        if (this.deps.view.getMode() !== 'foreground') return;
+        if (this.deps.getModel().getMode() !== 'foreground') return;
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
         if (cloudState && cloudState.opacity > 0) {
@@ -109,13 +109,14 @@ export class InputHandler {
     }
 
     selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
-        if (this.deps.view.getMode() === 'panorama') {
+        console.log('[InputHandler] selectCloud', cloud.id, 'mode:', this.deps.getModel().getMode(), 'pendingAction:', this.pendingTargetAction?.action.id, 'model:', this.deps.getModel());
+        if (this.pendingTargetAction) {
+            this.completePendingTargetAction(cloud.id);
+            return;
+        }
+        if (this.deps.getModel().getMode() === 'panorama') {
             this.callbacks.onCloudSelected(cloud, touchEvent);
-        } else if (this.deps.view.getMode() === 'foreground') {
-            if (this.pendingTargetAction) {
-                this.completePendingTargetAction(cloud.id);
-                return;
-            }
+        } else if (this.deps.getModel().getMode() === 'foreground') {
             const cloudState = this.deps.view.getCloudState(cloud.id);
             if (cloudState && cloudState.opacity > 0) {
                 this.deps.pieMenuController.toggle(cloud.id, cloudState.x, cloudState.y, touchEvent);
@@ -144,7 +145,7 @@ export class InputHandler {
             onClick: () => this.handleCloudClick(cloud),
             onHover: (hovered: boolean) => {
                 this.setHoveredCloud(hovered ? cloud.id : null);
-                const state = this.deps.model.getPartState(cloud.id);
+                const state = this.deps.getModel().getPartState(cloud.id);
                 cloud.updateSVGElements(false, state, hovered);
             },
             onLongPressStart: () => this.startLongPress(cloud.id),
