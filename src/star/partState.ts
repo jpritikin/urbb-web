@@ -28,7 +28,6 @@ export interface PartState {
     name: string;
     trust: number;
     needAttention: number;
-    agreedWaitUntil: number;
     wasProxy: boolean;
     biography: PartBiography;
     dialogues: PartDialogues;
@@ -37,17 +36,14 @@ export interface PartState {
 export function createPartState(id: string, name: string, options?: {
     trust?: number;
     needAttention?: number;
-    agreedWaitUntil?: number;
     partAge?: number | string;
     dialogues?: PartDialogues;
 }): PartState {
-    const waitDuration = options?.agreedWaitUntil ?? 10;
     return {
         id,
         name,
         trust: options?.trust ?? 0.5,
         needAttention: options?.needAttention ?? 0.1,
-        agreedWaitUntil: Date.now() + waitDuration * 1000,
         wasProxy: false,
         biography: {
             ageRevealed: false,

@@ -86,16 +86,8 @@ function runAllTrivialIFSTests(): void {
         const result1 = runScenario(scenario);
         const result2 = runScenario(scenario);
 
-        const stripTimestamps = (m: SerializedModel) => {
-            const copy = JSON.parse(JSON.stringify(m));
-            for (const ps of Object.values(copy.partStates)) {
-                delete (ps as Record<string, unknown>).agreedWaitUntil;
-            }
-            return copy;
-        };
-
-        const same = JSON.stringify(stripTimestamps(result1.finalModel)) ===
-                     JSON.stringify(stripTimestamps(result2.finalModel));
+        const same = JSON.stringify(result1.finalModel) ===
+                     JSON.stringify(result2.finalModel);
         test('Deterministic replay - same results', same,
              'models differ between runs');
     }

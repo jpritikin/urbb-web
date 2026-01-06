@@ -604,7 +604,6 @@ export class CloudManager {
         id?: string;
         trust?: number;
         needAttention?: number;
-        agreedWaitUntil?: number;
         partAge?: number | string;
         dialogues?: { burdenedJobAppraisal?: string[]; burdenedJobImpact?: string[]; unburdenedJob?: string; genericBlendedDialogues?: string[] };
     }): Cloud {
@@ -615,7 +614,6 @@ export class CloudManager {
         this.model.registerPart(cloud.id, word, {
             trust: options?.trust,
             needAttention: options?.needAttention,
-            agreedWaitUntil: options?.agreedWaitUntil,
             partAge: options?.partAge,
             dialogues: options?.dialogues,
         });

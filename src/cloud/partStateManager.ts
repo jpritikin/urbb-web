@@ -31,7 +31,6 @@ export class PartStateManager {
     registerPart(id: string, name: string, options?: {
         trust?: number;
         needAttention?: number;
-        agreedWaitUntil?: number;
         partAge?: number | string;
         dialogues?: PartDialogues;
     }): PartState {

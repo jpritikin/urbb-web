@@ -374,7 +374,6 @@ export class SimulatorModel {
     registerPart(id: string, name: string, options?: {
         trust?: number;
         needAttention?: number;
-        agreedWaitUntil?: number;
         partAge?: number | string;
         dialogues?: PartDialogues;
     }): PartState {
