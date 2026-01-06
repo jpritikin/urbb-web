@@ -216,6 +216,10 @@ export class SeatManager {
                 this.carpetVelocities.set(newSeatId, velocity);
             }
         }
+        const seatIndex = this.seats.findIndex(s => s.seatId === UNBLENDED_SEAT_ID);
+        if (seatIndex >= 0) {
+            this.seats[seatIndex].seatId = newSeatId;
+        }
     }
 
     private reassignCarpetToUnblended(oldSeatId: string): void {
@@ -228,6 +232,10 @@ export class SeatManager {
                 this.carpetVelocities.delete(oldSeatId);
                 this.carpetVelocities.set(UNBLENDED_SEAT_ID, velocity);
             }
+        }
+        const seatIndex = this.seats.findIndex(s => s.seatId === oldSeatId);
+        if (seatIndex >= 0) {
+            this.seats[seatIndex].seatId = UNBLENDED_SEAT_ID;
         }
     }
 
@@ -295,19 +303,23 @@ export class SeatManager {
         const { rx, ry } = this.getConferenceTableRadii();
 
         const allSeatData: { seatId: string; angle: number; x: number; y: number }[] = [];
+        const newSeatIds: string[] = [];
         for (const seatId of seatIds) {
             const existing = existingSeats.get(seatId);
             if (existing) {
                 allSeatData.push({ seatId, angle: existing.angle, x: existing.x, y: existing.y });
             } else {
-                const spawnAngle = this.findLargestGap(allSeatData);
-                allSeatData.push({
-                    seatId,
-                    angle: spawnAngle,
-                    x: centerX + rx * Math.cos(spawnAngle),
-                    y: centerY + ry * Math.sin(spawnAngle)
-                });
+                newSeatIds.push(seatId);
             }
+        }
+        for (const seatId of newSeatIds) {
+            const spawnAngle = this.findLargestGap(allSeatData);
+            allSeatData.push({
+                seatId,
+                angle: spawnAngle,
+                x: centerX + rx * Math.cos(spawnAngle),
+                y: centerY + ry * Math.sin(spawnAngle)
+            });
         }
 
         const sortedSeats = [...allSeatData].sort((a, b) => a.angle - b.angle);
