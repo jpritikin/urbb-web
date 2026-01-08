@@ -559,11 +559,14 @@ class AnimatronicSalmon {
 }
 
 // Cassette player controller
+type PlayMode = 'loop' | 'play-next';
+
 class CassettePlayer {
     private audio: HTMLAudioElement;
     private source: HTMLSourceElement;
     private salmon: AnimatronicSalmon;
     private currentHymn: string | null = null;
+    private playMode: PlayMode = 'play-next';
 
     constructor(salmon: AnimatronicSalmon) {
         this.salmon = salmon;
@@ -592,7 +595,10 @@ class CassettePlayer {
         playPauseBtn?.addEventListener('click', () => this.togglePlayPause());
 
         const loopBtn = document.getElementById('loop-btn');
-        loopBtn?.addEventListener('click', () => this.toggleLoop());
+        loopBtn?.addEventListener('click', () => this.setPlayMode('loop'));
+
+        const playNextBtn = document.getElementById('play-next-btn');
+        playNextBtn?.addEventListener('click', () => this.setPlayMode('play-next'));
 
         this.audio.addEventListener('play', () => {
             this.salmon.startPlaying();
@@ -605,8 +611,12 @@ class CassettePlayer {
         });
 
         this.audio.addEventListener('ended', () => {
-            this.salmon.stopPlaying();
-            if (!this.audio.loop && playPauseBtn) playPauseBtn.textContent = '▶';
+            if (this.playMode === 'play-next') {
+                this.playNextHymn();
+            } else {
+                this.salmon.stopPlaying();
+                if (playPauseBtn) playPauseBtn.textContent = '▶';
+            }
         });
     }
 
@@ -629,6 +639,7 @@ class CassettePlayer {
         const randomColor = cassetteColors[Math.floor(Math.random() * cassetteColors.length)];
 
         if (this.currentHymn) {
+            this.audio.pause();
             const currentElement = document.querySelector(`[data-title="${this.currentHymn}"]`) as HTMLElement;
             if (currentElement) {
                 await this.salmon.openHeadAndEjectCassette(currentElement);
@@ -653,22 +664,47 @@ class CassettePlayer {
         }
     }
 
-    private toggleLoop(): void {
-        this.audio.loop = !this.audio.loop;
+    private setPlayMode(mode: PlayMode): void {
+        this.playMode = mode;
+        this.audio.loop = (mode === 'loop');
+
         const loopBtn = document.getElementById('loop-btn');
+        const playNextBtn = document.getElementById('play-next-btn');
+
         if (loopBtn) {
-            if (this.audio.loop) {
-                loopBtn.classList.add('active');
-                loopBtn.title = 'Loop enabled';
-            } else {
-                loopBtn.classList.remove('active');
-                loopBtn.title = 'Loop disabled';
-            }
+            loopBtn.classList.toggle('active', mode === 'loop');
+            loopBtn.title = mode === 'loop' ? 'Loop current track (active)' : 'Loop current track';
+        }
+        if (playNextBtn) {
+            playNextBtn.classList.toggle('active', mode === 'play-next');
+            playNextBtn.title = mode === 'play-next' ? 'Play through all (active)' : 'Play through all available hymns';
         }
     }
 
-    private sleep(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    private getUnlockedHymns(): HTMLElement[] {
+        return Array.from(document.querySelectorAll('.hymn-item.unlocked')) as HTMLElement[];
+    }
+
+    private async playNextHymn(): Promise<void> {
+        const unlocked = this.getUnlockedHymns();
+        if (unlocked.length === 0) return;
+
+        const currentIndex = unlocked.findIndex(el => el.getAttribute('data-title') === this.currentHymn);
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex < unlocked.length) {
+            const nextHymn = unlocked[nextIndex];
+            const hymnId = nextHymn.getAttribute('data-hymn');
+            const hymnTitle = nextHymn.getAttribute('data-title');
+            if (hymnId && hymnTitle) {
+                await this.loadCassette(hymnId, hymnTitle, nextHymn);
+                this.audio.play();
+            }
+        } else {
+            this.salmon.stopPlaying();
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            if (playPauseBtn) playPauseBtn.textContent = '▶';
+        }
     }
 }
 
@@ -776,6 +812,52 @@ class CassetteOverlay {
     };
 }
 
+function sortHymnList(): void {
+    const hymnList = document.getElementById('hymn-list');
+    if (!hymnList) return;
+
+    const items = Array.from(hymnList.querySelectorAll('.hymn-item'));
+    items.sort((a, b) => {
+        const aLocked = a.classList.contains('locked');
+        const bLocked = b.classList.contains('locked');
+        if (aLocked !== bLocked) return aLocked ? 1 : -1;
+
+        const aTitle = a.getAttribute('data-title') || '';
+        const bTitle = b.getAttribute('data-title') || '';
+        return aTitle.localeCompare(bTitle, 'pt');
+    });
+
+    items.forEach(item => hymnList.appendChild(item));
+}
+
+function isDevEnvironment(): boolean {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('dev.');
+}
+
+function addDevUnlockButton(): void {
+    if (!isDevEnvironment()) return;
+
+    const container = document.getElementById('hymn-list-container');
+    if (!container) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'dev-unlock-btn';
+    btn.textContent = '🔓 Unlock All (Dev)';
+    btn.title = 'Development only: unlock all hymns for testing';
+    container.appendChild(btn);
+
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.hymn-item.locked').forEach(item => {
+            item.classList.remove('locked');
+            item.classList.add('unlocked');
+            item.querySelector('.hymn-lock')?.remove();
+            (item as HTMLElement).style.gridTemplateColumns = '1fr';
+        });
+        btn.remove();
+    });
+}
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -784,11 +866,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[Supplement] Page version:', pageVersion);
         }
 
+        sortHymnList();
         const overlay = new CassetteOverlay();
         const salmon = new AnimatronicSalmon('salmon-canvas');
         overlay.setSalmon(salmon);
         const player = new CassettePlayer(salmon);
         loadBibliography();
+        addDevUnlockButton();
     } catch (error) {
         console.error('Failed to initialize:', error);
     }

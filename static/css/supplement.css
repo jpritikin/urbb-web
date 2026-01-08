@@ -97,12 +97,14 @@
   cursor: not-allowed;
 }
 
-#loop-btn.active {
+#loop-btn.active,
+#play-next-btn.active {
   background: var(--daime-blue);
   box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
 }
 
-#loop-btn:not(.active) {
+#loop-btn:not(.active),
+#play-next-btn:not(.active) {
   opacity: 0.5;
 }
 
@@ -110,8 +112,14 @@
   flex: 1;
   text-align: center;
   font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--daime-purple);
+  font-size: 1.1rem;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  color: #00ff00;
+  background: #111;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+  letter-spacing: 0.05em;
 }
 
 #hymn-list-container {
@@ -121,6 +129,25 @@
   border: 2px solid var(--daime-purple);
   border-radius: 12px;
   padding: 1rem;
+  position: relative;
+}
+
+#dev-unlock-btn {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: rgba(255, 107, 107, 0.8);
+  border: 1px dashed #ff6b6b;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+#dev-unlock-btn:hover {
+  opacity: 1;
 }
 
 #hymn-list-scroll {

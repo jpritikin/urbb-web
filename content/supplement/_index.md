@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.4.4"
+version: "v1.4.7"
 ---
 
 ## What is This?
@@ -33,7 +33,7 @@ Whether you're considering IFS therapy, already working with a therapist, or tra
 
 [Santo Daime](https://www.santodaime.org/) is a Brazilian ayahuasca religion where participants drink a psychoactive brew and then—here's the interesting part—maintain external focus through synchronized hymn singing and ritual movements. While the drug pulls attention inward toward private visions, the discipline (called *firmeza* or "firmness") is staying anchored in shared reality with the community. The hymns function as collective reference points 🎵, objects of mutual attention that help everyone navigate altered states together rather than drifting into isolated experiences (more details in chapter 7).
 
-The recordings here exist somewhere in the liminal space between "technically adequate" and "why did he think this was a good idea?" The author, possessing neither musical training nor appropriate shame, recorded himself singing these hymns in multitrack (at least 3 layers of his own voice, no instruments). Listen to at least one.
+The recordings here exist somewhere in the liminal space between "technically adequate" and "why did he think this was a good idea?" The author, possessing neither musical training nor appropriate shame, recorded himself singing these hymns in multitrack (at least 3 layers of his own voice, no instruments). Multiple voices is how these hymns would always be heard in actual Santo Daime rituals—and conveniently, the layering helps conceal the author's weakness in Portuguese pronunciation. Listen to at least one.
 
 Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along awkwardly in your kitchen. Let us share a few moments before you return to your regularly scheduled doomscrolling. Have mercy on my needy parts that are deeply embarrassed about making this emotional appeal but are doing it anyway because the alternative feels somehow worse.
 
@@ -43,12 +43,13 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
       <canvas id="salmon-canvas"></canvas>
     </div>
     <div class="hymn-player">
-      <audio id="hymn-audio" preload="metadata" loop>
+      <audio id="hymn-audio" preload="metadata">
         <source id="hymn-source" src="" type="audio/mpeg">
       </audio>
       <div id="player-controls">
         <button id="play-pause-btn" disabled>▶</button>
-        <button id="loop-btn" class="active" title="Loop enabled">🔁</button>
+        <button id="loop-btn" title="Loop current track">🔁</button>
+        <button id="play-next-btn" class="active" title="Play through all available hymns">⏭️</button>
         <div id="current-hymn-display">No cassette loaded</div>
       </div>
     </div>
@@ -57,38 +58,35 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
   <div id="hymn-list-container">
     <div id="hymn-list-scroll">
       <div id="hymn-list">
-        <div class="hymn-item unlocked" data-hymn="examine-a-consciencia" data-title="Examine A Consciência">
+        <div class="hymn-item unlocked" data-hymn="examine-a-consciência" data-title="Examine A Consciência">
           <span class="hymn-title">Examine A Consciência</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="eu-nao-sou-deus" data-title="Eu Não Sou Deus">
+        <div class="hymn-item locked" data-hymn="eu-não-sou-deus" data-title="Eu Não Sou Deus">
           <span class="hymn-title">Eu Não Sou Deus</span>
-        </div>
-        <div class="hymn-item locked" data-hymn="a-forca-e-a-verdade" data-title="A Força E A Verdade">
-          <span class="hymn-title">A Força E A Verdade</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="eu-pedi-uma-graca" data-title="Eu Pedi Uma Graça">
+        <div class="hymn-item unlocked" data-hymn="a-força-e-a-verdade" data-title="A Força E A Verdade">
+          <span class="hymn-title">A Força E A Verdade</span>
+        </div>
+        <div class="hymn-item locked" data-hymn="eu-pedi-uma-graça" data-title="Eu Pedi Uma Graça">
           <span class="hymn-title">Eu Pedi Uma Graça</span>
           <span class="hymn-lock">🔒</span>
         </div>
         <div class="hymn-item unlocked" data-hymn="sentado-no-trono" data-title="Sentado No Trono">
           <span class="hymn-title">Sentado No Trono</span>
         </div>
-        <div class="hymn-item locked" data-hymn="centro-livre" data-title="Centro Livre">
+        <div class="hymn-item unlocked" data-hymn="centro-livre" data-title="Centro Livre">
           <span class="hymn-title">Centro Livre</span>
-          <span class="hymn-lock">🔒</span>
         </div>
         <div class="hymn-item locked" data-hymn="o-santo-daime-me-chamou" data-title="O Santo Daime Me Chamou">
           <span class="hymn-title">O Santo Daime Me Chamou</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="hospital-divino" data-title="Hospital Divino">
+        <div class="hymn-item unlocked" data-hymn="hospital-divino" data-title="Hospital Divino">
           <span class="hymn-title">Hospital Divino</span>
-          <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="chamo-a-forca" data-title="Chamo A Força">
+        <div class="hymn-item unlocked" data-hymn="chamo-a-força" data-title="Chamo A Força">
           <span class="hymn-title">Chamo A Força</span>
-          <span class="hymn-lock">🔒</span>
         </div>
         <div class="hymn-item locked" data-hymn="estou-aqui" data-title="Estou Aqui">
           <span class="hymn-title">Estou Aqui</span>
@@ -98,7 +96,7 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
           <span class="hymn-title">Batalha</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="o-daime-e-o-daime" data-title="O Daime É O Daime">
+        <div class="hymn-item locked" data-hymn="o-daime-é-o-daime" data-title="O Daime É O Daime">
           <span class="hymn-title">O Daime É O Daime</span>
           <span class="hymn-lock">🔒</span>
         </div>
@@ -106,19 +104,21 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
           <span class="hymn-title">Linha Do Tucum</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="deus-e-para-todos" data-title="Deus É Para Todos">
+        <div class="hymn-item unlocked" data-hymn="deus-é-para-todos" data-title="Deus É Para Todos">
           <span class="hymn-title">Deus É Para Todos</span>
-          <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="eu-provo-com-os-meus-irmaos" data-title="Eu Provo Com Os Meus Irmãos">
+        <div class="hymn-item unlocked" data-hymn="eu-provo-com-os-meus-irmãos" data-title="Eu Provo Com Os Meus Irmãos">
           <span class="hymn-title">Eu Provo Com Os Meus Irmãos</span>
-          <span class="hymn-lock">🔒</span>
         </div>
         <div class="hymn-item unlocked" data-hymn="brilho-do-sol" data-title="Brilho do Sol">
           <span class="hymn-title">Brilho do Sol</span>
         </div>
         <div class="hymn-item unlocked" data-hymn="sol-lua-estrela" data-title="Sol, Lua, Estrela">
           <span class="hymn-title">Sol, Lua, Estrela</span>
+        </div>
+        <div class="hymn-item locked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
+          <span class="hymn-title">Mamãe Vosso Brilho É Tão Lindo</span>
+          <span class="hymn-lock">🔒</span>
         </div>
       </div>
     </div>
@@ -148,4 +148,3 @@ We've done the work. We've tracked down the actual papers. We dare you to click 
 <div id="bibliography-container">
   <p style="font-style: italic; color: #888;">Bibliography loading...</p>
 </div>
-
