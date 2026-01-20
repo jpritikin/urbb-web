@@ -1,7 +1,7 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.0.0"
+version: "v1.1.0"
 ---
 
 ## Welcome to the Unburdened Shop
@@ -14,7 +14,7 @@ Explore our carefully curated collection of items to support your Open Inquiry p
 
 ### 🎟️ Cipher Lottery Ticket
 
-Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. 🔐 Purchase a lottery ticket for a chance to win the keys to all the ciphers! 🗝️ **Winner selected quarterly.** 📅
+Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. 🔐 Purchase a lottery ticket for a chance to win the keys to all the ciphers! 🗝️ **Winner selected weekly! You are likely to win!** 📅
 
 <p class="shop-item-price">$5.00</p>
 
@@ -112,20 +112,16 @@ Includes recorded session 🎥 and personalized guide profile document. 📋✨
 
 <p class="shop-item-price">$500.00</p>
 
-<button class="snipcart-add-item"
-    data-item-id="spirit-guide-matching"
-    data-item-price="500.00"
-    data-item-url="/shop/"
-    data-item-description="Personal Spirit Guide Matching Service - 1 hour consultation"
-    data-item-name="Personal Spirit Guide Matching Service"
-    data-item-custom1-name="Preferred session time"
-    data-item-custom1-type="textarea"
-    data-item-custom1-required="true"
-    data-item-custom2-name="Email for scheduling"
-    data-item-custom2-type="textarea"
-    data-item-custom2-required="true">
+<button class="snipcart-add-item spirit-guide-btn">
     Add to Cart
 </button>
+<div class="spirit-guide-message" style="display: none;">
+<div class="ghost-container"></div>
+<button class="spirit-guide-dismiss">×</button>
+<p>⚠️ <strong>This is a delicate process.</strong> Spirit Guide Matching requires careful preparation and isn't right for everyone. The attunement process can surface unexpected parts, and rushing into guide contact without proper grounding can leave you more confused than before. 🌀</p>
+<p>We recommend booking time with Joshua to explore whether Spirit Guide Matching is the right choice for you. 🙏</p>
+<p><a href="https://estrelacounseling.com/" class="consultation-link" target="_blank">Book a consultation at Estrela Counseling →</a></p>
+</div>
 
 </div>
 
