@@ -1,7 +1,7 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.1.0"
+version: "v1.2.0"
 ---
 
 ## Welcome to the Unburdened Shop
@@ -16,31 +16,31 @@ Explore our carefully curated collection of items to support your Open Inquiry p
 
 Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. 🔐 Purchase a lottery ticket for a chance to win the keys to all the ciphers! 🗝️ **Winner selected weekly! You are likely to win!** 📅
 
-<p class="shop-item-price">$5.00</p>
+<p class="shop-item-price">$10.00</p>
 
 <button class="snipcart-add-item"
     data-item-id="cipher-lottery-ticket"
-    data-item-price="5.00"
+    data-item-price="10.00"
     data-item-url="/shop/"
     data-item-description="Cipher lottery ticket - chance to win decryption keys"
     data-item-name="Cipher Lottery Ticket"
-    data-item-max-quantity="10">
+    data-item-max-quantity="1">
     Add to Cart
 </button>
 
 </div>
 
-<div class="shop-item">
+<div class="shop-item has-sale">
 
 ### 📓 Official Way of Open Inquiry Journals
 
 Notebooks featuring the Sacred Question Mark symbol (?) on the cover. Perfect for your inquiry practice, parts dialogues, or daily reflections. 📝
 
-High-quality paper, durable binding, 200 pages. ✍️
+High-quality paper, durable binding, 140 pages. ✍️
 
 <p class="shop-item-price">$23.00</p>
 
-<button class="snipcart-add-item"
+<button class="snipcart-add-item sale-hint"
     data-item-id="inquiry-journal"
     data-item-price="23.00"
     data-item-url="/shop/"
@@ -53,50 +53,49 @@ High-quality paper, durable binding, 200 pages. ✍️
 
 </div>
 
-<div class="shop-item">
+<div class="shop-item has-sale">
 
 ### 💧 Ceremonial Water Bottles
 
 Stay hydrated during your practice with these premium insulated water bottles. 💧 Featuring subtle Open Inquiry branding for mindful fluid integration. 🧘
 
-32oz capacity, keeps drinks cold for 24 hours ❄️ or hot for 12 hours. 🔥
+Choose either 17 or 32oz size. Keeps drinks cold for 24 hours ❄️ or hot for 12 hours. 🔥
 
 <p class="shop-item-price">$47.00</p>
 
-<button class="snipcart-add-item"
+<button class="snipcart-add-item sale-hint"
     data-item-id="ceremonial-water-bottle"
     data-item-price="47.00"
     data-item-url="/shop/"
     data-item-description="Ceremonial Water Bottle for mindful fluid integration"
     data-item-name="Ceremonial Water Bottle"
     data-item-shippable="true"
-    data-item-weight="500">
+    data-item-weight="500"
+    data-item-custom1-name="Size"
+    data-item-custom1-options="32oz|17oz">
     Add to Cart
 </button>
 
 </div>
 
-<div class="shop-item">
+<div class="shop-item has-sale">
 
 ### 📜 Lifetime Membership Certificate
 
 Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to The Way of Open Inquiry. ✨
 
-Printed on archival-quality paper with gold embossing. ✨ Personalized with your name. 🏷️
+Printed on archival-quality paper. ✨ Personalize with your name. 🏷️
 
 <p class="shop-item-price">$250.00</p>
 
-<button class="snipcart-add-item"
+<button class="snipcart-add-item sale-hint"
     data-item-id="membership-certificate"
     data-item-price="250.00"
     data-item-url="/shop/"
     data-item-description="Lifetime Membership Certificate"
     data-item-name="Lifetime Membership Certificate"
     data-item-shippable="true"
-    data-item-weight="100"
-    data-item-custom1-name="Name for certificate"
-    data-item-custom1-type="textarea"
-    data-item-custom1-required="true">
+    data-item-weight="100">
     Add to Cart
 </button>
 
@@ -127,27 +126,27 @@ Includes recorded session 🎥 and personalized guide profile document. 📋✨
 
 <div class="shop-item">
 
-### 🏷️ Premium Belief Minimization Stickers
+### 🚗 Conviction Minimization Car Magnet
 
-Show your commitment to believing less with these premium vinyl stickers. 🎨
+Show your commitment to conviction minimization with this premium car magnet.
 
 **"Believe less, disbelieve less — Way of Open Inquiry"** 💭
 
-Pack of 10 stickers. 🌈 Weather-resistant, perfect for laptops, water bottles, or journals. 💻🧴📓
+Weather-resistant, perfect for cars, fridges, or filing cabinets. 🚙🧲
 
-**Free with any order, or $0.10/pack standalone.** 🎁 [Contact us](/contact/) for bulk order pricing.
+**Free with any order.** 🎁
 
-<p class="shop-item-price">$0.10</p>
+<p class="shop-item-price">$5.00</p>
 
 <button class="snipcart-add-item"
-    data-item-id="belief-minimization-stickers"
-    data-item-price="0.10"
+    data-item-id="conviction-minimization-magnet"
+    data-item-price="5.00"
     data-item-url="/shop/"
-    data-item-description="Premium Belief Minimization Stickers - Pack of 10"
-    data-item-name="Premium Belief Minimization Stickers (10-pack)"
+    data-item-description="Conviction Minimization Car Magnet"
+    data-item-name="Conviction Minimization Car Magnet"
     data-item-shippable="true"
-    data-item-weight="10"
-    data-item-max-quantity="100">
+    data-item-weight="50"
+    data-item-max-quantity="10">
     Add to Cart
 </button>
 
@@ -166,7 +165,7 @@ Pack of 10 stickers. 🌈 Weather-resistant, perfect for laptops, water bottles,
 
 ## Bulk Orders
 
-Interested in ordering journals, water bottles, or stickers in bulk for your community or practice group? 👥 [Contact us](/contact/) for special pricing. 💰
+Interested in ordering journals, water bottles, or magnets in bulk for your community or practice group? 👥 [Contact us](/contact/) for special pricing. 💰
 
 ## Disclaimer
 

@@ -15,3 +15,13 @@ https://chenhuijing.com/blog/debugging-firefox-on-android/
 Dev branch https://dev.urbb-web.pages.dev/
 
 Contact form needs to redirect to https://unburdened.biz/book/download/
+
+snipcart stuff:
+Domains
+Webhooks URL
+Webhooks shipping configuration (enable + webhook url)
+
+cloudfare variables and secrets:
+ENVIRONMENT
+PRINTFUL_API_KEY
+SNIPCART_SECRET_API_KEY
