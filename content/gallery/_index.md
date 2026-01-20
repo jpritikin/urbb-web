@@ -4,6 +4,16 @@ subtitle: "Moments with Luminaries"
 version: "v1.0.0"
 ---
 
+## Book Sizzle Reel
+
+A "sizzle reel" is Hollywood jargon for a short promotional video designed to generate excitement—typically used to pitch films or TV shows to executives. 🎬 Since books are tragically un-cinematic (no explosions, car chases, or CGI dragons), the concept rarely crosses over to publishing. But this isn't a normal book. 📚✨ What you're about to watch is a two-minute montage showcasing the artwork and design elements that make *Unburdened* more than words on a page. 🎨 Think of it as a trailer for a movie that happens entirely inside your head.
+
+<div class="video-container" style="display: flex; justify-content: center; margin: 0 auto; padding: 0 10%;">
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/iQhANgVCHRM?si=Sg7BKiQtssDNYRtQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
+Warning: The background music may cause spontaneous dancing. Side effects can include increased book purchases and an inexplicable urge to contemplate existence.
+
 ## A Life Among the Influential
 
 Understand something about credibility in the New Age industry. 🌟 You can't just write a book about daemon possession 👻 and expect people to take you seriously unless you've been photographed with the right people. 📸 That's how legitimacy works in this space. ✨
