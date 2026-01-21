@@ -2,8 +2,12 @@ interface Env {
   SNIPCART_SECRET_API_KEY: string;
   PRINTFUL_API_KEY: string;
   WEBHOOK_SECRET: string;
+  META_ACCESS_TOKEN: string;
   ENVIRONMENT?: string;
 }
+
+const META_PIXEL_ID = '1258922096144419';
+const META_API_VERSION = 'v21.0';
 
 interface SnipcartItem {
   id: string;
@@ -51,7 +55,77 @@ interface SnipcartWebhookPayload {
   content: SnipcartOrder;
 }
 
-import { PRODUCTS, ProductConfig } from '../config/products';
+import { PRODUCTS } from '../config/products';
+
+async function sha256(str: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str.toLowerCase().trim());
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function sendMetaConversionEvent(
+  order: SnipcartOrder,
+  env: Env
+): Promise<void> {
+  const eventTime = Math.floor(Date.now() / 1000);
+
+  const nameParts = (order.shippingAddress?.fullName || order.billingAddress?.fullName || '').split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+  const address = order.shippingAddress || order.billingAddress;
+
+  const userData: Record<string, string> = {};
+  if (order.email) userData.em = await sha256(order.email);
+  if (address?.phone) userData.ph = await sha256(address.phone.replace(/\D/g, ''));
+  if (firstName) userData.fn = await sha256(firstName);
+  if (lastName) userData.ln = await sha256(lastName);
+  if (address?.city) userData.ct = await sha256(address.city);
+  if (address?.province) userData.st = await sha256(address.province);
+  if (address?.postalCode) userData.zp = await sha256(address.postalCode);
+  if (address?.country) userData.country = await sha256(address.country);
+
+  const eventData = {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: eventTime,
+        event_id: order.token,
+        event_source_url: 'https://unburdened.org/shop/',
+        action_source: 'website',
+        user_data: userData,
+        custom_data: {
+          value: order.finalGrandTotal,
+          currency: 'USD',
+          content_ids: order.items.map((i) => i.id),
+          contents: order.items.map((i) => ({
+            id: i.id,
+            quantity: i.quantity,
+          })),
+          content_type: 'product',
+          num_items: order.items.reduce((sum, i) => sum + i.quantity, 0),
+        },
+      },
+    ],
+  };
+
+  const url = `https://graph.facebook.com/${META_API_VERSION}/${META_PIXEL_ID}/events?access_token=${env.META_ACCESS_TOKEN}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(eventData),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Meta CAPI error:', error);
+  } else {
+    console.log('Meta CAPI Purchase event sent for order:', order.token);
+  }
+}
 
 function getVariantId(item: SnipcartItem): number | null {
   const product = PRODUCTS[item.id];
@@ -158,8 +232,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   console.log(`Received Snipcart event: ${payload.eventName}`);
 
   switch (payload.eventName) {
-    case 'order.completed':
+    case 'order.completed': {
+      await sendMetaConversionEvent(payload.content, env);
       return createPrintfulOrder(payload.content, env);
+    }
 
     case 'order.status.changed':
       console.log(`Order ${payload.content.token} status: ${payload.content.status}`);

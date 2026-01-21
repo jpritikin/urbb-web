@@ -6,6 +6,7 @@
     {{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}
     <title>{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}</title>
     {{ partial "favicon.html" . }}
+    {{ partial "meta-pixel.html" . }}
     <link rel="stylesheet" href="/css/output.css">
     <link rel="stylesheet" href="/css/pages.css">
     {{ block "head-extra" . }}{{ end }}

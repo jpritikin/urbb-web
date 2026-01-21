@@ -1,3 +1,5 @@
+import { initMetaPixelTracking } from '../tracking/metaPixel.js';
+
 interface Ghost {
     element: HTMLSpanElement;
     startX: number;
@@ -79,6 +81,8 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initMetaPixelTracking();
+
     const spiritGuideBtn = document.querySelector('.spirit-guide-btn');
     const spiritGuideMessage = document.querySelector('.spirit-guide-message');
     const ghostContainer = document.querySelector('.ghost-container') as HTMLElement | null;
