@@ -31,11 +31,11 @@ interface CartItem {
     quantity: number;
 }
 
-interface OrderCompletedEvent {
-    order: {
-        token: string;
-        total: number;
-        currency: string;
+interface CartConfirmResponse {
+    token: string;
+    total: number;
+    currency: string;
+    items: {
         items: CartItem[];
     };
 }
@@ -74,17 +74,18 @@ function trackInitiateCheckout(state: SnipcartState) {
     });
 }
 
-function trackPurchase(order: OrderCompletedEvent['order']) {
+function trackPurchase(response: CartConfirmResponse) {
+    const items = response.items.items;
     window.fbq('track', 'Purchase', {
-        content_ids: order.items.map((i) => i.id),
-        contents: order.items.map((i) => ({
+        content_ids: items.map((i) => i.id),
+        contents: items.map((i) => ({
             id: i.id,
             quantity: i.quantity,
         })),
         content_type: 'product',
-        num_items: order.items.reduce((sum, i) => sum + i.quantity, 0),
-        value: order.total,
-        currency: order.currency || 'USD',
+        num_items: items.reduce((sum, i) => sum + i.quantity, 0),
+        value: response.total,
+        currency: response.currency.toUpperCase(),
     });
 }
 
@@ -97,14 +98,14 @@ function initSnipcartTracking() {
         trackAddToCart(item);
     });
 
-    snipcart.events.on('cart.confirmed', () => {
+    snipcart.events.on('summary.checkout_clicked', () => {
         const state = snipcart.store.getState();
         trackInitiateCheckout(state);
     });
 
-    snipcart.events.on('order.completed', (data: unknown) => {
-        const event = data as OrderCompletedEvent;
-        trackPurchase(event.order);
+    snipcart.events.on('cart.confirmed', (data: unknown) => {
+        const response = data as CartConfirmResponse;
+        trackPurchase(response);
     });
 }
 
