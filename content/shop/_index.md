@@ -158,10 +158,8 @@ Weather-resistant, perfect for cars, fridges, or filing cabinets. 🚙🧲
 
 ## Shipping & Returns
 
-- **Shipping**: We ship worldwide via USPS and UPS. 🌍 Rates calculated at checkout. 💳
 - **Processing Time**: Most orders ship within 2-3 business days. 📦⏰
-- **Returns**: 30-day return policy on physical items (excluding perishables and custom items). ↩️✅
-- **Questions?**: [Contact us](/contact/) for any order inquiries. 💬
+- **Returns**: All sales are final.
 
 ## Bulk Orders
 
