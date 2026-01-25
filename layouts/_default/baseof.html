@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="facebook-domain-verification" content="ewxj0ivfm7yxsfahjl2s6pjl8m2dce" />
     {{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}
     <title>{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}</title>
     {{ partial "favicon.html" . }}
     {{ partial "meta-pixel.html" . }}
+    {{ partial "google-analytics.html" . }}
     <link rel="stylesheet" href="/css/output.css">
     <link rel="stylesheet" href="/css/pages.css">
     {{ block "head-extra" . }}{{ end }}

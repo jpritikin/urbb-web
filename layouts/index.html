@@ -7,6 +7,8 @@
     <meta name="page-version" content="v1.7.1">
     <title>{{ .Site.Title }}</title>
     {{ partial "favicon.html" . }}
+    {{ partial "meta-pixel.html" . }}
+    {{ partial "google-analytics.html" . }}
     <link rel="stylesheet" href="/css/output.css">
     <script>
         const savedTheme = localStorage.getItem('theme');
