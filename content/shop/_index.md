@@ -82,7 +82,7 @@ Choose either 17 or 32oz size. Keeps drinks cold for 24 hours ❄️ or hot for 
 
 ### 📜 Lifetime Membership Certificate
 
-Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to The Way of Open Inquiry. ✨
+Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to the Way of Open Inquiry. ✨
 
 Printed on archival-quality paper. ✨ Personalize with your name. 🏷️
 
