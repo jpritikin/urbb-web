@@ -49,6 +49,10 @@ No need to write detailed summaries of what you accomplished unless I request th
 
 Gallery images should be scaled to a maximum of 500x500 pixels using `mogrify -resize 500x500\>`.
 
+## Button Styling
+
+Links have global underline styling in `input.css`. When styling button-like links (e.g., `.submit-button`, `.order-button`), always include `no-underline hover:no-underline` to override the base link styles.
+
 ## Glitchy and Playful Design Approach
 
 - Probabilistic behavior: UI elements have random chances (10-25%) to behave differently on each page load or interaction, making the experience unique each time

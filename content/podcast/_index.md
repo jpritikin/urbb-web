@@ -1,6 +1,6 @@
 ---
 title: "Podcast"
-version: "v1.0.0"
+version: "v1.0.1"
 ---
 
 ## 🎙️ The Podcast That Doesn't Exist (Yet)
@@ -15,7 +15,7 @@ Are you a skeptic, practitioner, academic, or curious troublemaker? Maybe you wa
 
 ### 🔓 Unblending is the engine of religious transformation
 
-Every mystical tradition, stripped of its cultural packaging, teaches the same core move: unblending.
+Every mystical tradition, stripped of its cultural packaging, teaches the same core move: unblending.[^1]
 
 *Want to argue this is reductive nonsense? I'm flattening profound theological differences into pop psychology? Let's talk.*
 
@@ -50,3 +50,7 @@ Not a philosophy of consciousness. Not a neuroscience of consciousness. A *user'
 </div>
 
 No promises. But enough interest might summon this podcast into existence. 👻✨
+
+## Notes
+
+[^1]: In Internal Family Systems therapy, *unblending* is the process of creating a little separation between you and your emotions. When you're *blended*, you *are* the anger, the fear, the shame. Unblending lets you feel these feelings without being consumed by them. Try the [IFS Simulator](/ifs/) to learn more about IFS. 🌟
