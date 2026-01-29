@@ -7,23 +7,23 @@ version: "v1.0.1"
 
 There is no podcast. Not yet, anyway.
 
-But if there's interest, I'm open to recording one. The book makes some claims that deserve pushback, elaboration, or at minimum, a raised eyebrow. 🤨
+But if there's interest, I'm open to recording one. The book makes some bold claims that deserve pushback, elaboration, or at minimum, a raised eyebrow. 🤨
 
 ## Who Wants to Talk to Me?
 
 Are you a skeptic, practitioner, academic, or curious troublemaker? Maybe you want to engage with some of the book's more *outlandish* claims?
 
-### 🔓 Unblending is the engine of religious transformation
-
-Every mystical tradition, stripped of its cultural packaging, teaches the same core move: unblending.[^1]
-
-*Want to argue this is reductive nonsense? I'm flattening profound theological differences into pop psychology? Let's talk.*
-
 ### 🔬 I have cleared the way for scientific religion
 
-Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal transformation becomes the predictable outcome of a reproducible process. 📊
+Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal growth becomes the predictable outcome of a reproducible process. 📊
 
 *Think this is category error? That the ineffable can't be operationalized? That I'm committing scientism while claiming to transcend it? I'd love to hear why.*
+
+### 🔓 Unblending is the engine of religious transformation
+
+Every tradition, stripped of its cultural packaging, teaches the same core move to advance human flourishing: unblending.[^1]
+
+*Want to argue this is reductive nonsense? I'm flattening profound theological differences into pop psychology? Let's talk.*
 
 ### 📖 My book represents the first User's Guide to Consciousness
 
