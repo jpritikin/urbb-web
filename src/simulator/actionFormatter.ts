@@ -11,6 +11,7 @@ const KNOWN_ACTIONS = new Set([
     'job',
     'feel_toward',
     'expand_deepen',
+    'add_target',
     'who_do_you_see',
     'help_protected',
     'notice_part',
@@ -68,6 +69,9 @@ export function formatActionLabel(
 
         case 'expand_deepen':
             return 'Expand and deepen';
+
+        case 'add_target':
+            return 'Invite a target';
 
         case 'who_do_you_see':
             return `Who do you see: ${name}`;

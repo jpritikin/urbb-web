@@ -8,6 +8,7 @@ export interface TherapistAction {
 export const STAR_MENU_ACTIONS: TherapistAction[] = [
     { id: 'feel_toward', question: 'How do you feel toward?', shortName: 'Feel', category: 'relationship' },
     { id: 'expand_deepen', question: 'Feel calm and patient. Allow this feeling to expand and deepen.', shortName: 'Expand', category: 'relationship' },
+    { id: 'add_target', question: 'Invite another part to the conference', shortName: 'Invite', category: 'relationship' },
 ];
 
 export const CLOUD_MENU_ACTIONS: TherapistAction[] = [

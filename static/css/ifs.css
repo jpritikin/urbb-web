@@ -705,6 +705,61 @@ body.ifs-fullscreen main {
   background: #5a5a7a;
 }
 
+.pending-action-banner {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.dark .pending-action-banner {
+  background: rgba(45, 45, 60, 0.9);
+  border-color: #666;
+}
+
+.pending-action-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.dark .pending-action-text {
+  color: #e0e0e0;
+}
+
+.pending-action-dismiss {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+  padding: 0 0.2rem;
+  pointer-events: auto;
+}
+
+.pending-action-dismiss:hover {
+  color: #333;
+}
+
+.dark .pending-action-dismiss {
+  color: #aaa;
+}
+
+.dark .pending-action-dismiss:hover {
+  color: #fff;
+}
+
 .help-panel-container {
   position: absolute;
   bottom: 10px;

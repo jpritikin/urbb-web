@@ -36,6 +36,7 @@ declare global {
     interface Window {
         stopAnimations?: () => void;
         resumeAnimations?: () => void;
+        dumpCloudStates?: () => void;
     }
 }
 
@@ -285,7 +286,7 @@ export class CloudManager {
                     this.playbackRecording.markSpontaneousBlendTriggered(accumulatedTime);
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
                 },
-            }
+            } //,{ skipAttentionChecks: true }
         );
 
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container' });
@@ -329,14 +330,7 @@ export class CloudManager {
             },
             {
                 onCloudSelected: (cloud, touchEvent) => this.handlePanoramaSelect(cloud),
-                onTargetActionComplete: (action, sourceCloudId, targetCloudId) => {
-                    if (action.id === 'notice_part') {
-                        this.handleNoticePart(sourceCloudId, targetCloudId);
-                    } else if (action.id === 'feel_toward') {
-                        this.handleFeelToward(targetCloudId);
-                    }
-                },
-                onPendingTargetSet: (text, cloudId) => this.showThoughtBubble(text, cloudId),
+                onPendingActionComplete: (targetCloudId) => this.completePendingAction(targetCloudId),
             }
         );
 
@@ -371,13 +365,17 @@ export class CloudManager {
         });
         this.model.setOnModeChange((mode) => {
             if (!this.insideAct) {
-                this.act({ action: 'mode_change', cloudId: '', newMode: mode }, () => {});
+                this.act({ action: 'mode_change', cloudId: '', newMode: mode }, () => { });
             }
         });
         this.view.setOnModeChange((mode) => {
-            this.inputHandler?.clearPendingTargetAction();
             this.updateUIForMode();
             this.uiManager?.setMode(mode);
+        });
+        this.view.setOnPendingActionDismiss(() => {
+            this.act('Cancel pending action', () => {
+                this.model.setPendingAction(null);
+            });
         });
         this.view.on('transition-started', ({ direction }) => {
             this.onTransitionStart(direction);
@@ -511,12 +509,6 @@ export class CloudManager {
         this.selectedAction = action;
         this.hidePieMenu();
 
-        if (action.id === 'feel_toward') {
-            this.inputHandler?.setPendingTargetAction(action, STAR_CLOUD_ID);
-            this.showThoughtBubble("Which part?", STAR_CLOUD_ID);
-            return;
-        }
-
         if (action.id === 'expand_deepen') {
             this.expandDeepenEffect?.start();
         }
@@ -541,12 +533,6 @@ export class CloudManager {
 
         const rec: RecordedAction = { action: action.id, cloudId: cloud.id };
         const isBlended = this.model.isBlended(cloud.id);
-
-        if (action.id === 'notice_part') {
-            this.inputHandler?.setPendingTargetAction(action, cloud.id);
-            this.showThoughtBubble("Which part?", cloud.id);
-            return;
-        }
 
         this.act(rec, () => {
             const result = this.controller!.executeAction(action.id, cloud.id, { isBlended });
@@ -587,7 +573,6 @@ export class CloudManager {
     }
 
     private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize', cloudId: string): void {
-        this.inputHandler?.clearPendingTargetAction();
         if (!this.controller) return;
 
         this.act({ action: 'ray_field_select', cloudId, field }, () => {
@@ -767,6 +752,26 @@ export class CloudManager {
 
         window.stopAnimations = () => this.animationLoop.stop();
         window.resumeAnimations = () => this.animationLoop.start();
+        window.dumpCloudStates = () => {
+            const fgIds = this.view.getForegroundCloudIds();
+            const confIds = this.model.getConferenceCloudIds();
+            const targetIds = this.model.getTargetCloudIds();
+            for (const inst of this.instances) {
+                const id = inst.cloud.id;
+                const name = this.model.parts.getPartName(id);
+                const state = this.view.getCloudState(id);
+                const parentId = (inst.cloud.getGroupElement()?.parentNode as Element)?.id ?? '?';
+                const inFg = fgIds.has(id);
+                const inConf = confIds.has(id);
+                const isTarget = targetIds.has(id);
+                console.log(`${name}: pos=(${state?.x?.toFixed(0)},${state?.y?.toFixed(0)}) ` +
+                    `opacity=${state?.opacity?.toFixed(2)} scale=${state?.scale?.toFixed(2)} ` +
+                    `posTarget=${state?.positionTarget?.type} group=${parentId} ` +
+                    `fg=${inFg} conf=${inConf} target=${isTarget}`);
+            }
+            console.log(`mode=${this.model.getMode()} transDir=${this.view.getTransitionDirection()} ` +
+                `transProg=${this.view.getTransitionProgress()?.toFixed(2)}`);
+        };
     }
 
     stopAnimation(): void {
@@ -774,10 +779,17 @@ export class CloudManager {
     }
 
     private handlePanoramaSelect(cloud: Cloud): void {
-        console.log('[CloudManager] handlePanoramaSelect', cloud.id, 'model:', this.model);
+        const pending = this.model.getPendingAction();
+        if (pending?.actionId === 'add_target') {
+            this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
+                this.model.setPendingAction(null);
+                this.model.addTargetCloud(cloud.id);
+                this.model.setMode('foreground');
+            });
+            return;
+        }
         this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
             this.model.setTargetCloud(cloud.id);
-            console.log('[CloudManager] after setTargetCloud, model.getMode():', this.model.getMode(), 'model:', this.model);
         });
     }
 
@@ -793,12 +805,26 @@ export class CloudManager {
     private handleFeelToward(targetCloudId: string): void {
         if (!this.controller) return;
 
-        this.model.removeThoughtBubblesForCloud(STAR_CLOUD_ID);
         this.act({ action: 'feel_toward', cloudId: targetCloudId }, () => {
-            const result = this.controller!.executeAction('feel_toward', targetCloudId);
-            console.log('[CloudManager] feel_toward result:', result);
+            const result = this.controller!.executeAction('feel_toward', STAR_CLOUD_ID, { targetCloudId });
             this.applyActionResult(result, targetCloudId);
-            console.log('[CloudManager] after apply, selfRay:', this.model.getSelfRay());
+        });
+    }
+
+    private completePendingAction(targetCloudId: string): void {
+        const pending = this.model.getPendingAction();
+        if (!pending) return;
+
+        const { actionId, sourceCloudId } = pending;
+        this.act({ action: actionId, cloudId: sourceCloudId, targetCloudId }, () => {
+            this.model.setPendingAction(null);
+            if (actionId === 'notice_part') {
+                const result = this.controller!.executeAction('notice_part', sourceCloudId, { targetCloudId });
+                this.applyActionResult(result, sourceCloudId);
+            } else if (actionId === 'feel_toward') {
+                const result = this.controller!.executeAction('feel_toward', STAR_CLOUD_ID, { targetCloudId });
+                this.applyActionResult(result, targetCloudId);
+            }
         });
     }
 
@@ -951,7 +977,8 @@ export class CloudManager {
         this.view.setCloudNames(cloudNames);
         this.view.syncWithModel(oldModel, this.model, this.instances);
         const noBlendedParts = this.model.getBlendedParts().length === 0 && !this.model.peekPendingBlend();
-        this.animatedStar?.setPointerEventsEnabled(noBlendedParts);
+        const inForeground = this.model.getMode() === 'foreground';
+        this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
 
         this.dismissPieMenuIfPartLeft();
     }
@@ -1294,7 +1321,13 @@ export class CloudManager {
             }
             this.moveStarToUIGroup();
         } else {
-            // fg → panorama: release stretch gradually on partially blended clouds
+            // fg → panorama: move stepped-back clouds (in uiGroup but no longer
+            // in foreground) back to zoomGroup so they use the correct coord space
+            for (const instance of this.instances) {
+                if (!foregroundCloudIds.has(instance.cloud.id)) {
+                    this.moveCloudToZoomGroup(instance.cloud.id);
+                }
+            }
             for (const cloudId of this.model.getBlendedParts()) {
                 const cloud = this.getCloudById(cloudId);
                 cloud?.releaseBlendedStretch();

@@ -122,6 +122,8 @@ export class SimulatorController {
             actions.push({ action: 'expand_deepen', cloudId: STAR_CLOUD_ID });
         }
 
+        actions.push({ action: 'add_target', cloudId: STAR_CLOUD_ID });
+
         return actions;
     }
 
@@ -258,20 +260,26 @@ export class SimulatorController {
                 return this.handleWhoDoYouSee(cloudId);
 
             case 'feel_toward':
-                return this.handleFeelToward(cloudId);
+                if (options?.targetCloudId) {
+                    return this.handleFeelToward(options.targetCloudId);
+                }
+                this.model.setPendingAction({ actionId: 'feel_toward', sourceCloudId: cloudId });
+                return { success: true, stateChanges: [] };
 
             case 'expand_deepen':
                 return this.handleExpandDeepen();
+
+            case 'add_target':
+                this.model.setPendingAction({ actionId: 'add_target', sourceCloudId: STAR_CLOUD_ID });
+                this.model.setMode('panorama');
+                return { success: true, stateChanges: [] };
 
             case 'notice_part':
                 if (options?.targetCloudId) {
                     return this.handleNoticePart(cloudId, options.targetCloudId);
                 }
-                return {
-                    success: true,
-                    stateChanges: [],
-                    uiFeedback: { thoughtBubble: { text: "Which part?", cloudId } }
-                };
+                this.model.setPendingAction({ actionId: 'notice_part', sourceCloudId: cloudId });
+                return { success: true, stateChanges: [] };
 
             case 'ray_field_select':
                 if (options?.field) {

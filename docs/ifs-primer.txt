@@ -13,13 +13,14 @@ Key Files
 src/cloud/cloudManager.ts        - Orchestrator. Owns model, view, controller. Handles
                                    user interaction routing, animation loop, act/sync flow.
 src/simulator/ifsModel.ts        - Pure state. Targets, blended parts, supporting parts,
-                                   self-ray, messages, thought bubbles, mode, pending blends.
+                                   self-ray, messages, thought bubbles, mode, pending blends,
+                                   pendingAction (multi-click action awaiting target selection).
                                    All state serializable to JSON.
 src/simulator/ifsView.ts         - View state + rendering coordination. Manages per-cloud
                                    animated state (position, opacity, scale, blending degree).
                                    syncWithModel() delegates to: updateSeatAssignments,
                                    updateStarPosition, updateCloudStateTargets, syncSelfRay,
-                                   syncThoughtBubbles, syncMode, syncAddTargetBanner,
+                                   syncThoughtBubbles, syncMode, syncPendingActionBanner,
                                    generateTraceEntries, checkVictoryCondition.
 src/simulator/simulatorController.ts - Action validation (getValidActions) and execution
                                    (executeAction). Returns ControllerActionResult with
@@ -35,9 +36,9 @@ src/simulator/therapistActions.ts - Action definitions. Three arrays:
 src/menu/pieMenuController.ts    - Routes pie menu interactions to correct action set
                                    based on MenuMode ('cloud' | 'selfRay' | 'star').
                                    Filters to valid actions via controller.getValidActions().
-src/simulator/inputHandler.ts    - Cloud click/touch/hover handling. Manages pending target
-                                   actions (for feel_toward, notice_part - actions that need
-                                   a second click to pick a target cloud).
+src/simulator/inputHandler.ts    - Cloud click/touch/hover handling. Checks model for
+                                   pendingAction; if set, routes click to
+                                   cloudManager.completePendingAction() instead of pie menu.
 src/simulator/uiManager.ts       - HTML UI elements: mode toggle, mobile banner, trace panel,
                                    debug/pause buttons, recording overlay.
 src/simulator/timeAdvancer.ts    - Advances simulation time. Increases needAttention over time,
@@ -84,11 +85,14 @@ Action Flow
    })
 5. act() then calls syncViewWithModel() to propagate all changes
 
-Pending Target Actions
-----------------------
-Some actions (feel_toward, notice_part) need a second click to pick a target.
-inputHandler.setPendingTargetAction() stores the action. Next cloud click completes
-it via callbacks.onTargetActionComplete().
+Pending Actions
+---------------
+Some actions (feel_toward, notice_part, add_target) need a second click to pick a
+target. The controller sets model.pendingAction = { actionId, sourceCloudId }.
+The view shows a banner (syncPendingActionBanner) with dismiss button.
+inputHandler checks model.getPendingAction(); if set, next cloud click calls
+cloudManager.completePendingAction(targetCloudId) which dispatches to the
+appropriate handler. Cleared on dismiss, mode change to foreground, or completion.
 
 Blending Lifecycle
 ------------------

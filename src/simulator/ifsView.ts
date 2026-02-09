@@ -89,6 +89,10 @@ export class SimulatorView {
     private victoryBanner: VictoryBanner = new VictoryBanner();
     private htmlContainer: HTMLElement | null = null;
 
+    // Pending-action banner
+    private pendingActionBannerEl: HTMLElement | null = null;
+    private onPendingActionDismiss: (() => void) | null = null;
+
     // Help panel
     private helpPanel: HelpPanel = new HelpPanel();
 
@@ -493,6 +497,7 @@ export class SimulatorView {
         this.syncSelfRay(newModel);
         this.syncThoughtBubbles(newModel);
         this.syncMode(newModel);
+        this.syncPendingActionBanner(newModel);
 
         this.generateTraceEntries(oldModel, newModel);
 
@@ -503,6 +508,40 @@ export class SimulatorView {
         const modelMode = model.getMode();
         if (modelMode !== this.mode) {
             this.setMode(modelMode);
+        }
+    }
+
+    setOnPendingActionDismiss(callback: () => void): void {
+        this.onPendingActionDismiss = callback;
+    }
+
+    private static getPendingActionText(actionId: string): string {
+        switch (actionId) {
+            case 'add_target': return 'Select a part to invite';
+            case 'feel_toward': return 'How do you feel toward which part?';
+            case 'notice_part': return 'Notice which part?';
+            default: return 'Select a part';
+        }
+    }
+
+    private syncPendingActionBanner(model: SimulatorModel): void {
+        const pending = model.getPendingAction();
+        if (pending && !this.pendingActionBannerEl && this.htmlContainer) {
+            this.pendingActionBannerEl = document.createElement('div');
+            this.pendingActionBannerEl.className = 'pending-action-banner';
+            this.pendingActionBannerEl.innerHTML = `
+                <span class="pending-action-text">${SimulatorView.getPendingActionText(pending.actionId)}</span>
+                <button class="pending-action-dismiss">\u00d7</button>
+            `;
+            this.pendingActionBannerEl.querySelector('.pending-action-dismiss')!
+                .addEventListener('click', () => this.onPendingActionDismiss?.());
+            this.htmlContainer.appendChild(this.pendingActionBannerEl);
+        } else if (pending && this.pendingActionBannerEl) {
+            const textEl = this.pendingActionBannerEl.querySelector('.pending-action-text');
+            if (textEl) textEl.textContent = SimulatorView.getPendingActionText(pending.actionId);
+        } else if (!pending && this.pendingActionBannerEl) {
+            this.pendingActionBannerEl.remove();
+            this.pendingActionBannerEl = null;
         }
     }
 

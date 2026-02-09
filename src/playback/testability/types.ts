@@ -22,6 +22,7 @@ export interface SerializedModel {
     victoryAchieved?: boolean;
     selfAmplification?: number;
     mode?: 'panorama' | 'foreground';
+    pendingAction?: { actionId: string; sourceCloudId: string } | null;
 }
 
 export interface OrchestratorSnapshot {

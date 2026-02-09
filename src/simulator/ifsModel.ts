@@ -31,6 +31,11 @@ export interface ThoughtBubble {
 
 export type SimulatorMode = 'panorama' | 'foreground';
 
+export interface PendingAction {
+    actionId: string;
+    sourceCloudId: string;
+}
+
 export class SimulatorModel {
     private targetCloudIds: Set<string> = new Set();
     private supportingParts: Map<string, Set<string>> = new Map();
@@ -45,6 +50,7 @@ export class SimulatorModel {
     private victoryAchieved: boolean = false;
     private selfAmplification: number = 1;
     private mode: SimulatorMode = 'panorama';
+    private pendingAction: PendingAction | null = null;
     private onModeChange?: (mode: SimulatorMode) => void;
 
     getSelfAmplification(): number {
@@ -69,9 +75,19 @@ export class SimulatorModel {
             this.mode = mode;
             if (mode === 'panorama') {
                 this.clearSelfRay();
+            } else {
+                this.pendingAction = null;
             }
             this.onModeChange?.(mode);
         }
+    }
+
+    getPendingAction(): PendingAction | null {
+        return this.pendingAction;
+    }
+
+    setPendingAction(action: PendingAction | null): void {
+        this.pendingAction = action;
     }
 
     changeNeedAttention(cloudId: string, delta: number): void {
@@ -410,6 +426,7 @@ export class SimulatorModel {
         cloned.thoughtBubbles = this.thoughtBubbles.map(b => ({ ...b }));
         cloned.selfAmplification = this.selfAmplification;
         cloned.mode = this.mode;
+        cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
         return cloned;
     }
 
@@ -591,6 +608,7 @@ export class SimulatorModel {
             victoryAchieved: this.victoryAchieved,
             selfAmplification: this.selfAmplification,
             mode: this.mode,
+            pendingAction: this.pendingAction ? { ...this.pendingAction } : null,
         };
     }
 
@@ -613,6 +631,7 @@ export class SimulatorModel {
         model.victoryAchieved = json.victoryAchieved ?? false;
         model.selfAmplification = json.selfAmplification ?? 1;
         model.mode = json.mode ?? 'panorama';
+        model.pendingAction = json.pendingAction ?? null;
         return model;
     }
 }

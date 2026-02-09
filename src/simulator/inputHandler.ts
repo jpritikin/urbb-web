@@ -2,7 +2,6 @@ import { Cloud } from '../cloud/cloudShape.js';
 import { SimulatorModel } from './ifsModel.js';
 import { SimulatorView } from './ifsView.js';
 import { PieMenuController } from '../menu/pieMenuController.js';
-import type { TherapistAction } from './therapistActions.js';
 
 export interface InputHandlerDependencies {
     getModel: () => SimulatorModel;
@@ -14,8 +13,7 @@ export interface InputHandlerDependencies {
 
 export interface InputHandlerCallbacks {
     onCloudSelected: (cloud: Cloud, touchEvent?: TouchEvent) => void;
-    onTargetActionComplete: (action: TherapistAction, sourceCloudId: string, targetCloudId: string) => void;
-    onPendingTargetSet: (text: string, cloudId: string) => void;
+    onPendingActionComplete: (targetCloudId: string) => void;
 }
 
 export class InputHandler {
@@ -27,7 +25,6 @@ export class InputHandler {
     private longPressTimer: number | null = null;
     private longPressStartTime: number = 0;
     private readonly LONG_PRESS_DURATION = 500;
-    private pendingTargetAction: { action: TherapistAction; sourceCloudId: string } | null = null;
 
     constructor(deps: InputHandlerDependencies, callbacks: InputHandlerCallbacks) {
         this.deps = deps;
@@ -63,18 +60,6 @@ export class InputHandler {
             (performance.now() - this.longPressStartTime) >= this.LONG_PRESS_DURATION;
     }
 
-    setPendingTargetAction(action: TherapistAction, sourceCloudId: string): void {
-        this.pendingTargetAction = { action, sourceCloudId };
-    }
-
-    clearPendingTargetAction(): void {
-        this.pendingTargetAction = null;
-    }
-
-    hasPendingTargetAction(): boolean {
-        return this.pendingTargetAction !== null;
-    }
-
     handleCloudClick(cloud: Cloud): void {
         if (this.touchOpenedPieMenu) {
             this.touchOpenedPieMenu = false;
@@ -89,7 +74,7 @@ export class InputHandler {
         this.deps.updateAllCloudStyles();
 
         if (this.deps.getModel().getMode() !== 'foreground') return;
-        if (this.pendingTargetAction) return;
+        if (this.deps.getModel().getPendingAction()) return;
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
         if (cloudState && cloudState.opacity > 0) {
@@ -99,19 +84,18 @@ export class InputHandler {
     }
 
     handleCloudTouchEnd(cloud: Cloud): void {
-        if (!this.pendingTargetAction) return;
+        if (!this.deps.getModel().getPendingAction()) return;
         if (this.deps.getModel().getMode() !== 'foreground') return;
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
         if (cloudState && cloudState.opacity > 0) {
-            this.completePendingTargetAction(cloud.id);
+            this.callbacks.onPendingActionComplete(cloud.id);
         }
     }
 
     selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
-        console.log('[InputHandler] selectCloud', cloud.id, 'mode:', this.deps.getModel().getMode(), 'pendingAction:', this.pendingTargetAction?.action.id, 'model:', this.deps.getModel());
-        if (this.pendingTargetAction) {
-            this.completePendingTargetAction(cloud.id);
+        if (this.deps.getModel().getPendingAction()) {
+            this.callbacks.onPendingActionComplete(cloud.id);
             return;
         }
         if (this.deps.getModel().getMode() === 'panorama') {
@@ -122,15 +106,6 @@ export class InputHandler {
                 this.deps.pieMenuController.toggle(cloud.id, cloudState.x, cloudState.y, touchEvent);
             }
         }
-    }
-
-    private completePendingTargetAction(targetCloudId: string): void {
-        if (!this.pendingTargetAction) return;
-
-        const { action, sourceCloudId } = this.pendingTargetAction;
-        this.pendingTargetAction = null;
-
-        this.callbacks.onTargetActionComplete(action, sourceCloudId, targetCloudId);
     }
 
     createCloudEventHandlers(cloud: Cloud): {
