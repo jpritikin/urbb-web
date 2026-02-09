@@ -1077,10 +1077,12 @@ export class Cloud {
         onTouchEnd?: () => void;
     }): SVGGElement {
         this.groupElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.groupElement.classList.add('cloud-group');
         this.groupElement.setAttribute('transform', `translate(${this.x}, ${this.y})`);
         this.groupElement.style.cursor = 'pointer';
 
         this.pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        this.pathElement.setAttribute('pointer-events', 'all');
         this.pathElement.style.strokeWidth = String(0.8);
 
         this.textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1092,10 +1094,24 @@ export class Cloud {
         this.groupElement.appendChild(this.pathElement);
         this.groupElement.appendChild(this.textElement);
 
+        // Chrome suppresses click events on SVG elements whose transform changes
+        // between mousedown and mouseup (animation loop updates translate every frame).
+        // Synthesize click from mousedown+mouseup on the same group.
+        let mouseDownOnThis = false;
+        this.groupElement.addEventListener('mousedown', () => {
+            mouseDownOnThis = true;
+        }, true);
+        this.groupElement.addEventListener('mouseup', (e: Event) => {
+            if (mouseDownOnThis) {
+                mouseDownOnThis = false;
+                e.preventDefault();
+                e.stopPropagation();
+                callbacks.onClick();
+            }
+        }, true);
         this.groupElement.addEventListener('click', (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
-            callbacks.onClick();
         }, true);
 
         const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

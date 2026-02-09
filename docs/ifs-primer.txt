@@ -1,0 +1,103 @@
+IFS Simulator Architecture Primer
+==================================
+
+Core pattern: Model-View-Controller with act/sync flow.
+All state mutations go through cloudManager.act(action, fn), which:
+  1. Clones model (for diff)
+  2. Runs fn() which mutates model
+  3. Calls syncViewWithModel(oldModel) to propagate changes to view
+  4. Records action for playback
+
+Key Files
+---------
+src/cloud/cloudManager.ts        - Orchestrator. Owns model, view, controller. Handles
+                                   user interaction routing, animation loop, act/sync flow.
+src/simulator/ifsModel.ts        - Pure state. Targets, blended parts, supporting parts,
+                                   self-ray, messages, thought bubbles, mode, pending blends.
+                                   All state serializable to JSON.
+src/simulator/ifsView.ts         - View state + rendering coordination. Manages per-cloud
+                                   animated state (position, opacity, scale, blending degree).
+                                   syncWithModel() delegates to: updateSeatAssignments,
+                                   updateStarPosition, updateCloudStateTargets, syncSelfRay,
+                                   syncThoughtBubbles, syncMode, syncAddTargetBanner,
+                                   generateTraceEntries, checkVictoryCondition.
+src/simulator/simulatorController.ts - Action validation (getValidActions) and execution
+                                   (executeAction). Returns ControllerActionResult with
+                                   stateChanges, uiFeedback, reduceBlending, triggerBacklash,
+                                   createSelfRay, trustGain.
+src/simulator/actionEffectApplicator.ts - Applies ControllerActionResult to model: handles
+                                   uiFeedback (thought bubbles), reduceBlending, triggerBacklash,
+                                   createSelfRay.
+src/simulator/therapistActions.ts - Action definitions. Three arrays:
+                                   STAR_MENU_ACTIONS (star pie menu),
+                                   CLOUD_MENU_ACTIONS (part pie menu),
+                                   SELFRAY_MENU_ACTIONS (self-ray pie menu).
+src/menu/pieMenuController.ts    - Routes pie menu interactions to correct action set
+                                   based on MenuMode ('cloud' | 'selfRay' | 'star').
+                                   Filters to valid actions via controller.getValidActions().
+src/simulator/inputHandler.ts    - Cloud click/touch/hover handling. Manages pending target
+                                   actions (for feel_toward, notice_part - actions that need
+                                   a second click to pick a target cloud).
+src/simulator/uiManager.ts       - HTML UI elements: mode toggle, mobile banner, trace panel,
+                                   debug/pause buttons, recording overlay.
+src/simulator/timeAdvancer.ts    - Advances simulation time. Increases needAttention over time,
+                                   checks attention thresholds, triggers spontaneous blends.
+src/simulator/messageOrchestrator.ts - Timed message exchanges between parts, blend-start
+                                   delays, cooldown timers for dialogue.
+
+Visual/Animation
+----------------
+src/cloud/cloudShape.ts          - SVG cloud rendering, lattice deformation for blending.
+src/cloud/panoramaCloudMotion.ts - Cloud positions on 3D torus, velocity-based motion.
+src/star/starAnimation.ts        - Animated star (Self), arm transitions for blended parts.
+src/star/selfRay.ts              - Beam from star to target part. BiographyField type:
+                                   'age'|'identity'|'job'|'jobAppraisal'|'jobImpact'|
+                                   'gratitude'|'whatNeedToKnow'|'compassion'|'apologize'
+src/star/carpetRenderer.ts       - Seat carpets for conference table positions.
+src/simulator/view/SeatManager.ts - Assigns seats around conference table. STAR_CLOUD_ID
+                                   is the sentinel ID for the star/Self.
+
+Playback/Testing
+----------------
+src/playback/testability/types.ts - SerializedModel, RecordedAction, RecordedSession,
+                                   ControllerActionResult, Scenario, etc.
+src/playback/playbackRecordingCoordinator.ts - Records/replays sessions for testing.
+src/playback/testability/rng.ts  - Seeded RNG. model.random() for reproducibility.
+
+Modes
+-----
+SimulatorMode: 'panorama' | 'foreground'
+- Panorama: all clouds visible on torus, click selects a target (enters foreground).
+- Foreground: conference table view. Targets sit at seats, blended parts at star center,
+  supporting parts orbit their target. Non-participating clouds fade out.
+- Transitions animate smoothly (forward/reverse) via TransitionAnimator.
+- Clouds move between zoomGroup (panorama coords) and uiGroup (screen coords).
+
+Action Flow
+-----------
+1. User clicks cloud/star → inputHandler routes based on mode
+2. Pie menu shows valid actions (filtered by simulatorController.getValidActions())
+3. User selects action → pieMenuController dispatches to cloudManager handler
+4. cloudManager calls act(recordedAction, () => {
+     result = controller.executeAction(actionId, cloudId, options);
+     effectApplicator.apply(result, cloudId);
+   })
+5. act() then calls syncViewWithModel() to propagate all changes
+
+Pending Target Actions
+----------------------
+Some actions (feel_toward, notice_part) need a second click to pick a target.
+inputHandler.setPendingTargetAction() stores the action. Next cloud click completes
+it via callbacks.onTargetActionComplete().
+
+Blending Lifecycle
+------------------
+spontaneous (needAttention threshold) → partDemandsAttention() → addBlendedPart
+therapist-initiated: blend action → removeTargetCloud + addBlendedPart
+Separation: separate action → reduceBlending → degree reaches 0 → promoteBlendedToTarget
+Pending blends: enqueuePendingBlend → view animates arrival → promotePendingBlend
+
+Conference Participants
+-----------------------
+model.getConferenceCloudIds() returns union of: targets, blended, pending blends,
+supporting parts. All are visible in foreground mode.

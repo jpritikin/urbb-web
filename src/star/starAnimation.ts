@@ -197,7 +197,7 @@ export class AnimatedStar {
         canvas.style.height = '100%';
         canvas.style.display = 'block';
         canvas.style.cursor = 'pointer';
-        canvas.style.pointerEvents = 'auto';
+        canvas.style.pointerEvents = 'none';
         canvas.addEventListener('click', (e) => {
             e.stopPropagation();
             this.onClick?.(this.centerX, this.centerY, e);

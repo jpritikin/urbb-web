@@ -235,6 +235,7 @@ export class CloudManager {
 
         this.container.appendChild(this.svgElement);
 
+
         // zoomGroup contains content that zooms (clouds, carpet, rays)
         this.zoomGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.zoomGroup.setAttribute('id', 'zoom-group');

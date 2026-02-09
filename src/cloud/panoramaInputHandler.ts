@@ -150,7 +150,6 @@ export class PanoramaInputHandler {
         if (this.getMode() !== 'panorama') return;
         if (e.button !== 0) return; // Only left click
 
-        // Check if clicking on a cloud - if so, don't start drag
         const target = e.target as Element;
         if (target.closest('.cloud-group')) return;
 

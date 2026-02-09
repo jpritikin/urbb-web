@@ -47,7 +47,9 @@ export class TimeAdvancer {
             this.accumulatedTime -= ATTENTION_CHECK_INTERVAL;
             this.intervalCount++;
             this.processOneInterval();
-            this.checkAttentionDemands();
+            if (!this.skipAttentionChecks) {
+                this.checkAttentionDemands();
+            }
         }
     }
 
