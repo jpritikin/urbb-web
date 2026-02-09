@@ -15,7 +15,7 @@ Are you a skeptic, practitioner, academic, or curious troublemaker? Maybe you wa
 
 ### 🔬 I have cleared the way for scientific religion
 
-Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal growth you can actually test. 📊
+Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal growth becomes the predictable outcome of a reproducible process — one you can actually test. 📊
 
 *Think this is category error? That the ineffable can't be operationalized? That I'm committing scientism while claiming to transcend it? I'd love to hear why.*
 
