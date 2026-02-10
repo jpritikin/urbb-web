@@ -19,12 +19,6 @@ Not Scientology. Not "religion that doesn't conflict with science" but actual *s
 
 *Think this is category error? That the ineffable can't be operationalized? That I'm committing scientism while claiming to transcend it? I'd love to hear why.*
 
-### 🔓 Unblending is the engine of religious transformation
-
-Every tradition, stripped of its cultural packaging, teaches the same core move to advance human flourishing: unblending.[^1]
-
-*Want to argue this is reductive nonsense? I'm flattening profound theological differences into pop psychology? Let's talk.*
-
 ### 📖 My book represents the first User's Guide to Consciousness
 
 Not a philosophy of consciousness. Not a neuroscience of consciousness. A *user's guide*—practical instructions for operating the equipment you already have. 🧠
