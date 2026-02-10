@@ -25,7 +25,8 @@ function getOffscreenPosition(fromX: number, fromY: number, canvasWidth: number,
     };
 }
 import { Vec3, CloudInstance } from '../utils/types.js';
-import { STAR_OUTER_RADIUS } from '../star/starAnimation.js';
+import { AnimatedStar, STAR_OUTER_RADIUS } from '../star/starAnimation.js';
+import type { HSLColor } from '../utils/colorUtils.js';
 import { ViewEventEmitter, ViewEventMap } from './view/ViewEvents.js';
 import { SeatManager } from './view/SeatManager.js';
 import { TransitionAnimator } from './view/TransitionAnimator.js';
@@ -62,6 +63,10 @@ export class SimulatorView {
     private perspectiveFactor: number = 600;
     private foregroundZoomFactor: number = 5.0;
 
+    private animatedStar: AnimatedStar | null = null;
+    private zoomGroup: SVGGElement | null = null;
+    private uiGroup: SVGGElement | null = null;
+
     private starElement: SVGElement | null = null;
     private starCurrentX: number = 0;
     private starCurrentY: number = 0;
@@ -96,6 +101,10 @@ export class SimulatorView {
     // Help panel
     private helpPanel: HelpPanel = new HelpPanel();
 
+    // Cached model state for star scale (updated in syncWithModel)
+    private lastSyncTargetCount: number = 0;
+    private lastSyncBlendedCount: number = 0;
+
     // Victory check throttle
     private lastVictoryCheck: number = 0;
 
@@ -121,8 +130,41 @@ export class SimulatorView {
         this.events.off(event, listener);
     }
 
-    setStarElement(element: SVGElement): void {
-        this.starElement = element;
+    setGroups(zoomGroup: SVGGElement, uiGroup: SVGGElement): void {
+        this.zoomGroup = zoomGroup;
+        this.uiGroup = uiGroup;
+    }
+
+    createStar(onStarClick: (x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
+        if (!this.uiGroup) return;
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        this.animatedStar = new AnimatedStar(centerX, centerY);
+        this.animatedStar.setOnClick(onStarClick);
+        const starElement = this.animatedStar.createElement();
+
+        this.uiGroup.appendChild(starElement);
+        this.starElement = starElement;
+
+        (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
+    }
+
+    getStarFillColor(): HSLColor | null {
+        return this.animatedStar?.getFillColor() ?? null;
+    }
+
+    getStarElement(): SVGGElement | null {
+        return this.animatedStar?.getElement() ?? null;
+    }
+
+    simulateStarClick(): void {
+        this.animatedStar?.simulateClick();
+    }
+
+    setStarBorderOpacity(opacity: number): void {
+        this.animatedStar?.setBorderOpacity(opacity);
     }
 
     setHtmlContainer(container: HTMLElement): void {
@@ -498,6 +540,12 @@ export class SimulatorView {
         this.syncThoughtBubbles(newModel);
         this.syncMode(newModel);
         this.syncPendingActionBanner(newModel);
+
+        this.lastSyncTargetCount = newModel.getTargetCloudIds().size;
+        this.lastSyncBlendedCount = newModel.getBlendedParts().length;
+        const noBlendedParts = this.lastSyncBlendedCount === 0 && !newModel.peekPendingBlend();
+        const inForeground = newModel.getMode() === 'foreground';
+        this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
 
         this.generateTraceEntries(oldModel, newModel);
 
@@ -1030,6 +1078,75 @@ export class SimulatorView {
             x: centerX + this.starTargetX,
             y: centerY + this.starTargetY
         };
+    }
+
+    animateStarVisuals(deltaTime: number): void {
+        this.updateStarScale();
+        this.animatedStar?.animate(deltaTime);
+    }
+
+    private updateStarScale(): void {
+        if (!this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        const inZoomGroup = starElement?.parentNode === this.zoomGroup;
+        const isReverseTransition = this.getTransitionDirection() === 'reverse';
+
+        if (this.getVisualMode() === 'foreground') {
+            const totalParts = this.lastSyncTargetCount + this.lastSyncBlendedCount;
+            const visualTarget = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
+            this.animatedStar.setTargetRadiusScale(visualTarget);
+        } else if (isReverseTransition && !inZoomGroup) {
+            this.animatedStar.setTargetRadiusScale(1.5 * this.panoramaZoom);
+        } else {
+            this.animatedStar.setTargetRadiusScale(1.5);
+        }
+    }
+
+    private moveStarToUIGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.uiGroup) return;
+
+        const zoom = this.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        this.transformStarPosition(zoom);
+        this.animatedStar.setRadiusScale(scaleBefore * zoom);
+
+        this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
+    }
+
+    private moveStarToZoomGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.zoomGroup) return;
+
+        const zoom = this.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        this.transformStarPosition(1 / zoom);
+        this.animatedStar.setRadiusScale(scaleBefore / zoom);
+
+        this.zoomGroup.appendChild(starElement);
+    }
+
+    onTransitionStartStar(direction: 'forward' | 'reverse'): void {
+        if (direction === 'forward') {
+            this.moveStarToUIGroup();
+        }
+    }
+
+    finalizeStarGroup(mode: 'panorama' | 'foreground'): void {
+        if (mode === 'foreground') {
+            this.moveStarToUIGroup();
+        } else {
+            this.moveStarToZoomGroup();
+        }
+    }
+
+    handleStarResize(width: number, height: number): void {
+        this.animatedStar?.setPosition(width / 2, height / 2);
     }
 
     private updateStarPosition(model: SimulatorModel): void {

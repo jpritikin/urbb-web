@@ -4,7 +4,6 @@ import { SimulatorModel, PartMessage } from '../simulator/ifsModel.js';
 import { SimulatorView } from '../simulator/ifsView.js';
 import { CarpetRenderer } from '../star/carpetRenderer.js';
 import { CloudInstance } from '../utils/types.js';
-import { AnimatedStar } from '../star/starAnimation.js';
 import { PanoramaCloudMotion } from './panoramaCloudMotion.js';
 import { PieMenuController } from '../menu/pieMenuController.js';
 import { PieMenu } from '../menu/pieMenu.js';
@@ -52,7 +51,6 @@ export class CloudManager {
     private animationLoop: AnimationLoop;
     private partitionCount: number = 8;
     private currentPartition: number = 0;
-    private animatedStar: AnimatedStar | null = null;
     private zoomGroup: SVGGElement | null = null;
     private uiGroup: SVGGElement | null = null;
 
@@ -113,7 +111,7 @@ export class CloudManager {
             getTimeAdvancer: () => this.timeAdvancer,
             getMessageOrchestrator: () => this.messageOrchestrator,
             getPieMenuController: () => this.pieMenuController,
-            getAnimatedStar: () => this.animatedStar,
+            getAnimatedStar: () => ({ simulateClick: () => this.view.simulateStarClick(), getElement: () => this.view.getStarElement() }),
             getInputHandler: () => this.inputHandler,
             getUIManager: () => this.uiManager,
             getContainer: () => this.container,
@@ -389,13 +387,21 @@ export class CloudManager {
             }
         });
 
-        this.createSelfStar();
+        this.view.setGroups(this.zoomGroup!, this.uiGroup!);
+        this.view.createStar((_x, _y, event) => {
+            if (this.pieMenuController && this.model.getMode() === 'foreground') {
+                const starPos = this.view.getStarScreenPosition();
+                const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
+                this.pieMenuController.toggleStar(starPos.x, starPos.y, touchEvent);
+            }
+        });
 
         this.expandDeepenEffect = new ExpandDeepenEffect();
         this.expandDeepenEffect.attach(this.container);
         this.expandDeepenEffect.setDimensions(this.canvasWidth, this.canvasHeight);
-        if (this.animatedStar) {
-            this.expandDeepenEffect.setStarColor(this.animatedStar.getFillColor());
+        const starColor = this.view.getStarFillColor();
+        if (starColor) {
+            this.expandDeepenEffect.setStarColor(starColor);
         }
 
         this.uiManager = new UIManager(this.container, this.svgElement, this.uiGroup, {
@@ -449,35 +455,12 @@ export class CloudManager {
         this.panY = height / 2;
 
         this.view.setDimensions(width, height);
-        this.animatedStar?.setPosition(width / 2, height / 2);
+        this.view.handleStarResize(width, height);
         this.carpetRenderer?.setDimensions(width, height);
         this.uiManager?.updateDimensions(width, height);
         this.expandDeepenEffect?.setDimensions(width, height);
         this.panoramaMotion.setDimensions(width, height);
         this.updateViewBox();
-    }
-
-    private createSelfStar(): void {
-        if (!this.uiGroup) return;
-
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-
-        this.animatedStar = new AnimatedStar(centerX, centerY);
-        this.animatedStar.setOnClick((_x, _y, event) => {
-            if (this.pieMenuController && this.model.getMode() === 'foreground') {
-                const starPos = this.view.getStarScreenPosition();
-                const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
-                this.pieMenuController.toggleStar(starPos.x, starPos.y, touchEvent);
-            }
-        });
-        const starElement = this.animatedStar.createElement();
-
-        this.uiGroup.appendChild(starElement);
-        this.view.setStarElement(starElement);
-
-        // Expose star for console testing: star.testTransition('removing', 6, 5)
-        (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
     }
 
     private toggleFullscreen(): void {
@@ -976,9 +959,6 @@ export class CloudManager {
 
         this.view.setCloudNames(cloudNames);
         this.view.syncWithModel(oldModel, this.model, this.instances);
-        const noBlendedParts = this.model.getBlendedParts().length === 0 && !this.model.peekPendingBlend();
-        const inForeground = this.model.getMode() === 'foreground';
-        this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
 
         this.dismissPieMenuIfPartLeft();
     }
@@ -1046,8 +1026,7 @@ export class CloudManager {
     private animate(deltaTime: number): void {
         this.playbackRecording.updatePlayback(deltaTime);
         this.view.animate(deltaTime);
-        this.updateStarScale();
-        this.animatedStar?.animate(deltaTime);
+        this.view.animateStarVisuals(deltaTime);
 
         const mode = this.view.getVisualMode();
         const isTransitioning = this.view.isTransitioning();
@@ -1108,9 +1087,8 @@ export class CloudManager {
                 const starPos = this.view.getStarScreenPosition();
                 this.expandDeepenEffect.render(starPos.x, starPos.y);
             }
-            // Always sync border opacity (returns 1 when effect inactive)
             if (this.expandDeepenEffect) {
-                this.animatedStar?.setBorderOpacity(this.expandDeepenEffect.getBorderOpacity());
+                this.view.setStarBorderOpacity(this.expandDeepenEffect.getBorderOpacity());
             }
         } else {
             // Cancel expand/deepen effect when leaving foreground
@@ -1169,7 +1147,7 @@ export class CloudManager {
 
         const inPanorama = this.view.getVisualMode() === 'panorama' && !this.view.isTransitioning();
         if (inPanorama) {
-            this.panoramaMotion.depthSort(this.instances, this.zoomGroup!, this.animatedStar?.getElement() ?? null);
+            this.panoramaMotion.depthSort(this.instances, this.zoomGroup!, this.view.getStarElement());
             const debugGroup = this.zoomGroup!.querySelector('#panorama-debug-group');
             if (debugGroup) {
                 this.zoomGroup!.appendChild(debugGroup);
@@ -1185,31 +1163,6 @@ export class CloudManager {
             }
         }
         this.currentPartition = (this.currentPartition + 1) % this.partitionCount;
-    }
-
-    private updateStarScale(): void {
-        if (!this.animatedStar) return;
-
-        const starElement = this.animatedStar.getElement();
-        const inZoomGroup = starElement?.parentNode === this.zoomGroup;
-        const isReverseTransition = this.view.getTransitionDirection() === 'reverse';
-
-        if (this.view.getVisualMode() === 'foreground') {
-            // Foreground mode: scale based on part count
-            const targetIds = this.model.getTargetCloudIds();
-            const blendedParts = this.model.getBlendedParts();
-            const totalParts = targetIds.size + blendedParts.length;
-            const visualTarget = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
-            this.animatedStar.setTargetRadiusScale(visualTarget);
-        } else if (isReverseTransition && !inZoomGroup) {
-            // Reverse transition with star in uiGroup: animate toward panorama visual size
-            // Star will be moved to zoomGroup after transition, where its scale will be divided by zoom
-            const panoramaZoom = this.view.getPanoramaZoom();
-            this.animatedStar.setTargetRadiusScale(1.5 * panoramaZoom);
-        } else {
-            // Panorama mode with star in zoomGroup: use fixed scale, let zoomGroup handle zoom
-            this.animatedStar.setTargetRadiusScale(1.5);
-        }
     }
 
     private updateZoomGroup(): void {
@@ -1274,55 +1227,18 @@ export class CloudManager {
         this.zoomGroup.appendChild(group);
     }
 
-    private moveStarToUIGroup(): void {
-        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
-
-        const starElement = this.animatedStar.getElement();
-        if (!starElement || starElement.parentNode === this.uiGroup) return;
-
-        const zoom = this.view.getCurrentZoomFactor();
-        const scaleBefore = this.animatedStar.getRadiusScale();
-        // Star offset is relative to center; in zoomGroup it gets scaled
-        // Transform to uiGroup: multiply offset and scale by zoom
-        this.view.transformStarPosition(zoom);
-        this.animatedStar.setRadiusScale(scaleBefore * zoom);
-
-        this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
-    }
-
-    private moveStarToZoomGroup(): void {
-        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
-
-        const starElement = this.animatedStar.getElement();
-        if (!starElement || starElement.parentNode === this.zoomGroup) return;
-
-        const zoom = this.view.getCurrentZoomFactor();
-        const scaleBefore = this.animatedStar.getRadiusScale();
-        // Transform from uiGroup to zoomGroup: divide offset and scale by zoom
-        this.view.transformStarPosition(1 / zoom);
-        this.animatedStar.setRadiusScale(scaleBefore / zoom);
-
-        this.zoomGroup.appendChild(starElement);
-    }
-
     private onTransitionStart(direction: 'forward' | 'reverse'): void {
         if (!this.zoomGroup || !this.uiGroup) return;
 
-        // For forward: use conference clouds (what WILL be in foreground)
-        // For reverse: use previous foreground clouds (what IS currently in foreground)
         const foregroundCloudIds = direction === 'forward'
             ? this.model.getConferenceCloudIds()
             : this.view.getForegroundCloudIds();
 
         if (direction === 'forward') {
-            // panorama → fg: move participating clouds and star to uiGroup at start
             for (const cloudId of foregroundCloudIds) {
                 this.moveCloudToUIGroup(cloudId);
             }
-            this.moveStarToUIGroup();
         } else {
-            // fg → panorama: move stepped-back clouds (in uiGroup but no longer
-            // in foreground) back to zoomGroup so they use the correct coord space
             for (const instance of this.instances) {
                 if (!foregroundCloudIds.has(instance.cloud.id)) {
                     this.moveCloudToZoomGroup(instance.cloud.id);
@@ -1333,6 +1249,7 @@ export class CloudManager {
                 cloud?.releaseBlendedStretch();
             }
         }
+        this.view.onTransitionStartStar(direction);
     }
 
     private finalizeCloudGroups(): void {
@@ -1342,16 +1259,15 @@ export class CloudManager {
         const foregroundCloudIds = this.view.getForegroundCloudIds();
 
         if (mode === 'foreground') {
-            this.moveStarToUIGroup();
             for (const cloudId of foregroundCloudIds) {
                 this.moveCloudToUIGroup(cloudId);
             }
         } else {
-            this.moveStarToZoomGroup();
             for (const instance of this.instances) {
                 this.moveCloudToZoomGroup(instance.cloud.id);
             }
         }
+        this.view.finalizeStarGroup(mode);
     }
 
     private checkBlendedPartsAttention(): void {
