@@ -584,6 +584,18 @@ export class SimulatorModel {
         return this.victoryAchieved;
     }
 
+    isConversationPossible(): { possible: boolean; participantIds: [string, string] | null } {
+        if (this.mode !== 'foreground') return { possible: false, participantIds: null };
+        if (this.blendedParts.size > 0) return { possible: false, participantIds: null };
+        const targets = Array.from(this.targetCloudIds);
+        if (targets.length !== 2) return { possible: false, participantIds: null };
+        const [a, b] = targets;
+        if (!this.parts.hasGrievance(a, b) && !this.parts.hasGrievance(b, a)) {
+            return { possible: false, participantIds: null };
+        }
+        return { possible: true, participantIds: [a, b] };
+    }
+
     toJSON(): SerializedModel {
         const supportingParts: Record<string, string[]> = {};
         for (const [k, v] of this.supportingParts) {

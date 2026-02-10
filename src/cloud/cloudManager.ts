@@ -284,7 +284,7 @@ export class CloudManager {
                     this.playbackRecording.markSpontaneousBlendTriggered(accumulatedTime);
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
                 },
-            } //,{ skipAttentionChecks: true }
+            }//, { skipAttentionChecks: true }
         );
 
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container' });
@@ -762,15 +762,6 @@ export class CloudManager {
     }
 
     private handlePanoramaSelect(cloud: Cloud): void {
-        const pending = this.model.getPendingAction();
-        if (pending?.actionId === 'add_target') {
-            this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
-                this.model.setPendingAction(null);
-                this.model.addTargetCloud(cloud.id);
-                this.model.setMode('foreground');
-            });
-            return;
-        }
         this.act({ action: 'select_a_target', cloudId: cloud.id }, () => {
             this.model.setTargetCloud(cloud.id);
         });
@@ -799,6 +790,14 @@ export class CloudManager {
         if (!pending) return;
 
         const { actionId, sourceCloudId } = pending;
+        if (actionId === 'add_target') {
+            this.act({ action: 'select_a_target', cloudId: targetCloudId }, () => {
+                this.model.setPendingAction(null);
+                this.model.addTargetCloud(targetCloudId);
+                this.model.setMode('foreground');
+            });
+            return;
+        }
         this.act({ action: actionId, cloudId: sourceCloudId, targetCloudId }, () => {
             this.model.setPendingAction(null);
             if (actionId === 'notice_part') {
@@ -1067,11 +1066,16 @@ export class CloudManager {
             this.view.animateSupportingEntries(this.model);
             this.view.animateDelayedArrivals(this.model);
             this.view.updateBlendedLatticeDeformations(this.model, this.instances, this.resolvingClouds);
+            const convParticipants = this.view.getConversationParticipantIds();
+            this.view.updateStarConversationState(convParticipants, this.instances);
+
+            const conversationParticipantSet = convParticipants ? new Set(convParticipants) : null;
+
             const transitioningToForeground = isTransitioning && this.view.getTransitionDirection() === 'forward';
             if (this.carpetRenderer && !transitioningToForeground) {
                 const carpetStates = this.view.getCarpetStates();
                 const seats = this.view.getSeats();
-                this.carpetRenderer.update(carpetStates, seats, deltaTime);
+                this.carpetRenderer.update(carpetStates, seats, deltaTime, conversationParticipantSet);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
                 this.view.renderSeatDebug();

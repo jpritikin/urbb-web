@@ -408,7 +408,8 @@ export class SeatManager {
             entering: true,
             exiting: false,
             progress: -enteringCount * CARPET_ENTRY_STAGGER,
-            vertices: createCarpetVertices()
+            vertices: createCarpetVertices(),
+            landingProgress: 0
         });
         this.carpetVelocities.set(seatId, { vx: 0, vy: 0 });
     }

@@ -84,8 +84,9 @@ export class InputHandler {
     }
 
     handleCloudTouchEnd(cloud: Cloud): void {
-        if (!this.deps.getModel().getPendingAction()) return;
-        if (this.deps.getModel().getMode() !== 'foreground') return;
+        const pending = this.deps.getModel().getPendingAction();
+        if (!pending) return;
+        if (pending.actionId !== 'add_target' && this.deps.getModel().getMode() !== 'foreground') return;
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
         if (cloudState && cloudState.opacity > 0) {

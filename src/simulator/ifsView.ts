@@ -105,6 +105,9 @@ export class SimulatorView {
     private lastSyncTargetCount: number = 0;
     private lastSyncBlendedCount: number = 0;
 
+    // Conversation visual state
+    private conversationParticipantIds: [string, string] | null = null;
+
     // Victory check throttle
     private lastVictoryCheck: number = 0;
 
@@ -309,6 +312,7 @@ export class SimulatorView {
                 state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
             }
 
+            this.animatedStar?.setForeground(mode === 'foreground');
             this.events.emit('mode-changed', { mode });
             this.events.emit('transition-started', { direction: this.transitionDirection });
         }
@@ -547,9 +551,20 @@ export class SimulatorView {
         const inForeground = newModel.getMode() === 'foreground';
         this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
 
+        this.syncConversation(newModel);
+
         this.generateTraceEntries(oldModel, newModel);
 
         this.checkVictoryCondition(newModel);
+    }
+
+    private syncConversation(model: SimulatorModel): void {
+        const result = model.isConversationPossible();
+        this.conversationParticipantIds = result.participantIds;
+    }
+
+    getConversationParticipantIds(): [string, string] | null {
+        return this.conversationParticipantIds;
     }
 
     private syncMode(model: SimulatorModel): void {
@@ -1083,6 +1098,57 @@ export class SimulatorView {
     animateStarVisuals(deltaTime: number): void {
         this.updateStarScale();
         this.animatedStar?.animate(deltaTime);
+    }
+
+    updateStarConversationState(participantIds: [string, string] | null, instances: CloudInstance[]): void {
+        if (!this.animatedStar) return;
+        if (participantIds) {
+            const p0 = this.getCloudState(participantIds[0]);
+            const p1 = this.getCloudState(participantIds[1]);
+            if (p0 && p1) {
+                const BADGE_DROP = 50; // carpet occupied drop (35) + conversation drop (15)
+                const BADGE_HALF_W = 30;
+                const BADGE_HALF_H = 8;
+
+                const toCloudInfo = (cloudId: string, p: { x: number; y: number }) => {
+                    const inst = instances.find(i => i.cloud.id === cloudId);
+                    const lx = p.x - this.starCurrentX;
+                    const ly = p.y - this.starCurrentY;
+
+                    // Cloud shape bounding box in star-local coords
+                    let hw = 30, hh = 15;
+                    if (inst) {
+                        const bb = inst.cloud.getBoundingBox();
+                        hw = (bb.maxX - bb.minX) / 2;
+                        hh = (bb.maxY - bb.minY) / 2;
+                    }
+                    const cloudBox = { minX: lx - hw, maxX: lx + hw, minY: ly - hh, maxY: ly + hh };
+
+                    // Badge bounding box: carpet drops straight down from cloud position
+                    const badgeCX = lx;
+                    const badgeCY = ly + BADGE_DROP;
+                    // Badge box aligned to axes (approximation)
+                    const badgeBox = {
+                        minX: badgeCX - BADGE_HALF_W,
+                        maxX: badgeCX + BADGE_HALF_W,
+                        minY: badgeCY - BADGE_HALF_H,
+                        maxY: badgeCY + BADGE_HALF_H,
+                    };
+
+                    return { boxes: [cloudBox, badgeBox] };
+                };
+                const tableCenter = {
+                    x: this.canvasWidth / 2 - this.starCurrentX,
+                    y: this.canvasHeight / 2 - this.starCurrentY,
+                };
+                this.animatedStar.setConversationState(true, [
+                    toCloudInfo(participantIds[0], p0),
+                    toCloudInfo(participantIds[1], p1),
+                ], tableCenter);
+                return;
+            }
+        }
+        this.animatedStar.setConversationState(false, null, null);
     }
 
     private updateStarScale(): void {

@@ -23,12 +23,15 @@ export interface CarpetState {
     exiting: boolean;
     progress: number;
     vertices: CarpetVertex[];
+    landingProgress: number;
 }
 
 export const CARPET_FLY_DURATION = 1.5;
 export const CARPET_ENTRY_STAGGER = 0.5;
 export const CARPET_START_SCALE = 10;
 export const CARPET_OFFSCREEN_DISTANCE = 350;
+const CARPET_CONVERSATION_DROP = 10;
+const CARPET_LANDING_SECONDS = 10;
 
 export function createCarpetVertices(): CarpetVertex[] {
     const vertices: CarpetVertex[] = [];
@@ -216,7 +219,7 @@ export class CarpetRenderer {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    update(carpetStates: Map<string, CarpetState>, seats: SeatInfo[], deltaTime: number): void {
+    update(carpetStates: Map<string, CarpetState>, seats: SeatInfo[], deltaTime: number, conversationParticipants: Set<string> | null = null): void {
         this.windField.update(deltaTime);
 
         for (const [seatId, carpet] of carpetStates) {
@@ -253,18 +256,26 @@ export class CarpetRenderer {
                     carpet.currentScale = CARPET_SCALE;
                 }
             }
-            // Position updates handled by SeatManager
+
+            const landingTarget = (conversationParticipants?.has(seatId)) ? 1 : 0;
+            carpet.landingProgress += (landingTarget - carpet.landingProgress) * (1 - Math.exp(-3 / CARPET_LANDING_SECONDS * deltaTime));
+            if (Math.abs(carpet.landingProgress - landingTarget) < 0.001) {
+                carpet.landingProgress = landingTarget;
+            }
 
             carpet.isOccupied = seat !== undefined;
             const targetOffset = carpet.isOccupied ? this.CARPET_OCCUPIED_DROP : 0;
+            const landingDrop = carpet.landingProgress * CARPET_CONVERSATION_DROP;
             const offsetSmoothing = 4;
             const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
-            carpet.occupiedOffset += (targetOffset - carpet.occupiedOffset) * offsetFactor;
+            carpet.occupiedOffset += (targetOffset + landingDrop - carpet.occupiedOffset) * offsetFactor;
+
+            const windDampen = 1 - Math.min(1, carpet.landingProgress / 0.4);
 
             for (let i = 0; i < carpet.vertices.length; i++) {
                 const vertex = carpet.vertices[i];
                 const worldX = carpet.currentX + vertex.baseX;
-                const windForce = this.windField.sample(worldX);
+                const windForce = this.windField.sample(worldX) * windDampen;
                 vertex.velocity += windForce * this.CARPET_SPRING_STRENGTH * deltaTime;
                 vertex.velocity -= vertex.yOffset * this.CARPET_SPRING_STRENGTH * 0.5 * deltaTime;
                 if (i > 0) {
@@ -304,7 +315,7 @@ export class CarpetRenderer {
             carpet.setAttribute('opacity', String(data.opacity));
             carpet.dataset.carpetId = data.carpetId;
 
-            this.updateCarpetPath(carpet, data.vertices);
+            this.updateCarpetPath(carpet, data.vertices, data.landingProgress);
         }
     }
 
@@ -314,6 +325,7 @@ export class CarpetRenderer {
         y: number;
         scale: number;
         opacity: number;
+        landingProgress: number;
         vertices: Array<{ x: number; y: number }>;
     }> {
         const carpets: Array<{
@@ -322,6 +334,7 @@ export class CarpetRenderer {
             y: number;
             scale: number;
             opacity: number;
+            landingProgress: number;
             vertices: Array<{ x: number; y: number }>;
         }> = [];
 
@@ -343,14 +356,20 @@ export class CarpetRenderer {
             }));
 
             const depthScale = Math.sqrt(carpet.currentScale);
-            const isoX = 8 * depthScale * 2;
+            const baseIsoX = 8 * depthScale * 2;
+            const baseIsoY = -6 * depthScale * 2;
+            const flatDepth = Math.sqrt(baseIsoX * baseIsoX + baseIsoY * baseIsoY);
+            const flattenFraction = Math.max(0, Math.min(1, (carpet.landingProgress - 0.4) / 0.4));
+            const animIsoX = baseIsoX * (1 - flattenFraction);
+            const animIsoY = baseIsoY * (1 - flattenFraction) - flatDepth * flattenFraction;
 
             carpets.push({
                 carpetId,
-                x: carpet.currentX - isoX / 2,
-                y: carpet.currentY + carpet.occupiedOffset,
+                x: carpet.currentX - animIsoX / 2,
+                y: carpet.currentY + carpet.occupiedOffset - animIsoY / 2,
                 scale: carpet.currentScale / CARPET_SCALE,
                 opacity,
+                landingProgress: carpet.landingProgress,
                 vertices
             });
         }
@@ -358,18 +377,38 @@ export class CarpetRenderer {
         return carpets;
     }
 
-    private updateCarpetPath(group: SVGGElement, vertices: Array<{ x: number; y: number }>): void {
+    private updateCarpetPath(group: SVGGElement, vertices: Array<{ x: number; y: number }>, landingProgress: number = 0): void {
         const topSurface = group.querySelector('.carpet-top-surface') as SVGPathElement;
         const frontEdge = group.querySelector('.carpet-front-edge') as SVGPathElement;
         const sideFace = group.querySelector('.carpet-side-face') as SVGPathElement;
         const insetFrame = group.querySelector('.carpet-inset-frame') as SVGPathElement;
+        const badgeText = group.querySelector('.carpet-badge') as SVGTextElement;
 
         if (!topSurface || vertices.length < 2) return;
 
+        const flattenFraction = Math.max(0, Math.min(1, (landingProgress - 0.4) / 0.4));
+        const badgeOpacity = landingProgress >= 0.8 ? 1 : 0;
+
         const depthScale = Math.sqrt(CARPET_SCALE);
         const thickness = 1 * CARPET_SCALE;
-        const isoX = 8 * depthScale * 2;
-        const isoY = -6 * depthScale * 2;
+        const baseIsoX = 8 * depthScale * 2;
+        const baseIsoY = -6 * depthScale * 2;
+        const flatDepth = Math.sqrt(baseIsoX * baseIsoX + baseIsoY * baseIsoY);
+        const isoX = baseIsoX * (1 - flattenFraction);
+        const isoY = baseIsoY * (1 - flattenFraction) - flatDepth * flattenFraction;
+
+        if (badgeText) {
+            badgeText.style.opacity = String(badgeOpacity);
+            badgeText.setAttribute('x', String(isoX / 2));
+            badgeText.setAttribute('y', String(isoY / 2));
+        }
+
+        if (frontEdge) {
+            frontEdge.style.opacity = String(1 - flattenFraction);
+        }
+        if (sideFace) {
+            sideFace.style.opacity = String(1 - flattenFraction);
+        }
 
         const firstV = vertices[0];
         const lastV = vertices[vertices.length - 1];
@@ -509,10 +548,23 @@ export class CarpetRenderer {
         insetFrame.setAttribute('stroke', '#8B0000');
         insetFrame.setAttribute('stroke-width', '1.5');
 
+        const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        badge.setAttribute('class', 'carpet-badge');
+        badge.setAttribute('fill', 'white');
+        badge.setAttribute('font-size', '12');
+        badge.setAttribute('text-anchor', 'middle');
+        badge.setAttribute('dominant-baseline', 'central');
+        badge.setAttribute('x', '0');
+        badge.setAttribute('y', '0');
+        badge.setAttribute('pointer-events', 'none');
+        badge.style.opacity = '0';
+        badge.textContent = 'Speaking';
+
         group.appendChild(sideFace);
         group.appendChild(frontEdge);
         group.appendChild(topSurface);
         group.appendChild(insetFrame);
+        group.appendChild(badge);
 
         return group;
     }
