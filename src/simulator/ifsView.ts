@@ -78,11 +78,6 @@ export class SimulatorView {
     private pieMenuOverlay: SVGGElement | null = null;
     private onSelfRayClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
 
-    // Trace history for semantic events
-    private traceHistory: string[] = [];
-    private cloudNames: Map<string, string> = new Map();
-    private pendingAction: string | null = null;
-
     // Part-to-part messages
     private messageRenderer: MessageRenderer | null = null;
 
@@ -552,8 +547,6 @@ export class SimulatorView {
         this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
 
         this.syncConversation(newModel);
-
-        this.generateTraceEntries(oldModel, newModel);
 
         this.checkVictoryCondition(newModel);
     }
@@ -1415,145 +1408,6 @@ export class SimulatorView {
 
     getForegroundCloudIds(): Set<string> {
         return this.previousForegroundIds;
-    }
-
-    setCloudNames(names: Map<string, string>): void {
-        this.cloudNames = names;
-    }
-
-    getTrace(): string {
-        return this.traceHistory.map((entry, i) => `[${i}] ${entry}`).join('\n');
-    }
-
-    setAction(action: string): void {
-        this.pendingAction = action;
-    }
-
-    private addTraceEntry(action: string, effects: string[]): void {
-        if (effects.length === 0) return;
-        this.traceHistory.push(`${action} → ${effects.join(', ')}`);
-    }
-
-    private getName(cloudId: string): string {
-        return this.cloudNames.get(cloudId) ?? cloudId;
-    }
-
-    private generateTraceEntries(oldModel: SimulatorModel | null, newModel: SimulatorModel): void {
-        if (!oldModel) return;
-
-        const effects: string[] = [];
-        const oldTargets = oldModel.getTargetCloudIds();
-        const newTargets = newModel.getTargetCloudIds();
-        const oldBlended = new Set(oldModel.getBlendedParts());
-        const newBlended = new Set(newModel.getBlendedParts());
-
-        // Detect "demands attention" pattern: conference cleared + new spontaneous blend
-        const wasOccupied = oldTargets.size > 0 || oldBlended.size > 0;
-        const conferenceCleared = wasOccupied && newTargets.size === 0 && newBlended.size === 1;
-        if (conferenceCleared) {
-            const newBlendedId = Array.from(newBlended)[0];
-            const isNewBlend = !oldBlended.has(newBlendedId);
-            const reason = newModel.getBlendReason(newBlendedId);
-            if (isNewBlend && reason === 'spontaneous') {
-                const displaced = oldTargets.size + oldBlended.size;
-                const action = `${this.getName(newBlendedId)} demands attention`;
-                this.addTraceEntry(action, [`${displaced} displaced`]);
-                this.pendingAction = null;
-                return;
-            }
-        }
-
-        // Detect conference table clear (all empty now, wasn't before)
-        const nowEmpty = newTargets.size === 0 && newBlended.size === 0;
-        if (wasOccupied && nowEmpty) {
-            const action = this.pendingAction ?? 'Clear';
-            this.addTraceEntry(action, ['conference cleared']);
-            this.pendingAction = null;
-            return;
-        }
-
-        // Track conference membership changes
-        for (const id of newTargets) {
-            if (!oldTargets.has(id) && !oldBlended.has(id)) {
-                effects.push(`${this.getName(id)} joins`);
-            }
-        }
-
-        for (const id of oldTargets) {
-            if (!newTargets.has(id) && !newBlended.has(id)) {
-                effects.push(`${this.getName(id)} leaves`);
-            }
-        }
-
-        // Track blending changes
-        for (const id of newBlended) {
-            if (!oldBlended.has(id)) {
-                effects.push(`${this.getName(id)} blends`);
-            }
-        }
-
-        let actionDescribesEffect = false;
-        for (const id of oldBlended) {
-            if (!newBlended.has(id)) {
-                const effect = newTargets.has(id) ? `${this.getName(id)} separates` : `${this.getName(id)} unblends`;
-                if (this.pendingAction === effect) {
-                    actionDescribesEffect = true;
-                } else {
-                    effects.push(effect);
-                }
-            }
-        }
-
-        // Track biography reveals
-        this.collectBiographyEffects(oldModel, newModel, effects);
-
-        // Track trust changes
-        this.collectTrustEffects(oldModel, newModel, effects);
-
-        // Check for new messages (action label already describes the message)
-        const hasMessages = this.hasNewMessages(oldModel, newModel);
-
-        if (effects.length > 0) {
-            const action = this.pendingAction ?? 'Update';
-            this.addTraceEntry(action, effects);
-        } else if (this.pendingAction && (hasMessages || actionDescribesEffect)) {
-            this.traceHistory.push(this.pendingAction);
-        }
-        this.pendingAction = null;
-    }
-
-    private collectBiographyEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
-        for (const [cloudId] of this.cloudNames) {
-            const oldBio = oldModel.parts.getBiography(cloudId);
-            const newBio = newModel.parts.getBiography(cloudId);
-            if (!oldBio || !newBio) continue;
-
-            if (!oldBio.identityRevealed && newBio.identityRevealed) {
-                effects.push(`${this.getName(cloudId)} revealed`);
-            }
-            if (!oldBio.ageRevealed && newBio.ageRevealed) {
-                effects.push(`${this.getName(cloudId)} age revealed`);
-            }
-        }
-    }
-
-    private collectTrustEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
-        for (const [cloudId] of this.cloudNames) {
-            const oldTrust = oldModel.parts.getTrust(cloudId);
-            const newTrust = newModel.parts.getTrust(cloudId);
-            const diff = newTrust - oldTrust;
-            if (Math.abs(diff) > 0.01) {
-                const oldPct = Math.round(oldTrust * 100);
-                const newPct = Math.round(newTrust * 100);
-                const direction = diff > 0 ? '↑' : '↓';
-                effects.push(`${this.getName(cloudId)} trust ${oldPct}%${direction}${newPct}%`);
-            }
-        }
-    }
-
-    private hasNewMessages(oldModel: SimulatorModel, newModel: SimulatorModel): boolean {
-        const oldMessages = new Set(oldModel.getMessages().map(m => m.id));
-        return newModel.getMessages().some(m => !oldMessages.has(m.id));
     }
 
 }

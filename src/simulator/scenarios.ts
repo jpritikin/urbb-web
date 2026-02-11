@@ -64,10 +64,22 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
 
     const relationships = cloudManager.getRelationships();
     relationships.addProtection(innerCritic.id, criticized.id);
-    relationships.setGrievance(innerCritic.id, [innerCritic.id], [
-        "I'm a terrible person.",
-        "I hate myself."
-    ]);
+    relationships.setInterPartRelation(innerCritic.id, innerCritic.id, {
+        trust: 0.2,
+        stance: 0.6,
+        stanceFlipOdds: 0.05,
+        dialogues: {
+            hostile: {
+                dominating: {
+                    speak: ["I'm a terrible person.", "I hate myself."],
+                    mirror: [], validate: [], empathize: [],
+                },
+                withdrawing: {
+                    speak: ["..."], mirror: [], validate: [], empathize: [],
+                },
+            },
+        },
+    });
 
     return { innerCritic, criticized };
 }
@@ -102,12 +114,27 @@ function setupMediumScenario(cloudManager: CloudManager): void {
     });
 
     const relationships = cloudManager.getRelationships();
-    relationships.setGrievance(innerCritic.id, [threeYearOld.id], [
-        "You got us criticized.",
-        "You always make mistakes.",
-        "Don't do anything risky.",
-        "Be careful or you'll embarrass yourself.",
-    ]);
+    relationships.setInterPartRelation(innerCritic.id, threeYearOld.id, {
+        trust: 0.2,
+        stance: 0.6,
+        stanceFlipOdds: 0.05,
+        dialogues: {
+            hostile: {
+                dominating: {
+                    speak: [
+                        "You got us criticized.",
+                        "You always make mistakes.",
+                        "Don't do anything risky.",
+                        "Be careful or you'll embarrass yourself.",
+                    ],
+                    mirror: [], validate: [], empathize: [],
+                },
+                withdrawing: {
+                    speak: ["..."], mirror: [], validate: [], empathize: [],
+                },
+            },
+        },
+    });
 
     relationships.addProxy(innerCritic.id, adult.id);
     relationships.addProxy(criticized.id, adult.id);

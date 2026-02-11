@@ -421,16 +421,9 @@ export class RandomWalkRunner {
             for (const protectedId of protectedIds) {
                 const protectorId = partId;
                 const protecteeTrust = model.parts.getTrust(protectedId);
-                const isUnburdened = model.parts.isUnburdened(protectorId);
-
-                // Phase: Unburden - protectee trust >= 1 but protector not unburdened yet
-                if (protecteeTrust >= 1 && !isUnburdened) {
+                // Phase: Unburden - protectee trust >= 1, protector should notice
+                if (protecteeTrust >= 1) {
                     return { phase: 'unburden', protectorId, protecteeId: protectedId };
-                }
-
-                // If this pair is done, check next pair
-                if (protecteeTrust >= 1 && isUnburdened) {
-                    continue;
                 }
 
                 // Check if protectee is accessible (in conference)
@@ -485,7 +478,7 @@ export class RandomWalkRunner {
         const conferenceParts = model.getConferenceCloudIds();
 
         for (const attackerId of model.getAllPartIds()) {
-            const victimIds = relationships.getGrievanceTargets(attackerId);
+            const victimIds = relationships.getHostileRelationTargets(attackerId);
             for (const victimId of victimIds) {
                 if (victimId === attackerId) continue;
                 if (model.parts.isAttacked(victimId)) {
@@ -503,7 +496,7 @@ export class RandomWalkRunner {
 
         // Second priority: find a victim that hasn't been attacked yet
         for (const attackerId of model.getAllPartIds()) {
-            const victimIds = relationships.getGrievanceTargets(attackerId);
+            const victimIds = relationships.getHostileRelationTargets(attackerId);
             for (const victimId of victimIds) {
                 if (victimId === attackerId) continue;
                 if (!model.parts.isAttacked(victimId)) {
@@ -901,7 +894,7 @@ export class RandomWalkRunner {
         let score = 0;
         for (const [, part] of Object.entries(model.partStates)) {
             score += part.trust * 10;
-            if (part.biography.unburdened) score += 20;
+            // No longer tracking unburdened flag; protection removal + self-relation trust replace it
             score -= part.needAttention;
         }
         if (model.victoryAchieved) score += 100;

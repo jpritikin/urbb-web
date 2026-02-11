@@ -200,6 +200,8 @@ export class SimulatorModel {
         this.supportingParts.clear();
     }
 
+    private static readonly REACTIVITY_MULTIPLIER = 2;
+
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
         if (this.targetCloudIds.has(cloudId)) {
             this.removeTargetCloud(cloudId);
@@ -207,6 +209,16 @@ export class SimulatorModel {
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
             this.clearSelfRay();
+            this.triggerReactiveBlending(cloudId);
+        }
+    }
+
+    private triggerReactiveBlending(blendingCloudId: string): void {
+        const hostileSenders = this.parts.getHostileRelationSenders(blendingCloudId);
+        for (const senderId of hostileSenders) {
+            const trust = this.parts.getInterPartTrust(senderId, blendingCloudId);
+            const spike = (0.3 - trust) * SimulatorModel.REACTIVITY_MULTIPLIER;
+            this.changeNeedAttention(senderId, spike);
         }
     }
 
@@ -471,18 +483,18 @@ export class SimulatorModel {
     }
 
     increaseNeedAttention(deltaTime: number, inConference: boolean): void {
+        this.parts.driftStanceTowardSetPoint(deltaTime);
         const allParts = this.parts.getAllPartStates();
         for (const [cloudId] of allParts) {
-            if (this.parts.isUnburdened(cloudId)) continue;
             if (inConference && (this.isBlended(cloudId) || this.isTarget(cloudId) || this.isPendingBlend(cloudId))) continue;
 
-            const hasGrievances = this.parts.getGrievanceTargets(cloudId).size > 0;
+            const minInterPartTrust = this.parts.getMinInterPartTrust(cloudId);
             const isProtectee = this.parts.getProtectedBy(cloudId).size > 0;
             const trust = this.parts.getTrust(cloudId);
 
             let rate = 0;
-            if (hasGrievances) {
-                rate = 0.05;
+            if (minInterPartTrust < 0.3) {
+                rate = 0.05 * (0.3 - minInterPartTrust) / 0.3;
             } else if (!isProtectee) {
                 rate = 0.01 * (1 - trust);
             }
@@ -572,8 +584,7 @@ export class SimulatorModel {
 
         for (const [cloudId, state] of allParts) {
             if (state.trust <= 0.9 || state.needAttention >= 1) return false;
-            const isProtector = this.parts.getProtecting(cloudId).size > 0;
-            if (isProtector && !state.biography.unburdened) return false;
+            if (this.parts.getMinInterPartTrust(cloudId) < 1) return false;
         }
 
         this.victoryAchieved = true;
@@ -590,7 +601,8 @@ export class SimulatorModel {
         const targets = Array.from(this.targetCloudIds);
         if (targets.length !== 2) return { possible: false, participantIds: null };
         const [a, b] = targets;
-        if (!this.parts.hasGrievance(a, b) && !this.parts.hasGrievance(b, a)) {
+        const hasRelation = this.parts.hasInterPartRelation(a, b) || this.parts.hasInterPartRelation(b, a);
+        if (!hasRelation) {
             return { possible: false, participantIds: null };
         }
         return { possible: true, participantIds: [a, b] };

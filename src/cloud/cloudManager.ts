@@ -14,7 +14,6 @@ import { createModelRNG } from '../playback/testability/rng.js';
 import type { RecordedSession, RecordedAction, ControllerActionResult, SerializedModel } from '../playback/testability/types.js';
 import { SimulatorController } from '../simulator/simulatorController.js';
 import { STAR_CLOUD_ID } from '../simulator/view/SeatManager.js';
-import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { UIManager } from '../simulator/uiManager.js';
 import { InputHandler } from '../simulator/inputHandler.js';
 import { ActionEffectApplicator } from '../simulator/actionEffectApplicator.js';
@@ -389,6 +388,7 @@ export class CloudManager {
 
         this.view.setGroups(this.zoomGroup!, this.uiGroup!);
         this.view.createStar((_x, _y, event) => {
+            console.log(`[Star] onClick: mode=${this.model.getMode()} hasPieMenuController=${!!this.pieMenuController} pendingAction=${!!this.model.getPendingAction()}`);
             if (this.pieMenuController && this.model.getMode() === 'foreground') {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
@@ -413,7 +413,6 @@ export class CloudManager {
             },
             onFullscreenToggle: () => this.toggleFullscreen(),
             onAnimationPauseToggle: () => this.toggleAnimationPause(),
-            onTracePanelToggle: () => this.toggleTracePanel(),
             onDownloadSession: () => this.playbackRecording.triggerDownload(),
         });
         this.uiManager.createAllUI();
@@ -471,11 +470,6 @@ export class CloudManager {
         return this.pieMenuController?.isOpen() ?? false;
     }
 
-    private toggleTracePanel(): void {
-        this.uiManager?.toggleTracePanel();
-        this.uiManager?.updateTrace(this.view.getTrace());
-    }
-
     private toggleAnimationPause(): void {
         if (this.animationLoop.isRunning()) {
             this.animationLoop.stop();
@@ -487,6 +481,7 @@ export class CloudManager {
     }
 
     private handleStarActionClick(action: TherapistAction): void {
+        console.log(`[CloudMgr] handleStarActionClick: ${action.id} pending=`, this.model.getPendingAction());
         if (!this.controller) return;
 
         this.selectedAction = action;
@@ -499,6 +494,7 @@ export class CloudManager {
         const rec: RecordedAction = { action: action.id, cloudId: STAR_CLOUD_ID };
         this.act(rec, () => {
             const result = this.controller!.executeAction(action.id, STAR_CLOUD_ID);
+            console.log(`[CloudMgr] after executeAction(${action.id}): pending=`, this.model.getPendingAction(), 'result=', result);
             this.applyActionResult(result, STAR_CLOUD_ID);
         });
     }
@@ -787,6 +783,7 @@ export class CloudManager {
 
     private completePendingAction(targetCloudId: string): void {
         const pending = this.model.getPendingAction();
+        console.log(`[CloudMgr] completePendingAction: target=${targetCloudId} pending=`, pending);
         if (!pending) return;
 
         const { actionId, sourceCloudId } = pending;
@@ -956,7 +953,6 @@ export class CloudManager {
             cloudNames.set(instance.cloud.id, instance.cloud.text);
         }
 
-        this.view.setCloudNames(cloudNames);
         this.view.syncWithModel(oldModel, this.model, this.instances);
 
         this.dismissPieMenuIfPartLeft();
@@ -979,11 +975,6 @@ export class CloudManager {
         }
 
         const recordedAction = typeof action === 'string' ? undefined : action;
-        const label = typeof action === 'string'
-            ? action
-            : formatActionLabel(action, (id) => this.getCloudById(id)?.text ?? id);
-
-        this.view.setAction(label);
         const oldModel = this.model.clone();
         if (recordedAction) {
             this.playbackRecording.recordIntervals();
@@ -997,9 +988,6 @@ export class CloudManager {
         this.syncViewWithModel(oldModel);
         if (recordedAction) {
             this.playbackRecording.recordAction(recordedAction);
-        }
-        if (this.uiManager?.isTracePanelVisible()) {
-            this.uiManager.updateTrace(this.view.getTrace());
         }
     }
 
@@ -1289,6 +1277,7 @@ export class CloudManager {
     private updateHelpPanel(): void {
         let lowestTrust: { name: string; trust: number } | null = null;
         let highestNeedAttention: { name: string; needAttention: number } | null = null;
+        let mostSelfLoathing: { name: string; trust: number } | null = null;
 
         for (const instance of this.instances) {
             const cloudId = instance.cloud.id;
@@ -1301,11 +1290,18 @@ export class CloudManager {
             if (highestNeedAttention === null || needAttention > highestNeedAttention.needAttention) {
                 highestNeedAttention = { name: instance.cloud.text, needAttention };
             }
+            if (this.model.parts.hasInterPartRelation(cloudId, cloudId)) {
+                const selfTrust = this.model.parts.getInterPartTrust(cloudId, cloudId);
+                if (selfTrust < 1 && (mostSelfLoathing === null || selfTrust < mostSelfLoathing.trust)) {
+                    mostSelfLoathing = { name: instance.cloud.text, trust: selfTrust };
+                }
+            }
         }
 
         this.view.updateHelpPanel({
             lowestTrust,
             highestNeedAttention,
+            mostSelfLoathing,
             victoryAchieved: this.model.isVictoryAchieved()
         });
     }

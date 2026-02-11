@@ -1,6 +1,7 @@
 export interface HelpData {
     lowestTrust: { name: string; trust: number } | null;
     highestNeedAttention: { name: string; needAttention: number } | null;
+    mostSelfLoathing: { name: string; trust: number } | null;
     victoryAchieved?: boolean;
 }
 
@@ -75,6 +76,15 @@ export class HelpPanel {
             html += `<div class="help-row">
                 <span class="help-label">Needs attention:</span>
                 <span class="help-value">${data.highestNeedAttention.name} (<span style="color:${naColor}">${naDisplay}</span>)</span>
+            </div>`;
+        }
+
+        if (data.mostSelfLoathing) {
+            const slPct = Math.round(data.mostSelfLoathing.trust * 100);
+            const slColor = slPct < 30 ? 'red' : slPct < 70 ? 'orange' : 'green';
+            html += `<div class="help-row">
+                <span class="help-label">Self-loathing:</span>
+                <span class="help-value">${data.mostSelfLoathing.name} (<span style="color:${slColor}">${slPct}%</span> self-trust)</span>
             </div>`;
         }
 

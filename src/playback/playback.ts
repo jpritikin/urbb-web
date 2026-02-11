@@ -4,12 +4,13 @@ import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
 
+const IS_LOCAL = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const HOVER_PAUSE_MS = 0;
-const SLICE_HOVER_PAUSE_MS = 1500;
-const MOVE_BASE_DURATION_MS = 900;
+const SLICE_HOVER_PAUSE_MS = IS_LOCAL ? 100 : 1500;
+const MOVE_BASE_DURATION_MS = IS_LOCAL ? 100 : 900;
 const MOVE_BASE_DISTANCE = 300;
-const INTER_ACTION_DELAY_MS = 1000;
-const INTRA_ACTION_DELAY_MS = 800;
+const INTER_ACTION_DELAY_MS = IS_LOCAL ? 100 : 1000;
+const INTRA_ACTION_DELAY_MS = IS_LOCAL ? 100 : 800;
 
 export interface ActionResult {
     success: boolean;
@@ -72,7 +73,7 @@ export interface PlaybackCallbacks extends
     PlaybackInputSimulator,
     PlaybackModelAccess,
     PlaybackTimeControl,
-    PlaybackLifecycle {}
+    PlaybackLifecycle { }
 
 type PlaybackState = 'idle' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
 
@@ -251,6 +252,7 @@ export class PlaybackController {
     }
 
     private async executeAction(action: RecordedAction): Promise<void> {
+        console.log(`[Playback] executeAction #${this.currentActionIndex}: ${action.action} cloudId=${action.cloudId} targetCloudId=${action.targetCloudId}`);
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
         await this.waitForPendingBlends();
@@ -292,46 +294,56 @@ export class PlaybackController {
     }
 
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
+        console.log(`[Playback] executeCloudMenuAction: ${action.action} on ${action.cloudId} targetCloudId=${action.targetCloudId}, mode=${this.callbacks.getMode()}`);
+
+        if (action.targetCloudId) {
+            // Completing a pending action: just click the target cloud
+            await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
+            await this.reticle.fadeOut();
+            return;
+        }
+
         const openSuccess = await this.hoverAndClickCloud(action.cloudId, `opening cloud menu for ${action.cloudId}`);
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
+        console.log(`[Playback] after cloud click: findActionInOpenMenu(${action.action})=`, sliceInfo, 'menuCenter=', this.callbacks.getMenuCenter());
         if (!sliceInfo) {
             this.handleError(`Action '${action.action}' not found in open menu`, action.cloudId);
             return;
         }
 
-        const needsTargetClick = action.targetCloudId && action.targetCloudId !== action.cloudId;
-        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount, !needsTargetClick);
-
-        if (needsTargetClick) {
-            await this.hoverAndClickCloud(action.targetCloudId!, `${action.action} target ${action.targetCloudId}`, true);
-            await this.reticle.fadeOut();
-        }
+        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount);
     }
 
     private async executeStarMenuAction(action: RecordedAction): Promise<void> {
+        console.log(`[Playback] executeStarMenuAction: ${action.action} targetCloudId=${action.targetCloudId}, mode=${this.callbacks.getMode()}`);
+
+        if (action.targetCloudId) {
+            // Completing a pending action: just click the target cloud
+            await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
+            await this.reticle.fadeOut();
+            return;
+        }
+
         const openSuccess = await this.hoverAndClickCloud(STAR_CLOUD_ID, 'opening star menu');
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
+        console.log(`[Playback] after star click: findActionInOpenMenu(${action.action})=`, sliceInfo, 'menuCenter=', this.callbacks.getMenuCenter());
         if (!sliceInfo) {
             this.handleError(`Action '${action.action}' not found in star menu`, 'star');
             return;
         }
 
-        // Don't fade out - we need to continue to target cloud click
-        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount, false);
-
-        // Star menu actions require clicking target cloud
-        const targetCloudId = action.targetCloudId ?? action.cloudId;
-        await this.hoverAndClickCloud(targetCloudId, `${action.action} target ${targetCloudId}`, true);
-        await this.reticle.fadeOut();
+        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount);
     }
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
         const menuCenter = this.callbacks.getMenuCenter();
+        console.log(`[Playback] executeSliceSelection: menuCloudId=${menuCloudId} slice=${sliceIndex}/${itemCount} fadeOut=${fadeOut} menuCenter=`, menuCenter);
         if (!menuCenter) {
+            console.error(`[Playback] Menu center not found for ${menuCloudId}`);
             this.handleError('Menu center not found', menuCloudId);
             return;
         }

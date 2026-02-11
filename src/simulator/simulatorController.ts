@@ -365,12 +365,9 @@ export class SimulatorController {
     }
 
     private getJobResponse(cloudId: string): string {
-        if (this.model.parts.isUnburdened(cloudId)) {
+        if (this.model.parts.isFormerProtector(cloudId)) {
             const unburdenedJob = this.model.parts.getDialogues(cloudId)?.unburdenedJob;
-            if (!unburdenedJob) {
-                throw new Error(`Part ${cloudId} is unburdened but no unburdenedJob dialogue`);
-            }
-            return unburdenedJob;
+            if (unburdenedJob) return unburdenedJob;
         }
 
         const protectedIds = this.relationships.getProtecting(cloudId);
@@ -530,16 +527,16 @@ export class SimulatorController {
 
     private handleFeelToward(cloudId: string): ControllerActionResult {
         const stateChanges: string[] = [];
-        const grievanceTargets = this.relationships.getGrievanceTargets(cloudId);
+        const hostileTargets = this.relationships.getHostileRelationTargets(cloudId);
         const targetIds = this.model.getTargetCloudIds();
         const blendedParts = this.model.getBlendedParts();
         const blendedResponses: { cloudId: string; response: string }[] = [];
 
         for (const blendedId of blendedParts) {
-            if (this.relationships.hasGrievance(blendedId, cloudId)) {
-                const dialogues = this.relationships.getGrievanceDialogues(blendedId, cloudId);
-                if (dialogues.length > 0) {
-                    blendedResponses.push({ cloudId: blendedId, response: pickRandom(dialogues) });
+            if (this.relationships.hasHostileRelation(blendedId, cloudId)) {
+                const dialogue = this.relationships.getInterPartDialogue(blendedId, cloudId, 'speak', 1);
+                if (dialogue) {
+                    blendedResponses.push({ cloudId: blendedId, response: dialogue });
                 }
             } else {
                 const dialogues = this.model.parts.getDialogues(blendedId).genericBlendedDialogues;
@@ -549,12 +546,12 @@ export class SimulatorController {
             }
         }
 
-        for (const grievanceId of grievanceTargets) {
-            const isPending = this.model.isPendingBlend(grievanceId);
-            if (!targetIds.has(grievanceId) && !blendedParts.includes(grievanceId) && !isPending) {
-                if (this.model.parts.getTrust(grievanceId) < 0.5) {
-                    this.model.enqueuePendingBlend(grievanceId, 'therapist');
-                    stateChanges.push(outcome(grievanceId, OUTCOMES.PENDING_BLEND));
+        for (const hostileId of hostileTargets) {
+            const isPending = this.model.isPendingBlend(hostileId);
+            if (!targetIds.has(hostileId) && !blendedParts.includes(hostileId) && !isPending) {
+                if (this.model.parts.getTrust(hostileId) < 0.5) {
+                    this.model.enqueuePendingBlend(hostileId, 'therapist');
+                    stateChanges.push(outcome(hostileId, OUTCOMES.PENDING_BLEND));
                 }
             }
         }
@@ -606,7 +603,7 @@ export class SimulatorController {
             return this.handleProtecteeNoticingProtector(cloudId, targetCloudId);
         }
 
-        const partsIHurt = this.relationships.getGrievanceTargets(cloudId);
+        const partsIHurt = this.relationships.getHostileRelationTargets(cloudId);
         if (partsIHurt.has(targetCloudId)) {
             return this.handleAttackerNoticingVictim(cloudId, targetCloudId);
         }
@@ -675,7 +672,7 @@ export class SimulatorController {
             };
         }
 
-        this.model.parts.setUnburdened(protectorId);
+        this.relationships.removeProtection(protectorId, protecteeId);
         this.model.parts.setNeedAttention(protectorId, 0);
 
         const unburdenedJob = this.model.parts.getDialogues(protectorId)?.unburdenedJob;
@@ -786,7 +783,8 @@ export class SimulatorController {
         }
 
         const highTrustFields: BiographyField[] = ['gratitude', 'compassion', 'jobAppraisal', 'jobImpact', 'age', 'identity'];
-        if (highTrustFields.includes(field) && this.model.parts.getTrust(cloudId) >= 0.95) {
+        const selfRelationHealed = this.model.parts.getMinInterPartTrust(cloudId) >= 1;
+        if (highTrustFields.includes(field) && this.model.parts.getTrust(cloudId) >= 0.95 && selfRelationHealed) {
             this.model.parts.setNeedAttention(cloudId, 0);
             return {
                 success: true,
@@ -830,8 +828,9 @@ export class SimulatorController {
             }
 
             case 'gratitude': {
-                const protectedIds = this.relationships.getProtecting(cloudId);
-                if (protectedIds.size > 0) {
+                const isFormerProtector = this.model.parts.isFormerProtector(cloudId);
+                const stillProtecting = this.relationships.getProtecting(cloudId).size > 0;
+                if (stillProtecting) {
                     const gratitudeResponses = [
                         "I'm not used to being appreciated. Thank you.",
                         "This is unfamiliar. No one ever thanks me.",
@@ -841,6 +840,25 @@ export class SimulatorController {
                     response = pickRandom(gratitudeResponses);
                     trustGain = this.calculateTrustGain(cloudId);
                     this.model.parts.addTrust(cloudId, trustGain);
+                } else if (isFormerProtector) {
+                    const selfTrust = this.model.parts.getTrust(cloudId);
+                    const totalGain = this.calculateTrustGain(cloudId);
+                    const selfRelationShare = selfTrust * selfTrust;
+                    const selfPartGain = totalGain * (1 - selfRelationShare);
+                    const selfRelationGain = totalGain * selfRelationShare;
+                    this.model.parts.addTrust(cloudId, selfPartGain);
+                    this.model.parts.addInterPartTrust(cloudId, cloudId, selfRelationGain);
+                    const selfRelTrust = this.model.parts.getInterPartTrust(cloudId, cloudId);
+                    if (selfRelTrust >= 1) {
+                        response = "I forgive myself. I was doing my best.";
+                    } else {
+                        const gratitudeResponses = [
+                            "Maybe I'm not so terrible after all.",
+                            "Thank you... I'm starting to believe it.",
+                            "It's hard to accept, but thank you.",
+                        ];
+                        response = pickRandom(gratitudeResponses);
+                    }
                 } else {
                     response = "Gratitude? For what?";
                     this.model.parts.adjustTrust(cloudId, 0.98);
@@ -990,11 +1008,11 @@ export class SimulatorController {
             return pickRandom(confused);
         }
 
-        const grievanceSenders = this.relationships.getGrievanceSenders(cloudId);
-        const hasUnburdenedAttacker = Array.from(grievanceSenders).some(
-            senderId => this.model.parts.isUnburdened(senderId)
+        const hostileSenders = this.relationships.getHostileRelationSenders(cloudId);
+        const hasReleasedAttacker = Array.from(hostileSenders).some(
+            senderId => this.model.parts.isFormerProtector(senderId)
         );
-        if (!hasUnburdenedAttacker) {
+        if (!hasReleasedAttacker) {
             this.model.parts.adjustTrust(cloudId, 0.95);
             return "The ones who attacked me are still burdened. How can I trust you?";
         }

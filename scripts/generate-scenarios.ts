@@ -32,7 +32,11 @@ const easyScenario: Scenario = {
     ],
     relationships: {
         protections: [{ protectorId: 'inner-critic', protectedId: 'criticized' }],
-        grievances: [{ cloudId: 'inner-critic', targetIds: 'inner-critic', dialogues: ["I'm a terrible person.", "I hate myself."] }],
+        interPartRelations: [{
+            fromId: 'inner-critic', toId: 'inner-critic',
+            trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+            dialogues: { hostile: { dominating: { speak: ["I'm a terrible person.", "I hate myself."], mirror: [], validate: [], empathize: [] }, withdrawing: { speak: ["..."], mirror: [], validate: [], empathize: [] } } },
+        }],
     },
     initialTargets: ['inner-critic'],
     actions: [],
@@ -82,9 +86,17 @@ const mediumScenario: Scenario = {
     ],
     relationships: {
         protections: [{ protectorId: 'inner-critic', protectedId: 'criticized' }],
-        grievances: [
-            { cloudId: 'inner-critic', targetIds: 'inner-critic', dialogues: ["I'm a terrible person."] },
-            { cloudId: 'inner-critic', targetIds: 'toddler', dialogues: ["You got us criticized.", "Don't do anything risky."] },
+        interPartRelations: [
+            {
+                fromId: 'inner-critic', toId: 'inner-critic',
+                trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+                dialogues: { hostile: { dominating: { speak: ["I'm a terrible person."], mirror: [], validate: [], empathize: [] }, withdrawing: { speak: ["..."], mirror: [], validate: [], empathize: [] } } },
+            },
+            {
+                fromId: 'inner-critic', toId: 'toddler',
+                trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+                dialogues: { hostile: { dominating: { speak: ["You got us criticized.", "Don't do anything risky."], mirror: [], validate: [], empathize: [] }, withdrawing: { speak: ["..."], mirror: [], validate: [], empathize: [] } } },
+            },
         ],
         proxies: [
             { cloudId: 'inner-critic', proxyId: 'self-image' },

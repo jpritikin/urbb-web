@@ -113,7 +113,10 @@ export class PieMenuController {
     private showMenu(mode: MenuMode, cloudId: string, x: number, y: number, items: PieMenuItem[], touchEvent?: TouchEvent): void {
         if (!this.pieMenu) return;
 
+        console.log(`[PieMenu] showMenu: mode=${mode} cloudId=${cloudId} items=${items.length} pieMenuOpen=${this.pieMenuOpen} selectedCloudId=${this.selectedCloudId} menuMode=${this.menuMode} visible=${this.pieMenu.isVisible()}`);
+
         if (this.pieMenuOpen && this.selectedCloudId === cloudId && this.menuMode === mode) {
+            console.log(`[PieMenu] toggle-off: hiding menu`);
             this.pieMenu.hide();
             return;
         }

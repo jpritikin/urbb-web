@@ -97,43 +97,45 @@ export class MessageOrchestrator {
             const blendedCloud = this.callbacks.getCloudById(blendedId);
             if (!blendedCloud) continue;
 
-            if (this.model.parts.isUnburdened(blendedId)) continue;
+            if (this.model.parts.isFormerProtector(blendedId)) continue;
 
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
 
-            const grievanceTargets = this.relationships.getGrievanceTargets(blendedId);
-            if (grievanceTargets.size === 0) continue;
+            const hostileTargets = this.relationships.getHostileRelationTargets(blendedId);
+            if (hostileTargets.size === 0) continue;
 
             const timeSinceSent = this.messageCooldownTimers.get(blendedId) ?? 10;
             if (timeSinceSent < 3) continue;
 
-            let grievanceTargetId = this.pendingGrievanceTargets.get(blendedId);
+            let hostileTargetId = this.pendingGrievanceTargets.get(blendedId);
 
-            if (!grievanceTargetId) {
+            if (!hostileTargetId) {
                 if (timeSinceSent < 10) continue;
-                const grievanceTargetArray = Array.from(grievanceTargets);
-                grievanceTargetId = this.rng.pickRandom(grievanceTargetArray, 'grievance_target');
+                const hostileTargetArray = Array.from(hostileTargets);
+                hostileTargetId = this.rng.pickRandom(hostileTargetArray, 'grievance_target');
             }
 
-            const dialogues = this.relationships.getGrievanceDialogues(blendedId, grievanceTargetId);
-            if (dialogues.length === 0) continue;
+            const stanceSign = this.relationships.getPhaseStance(blendedId, hostileTargetId, () => this.rng.random('stance_flip')) > 0 ? 1 : -1;
+            const dialogue = this.relationships.getInterPartDialogue(blendedId, hostileTargetId, 'speak', stanceSign as 1 | -1);
+            const genericDialogues = this.model.parts.getDialogues(blendedId)?.genericBlendedDialogues;
+            const text = dialogue ?? (genericDialogues ? pickRandom(genericDialogues) : null);
+            if (!text) continue;
 
-            if (!targetIds.has(grievanceTargetId) && grievanceTargetId !== blendedId) {
+            if (!targetIds.has(hostileTargetId) && hostileTargetId !== blendedId) {
                 const blenderName = this.model.parts.getPartName(blendedId);
-                const targetName = this.model.parts.getPartName(grievanceTargetId);
+                const targetName = this.model.parts.getPartName(hostileTargetId);
                 this.callbacks.act(`${blenderName} summons ${targetName}`, () => {
-                    this.model.addTargetCloud(grievanceTargetId);
+                    this.model.addTargetCloud(hostileTargetId);
                 });
-                this.pendingGrievanceTargets.set(blendedId, grievanceTargetId);
+                this.pendingGrievanceTargets.set(blendedId, hostileTargetId);
                 this.messageCooldownTimers.set(blendedId, 0);
                 continue;
             }
 
-            if (this.view.isAwaitingArrival(grievanceTargetId)) continue;
+            if (this.view.isAwaitingArrival(hostileTargetId)) continue;
 
-            const text = pickRandom(dialogues);
-            this.sendMessage(blendedId, grievanceTargetId, text, 'grievance');
+            this.sendMessage(blendedId, hostileTargetId, text, 'grievance');
             this.messageCooldownTimers.set(blendedId, 0);
             this.pendingGrievanceTargets.delete(blendedId);
         }
@@ -153,8 +155,8 @@ export class MessageOrchestrator {
             const blendTime = this.blendStartTimers.get(blendedId) ?? 0;
             if (blendTime < this.BLEND_MESSAGE_DELAY) continue;
 
-            const hasGrievances = this.relationships.getGrievanceTargets(blendedId).size > 0;
-            if (hasGrievances) continue;
+            const hasHostileRelations = this.relationships.getHostileRelationTargets(blendedId).size > 0;
+            if (hasHostileRelations) continue;
 
             const dialogues = this.model.parts.getDialogues(blendedId)?.genericBlendedDialogues;
             if (!dialogues || dialogues.length === 0) continue;

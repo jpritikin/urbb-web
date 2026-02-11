@@ -144,8 +144,13 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         for (const p of config.protections ?? []) {
             this.model.parts.addProtection(p.protectorId, p.protectedId);
         }
-        for (const g of config.grievances ?? []) {
-            this.model.parts.setGrievance(g.cloudId, g.targetIds, g.dialogues);
+        for (const r of config.interPartRelations ?? []) {
+            this.model.parts.setInterPartRelation(r.fromId, r.toId, {
+                trust: r.trust,
+                stance: r.stance,
+                stanceFlipOdds: r.stanceFlipOdds,
+                dialogues: r.dialogues,
+            });
         }
         for (const p of config.proxies ?? []) {
             this.model.parts.addProxy(p.cloudId, p.proxyId);

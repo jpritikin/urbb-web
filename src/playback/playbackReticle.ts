@@ -1,10 +1,11 @@
+const IS_LOCAL = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const RETICLE_TOP_HAND_X_OFFSET = -10;
 const RETICLE_BOTTOM_HAND_X_OFFSET = 10;
-const RETICLE_FADE_MS = 600;
-const HUG_DURATION_MS = 400;
-const MOVE_BASE_DURATION_MS = 900;
+const RETICLE_FADE_MS = IS_LOCAL ? 50 : 600;
+const HUG_DURATION_MS = IS_LOCAL ? 50 : 400;
+const MOVE_BASE_DURATION_MS = IS_LOCAL ? 100 : 900;
 const MOVE_BASE_DISTANCE = 300;
-const KISS_DURATION_MS = 1500;
+const KISS_DURATION_MS = IS_LOCAL ? 200 : 1500;
 const KISS_SPEED = 25;
 
 interface DriftingKiss {

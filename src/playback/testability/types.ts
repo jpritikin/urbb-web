@@ -1,5 +1,6 @@
 import type { BlendReason, BlendedPartState, PartMessage, SelfRayState, ThoughtBubble } from '../../simulator/ifsModel.js';
 import type { PartState, PartBiography, PartDialogues } from '../../star/partState.js';
+import type { ConversationDialogues } from '../../cloud/partStateManager.js';
 import type { RngLogEntry } from './rng.js';
 
 export const WAIT_DURATION = 2.0;
@@ -15,7 +16,15 @@ export interface SerializedModel {
     messageIdCounter: number;
     partStates: Record<string, PartState>;
     protections: { protectorId: string; protectedId: string }[];
-    grievances: { cloudId: string; targetIds: string[]; dialogues: string[] }[];
+    interPartRelations: {
+        fromId: string;
+        toId: string;
+        trust: number;
+        stance: number;
+        stanceSetPoint: number;
+        stanceFlipOdds: number;
+        dialogues?: ConversationDialogues;
+    }[];
     proxies: { cloudId: string; proxyId: string }[];
     attackedBy: { victimId: string; attackerIds: string[] }[];
     thoughtBubbles?: ThoughtBubble[];
@@ -89,9 +98,18 @@ export interface PartConfig {
     dialogues?: PartDialogues;
 }
 
+export interface InterPartRelationConfig {
+    fromId: string;
+    toId: string;
+    trust: number;
+    stance: number;
+    stanceFlipOdds: number;
+    dialogues?: ConversationDialogues;
+}
+
 export interface RelationshipConfig {
     protections?: { protectorId: string; protectedId: string | string[] }[];
-    grievances?: { cloudId: string; targetIds: string | string[]; dialogues: string | string[] }[];
+    interPartRelations?: InterPartRelationConfig[];
     proxies?: { cloudId: string; proxyId: string | string[] }[];
 }
 

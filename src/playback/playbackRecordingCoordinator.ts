@@ -373,6 +373,7 @@ export class PlaybackRecordingCoordinator {
     }
 
     private simulateClickOnCloud(cloudId: string): ActionResult {
+        console.log(`[PlaybackCoord] simulateClickOnCloud: ${cloudId}`);
         if (cloudId === STAR_CLOUD_ID) {
             this.deps.getAnimatedStar()?.simulateClick();
             return { success: true };

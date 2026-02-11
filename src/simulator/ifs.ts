@@ -11,8 +11,10 @@ function downloadSessionAsJson(session: RecordedSession): void {
     const a = document.createElement('a');
     a.href = url;
     a.download = `ifs-session-${Date.now()}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function getPageVersion(): string {
@@ -33,12 +35,6 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
 
     cloudManager.setDownloadSessionHandler(downloadCurrentSession);
 
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === ' ') {
-            e.preventDefault();
-            downloadCurrentSession();
-        }
-    });
 
     cloudManager.startRecording(getPageVersion());
 
