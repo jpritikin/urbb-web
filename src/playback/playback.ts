@@ -3,14 +3,16 @@ import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
+import { SPEED_CONFIGS } from '../simulator/scenarioSelector.js';
 
-const IS_LOCAL = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+export type PlaybackSpeed = 'realtime' | 'highlights' | 'speedrun';
+
 const HOVER_PAUSE_MS = 0;
-const SLICE_HOVER_PAUSE_MS = IS_LOCAL ? 100 : 1500;
-const MOVE_BASE_DURATION_MS = IS_LOCAL ? 100 : 900;
+const BASE_SLICE_HOVER_PAUSE_MS = 1500;
+const BASE_MOVE_DURATION_MS = 900;
 const MOVE_BASE_DISTANCE = 300;
-const INTER_ACTION_DELAY_MS = IS_LOCAL ? 100 : 1000;
-const INTRA_ACTION_DELAY_MS = IS_LOCAL ? 100 : 800;
+const BASE_INTER_ACTION_DELAY_MS = 1000;
+const BASE_INTRA_ACTION_DELAY_MS = 800;
 
 export interface ActionResult {
     success: boolean;
@@ -86,6 +88,10 @@ export class PlaybackController {
     private callbacks: PlaybackCallbacks;
     private errorMessage: string = '';
     private reticle: PlaybackReticle;
+    private speed: PlaybackSpeed;
+    private sliceHoverMs: number;
+    private interActionDelayMs: number;
+    private intraActionDelayMs: number;
 
     private controlPanel: HTMLDivElement | null = null;
     private countdownDisplay: HTMLSpanElement | null = null;
@@ -101,19 +107,24 @@ export class PlaybackController {
     constructor(
         private container: HTMLElement,
         private svgElement: SVGSVGElement,
-        callbacks: PlaybackCallbacks
+        callbacks: PlaybackCallbacks,
+        speed: PlaybackSpeed = 'highlights'
     ) {
         this.callbacks = callbacks;
-        this.reticle = new PlaybackReticle(svgElement);
+        this.speed = speed;
+        const divisor = SPEED_CONFIGS.find(c => c.speed === speed)?.divisor ?? 1;
+        this.sliceHoverMs = BASE_SLICE_HOVER_PAUSE_MS / divisor;
+        this.interActionDelayMs = BASE_INTER_ACTION_DELAY_MS / divisor;
+        this.intraActionDelayMs = BASE_INTRA_ACTION_DELAY_MS / divisor;
+        this.reticle = new PlaybackReticle(svgElement, divisor);
     }
 
     start(session: RecordedSession): void {
-        console.log(`[Playback] Starting playback with ${session.actions.length} actions`);
         this.actions = session.actions;
         this.currentActionIndex = 0;
         this.state = 'waiting';
         this.canResume = true;
-        this.waitCountdown = INTER_ACTION_DELAY_MS / 1000;
+        this.waitCountdown = this.getInterActionDelay();
 
         this.reticle.create();
         this.createControlPanel();
@@ -213,7 +224,6 @@ export class PlaybackController {
             await this.waitForSpiralExits();
             if (this.state !== 'executing') return;
             const verifyResult = this.callbacks.onActionCompleted(action);
-            console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) executed. Sync check:`, verifyResult);
             if (!verifyResult.success) {
                 this.handleError(verifyResult.error ?? 'Sync verification failed', `action ${this.currentActionIndex}`);
                 return;
@@ -231,7 +241,6 @@ export class PlaybackController {
         if (this.state !== 'executing') return;
 
         const verifyResult = this.callbacks.onActionCompleted(action);
-        console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) completed. Sync check:`, verifyResult);
         if (!verifyResult.success) {
             this.handleError(verifyResult.error ?? 'Sync verification failed', `action ${this.currentActionIndex}`);
             return;
@@ -241,9 +250,15 @@ export class PlaybackController {
         this.advanceToNextAction();
     }
 
+    private getInterActionDelay(): number {
+        if (this.speed !== 'realtime') return this.interActionDelayMs / 1000;
+        const nextAction = this.actions[this.currentActionIndex];
+        return nextAction?.elapsedTime ?? 1;
+    }
+
     private advanceToNextAction(): void {
         if (this.currentActionIndex < this.actions.length) {
-            this.waitCountdown = INTER_ACTION_DELAY_MS / 1000;
+            this.waitCountdown = this.getInterActionDelay();
             this.lastDisplayedCountdown = -1;
             this.state = 'waiting';
         } else {
@@ -252,7 +267,6 @@ export class PlaybackController {
     }
 
     private async executeAction(action: RecordedAction): Promise<void> {
-        console.log(`[Playback] executeAction #${this.currentActionIndex}: ${action.action} cloudId=${action.cloudId} targetCloudId=${action.targetCloudId}`);
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
         await this.waitForPendingBlends();
@@ -294,8 +308,6 @@ export class PlaybackController {
     }
 
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
-        console.log(`[Playback] executeCloudMenuAction: ${action.action} on ${action.cloudId} targetCloudId=${action.targetCloudId}, mode=${this.callbacks.getMode()}`);
-
         if (action.targetCloudId) {
             // Completing a pending action: just click the target cloud
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
@@ -307,7 +319,6 @@ export class PlaybackController {
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        console.log(`[Playback] after cloud click: findActionInOpenMenu(${action.action})=`, sliceInfo, 'menuCenter=', this.callbacks.getMenuCenter());
         if (!sliceInfo) {
             this.handleError(`Action '${action.action}' not found in open menu`, action.cloudId);
             return;
@@ -317,8 +328,6 @@ export class PlaybackController {
     }
 
     private async executeStarMenuAction(action: RecordedAction): Promise<void> {
-        console.log(`[Playback] executeStarMenuAction: ${action.action} targetCloudId=${action.targetCloudId}, mode=${this.callbacks.getMode()}`);
-
         if (action.targetCloudId) {
             // Completing a pending action: just click the target cloud
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
@@ -330,7 +339,6 @@ export class PlaybackController {
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        console.log(`[Playback] after star click: findActionInOpenMenu(${action.action})=`, sliceInfo, 'menuCenter=', this.callbacks.getMenuCenter());
         if (!sliceInfo) {
             this.handleError(`Action '${action.action}' not found in star menu`, 'star');
             return;
@@ -341,7 +349,6 @@ export class PlaybackController {
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
         const menuCenter = this.callbacks.getMenuCenter();
-        console.log(`[Playback] executeSliceSelection: menuCloudId=${menuCloudId} slice=${sliceIndex}/${itemCount} fadeOut=${fadeOut} menuCenter=`, menuCenter);
         if (!menuCenter) {
             console.error(`[Playback] Menu center not found for ${menuCloudId}`);
             this.handleError('Menu center not found', menuCloudId);
@@ -394,7 +401,7 @@ export class PlaybackController {
     private async hoverOnSlice(x: number, y: number): Promise<void> {
         await this.reticle.moveTo(x, y);
         this.callbacks.simulateHover(x, y);
-        await this.delay(SLICE_HOVER_PAUSE_MS);
+        await this.delay(this.sliceHoverMs);
     }
 
     private async clickAtPosition(x: number, y: number, context?: string, expectAction: boolean = false, retryCount: number = 0): Promise<boolean> {
@@ -462,7 +469,7 @@ export class PlaybackController {
         if (this.callbacks.getMode() === 'panorama') return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, 'mode toggle');
         await this.reticle.fadeOut();
-        await this.delay(INTRA_ACTION_DELAY_MS);
+        await this.delay(this.intraActionDelayMs);
     }
 
     private async executeModeChange(action: RecordedAction): Promise<void> {

@@ -3,6 +3,7 @@ import { sessionToJSON } from '../playback/testability/recorder.js';
 import { loadRecordedSession, Scenario } from './scenarios.js';
 import { ScenarioSelector } from './scenarioSelector.js';
 import type { RecordedSession } from '../playback/testability/types.js';
+import type { PlaybackSpeed } from '../playback/playback.js';
 
 function downloadSessionAsJson(session: RecordedSession): void {
     const json = sessionToJSON(session);
@@ -46,7 +47,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
     }, MAX_RECORDING_MS);
 }
 
-async function startSimulation(scenario: Scenario, playbackMode: boolean = false): Promise<void> {
+async function startSimulation(scenario: Scenario, playbackMode: boolean = false, speed?: PlaybackSpeed): Promise<void> {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
@@ -98,7 +99,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
 
     if (playbackMode && recordedSession) {
         setTimeout(() => {
-            cloudManager.startPlayback(recordedSession!);
+            cloudManager.startPlayback(recordedSession!, speed);
         }, 500);
     }
 }
@@ -109,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
-    const selector = new ScenarioSelector(cloudContainer, (scenario, playbackMode) => {
-        startSimulation(scenario, playbackMode);
+    const selector = new ScenarioSelector(cloudContainer, (scenario, playbackMode, speed) => {
+        startSimulation(scenario, playbackMode, speed);
     });
     selector.start();
 });

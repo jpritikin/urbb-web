@@ -22,7 +22,7 @@ import { AnimationLoop } from '../utils/animationLoop.js';
 import { MessageOrchestrator } from '../simulator/messageOrchestrator.js';
 import { PanoramaInputHandler } from './panoramaInputHandler.js';
 import { ExpandDeepenEffect } from './expandDeepenEffect.js';
-import type { ActionResult } from '../playback/playback.js';
+import type { ActionResult, PlaybackSpeed } from '../playback/playback.js';
 import { TimeAdvancer } from '../simulator/timeAdvancer.js';
 import { PlaybackRecordingCoordinator } from '../playback/playbackRecordingCoordinator.js';
 
@@ -388,7 +388,6 @@ export class CloudManager {
 
         this.view.setGroups(this.zoomGroup!, this.uiGroup!);
         this.view.createStar((_x, _y, event) => {
-            console.log(`[Star] onClick: mode=${this.model.getMode()} hasPieMenuController=${!!this.pieMenuController} pendingAction=${!!this.model.getPendingAction()}`);
             if (this.pieMenuController && this.model.getMode() === 'foreground') {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
@@ -481,7 +480,6 @@ export class CloudManager {
     }
 
     private handleStarActionClick(action: TherapistAction): void {
-        console.log(`[CloudMgr] handleStarActionClick: ${action.id} pending=`, this.model.getPendingAction());
         if (!this.controller) return;
 
         this.selectedAction = action;
@@ -494,7 +492,6 @@ export class CloudManager {
         const rec: RecordedAction = { action: action.id, cloudId: STAR_CLOUD_ID };
         this.act(rec, () => {
             const result = this.controller!.executeAction(action.id, STAR_CLOUD_ID);
-            console.log(`[CloudMgr] after executeAction(${action.id}): pending=`, this.model.getPendingAction(), 'result=', result);
             this.applyActionResult(result, STAR_CLOUD_ID);
         });
     }
@@ -783,7 +780,6 @@ export class CloudManager {
 
     private completePendingAction(targetCloudId: string): void {
         const pending = this.model.getPendingAction();
-        console.log(`[CloudMgr] completePendingAction: target=${targetCloudId} pending=`, pending);
         if (!pending) return;
 
         const { actionId, sourceCloudId } = pending;
@@ -1322,8 +1318,8 @@ export class CloudManager {
     }
 
     // Playback mode methods
-    startPlayback(session: RecordedSession): void {
-        this.playbackRecording.startPlayback(session);
+    startPlayback(session: RecordedSession, speed?: PlaybackSpeed): void {
+        this.playbackRecording.startPlayback(session, speed);
     }
 
     isInPlaybackMode(): boolean {

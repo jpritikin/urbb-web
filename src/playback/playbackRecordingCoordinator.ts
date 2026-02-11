@@ -1,6 +1,6 @@
 import { ActionRecorder, sessionToJSON } from './testability/recorder.js';
 import { RNG, createModelRNG, SeededRNG } from './testability/rng.js';
-import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo } from './playback.js';
+import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo, PlaybackSpeed } from './playback.js';
 import type { RecordedSession, RecordedAction, SerializedModel } from './testability/types.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 
@@ -57,7 +57,7 @@ export class PlaybackRecordingCoordinator {
     private lastActionResult: ActionResult | null = null;
     private downloadSessionHandler: (() => void) | null = null;
 
-    constructor(private deps: PlaybackRecordingDependencies) {}
+    constructor(private deps: PlaybackRecordingDependencies) { }
 
     getRNG(): RNG {
         return this.rng;
@@ -176,13 +176,13 @@ export class PlaybackRecordingCoordinator {
 
     // Playback
 
-    startPlayback(session: RecordedSession): void {
+    startPlayback(session: RecordedSession, speed?: PlaybackSpeed): void {
         const container = this.deps.getContainer();
         const svgElement = this.deps.getSvgElement();
         if (!container || !svgElement) return;
 
         const callbacks = this.createPlaybackCallbacks();
-        this.playbackController = new PlaybackController(container, svgElement, callbacks);
+        this.playbackController = new PlaybackController(container, svgElement, callbacks, speed);
         this.playbackController.start(session);
     }
 
@@ -373,7 +373,6 @@ export class PlaybackRecordingCoordinator {
     }
 
     private simulateClickOnCloud(cloudId: string): ActionResult {
-        console.log(`[PlaybackCoord] simulateClickOnCloud: ${cloudId}`);
         if (cloudId === STAR_CLOUD_ID) {
             this.deps.getAnimatedStar()?.simulateClick();
             return { success: true };

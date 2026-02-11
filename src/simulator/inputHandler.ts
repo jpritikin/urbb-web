@@ -61,7 +61,6 @@ export class InputHandler {
     }
 
     handleCloudClick(cloud: Cloud): void {
-        console.log(`[InputHandler] handleCloudClick: ${cloud.id} touchOpenedPieMenu=${this.touchOpenedPieMenu} pending=`, this.deps.getModel().getPendingAction());
         if (this.touchOpenedPieMenu) {
             this.touchOpenedPieMenu = false;
             return;
@@ -97,7 +96,6 @@ export class InputHandler {
 
     selectCloud(cloud: Cloud, touchEvent?: TouchEvent): void {
         const pending = this.deps.getModel().getPendingAction();
-        console.log(`[InputHandler] selectCloud: ${cloud.id} mode=${this.deps.getModel().getMode()} pending=`, pending);
         if (pending) {
             this.callbacks.onPendingActionComplete(cloud.id);
             return;
