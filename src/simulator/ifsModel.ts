@@ -1,9 +1,9 @@
-import { PartStateManager, PartState, PartBiography, PartDialogues } from '../cloud/partStateManager.js';
+import { PartStateManager, PartState, PartBiography, PartDialogues, type IfioPhase } from '../cloud/partStateManager.js';
 import type { SerializedModel } from '../playback/testability/types.js';
 import type { RNG } from '../playback/testability/rng.js';
 
 export type BlendReason = 'spontaneous' | 'therapist';
-export type MessageType = 'grievance';
+export type MessageType = 'conversation';
 
 export interface BlendedPartState {
     degree: number;
@@ -51,6 +51,11 @@ export class SimulatorModel {
     private selfAmplification: number = 1;
     private mode: SimulatorMode = 'panorama';
     private pendingAction: PendingAction | null = null;
+    private conversationEffectiveStances: Map<string, number> = new Map();
+    private conversationTherapistDelta: Map<string, number> = new Map();
+    private conversationParticipantIds: [string, string] | null = null;
+    private conversationPhases: Map<string, IfioPhase> = new Map();
+    private conversationSpeakerId: string | null = null;
     private onModeChange?: (mode: SimulatorMode) => void;
 
     getSelfAmplification(): number {
@@ -358,12 +363,13 @@ export class SimulatorModel {
     }
 
     partDemandsAttention(demandingCloudId: string): void {
-        if (this.isBlended(demandingCloudId) || this.isTarget(demandingCloudId)) {
-            if (this.mode === 'panorama') {
-                this.setMode('foreground');
-                const name = this.parts.getPartName(demandingCloudId);
-                this.addThoughtBubble(`${name} needs attention urgently.`, demandingCloudId);
-            }
+        if (this.isBlended(demandingCloudId)) {
+            return;
+        }
+
+        if (this.isTarget(demandingCloudId)) {
+            this.removeTargetCloud(demandingCloudId);
+            this.addBlendedPart(demandingCloudId, 'spontaneous');
             return;
         }
 
@@ -386,6 +392,7 @@ export class SimulatorModel {
         }
 
         this.clearConferenceTable();
+        this.pendingAction = null;
         this.addBlendedPart(demandingCloudId, 'spontaneous');
     }
 
@@ -439,16 +446,18 @@ export class SimulatorModel {
         cloned.selfAmplification = this.selfAmplification;
         cloned.mode = this.mode;
         cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
+        cloned.conversationEffectiveStances = new Map(this.conversationEffectiveStances);
+        cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
         return cloned;
     }
 
-    private getMaxConferenceNeedAttention(): number {
+    getMaxConferenceNeedAttention(excludeId?: string): number {
         let max = 0;
         for (const cloudId of this.targetCloudIds) {
-            max = Math.max(max, this.parts.getNeedAttention(cloudId));
+            if (cloudId !== excludeId) max = Math.max(max, this.parts.getNeedAttention(cloudId));
         }
         for (const cloudId of this.blendedParts.keys()) {
-            max = Math.max(max, this.parts.getNeedAttention(cloudId));
+            if (cloudId !== excludeId) max = Math.max(max, this.parts.getNeedAttention(cloudId));
         }
         return max;
     }
@@ -459,23 +468,22 @@ export class SimulatorModel {
             (a, b) => b[1].needAttention - a[1].needAttention
         );
 
-        const maxConferenceAttention = this.getMaxConferenceNeedAttention();
-
         for (const [cloudId, state] of sorted) {
+            const maxConferenceAttention = this.getMaxConferenceNeedAttention(cloudId);
             const excess = state.needAttention - maxConferenceAttention;
             if (excess <= 1) break;
 
             if (inConference) {
                 if (this.blendedParts.has(cloudId)) continue;
                 if (this.pendingBlends.some(p => p.cloudId === cloudId)) continue;
-                if (this.targetCloudIds.has(cloudId)) continue;
             }
 
             const protectors = this.parts.getProtectedBy(cloudId);
             if (protectors.size > 0) continue;
 
-            const urgent = excess > 2 && (excess - 2) > rng.random('urgent_attention');
-            if (!urgent && inConference) continue;
+            const isTarget = this.targetCloudIds.has(cloudId);
+            const urgent = !isTarget && excess > 2 && (excess - 2) > rng.random('urgent_attention');
+            if (!urgent && inConference && !isTarget) continue;
 
             return { cloudId, urgent, needAttention: state.needAttention };
         }
@@ -483,22 +491,23 @@ export class SimulatorModel {
     }
 
     increaseNeedAttention(deltaTime: number, inConference: boolean): void {
-        this.parts.driftStanceTowardSetPoint(deltaTime);
         const allParts = this.parts.getAllPartStates();
         for (const [cloudId] of allParts) {
-            if (inConference && (this.isBlended(cloudId) || this.isTarget(cloudId) || this.isPendingBlend(cloudId))) continue;
-
-            const minInterPartTrust = this.parts.getMinInterPartTrust(cloudId);
-            const isProtectee = this.parts.getProtectedBy(cloudId).size > 0;
-            const trust = this.parts.getTrust(cloudId);
-
-            let rate = 0;
-            if (minInterPartTrust < 0.3) {
-                rate = 0.05 * (0.3 - minInterPartTrust) / 0.3;
-            } else if (!isProtectee) {
-                rate = 0.01 * (1 - trust);
+            if (this.isBlended(cloudId)) {
+                const current = this.parts.getNeedAttention(cloudId);
+                if (current > 0) {
+                    this.parts.setNeedAttention(cloudId, current * Math.pow(0.98, deltaTime));
+                }
+                continue;
             }
 
+            if (inConference && (this.isTarget(cloudId) || this.isPendingBlend(cloudId))) continue;
+
+            const isProtectee = this.parts.getProtectedBy(cloudId).size > 0;
+            if (isProtectee) continue;
+
+            const trust = this.parts.getTrust(cloudId);
+            const rate = 0.01 * (1 - trust);
             if (rate > 0) {
                 this.changeNeedAttention(cloudId, deltaTime * rate);
             }
@@ -584,7 +593,7 @@ export class SimulatorModel {
 
         for (const [cloudId, state] of allParts) {
             if (state.trust <= 0.9 || state.needAttention >= 1) return false;
-            if (this.parts.getMinInterPartTrust(cloudId) < 1) return false;
+            if (this.parts.getMinInterPartTrust(cloudId) < 0.8) return false;
         }
 
         this.victoryAchieved = true;
@@ -593,6 +602,109 @@ export class SimulatorModel {
 
     isVictoryAchieved(): boolean {
         return this.victoryAchieved;
+    }
+
+    initConversation(participantIds: [string, string], rng: RNG): void {
+        const [a, b] = participantIds;
+        this.conversationParticipantIds = participantIds;
+        this.parts.applyStanceFlip(a, b, () => rng.random('conv_stance'));
+        this.parts.applyStanceFlip(b, a, () => rng.random('conv_stance'));
+
+        const stanceA = this.getConversationEffectiveStance(a);
+        const stanceB = this.getConversationEffectiveStance(b);
+        const speaker = stanceA >= stanceB ? a : b;
+        const listener = speaker === a ? b : a;
+        this.conversationSpeakerId = speaker;
+        this.conversationPhases.set(speaker, 'speak');
+        this.conversationPhases.set(listener, 'listen');
+    }
+
+    getConversationParticipantIds(): [string, string] | null {
+        return this.conversationParticipantIds;
+    }
+
+    isConversationInitialized(): boolean {
+        return this.conversationParticipantIds !== null;
+    }
+
+    getConversationPhase(cloudId: string): IfioPhase | undefined {
+        return this.conversationPhases.get(cloudId);
+    }
+
+    setConversationPhase(cloudId: string, phase: IfioPhase): void {
+        this.conversationPhases.set(cloudId, phase);
+    }
+
+    getConversationPhases(): Map<string, IfioPhase> {
+        return this.conversationPhases;
+    }
+
+    getConversationSpeakerId(): string | null {
+        return this.conversationSpeakerId;
+    }
+
+    setConversationSpeakerId(id: string): void {
+        this.conversationSpeakerId = id;
+    }
+
+    clearConversationStances(): void {
+        this.conversationEffectiveStances.clear();
+        this.conversationTherapistDelta.clear();
+        this.conversationParticipantIds = null;
+        this.conversationPhases.clear();
+        this.conversationSpeakerId = null;
+    }
+
+    getTherapistStanceDelta(cloudId: string): number {
+        return this.conversationTherapistDelta.get(cloudId) ?? 0;
+    }
+
+    addTherapistStanceDelta(cloudId: string, delta: number): void {
+        const current = this.conversationTherapistDelta.get(cloudId) ?? 0;
+        this.conversationTherapistDelta.set(cloudId, Math.max(-1, Math.min(1, current + delta)));
+    }
+
+    getConversationTherapistDeltas(): Map<string, number> {
+        return this.conversationTherapistDelta;
+    }
+
+    decayTherapistStanceDeltas(dt: number): void {
+        const decay = Math.exp(-0.08 * dt);
+        for (const [id, delta] of this.conversationTherapistDelta) {
+            const newDelta = delta * decay;
+            if (Math.abs(newDelta) < 0.001) {
+                this.conversationTherapistDelta.delete(id);
+            } else {
+                this.conversationTherapistDelta.set(id, newDelta);
+            }
+        }
+    }
+
+    getSelfTrust(cloudId: string): number {
+        return this.parts.getPartState(cloudId)?.trust ?? 0;
+    }
+
+    getConversationEffectiveStance(cloudId: string): number {
+        if (!this.conversationParticipantIds) return 0;
+        const [a, b] = this.conversationParticipantIds;
+        const otherId = cloudId === a ? b : a;
+        const stance = this.parts.getRelationStance(cloudId, otherId);
+        const delta = this.conversationTherapistDelta.get(cloudId) ?? 0;
+        return Math.max(-1, Math.min(1, stance + delta));
+    }
+
+    updateConversationEffectiveStancesCache(): void {
+        if (!this.conversationParticipantIds) {
+            this.conversationEffectiveStances.clear();
+            return;
+        }
+        for (const id of this.conversationParticipantIds) {
+            this.conversationEffectiveStances.set(id, this.getConversationEffectiveStance(id));
+        }
+    }
+
+    getConversationEffectiveStances(): Map<string, number> {
+        return this.conversationEffectiveStances;
     }
 
     isConversationPossible(): { possible: boolean; participantIds: [string, string] | null } {
@@ -606,6 +718,17 @@ export class SimulatorModel {
             return { possible: false, participantIds: null };
         }
         return { possible: true, participantIds: [a, b] };
+    }
+
+    syncConversation(rng: RNG): void {
+        const convResult = this.isConversationPossible();
+        if (convResult.participantIds) {
+            if (!this.isConversationInitialized()) {
+                this.initConversation(convResult.participantIds, rng);
+            }
+        } else if (this.isConversationInitialized()) {
+            this.clearConversationStances();
+        }
     }
 
     toJSON(): SerializedModel {
@@ -633,6 +756,11 @@ export class SimulatorModel {
             selfAmplification: this.selfAmplification,
             mode: this.mode,
             pendingAction: this.pendingAction ? { ...this.pendingAction } : null,
+            conversationEffectiveStances: Object.fromEntries(this.conversationEffectiveStances),
+            conversationTherapistDelta: Object.fromEntries(this.conversationTherapistDelta),
+            conversationParticipantIds: this.conversationParticipantIds,
+            conversationPhases: Object.fromEntries(this.conversationPhases),
+            conversationSpeakerId: this.conversationSpeakerId,
         };
     }
 
@@ -656,6 +784,23 @@ export class SimulatorModel {
         model.selfAmplification = json.selfAmplification ?? 1;
         model.mode = json.mode ?? 'panorama';
         model.pendingAction = json.pendingAction ?? null;
+        if (json.conversationEffectiveStances) {
+            for (const [k, v] of Object.entries(json.conversationEffectiveStances)) {
+                model.conversationEffectiveStances.set(k, v);
+            }
+        }
+        if (json.conversationTherapistDelta) {
+            for (const [k, v] of Object.entries(json.conversationTherapistDelta)) {
+                model.conversationTherapistDelta.set(k, v);
+            }
+        }
+        model.conversationParticipantIds = json.conversationParticipantIds ?? null;
+        if (json.conversationPhases) {
+            for (const [k, v] of Object.entries(json.conversationPhases)) {
+                model.conversationPhases.set(k, v as IfioPhase);
+            }
+        }
+        model.conversationSpeakerId = json.conversationSpeakerId ?? null;
         return model;
     }
 }

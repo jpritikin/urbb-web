@@ -337,6 +337,14 @@ export class RandomWalkRunner {
             for (let step = 0; step < config.maxActionsPerIteration; step++) {
                 const validActions = controller.getValidActions();
 
+                // Assign random stanceDelta for nudge_stance actions
+                for (const a of validActions) {
+                    if (a.action === 'nudge_stance') {
+                        const sign = rng.random('nudge_sign') < 0.5 ? -1 : 1;
+                        a.stanceDelta = sign * (0.2 + rng.random('nudge_magnitude') * 0.3);
+                    }
+                }
+
                 if (config.coverageTracking) {
                     for (const a of validActions) this.actionsEverValid.add(a.action);
                 }
@@ -360,6 +368,7 @@ export class RandomWalkRunner {
                         cloudId: result.action.cloudId,
                         targetCloudId: result.action.targetCloudId,
                         field: result.action.field,
+                        stanceDelta: result.action.stanceDelta,
                         ...(config.recordHeuristicState ? { heuristic: result.heuristic, score: result.score } : {}),
                     };
                 } else {
@@ -369,6 +378,7 @@ export class RandomWalkRunner {
                         cloudId: pickedAction.cloudId,
                         targetCloudId: pickedAction.targetCloudId,
                         field: pickedAction.field,
+                        stanceDelta: pickedAction.stanceDelta,
                     };
                 }
                 actions.push(recordedAction);
@@ -380,7 +390,7 @@ export class RandomWalkRunner {
                 if (pickedAction.action === 'wait') {
                     sim.advanceTime(WAIT_DURATION);
                 } else {
-                    sim.executeAction(pickedAction.action, pickedAction.cloudId, pickedAction.targetCloudId, pickedAction.field);
+                    sim.executeAction(pickedAction.action, pickedAction.cloudId, pickedAction.targetCloudId, pickedAction.field, undefined, pickedAction.stanceDelta);
                 }
 
                 if (config.coverageTracking) {
@@ -468,45 +478,6 @@ export class RandomWalkRunner {
         return { phase: 'victory', protectorId: null, protecteeId: null };
     }
 
-    private findGrievancePath(
-        model: ReturnType<HeadlessSimulator['getModel']>,
-        relationships: ReturnType<HeadlessSimulator['getRelationships']>,
-    ): { attackerId: string; victimId: string } | null {
-        // First priority: find an attacked victim where attacker can still do notice_part
-        // (attacker not blended, victim in conference)
-        const blendedParts = model.getBlendedParts();
-        const conferenceParts = model.getConferenceCloudIds();
-
-        for (const attackerId of model.getAllPartIds()) {
-            const victimIds = relationships.getHostileRelationTargets(attackerId);
-            for (const victimId of victimIds) {
-                if (victimId === attackerId) continue;
-                if (model.parts.isAttacked(victimId)) {
-                    // Victim already attacked - can we complete the path?
-                    if (!blendedParts.includes(attackerId) && conferenceParts.has(victimId)) {
-                        return { attackerId, victimId };
-                    }
-                    // Attacker still blended - need to separate first
-                    if (blendedParts.includes(attackerId)) {
-                        return { attackerId, victimId };
-                    }
-                }
-            }
-        }
-
-        // Second priority: find a victim that hasn't been attacked yet
-        for (const attackerId of model.getAllPartIds()) {
-            const victimIds = relationships.getHostileRelationTargets(attackerId);
-            for (const victimId of victimIds) {
-                if (victimId === attackerId) continue;
-                if (!model.parts.isAttacked(victimId)) {
-                    return { attackerId, victimId };
-                }
-            }
-        }
-        return null;
-    }
-
     private pickActionWithHeuristic(
         sim: HeadlessSimulator,
         _controller: SimulatorController,
@@ -518,22 +489,12 @@ export class RandomWalkRunner {
         const relationships = sim.getRelationships();
         const phaseInfo = this.determinePhase(model, relationships);
         const { phase, protectorId, protecteeId, targetPartId } = phaseInfo;
-        const grievancePath = this.findGrievancePath(model, relationships);
         const blendedParts = model.getBlendedParts();
-        const conferenceParts = model.getConferenceCloudIds();
 
         const heuristic: HeuristicState = {
             phase,
             protectorId,
             protecteeId,
-            grievancePath: grievancePath ? {
-                attackerId: grievancePath.attackerId,
-                victimId: grievancePath.victimId,
-                attackerBlended: blendedParts.includes(grievancePath.attackerId),
-                victimAttacked: model.parts.isAttacked(grievancePath.victimId),
-                attackerInConf: conferenceParts.has(grievancePath.attackerId),
-                victimInConf: conferenceParts.has(grievancePath.victimId),
-            } : null,
         };
 
         // 10% chance to pick randomly for exploration
@@ -565,41 +526,7 @@ export class RandomWalkRunner {
                 if (action.action === 'select_a_target' || action.action === 'join_conference') score += 20;
             }
 
-            // Grievance path exploration (runs alongside main phases)
-            // Uses high scores to override protector penalties when needed
-            if (grievancePath) {
-                const { attackerId, victimId } = grievancePath;
-                const attackerBlended = blendedParts.includes(attackerId);
-                const victimIsAttacked = model.parts.isAttacked(victimId);
-                const conferenceParts = model.getConferenceCloudIds();
-                const attackerInConference = conferenceParts.has(attackerId);
-                const victimInConference = conferenceParts.has(victimId);
-
-                // Step 1: Get attacker into conference
-                if (!attackerInConference && action.action === 'select_a_target' && action.cloudId === attackerId) {
-                    score += 15;
-                }
-                // Step 2: Blend attacker (grievance will summon victim)
-                if (attackerInConference && !attackerBlended && !victimIsAttacked) {
-                    if (action.action === 'blend' && action.cloudId === attackerId) score += 150;
-                }
-                // Step 3: Wait for grievance message (victim gets summoned then attacked)
-                if (attackerBlended && !victimIsAttacked && action.action === 'wait') {
-                    score += 50;
-                }
-                // Step 4: Separate attacker so it can use notice_part
-                if (attackerBlended && victimIsAttacked && action.action === 'separate' && action.cloudId === attackerId) {
-                    score += 60;
-                }
-                // Step 5: notice_part to trigger attacker_recognized_harm
-                if (!attackerBlended && victimIsAttacked && victimInConference) {
-                    if (action.action === 'notice_part' && action.cloudId === attackerId && action.targetCloudId === victimId) {
-                        score += 100;
-                    }
-                }
-            }
-
-            // Penalize blending protector (but grievance path can override)
+            // Penalize blending protector
             if ((action.action === 'blend' || action.action === 'step_back') && action.cloudId === protectorId) {
                 score -= 100;
             }
@@ -749,9 +676,7 @@ export class RandomWalkRunner {
                             score += 35;  // +0.2 openness
                         }
                         // Then trust-building fields (scale with openness)
-                        else if (action.field === 'whatNeedToKnow') {
-                            score += 30 + openness * 10;
-                        } else if (action.field === 'compassion') {
+                        else if (action.field === 'compassion') {
                             score += 25 + openness * 10;
                         } else if (action.field === 'gratitude') {
                             score += 20 + openness * 10;
@@ -862,6 +787,27 @@ export class RandomWalkRunner {
                 }
             }
 
+            // Conversation awareness: boost actions that reach or use conversation state
+            if (model.isConversationInitialized()) {
+                if (action.action === 'nudge_stance' && action.stanceDelta !== undefined) {
+                    const currentStance = model.getConversationEffectiveStance(action.cloudId);
+                    // Prefer delta that brings stance toward 0
+                    const movesTowardZero = Math.abs(currentStance + action.stanceDelta) < Math.abs(currentStance);
+                    score += movesTowardZero ? 20 : 5;
+                }
+            } else {
+                // Boost clearing blended parts when 2 related targets exist (enables conversation)
+                const relatedTargetPairs = this.countRelatedTargetPairs(model, relationships);
+                if (relatedTargetPairs > 0 && blendedParts.length > 0) {
+                    if (action.action === 'separate') score += 10;
+                    if (action.action === 'step_back') score += 8;
+                }
+                // Boost stepping back extra targets when we have 2+ related ones (conversation needs exactly 2)
+                if (relatedTargetPairs > 0 && targets.size > 2) {
+                    if (action.action === 'step_back') score += 10;
+                }
+            }
+
             // Wait for pending blends
             if (action.action === 'wait' && model.peekPendingBlend() !== null) {
                 score += 15;
@@ -888,6 +834,20 @@ export class RandomWalkRunner {
         const lastAction = expScores[expScores.length - 1].action;
         const lastScore = scored.find(x => x.action === lastAction)?.score ?? 0;
         return { action: lastAction, heuristic, score: lastScore };
+    }
+
+    private countRelatedTargetPairs(
+        model: ReturnType<HeadlessSimulator['getModel']>,
+        relationships: ReturnType<HeadlessSimulator['getRelationships']>,
+    ): number {
+        const targets = [...model.getTargetCloudIds()];
+        let count = 0;
+        for (let i = 0; i < targets.length; i++) {
+            for (let j = i + 1; j < targets.length; j++) {
+                if (relationships.hasInterPartRelation(targets[i], targets[j])) count++;
+            }
+        }
+        return count;
     }
 
     private computeScore(model: SerializedModel): number {
@@ -932,7 +892,7 @@ export class RandomWalkRunner {
                 gaps.push({
                     type: 'precondition_never_met',
                     action: `ray_field_select:${field}`,
-                    reason: this.getReasonForMissingField(field),
+                    reason: 'Self-ray never pointed at appropriate target',
                     suggestion: 'Use feel_toward to create self-ray, then access fields',
                 });
             }
@@ -954,14 +914,6 @@ export class RandomWalkRunner {
         }
     }
 
-    private getReasonForMissingField(field: string): string {
-        switch (field) {
-            case 'whatNeedToKnow':
-                return 'Part must have identity revealed and not be a protector';
-            default:
-                return 'Self-ray never pointed at appropriate target';
-        }
-    }
 
     private createEmptyCoverage(): CoverageData {
         return { actions: {}, actionCloudPairs: {}, transitions: {}, rayFields: {}, stateVisits: {} };

@@ -184,11 +184,10 @@ export class MessageRenderer {
         const size = computeBubbleSize(message.text, config);
         const { width: bubbleWidth, height: bubbleHeight, textHeight, lines } = size;
 
-        const isGrievance = message.type === 'grievance';
         const rect = createRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, {
             rx: 6,
-            fill: isGrievance ? '#ffcccc' : '#ffffff',
-            stroke: isGrievance ? '#cc0000' : '#333333',
+            fill: '#ffffff',
+            stroke: '#333333',
             'stroke-width': 1.5,
         });
         group.appendChild(rect);

@@ -3,6 +3,7 @@ import { PartStateManager } from './partStateManager.js';
 import { SimulatorModel, PartMessage } from '../simulator/ifsModel.js';
 import { SimulatorView } from '../simulator/ifsView.js';
 import { CarpetRenderer } from '../star/carpetRenderer.js';
+import type { BiographyField } from '../star/selfRay.js';
 import { CloudInstance } from '../utils/types.js';
 import { PanoramaCloudMotion } from './panoramaCloudMotion.js';
 import { PieMenuController } from '../menu/pieMenuController.js';
@@ -118,10 +119,12 @@ export class CloudManager {
             getCanvasDimensions: () => ({ width: this.canvasWidth, height: this.canvasHeight }),
             simulateRayClick: () => this.view.simulateRayClick(),
             executeSpontaneousBlendForPlayback: (cloudId) => this.executeSpontaneousBlendForPlayback(cloudId),
+            getCarpetRenderer: () => this.carpetRenderer,
             checkBlendedPartsAttention: () => this.checkBlendedPartsAttention(),
             onRngChanged: (rng) => {
                 this.initController();
                 this.messageOrchestrator?.setRNG(rng);
+                this.timeAdvancer?.setRNG(rng);
                 this.panoramaMotion.setRandom(() => Math.random());
             },
         });
@@ -301,17 +304,11 @@ export class CloudManager {
         this.pieMenuController.setOnActionSelect((action, cloud) => this.handleActionClick(action, cloud));
         this.pieMenuController.setOnStarActionSelect((action) => this.handleStarActionClick(action));
         this.pieMenuController.setOnBiographySelect((field, cloudId) => this.handleRayFieldSelect(field, cloudId));
-        this.pieMenuController.setGetPartContext((cloudId) => {
-            const attackers = this.model.parts.getAttackers(cloudId);
-            const firstAttacker = attackers.size > 0 ? [...attackers][0] : null;
-            return {
-                isProtector: this.model.parts.getProtecting(cloudId).size > 0,
-                isIdentityRevealed: this.model.parts.isIdentityRevealed(cloudId),
-                isAttacked: this.model.parts.isAttacked(cloudId),
-                partName: this.model.parts.getPartName(cloudId),
-                attackerName: firstAttacker ? this.model.parts.getPartName(firstAttacker) : null,
-            };
-        });
+        this.pieMenuController.setGetPartContext((cloudId) => ({
+            isProtector: this.model.parts.getProtecting(cloudId).size > 0,
+            isIdentityRevealed: this.model.parts.isIdentityRevealed(cloudId),
+            partName: this.model.parts.getPartName(cloudId),
+        }));
         this.pieMenuController.setOnClose(() => {
             this.inputHandler?.setHoveredCloud(null);
             this.updateAllCloudStyles();
@@ -319,6 +316,7 @@ export class CloudManager {
 
         this.inputHandler = new InputHandler(
             {
+                svgElement: this.svgElement,
                 getModel: () => this.model,
                 view: this.view,
                 pieMenuController: this.pieMenuController,
@@ -548,7 +546,7 @@ export class CloudManager {
         this.model.clearThoughtBubbles();
     }
 
-    private handleRayFieldSelect(field: 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize', cloudId: string): void {
+    private handleRayFieldSelect(field: BiographyField, cloudId: string): void {
         if (!this.controller) return;
 
         this.act({ action: 'ray_field_select', cloudId, field }, () => {
@@ -951,6 +949,22 @@ export class CloudManager {
 
         this.view.syncWithModel(oldModel, this.model, this.instances);
 
+        this.model.syncConversation(this.playbackRecording.getRNG());
+        if (this.model.isConversationInitialized()) {
+            this.carpetRenderer?.setConversationActive(true);
+            this.carpetRenderer?.setOnRotationEnd((carpetId, stanceDelta) => {
+                const rounded = Math.round(stanceDelta * 10) / 10;
+                if (Math.abs(rounded) < 0.01) return;
+                const rec: RecordedAction = { action: 'nudge_stance', cloudId: carpetId, stanceDelta: rounded };
+                this.act(rec, () => {
+                    this.controller!.executeAction('nudge_stance', carpetId, { stanceDelta: rounded });
+                });
+            });
+        } else {
+            this.carpetRenderer?.setConversationActive(false);
+            this.carpetRenderer?.setOnRotationEnd(null);
+        }
+
         this.dismissPieMenuIfPartLeft();
     }
 
@@ -1059,7 +1073,12 @@ export class CloudManager {
             if (this.carpetRenderer && !transitioningToForeground) {
                 const carpetStates = this.view.getCarpetStates();
                 const seats = this.view.getSeats();
-                this.carpetRenderer.update(carpetStates, seats, deltaTime, conversationParticipantSet);
+                this.model.updateConversationEffectiveStancesCache();
+                const rawStances = this.model.getConversationEffectiveStances();
+                const effectiveStances: Map<string, number> | null = rawStances.size > 0 ? rawStances : null;
+                const phases = this.model.getConversationPhases();
+                this.carpetRenderer.setConversationPhases(phases.size > 0 ? phases : null);
+                this.carpetRenderer.update(carpetStates, seats, deltaTime, conversationParticipantSet, effectiveStances);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
                 this.view.renderSeatDebug();
@@ -1294,10 +1313,21 @@ export class CloudManager {
             }
         }
 
+        let worstInterPartDistrust: { fromName: string; toName: string; trust: number } | null = null;
+        const worstRel = this.model.parts.getWorstNonSelfInterPartRelation();
+        if (worstRel) {
+            worstInterPartDistrust = {
+                fromName: this.model.parts.getPartName(worstRel.fromId),
+                toName: this.model.parts.getPartName(worstRel.toId),
+                trust: worstRel.trust,
+            };
+        }
+
         this.view.updateHelpPanel({
             lowestTrust,
             highestNeedAttention,
             mostSelfLoathing,
+            worstInterPartDistrust,
             victoryAchieved: this.model.isVictoryAchieved()
         });
     }

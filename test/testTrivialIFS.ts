@@ -62,8 +62,8 @@ function runAllTrivialIFSTests(): void {
         test('Time advance - needAttention increases', afterNeed > initialNeed,
              `expected ${afterNeed} > ${initialNeed}`);
 
-        // rate = 0.05 * (0.3 - 0.2) / 0.3 = 0.0167
-        const expectedRate = 0.05 * (0.3 - 0.2) / 0.3;
+        const trust = 0.5; // default
+        const expectedRate = 0.01 * (1 - trust);
         const expectedIncrease = 10 * expectedRate;
         const actualIncrease = afterNeed - initialNeed;
         test('Time advance - correct rate', Math.abs(actualIncrease - expectedIncrease) < 0.01,

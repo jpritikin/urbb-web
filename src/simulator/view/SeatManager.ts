@@ -186,6 +186,14 @@ export class SeatManager {
         return this.carpets;
     }
 
+    getCarpetSnapshot(): Record<string, { entering: boolean; exiting: boolean; landingProgress: number }> {
+        const result: Record<string, { entering: boolean; exiting: boolean; landingProgress: number }> = {};
+        for (const [id, carpet] of this.carpets) {
+            result[id] = { entering: carpet.entering, exiting: carpet.exiting, landingProgress: carpet.landingProgress };
+        }
+        return result;
+    }
+
     setCarpetPosition(carpetId: string, x: number, y: number): void {
         const carpet = this.carpets.get(carpetId);
         if (!carpet || carpet.entering || carpet.exiting) {
@@ -409,7 +417,9 @@ export class SeatManager {
             exiting: false,
             progress: -enteringCount * CARPET_ENTRY_STAGGER,
             vertices: createCarpetVertices(),
-            landingProgress: 0
+            landingProgress: 0,
+            effectiveStance: 0,
+            tiltAngle: 0
         });
         this.carpetVelocities.set(seatId, { vx: 0, vy: 0 });
     }

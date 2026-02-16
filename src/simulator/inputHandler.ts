@@ -4,6 +4,7 @@ import { SimulatorView } from './ifsView.js';
 import { PieMenuController } from '../menu/pieMenuController.js';
 
 export interface InputHandlerDependencies {
+    svgElement: SVGSVGElement;
     getModel: () => SimulatorModel;
     view: SimulatorView;
     pieMenuController: PieMenuController;
@@ -29,6 +30,24 @@ export class InputHandler {
     constructor(deps: InputHandlerDependencies, callbacks: InputHandlerCallbacks) {
         this.deps = deps;
         this.callbacks = callbacks;
+        this.setupSvgHoverTracking();
+    }
+
+    private setupSvgHoverTracking(): void {
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isMobile) return;
+        this.deps.svgElement.addEventListener('mousemove', (e: MouseEvent) => {
+            if (!this.hoveredCloudId) return;
+            const target = e.target as Element;
+            if (!target.closest('.cloud-group')) {
+                const cloud = this.deps.getCloudById(this.hoveredCloudId);
+                this.hoveredCloudId = null;
+                if (cloud) {
+                    const state = this.deps.getModel().getPartState(cloud.id);
+                    cloud.updateSVGElements(false, state, false);
+                }
+            }
+        });
     }
 
     setHoveredCloud(cloudId: string | null): void {

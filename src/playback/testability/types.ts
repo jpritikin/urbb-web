@@ -2,6 +2,7 @@ import type { BlendReason, BlendedPartState, PartMessage, SelfRayState, ThoughtB
 import type { PartState, PartBiography, PartDialogues } from '../../star/partState.js';
 import type { ConversationDialogues } from '../../cloud/partStateManager.js';
 import type { RngLogEntry } from './rng.js';
+import type { AttentionDemandEntry } from '../../simulator/timeAdvancer.js';
 
 export const WAIT_DURATION = 2.0;
 
@@ -21,17 +22,22 @@ export interface SerializedModel {
         toId: string;
         trust: number;
         stance: number;
-        stanceSetPoint: number;
         stanceFlipOdds: number;
+        stanceFlipOddsSetPoint?: number;
         dialogues?: ConversationDialogues;
+        rumination?: string[];
     }[];
     proxies: { cloudId: string; proxyId: string }[];
-    attackedBy: { victimId: string; attackerIds: string[] }[];
     thoughtBubbles?: ThoughtBubble[];
     victoryAchieved?: boolean;
     selfAmplification?: number;
     mode?: 'panorama' | 'foreground';
     pendingAction?: { actionId: string; sourceCloudId: string } | null;
+    conversationEffectiveStances?: Record<string, number>;
+    conversationTherapistDelta?: Record<string, number>;
+    conversationParticipantIds?: [string, string] | null;
+    conversationPhases?: Record<string, string>;
+    conversationSpeakerId?: string | null;
 }
 
 export interface OrchestratorSnapshot {
@@ -48,13 +54,28 @@ export interface BiographySnapshot {
     jobImpactRevealed: boolean;
 }
 
+export interface ViewSnapshot {
+    seats: string[];
+    carpets: Record<string, { entering: boolean; exiting: boolean; landingProgress: number }>;
+    conversationParticipantIds: [string, string] | null;
+    transitionDirection: 'forward' | 'reverse' | 'none';
+    transitionProgress: number;
+}
+
 export interface ModelSnapshot {
     targets: string[];
     blended: string[];
     selfRay: { targetCloudId: string } | null;
+    pendingAction?: { actionId: string; sourceCloudId: string } | null;
     biography?: Record<string, BiographySnapshot>;
     needAttention?: Record<string, number>;
     trust?: Record<string, number>;
+    conversationEffectiveStances?: Record<string, number>;
+    conversationPhases?: Record<string, string>;
+    conversationTherapistDelta?: Record<string, number>;
+    conversationSpeakerId?: string | null;
+    interPartRelations?: { fromId: string; toId: string; stance: number; trust: number }[];
+    viewState?: ViewSnapshot;
 }
 
 export interface RecordedAction {
@@ -71,9 +92,13 @@ export interface RecordedAction {
     triggerLastAttentionCheck?: number;  // For spontaneous_blend: lastAttentionCheck when callback triggered
     waitCount?: number;  // Number of WAIT_DURATION chunks to advance (for proper orchestrator timing)
     count?: number;  // For process_intervals action: number of 0.5s intervals to process
+    stanceDelta?: number;
     thoughtBubble?: { text: string; cloudId: string };
     rngCounts?: { model: number };
     rngLog?: RngLogEntry[];  // Model RNG calls with labels and values
+    attentionDemands?: AttentionDemandEntry[];  // Attention demands found during intervals
+    needAttention?: Record<string, number>;  // Per-part needAttention after intervals
+    isTransitioning?: boolean;  // Whether view was transitioning when recorded
     orchState?: OrchestratorSnapshot;  // Orchestrator state after action
     modelState?: ModelSnapshot;  // Model state after action
 }
@@ -104,7 +129,9 @@ export interface InterPartRelationConfig {
     trust: number;
     stance: number;
     stanceFlipOdds: number;
+    stanceFlipOddsSetPoint?: number;
     dialogues?: ConversationDialogues;
+    rumination?: string[];
 }
 
 export interface RelationshipConfig {
@@ -232,7 +259,6 @@ export interface HeuristicState {
     phase: string;
     protectorId: string | null;
     protecteeId: string | null;
-    grievancePath: { attackerId: string; victimId: string; attackerBlended: boolean; victimAttacked: boolean; attackerInConf: boolean; victimInConf: boolean } | null;
 }
 
 export interface RecordedWalkAction {
@@ -240,6 +266,7 @@ export interface RecordedWalkAction {
     cloudId: string;
     targetCloudId?: string;
     field?: string;
+    stanceDelta?: number;
     heuristic?: HeuristicState;
     score?: number;
 }

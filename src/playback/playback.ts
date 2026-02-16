@@ -4,6 +4,8 @@ import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
 import { SPEED_CONFIGS } from '../simulator/scenarioSelector.js';
+import { MAX_TILT } from '../star/carpetRenderer.js';
+import { REGULATION_STANCE_LIMIT } from '../simulator/messageOrchestrator.js';
 
 export type PlaybackSpeed = 'realtime' | 'highlights' | 'speedrun';
 
@@ -40,12 +42,20 @@ export interface PlaybackViewState {
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
+    getCarpetCenter: (cloudId: string) => { x: number; y: number } | null;
+    getCarpetVisualCenter: (cloudId: string) => { x: number; y: number } | null;
+    getCarpetTiltSign: (cloudId: string) => number;
+    isCarpetSettled: (cloudId: string) => boolean;
+    getCurrentDragStanceDelta: () => number | null;
 }
 
 export interface PlaybackInputSimulator {
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
     simulateClickOnCloud: (cloudId: string) => ActionResult;
+    simulateMouseDown: (x: number, y: number, carpetCloudId?: string) => void;
+    simulateMouseMove: (x: number, y: number) => void;
+    simulateMouseUp: () => void;
 }
 
 export interface PlaybackModelAccess {
@@ -284,6 +294,10 @@ export class PlaybackController {
                 await this.executeModeChange(action);
                 break;
 
+            case 'nudge_stance':
+                await this.executeNudgeStance(action);
+                break;
+
             default:
                 if (isCloudMenuAction(action.action) || isStarMenuAction(action.action)) {
                     await this.executeCloudAction(action);
@@ -419,6 +433,12 @@ export class PlaybackController {
             return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
         }
 
+        if (!clickResult.success && clickResult.error?.startsWith('No element') && retryCount < 5) {
+            console.warn(`[Playback] elementFromPoint miss at (${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`);
+            await this.delay(100);
+            return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
+        }
+
         return this.handleClickResult(clickResult, context ?? `at (${x.toFixed(0)}, ${y.toFixed(0)})`, expectAction);
     }
 
@@ -476,6 +496,86 @@ export class PlaybackController {
         const targetMode = action.newMode;
         if (!targetMode || this.callbacks.getMode() === targetMode) return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
+        await this.reticle.fadeOut();
+    }
+
+    private async executeNudgeStance(action: RecordedAction): Promise<void> {
+        const stanceDelta = action.stanceDelta ?? 0;
+        // Wait for carpet to finish entering/landing animation
+        const maxWait = 5000;
+        const start = performance.now();
+        while (!this.callbacks.isCarpetSettled(action.cloudId)) {
+            if (performance.now() - start > maxWait) {
+                console.warn('[NudgeDrag] Timeout waiting for carpet to settle');
+                break;
+            }
+            await this.delay(50);
+        }
+
+        const center = this.callbacks.getCarpetCenter(action.cloudId);
+        const visualCenter = this.callbacks.getCarpetVisualCenter(action.cloudId);
+        if (!center || !visualCenter) return;
+
+        const tiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
+        const dragRadius = 200;
+
+        // Target angle in degrees from the stance delta
+        const targetAngleDeg = (stanceDelta / REGULATION_STANCE_LIMIT) * MAX_TILT;
+        const targetAngleRad = targetAngleDeg * Math.PI / 180;
+
+        // Offset toward the side with more screen space to stay on canvas
+        const canvasWidth = this.svgElement.viewBox.baseVal.width || 800;
+        const horizontalDir = center.x < canvasWidth / 2 ? 1 : -1;
+
+        // End point far from center for angle accuracy
+        // computeRotation: angleDeg = atan2(dy, |dx|) * horizontalSign * tiltSign
+        // With consistent horizontalDir, directionSign = horizontalDir * tiltSign
+        // We want: relativeAngle = targetAngleDeg (startAngle ≈ 0)
+        // So: endAngleDeg = targetAngleDeg
+        // endAngleDeg = atan2(dy, |dx|) * horizontalDir * tiltSign = targetAngleDeg
+        // atan2(dy, |dx|) = targetAngleDeg / (horizontalDir * tiltSign)
+        const effectiveAngleRad = (targetAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
+        const endX = center.x + Math.abs(Math.cos(effectiveAngleRad)) * dragRadius * horizontalDir;
+        const endY = center.y + Math.sin(effectiveAngleRad) * dragRadius;
+
+        // Mousedown horizontally offset from logical center so startAngle ≈ 0
+        const startX = center.x + 40 * horizontalDir;
+        const startY = center.y;
+        await this.reticle.showAt(startX, startY);
+        this.callbacks.simulateMouseDown(startX, startY);
+
+        // Animate drag outward to end position
+        const steps = 8;
+        const stepDelay = 30;
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = center.x + (endX - center.x) * t;
+            const y = center.y + (endY - center.y) * t;
+            this.reticle.setTarget(x, y);
+            this.callbacks.simulateMouseMove(x, y);
+            await this.delay(stepDelay);
+        }
+
+        // Fine-tune: recompute end position using fresh center to correct for drift
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const currentDelta = this.callbacks.getCurrentDragStanceDelta();
+            if (currentDelta === null) break;
+            const error = stanceDelta - currentDelta;
+            if (Math.abs(error) < 0.02) break;
+            // Recompute target from fresh center with corrected angle
+            const freshCenter = this.callbacks.getCarpetCenter(action.cloudId);
+            if (!freshCenter) break;
+            const correctedAngleDeg = targetAngleDeg + (error / REGULATION_STANCE_LIMIT) * MAX_TILT;
+            const correctedRad = (correctedAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
+            const nx = freshCenter.x + Math.abs(Math.cos(correctedRad)) * dragRadius * horizontalDir;
+            const ny = freshCenter.y + Math.sin(correctedRad) * dragRadius;
+            this.reticle.setTarget(nx, ny);
+            this.callbacks.simulateMouseMove(nx, ny);
+            await this.delay(10);
+        }
+
+        // Mouse up triggers commitRotation → onRotationEnd
+        this.callbacks.simulateMouseUp();
         await this.reticle.fadeOut();
     }
 

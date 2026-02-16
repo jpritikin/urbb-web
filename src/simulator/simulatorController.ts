@@ -18,6 +18,7 @@ export interface ActionOptions {
     targetCloudId?: string;
     field?: BiographyField;
     isBlended?: boolean;
+    stanceDelta?: number;
 }
 
 export interface ValidAction {
@@ -25,11 +26,12 @@ export interface ValidAction {
     cloudId: string;
     targetCloudId?: string;
     field?: BiographyField;
+    stanceDelta?: number;
 }
 
 export const ALL_RAY_FIELDS: BiographyField[] = [
     'age', 'identity', 'jobAppraisal', 'jobImpact', 'gratitude',
-    'whatNeedToKnow', 'compassion', 'apologize'
+    'compassion'
 ];
 
 const UNWILLING_RESPONSES = [
@@ -191,6 +193,14 @@ export class SimulatorController {
             actions.push({ action: 'help_protected', cloudId });
         }
 
+        // nudge_stance: available when conversation is active and part is a participant
+        if (this.model.isConversationInitialized()) {
+            const participants = this.model.getConversationParticipantIds();
+            if (participants && (participants[0] === cloudId || participants[1] === cloudId)) {
+                actions.push({ action: 'nudge_stance', cloudId });
+            }
+        }
+
         // notice_part: any non-blended conference part can notice any other conference part (including self)
         if (inConference && !isBlended) {
             for (const targetPartId of conferenceParts) {
@@ -206,13 +216,11 @@ export class SimulatorController {
         const isProtector = this.relationships.getProtecting(cloudId).size > 0;
         const isIdentityRevealed = this.model.parts.isIdentityRevealed(cloudId);
 
-        fields.push('age', 'identity', 'gratitude', 'compassion', 'apologize');
+        fields.push('age', 'identity', 'gratitude', 'compassion');
 
         const showJobQuestions = !isIdentityRevealed || isProtector;
         if (showJobQuestions) {
             fields.push('jobAppraisal', 'jobImpact');
-        } else {
-            fields.push('whatNeedToKnow');
         }
 
         return fields;
@@ -222,6 +230,20 @@ export class SimulatorController {
         const openness = this.model.parts.getOpenness(cloudId);
         const targetCount = Math.max(1, this.model.getTargetCloudIds().size);
         return openness / targetCount;
+    }
+
+    private checkBacklash(cloudId: string, trustGain: number, rngLabel: string): { protectorId: string; protecteeId: string } | undefined {
+        const protectorIds = this.relationships.getProtectedBy(cloudId);
+        for (const protectorId of protectorIds) {
+            if (!this.model.parts.hasConsentedToHelp(protectorId)) {
+                const protectorTrust = this.model.parts.getTrust(protectorId);
+                const newProtectorTrust = protectorTrust - trustGain / 2;
+                this.model.parts.setTrust(protectorId, newProtectorTrust);
+                if (newProtectorTrust < this.rng.random(rngLabel)) {
+                    return { protectorId, protecteeId: cloudId };
+                }
+            }
+        }
     }
 
     executeAction(actionId: string, cloudId: string, options?: ActionOptions): ControllerActionResult {
@@ -298,6 +320,15 @@ export class SimulatorController {
 
             case 'validate':
                 return this.handleValidate(cloudId);
+
+            case 'nudge_stance': {
+                const delta = options?.stanceDelta ?? 0;
+                this.model.addTherapistStanceDelta(cloudId, delta);
+                return {
+                    success: true,
+                    stateChanges: [outcome(cloudId, OUTCOMES.STANCE_NUDGED)]
+                };
+            }
 
             default:
                 return { success: false, message: `Unknown action: ${actionId}`, stateChanges: [] };
@@ -534,7 +565,7 @@ export class SimulatorController {
 
         for (const blendedId of blendedParts) {
             if (this.relationships.hasHostileRelation(blendedId, cloudId)) {
-                const dialogue = this.relationships.getInterPartDialogue(blendedId, cloudId, 'speak', 1);
+                const dialogue = this.relationships.getInterPartDialogue(blendedId, cloudId, 'speak', () => this.rng.random('dialogue_pick'));
                 if (dialogue) {
                     blendedResponses.push({ cloudId: blendedId, response: dialogue });
                 }
@@ -652,7 +683,7 @@ export class SimulatorController {
         const protecteeName = this.getPartName(protecteeId);
         const protecteeTrust = this.model.parts.getTrust(protecteeId);
 
-        if (protecteeTrust < 1) {
+        if (protecteeTrust < 0.95) {
             const burdenRecognitionResponses = [
                 `I see how much ${protecteeName} is carrying. My job is so important.`,
                 `${protecteeName} has been through so much. That's why I can't stop.`,
@@ -724,31 +755,7 @@ export class SimulatorController {
     }
 
     private handleAttackerNoticingVictim(attackerId: string, victimId: string): ControllerActionResult {
-        if (!this.model.parts.isAttacked(victimId)) {
-            return this.handleGenericNotice(attackerId, victimId);
-        }
-
-        const victimName = this.getPartName(victimId);
-
-        this.model.changeNeedAttention(victimId, 0.5);
-
-        const recognitionResponses = [
-            `I hurt ${victimName}, but I had to.`,
-            `I had to hurt ${victimName} to do my job.`,
-            `I see the pain I caused ${victimName}. It was necessary.`,
-            `${victimName} suffered because of me. I had no choice.`,
-        ];
-
-        return {
-            success: true,
-            stateChanges: [outcome(attackerId, OUTCOMES.ATTACKER_RECOGNIZED_HARM, victimId)],
-            uiFeedback: {
-                thoughtBubble: {
-                    text: pickRandom(recognitionResponses),
-                    cloudId: attackerId
-                }
-            }
-        };
+        return this.handleGenericNotice(attackerId, victimId);
     }
 
     private handleRayFieldSelect(cloudId: string, field: BiographyField): ControllerActionResult {
@@ -793,37 +800,21 @@ export class SimulatorController {
             };
         }
 
-        if (this.model.parts.isAttacked(cloudId) && this.model.parts.isTrustAtCeiling(cloudId) && highTrustFields.includes(field)) {
-            return {
-                success: true,
-                stateChanges: [],
-                uiFeedback: { thoughtBubble: { text: "Aren't you going to apologize?", cloudId } }
-            };
-        }
-
         let response: string | null;
         let trustGain = 0;
         let backlash: { protectorId: string; protecteeId: string } | undefined;
 
         switch (field) {
-            case 'whatNeedToKnow': {
-                const result = this.handleWhatNeedToKnowInternal(cloudId);
-                response = result.response;
-                trustGain = this.calculateTrustGain(cloudId);
-                backlash = result.triggerBacklash;
-                break;
-            }
-
             case 'compassion': {
                 const isProtector = this.relationships.getProtecting(cloudId).size > 0;
                 trustGain = this.calculateTrustGain(cloudId);
                 if (isProtector) {
                     response = "*Shrug*";
                     trustGain *= 0.25;
-                } else {
-                    response = pickRandom(COMPASSION_RECEIVED_RESPONSES);
                 }
                 this.model.parts.addTrust(cloudId, trustGain);
+                const trust = this.model.parts.getTrust(cloudId);
+                response = trust >= 1 ? "I feel understood." : pickRandom(COMPASSION_RECEIVED_RESPONSES);
                 break;
             }
 
@@ -840,6 +831,7 @@ export class SimulatorController {
                     response = pickRandom(gratitudeResponses);
                     trustGain = this.calculateTrustGain(cloudId);
                     this.model.parts.addTrust(cloudId, trustGain);
+                    backlash = this.checkBacklash(cloudId, trustGain, 'gratitude:backlash_check');
                 } else if (isFormerProtector) {
                     const selfTrust = this.model.parts.getTrust(cloudId);
                     const totalGain = this.calculateTrustGain(cloudId);
@@ -847,7 +839,7 @@ export class SimulatorController {
                     const selfPartGain = totalGain * (1 - selfRelationShare);
                     const selfRelationGain = totalGain * selfRelationShare;
                     this.model.parts.addTrust(cloudId, selfPartGain);
-                    this.model.parts.addInterPartTrust(cloudId, cloudId, selfRelationGain);
+                    this.model.parts.addInterPartTrust(cloudId, cloudId, selfRelationGain, () => this.rng.random('self_relation_trust'));
                     const selfRelTrust = this.model.parts.getInterPartTrust(cloudId, cloudId);
                     if (selfRelTrust >= 1) {
                         response = "I forgive myself. I was doing my best.";
@@ -874,19 +866,18 @@ export class SimulatorController {
 
             case 'jobAppraisal':
                 response = this.handleJobAppraisalInternal(cloudId);
+                backlash = this.checkBacklash(cloudId, 0.05, 'jobAppraisal:backlash_check');
                 break;
 
             case 'jobImpact':
                 response = this.handleJobImpactInternal(cloudId);
-                break;
-
-            case 'apologize':
-                response = this.handleApologizeInternal(cloudId);
+                backlash = this.checkBacklash(cloudId, 0.05, 'jobImpact:backlash_check');
                 break;
 
             case 'age':
                 response = this.revealAge(cloudId);
                 this.model.parts.addTrust(cloudId, 0.05);
+                backlash = this.checkBacklash(cloudId, 0.05, 'age:backlash_check');
                 break;
 
             case 'identity':
@@ -932,30 +923,6 @@ export class SimulatorController {
         return '';
     }
 
-    private handleWhatNeedToKnowInternal(cloudId: string): { response: string; triggerBacklash?: { protectorId: string; protecteeId: string } } {
-        const trustGain = this.calculateTrustGain(cloudId);
-        const protectorIds = this.relationships.getProtectedBy(cloudId);
-
-        this.model.parts.addTrust(cloudId, trustGain);
-
-        let backlash: { protectorId: string; protecteeId: string } | undefined;
-        for (const protectorId of protectorIds) {
-            if (!this.model.parts.hasConsentedToHelp(protectorId)) {
-                const protectorTrust = this.model.parts.getTrust(protectorId);
-                const newProtectorTrust = protectorTrust - trustGain / 2;
-                this.model.parts.setTrust(protectorId, newProtectorTrust);
-                if (newProtectorTrust < this.rng.random('whatNeedToKnow:backlash_check')) {
-                    backlash = { protectorId, protecteeId: cloudId };
-                    break;
-                }
-            }
-        }
-
-        const trust = this.model.parts.getTrust(cloudId);
-        const response = trust >= 1 ? "I feel understood." : "Blah blah blah.";
-        return { response, triggerBacklash: backlash };
-    }
-
     private handleJobAppraisalInternal(cloudId: string): string {
         const partState = this.model.getPartState(cloudId);
         if (!partState) return "...";
@@ -994,48 +961,6 @@ export class SimulatorController {
         this.model.parts.revealJobImpact(cloudId);
         this.model.parts.addTrust(cloudId, 0.05);
         return pickRandom(dialogues);
-    }
-
-    private handleApologizeInternal(cloudId: string): string {
-        if (!this.model.parts.isAttacked(cloudId)) {
-            this.model.parts.adjustTrust(cloudId, 0.98);
-            const confused = [
-                "For what?",
-                "What are you apologizing for?",
-                "I'm not upset with you.",
-                "You haven't done anything wrong.",
-            ];
-            return pickRandom(confused);
-        }
-
-        const hostileSenders = this.relationships.getHostileRelationSenders(cloudId);
-        const hasReleasedAttacker = Array.from(hostileSenders).some(
-            senderId => this.model.parts.isFormerProtector(senderId)
-        );
-        if (!hasReleasedAttacker) {
-            this.model.parts.adjustTrust(cloudId, 0.95);
-            return "The ones who attacked me are still burdened. How can I trust you?";
-        }
-
-        const trust = this.model.parts.getTrust(cloudId);
-        if (trust < 0.5 || this.rng.random('apologize:accept') > trust) {
-            this.model.parts.adjustTrust(cloudId, 0.9);
-            const rejections = [
-                "It's going to take more than that.",
-                "Words are easy. Show me you mean it.",
-                "I'm not ready to forgive yet.",
-            ];
-            return pickRandom(rejections);
-        }
-
-        this.model.parts.clearAttackedBy(cloudId);
-        this.model.parts.addTrust(cloudId, 0.2);
-        const acceptances = [
-            "Thank you. I appreciate that.",
-            "I can tell you mean it. Thank you.",
-            "That means a lot to me.",
-        ];
-        return pickRandom(acceptances);
     }
 
     private handleSpontaneousBlend(cloudId: string): ControllerActionResult {

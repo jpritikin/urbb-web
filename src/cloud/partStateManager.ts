@@ -11,36 +11,27 @@ interface ProxyRelation {
     proxyId: string;
 }
 
-export interface PhaseDialogues {
-    speak: string[];
-    mirror: string[];
-    validate: string[];
-    empathize: string[];
-}
-
-export interface StanceDialogues {
-    withdrawing: PhaseDialogues;
-    dominating: PhaseDialogues;
-}
+export const PHASE_INDEX = { speak: 0, mirror: 1, validate: 2, empathize: 3 } as const;
 
 export interface ConversationDialogues {
-    hostile?: StanceDialogues;
-    guarded?: StanceDialogues;
-    opening?: StanceDialogues;
-    collaborative?: PhaseDialogues;
+    hostile?: string[][];
+    guarded?: string[][];
+    opening?: string[][];
+    collaborative?: string[][];
 }
 
 export type TrustBand = 'hostile' | 'guarded' | 'opening' | 'collaborative';
-export type ImagoPhase = 'speak' | 'mirror' | 'validate' | 'empathize';
+export type IfioPhase = 'speak' | 'listen' | 'mirror' | 'validate' | 'empathize';
 
 export interface InterPartRelation {
     fromId: string;
     toId: string;
     trust: number;
     stance: number;
-    stanceSetPoint: number;
     stanceFlipOdds: number;
+    stanceFlipOddsSetPoint: number;
     dialogues?: ConversationDialogues;
+    rumination?: string[];
 }
 
 export class PartStateManager {
@@ -48,7 +39,6 @@ export class PartStateManager {
     private protections: ProtectionRelation[] = [];
     private interPartRelations: Map<string, Map<string, InterPartRelation>> = new Map();
     private proxies: ProxyRelation[] = [];
-    private attackedBy: Map<string, Set<string>> = new Map();
     private lastUtterance: Map<string, { text: string; timestamp: number }> = new Map();
     private beWithUsed: Set<string> = new Set();
 
@@ -88,30 +78,26 @@ export class PartStateManager {
         return openness;
     }
 
-    private getMaxTrust(cloudId: string): number {
-        return this.isAttacked(cloudId) ? 0.8 : 1;
-    }
-
-    private clampTrust(cloudId: string, trust: number): number {
-        return Math.max(0, Math.min(this.getMaxTrust(cloudId), trust));
+    private clampTrust(trust: number): number {
+        return Math.max(0, Math.min(1, trust));
     }
 
     setTrust(cloudId: string, trust: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
-        state.trust = this.clampTrust(cloudId, trust);
+        state.trust = this.clampTrust(trust);
     }
 
     adjustTrust(cloudId: string, multiplier: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
-        state.trust = this.clampTrust(cloudId, state.trust * multiplier);
+        state.trust = this.clampTrust(state.trust * multiplier);
     }
 
     addTrust(cloudId: string, amount: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
-        state.trust = this.clampTrust(cloudId, state.trust + amount);
+        state.trust = this.clampTrust(state.trust + amount);
     }
 
     getNeedAttention(cloudId: string): number {
@@ -134,12 +120,6 @@ export class PartStateManager {
 
     wasProxy(cloudId: string): boolean {
         return this.partStates.get(cloudId)?.wasProxy ?? false;
-    }
-
-    isTrustAtCeiling(cloudId: string): boolean {
-        const state = this.partStates.get(cloudId);
-        if (!state) return false;
-        return state.trust >= this.getMaxTrust(cloudId);
     }
 
     getDialogues(cloudId: string): PartDialogues {
@@ -355,6 +335,7 @@ export class PartStateManager {
         stance: number;
         stanceFlipOdds: number;
         dialogues?: ConversationDialogues;
+        rumination?: string[];
     }): void {
         let fromMap = this.interPartRelations.get(fromId);
         if (!fromMap) {
@@ -366,9 +347,10 @@ export class PartStateManager {
             toId,
             trust: opts.trust,
             stance: opts.stance,
-            stanceSetPoint: opts.stance,
             stanceFlipOdds: opts.stanceFlipOdds,
+            stanceFlipOddsSetPoint: opts.stanceFlipOdds,
             dialogues: opts.dialogues,
+            rumination: opts.rumination,
         });
     }
 
@@ -414,6 +396,20 @@ export class PartStateManager {
         return fromMap ? new Set(fromMap.keys()) : new Set();
     }
 
+    getWorstNonSelfInterPartRelation(): { fromId: string; toId: string; trust: number } | null {
+        let worst: { fromId: string; toId: string; trust: number } | null = null;
+        for (const fromMap of this.interPartRelations.values()) {
+            for (const rel of fromMap.values()) {
+                if (rel.fromId === rel.toId) continue;
+                if (rel.trust >= 1) continue;
+                if (worst === null || rel.trust < worst.trust) {
+                    worst = { fromId: rel.fromId, toId: rel.toId, trust: rel.trust };
+                }
+            }
+        }
+        return worst;
+    }
+
     getMinInterPartTrust(cloudId: string): number {
         const fromMap = this.interPartRelations.get(cloudId);
         if (!fromMap || fromMap.size === 0) return 1;
@@ -431,10 +427,44 @@ export class PartStateManager {
         return flip ? -rel.stance : rel.stance;
     }
 
-    addInterPartTrust(fromId: string, toId: string, delta: number): void {
+    getRelation(fromId: string, toId: string): InterPartRelation | undefined {
+        return this.interPartRelations.get(fromId)?.get(toId);
+    }
+
+    getRelationSummaries(): { fromId: string; toId: string; stance: number; trust: number }[] {
+        const result: { fromId: string; toId: string; stance: number; trust: number }[] = [];
+        for (const fromMap of this.interPartRelations.values()) {
+            for (const rel of fromMap.values()) {
+                result.push({ fromId: rel.fromId, toId: rel.toId, stance: rel.stance, trust: rel.trust });
+            }
+        }
+        return result;
+    }
+
+    getRelationStance(fromId: string, toId: string): number {
+        return this.interPartRelations.get(fromId)?.get(toId)?.stance ?? 0;
+    }
+
+    applyStanceFlip(fromId: string, toId: string, rng: () => number): void {
+        const rel = this.interPartRelations.get(fromId)?.get(toId);
+        if (!rel) return;
+        if (rng() < rel.stanceFlipOdds) {
+            rel.stance = -rel.stance;
+        }
+    }
+
+    addInterPartTrust(fromId: string, toId: string, delta: number, rng: () => number): void {
         const rel = this.interPartRelations.get(fromId)?.get(toId);
         if (rel) {
-            rel.trust = Math.max(0, Math.min(1, rel.trust + delta));
+            const newTrust = rel.trust + delta;
+            if (newTrust < 0) {
+                const overflow = -newTrust;
+                const flipShare = rng();
+                rel.stanceFlipOdds += (1 - rel.stanceFlipOdds) * overflow * flipShare * 0.5;
+                const extremeDir = Math.sign(rel.stance) || 1;
+                rel.stance = Math.max(-1, Math.min(1, rel.stance + extremeDir * overflow * (1 - flipShare) * 0.4));
+            }
+            rel.trust = Math.max(0, Math.min(1, newTrust));
         }
     }
 
@@ -446,14 +476,14 @@ export class PartStateManager {
         rel.stance += Math.sign(diff) * Math.min(amount, Math.abs(diff));
     }
 
-    driftStanceTowardSetPoint(deltaTime: number): void {
-        const DRIFT_RATE = 0.02;
+    decayFlipOdds(deltaTime: number, conferenceParticipantIds: Set<string>): void {
+        const rate = 0.05;
         for (const fromMap of this.interPartRelations.values()) {
             for (const rel of fromMap.values()) {
-                const diff = rel.stanceSetPoint - rel.stance;
+                if (conferenceParticipantIds.has(rel.fromId) && conferenceParticipantIds.has(rel.toId)) continue;
+                const diff = rel.stanceFlipOddsSetPoint - rel.stanceFlipOdds;
                 if (Math.abs(diff) < 0.001) continue;
-                const drift = Math.sign(diff) * Math.min(DRIFT_RATE * deltaTime, Math.abs(diff));
-                rel.stance += drift;
+                rel.stanceFlipOdds += diff * (1 - Math.exp(-rate * deltaTime));
             }
         }
     }
@@ -465,24 +495,29 @@ export class PartStateManager {
         return 'collaborative';
     }
 
-    getInterPartDialogue(fromId: string, toId: string, phase: ImagoPhase, stanceSign: 1 | -1): string | null {
-        const rel = this.interPartRelations.get(fromId)?.get(toId);
-        if (!rel?.dialogues) return null;
-        const band = PartStateManager.getTrustBand(rel.trust);
-        if (band === 'collaborative') {
-            const pool = rel.dialogues.collaborative;
-            return pool ? this.pickFromPool(pool, phase) : null;
-        }
-        const stanceDialogues = rel.dialogues[band];
-        if (!stanceDialogues) return null;
-        const pool = stanceSign > 0 ? stanceDialogues.dominating : stanceDialogues.withdrawing;
-        return this.pickFromPool(pool, phase);
+    hasInterPartDialogue(fromId: string, toId: string): boolean {
+        return !!this.interPartRelations.get(fromId)?.get(toId)?.dialogues;
     }
 
-    private pickFromPool(pool: PhaseDialogues, phase: ImagoPhase): string | null {
-        const arr = pool[phase];
+    private static FALLBACK_CONVERSATIONS: string[][] = [
+        ["No!", "So you're saying — no, that's ridiculous!", "Fine!", "I don't care!"],
+        ["...", "You said... something.", "Maybe.", "I guess."],
+    ];
+
+    getInterPartDialogue(fromId: string, toId: string, phase: IfioPhase, rng: () => number): string | null {
+        if (phase === 'listen') return null;
+        const rel = this.interPartRelations.get(fromId)?.get(toId);
+        const conversations = rel?.dialogues?.[PartStateManager.getTrustBand(rel.trust)];
+        const pool = conversations ?? PartStateManager.FALLBACK_CONVERSATIONS;
+        if (pool.length === 0) return null;
+        const conv = pool[Math.floor(rng() * pool.length)];
+        return conv[PHASE_INDEX[phase]] ?? null;
+    }
+
+    getRumination(cloudId: string, rng: () => number): string | null {
+        const arr = this.interPartRelations.get(cloudId)?.get(cloudId)?.rumination;
         if (!arr || arr.length === 0) return null;
-        return arr[Math.floor(Math.random() * arr.length)];
+        return arr[Math.floor(rng() * arr.length)];
     }
 
     // Proxy relationship methods
@@ -528,30 +563,6 @@ export class PartStateManager {
         );
     }
 
-    // Attack tracking methods
-
-    setAttackedBy(victimId: string, attackerId: string): void {
-        let attackers = this.attackedBy.get(victimId);
-        if (!attackers) {
-            attackers = new Set();
-            this.attackedBy.set(victimId, attackers);
-        }
-        attackers.add(attackerId);
-    }
-
-    clearAttackedBy(victimId: string): void {
-        this.attackedBy.delete(victimId);
-    }
-
-    isAttacked(victimId: string): boolean {
-        const attackers = this.attackedBy.get(victimId);
-        return attackers !== undefined && attackers.size > 0;
-    }
-
-    getAttackers(victimId: string): Set<string> {
-        return this.attackedBy.get(victimId) ?? new Set();
-    }
-
     // Combined methods
 
     assessNeedAttention(cloudId: string): number {
@@ -580,16 +591,11 @@ export class PartStateManager {
         this.proxies = this.proxies.filter(
             r => r.cloudId !== cloudId && r.proxyId !== cloudId
         );
-        this.attackedBy.delete(cloudId);
-        for (const [victimId, attackerIds] of this.attackedBy) {
-            attackerIds.delete(cloudId);
-            if (attackerIds.size === 0) this.attackedBy.delete(victimId);
-        }
     }
 
     // Serialization
 
-    toJSON(): Pick<SerializedModel, 'partStates' | 'protections' | 'interPartRelations' | 'proxies' | 'attackedBy'> {
+    toJSON(): Pick<SerializedModel, 'partStates' | 'protections' | 'interPartRelations' | 'proxies'> {
         const partStates: Record<string, PartState> = {};
         for (const [id, state] of this.partStates) {
             partStates[id] = {
@@ -606,9 +612,10 @@ export class PartStateManager {
                     toId: rel.toId,
                     trust: rel.trust,
                     stance: rel.stance,
-                    stanceSetPoint: rel.stanceSetPoint,
                     stanceFlipOdds: rel.stanceFlipOdds,
+                    stanceFlipOddsSetPoint: rel.stanceFlipOddsSetPoint,
                     dialogues: rel.dialogues,
+                    rumination: rel.rumination,
                 });
             }
         }
@@ -617,13 +624,10 @@ export class PartStateManager {
             protections: [...this.protections],
             interPartRelations: relations,
             proxies: [...this.proxies],
-            attackedBy: Array.from(this.attackedBy.entries()).map(
-                ([victimId, attackerIds]) => ({ victimId, attackerIds: Array.from(attackerIds) })
-            ),
         };
     }
 
-    static fromJSON(json: Pick<SerializedModel, 'partStates' | 'protections' | 'interPartRelations' | 'proxies' | 'attackedBy'>): PartStateManager {
+    static fromJSON(json: Pick<SerializedModel, 'partStates' | 'protections' | 'interPartRelations' | 'proxies'>): PartStateManager {
         const manager = new PartStateManager();
         for (const [id, state] of Object.entries(json.partStates)) {
             manager.partStates.set(id, {
@@ -646,18 +650,14 @@ export class PartStateManager {
                 toId: r.toId,
                 trust: r.trust,
                 stance: r.stance,
-                stanceSetPoint: r.stanceSetPoint,
                 stanceFlipOdds: r.stanceFlipOdds,
+                stanceFlipOddsSetPoint: r.stanceFlipOddsSetPoint ?? r.stanceFlipOdds,
                 dialogues: r.dialogues,
+                rumination: r.rumination,
             });
         }
         for (const p of json.proxies) {
             manager.addProxy(p.cloudId, p.proxyId);
-        }
-        for (const a of json.attackedBy) {
-            for (const attackerId of a.attackerIds) {
-                manager.setAttackedBy(a.victimId, attackerId);
-            }
         }
         return manager;
     }
@@ -683,9 +683,6 @@ export class PartStateManager {
             cloned.interPartRelations.set(fromId, clonedFromMap);
         }
         cloned.proxies = this.proxies.map(p => ({ ...p }));
-        for (const [victimId, attackerIds] of this.attackedBy) {
-            cloned.attackedBy.set(victimId, new Set(attackerIds));
-        }
         for (const [cloudId, utterance] of this.lastUtterance) {
             cloned.lastUtterance.set(cloudId, { ...utterance });
         }

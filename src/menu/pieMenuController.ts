@@ -209,9 +209,7 @@ export class PieMenuController {
         const context = this.getPartContext?.(cloudId) ?? {
             isProtector: false,
             isIdentityRevealed: false,
-            isAttacked: false,
             partName: '',
-            attackerName: null
         };
 
         const validActions = controller?.getValidActions() ?? [];
@@ -221,12 +219,7 @@ export class PieMenuController {
         const items: PieMenuItem[] = [];
         for (const action of SELFRAY_MENU_ACTIONS) {
             if (validFields.has(action.id as BiographyField)) {
-                let label = action.question;
-                if (action.id === 'apologize') {
-                    const attackerPart = context.attackerName ?? 'other parts';
-                    label = `Apologize to ${context.partName} for allowing ${attackerPart} to attack`;
-                }
-                items.push({ id: action.id, label, shortName: action.shortName, category: action.category });
+                items.push({ id: action.id, label: action.question, shortName: action.shortName, category: action.category });
             }
         }
 

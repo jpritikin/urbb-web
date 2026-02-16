@@ -29,6 +29,7 @@ import { AnimatedStar, STAR_OUTER_RADIUS } from '../star/starAnimation.js';
 import type { HSLColor } from '../utils/colorUtils.js';
 import { ViewEventEmitter, ViewEventMap } from './view/ViewEvents.js';
 import { SeatManager } from './view/SeatManager.js';
+import type { ViewSnapshot } from '../playback/testability/types.js';
 import { TransitionAnimator } from './view/TransitionAnimator.js';
 import {
     PositionTarget,
@@ -259,7 +260,6 @@ export class SimulatorView {
     }
 
     simulateRayClick(): void {
-        console.log('[IfsView] simulateRayClick - selfRay:', this.selfRay ? 'exists' : 'null');
         this.selfRay?.simulateClick();
     }
 
@@ -1389,6 +1389,16 @@ export class SimulatorView {
 
     getTransitionDirection(): 'forward' | 'reverse' | 'none' {
         return this.transitionDirection;
+    }
+
+    getViewSnapshot(): ViewSnapshot {
+        return {
+            seats: this.seatManager.getSeats().map(s => s.seatId),
+            carpets: this.seatManager.getCarpetSnapshot(),
+            conversationParticipantIds: this.conversationParticipantIds,
+            transitionDirection: this.transitionDirection,
+            transitionProgress: this.transitionProgress,
+        };
     }
 
     getCurrentZoomFactor(): number {

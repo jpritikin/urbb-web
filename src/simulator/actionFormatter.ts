@@ -20,6 +20,7 @@ const KNOWN_ACTIONS = new Set([
     'backlash',
     'mode_change',
     'process_intervals',
+    'nudge_stance',
 ]);
 
 export function isValidAction(actionId: string): boolean {
@@ -105,6 +106,11 @@ export function formatActionLabel(
 
         case 'process_intervals':
             return '';  // Silent action, not displayed
+
+        case 'nudge_stance': {
+            const dir = (action.stanceDelta ?? 0) > 0 ? 'speak' : 'listen';
+            return `Nudge ${name} to ${dir}`;
+        }
 
         default:
             throw new Error(`Unknown action: ${action.action}`);

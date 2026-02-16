@@ -9,12 +9,10 @@ export interface SelfRayConfig {
 export interface PartContext {
     isProtector: boolean;
     isIdentityRevealed: boolean;
-    isAttacked: boolean;
     partName: string;
-    attackerName: string | null;
 }
 
-export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'whatNeedToKnow' | 'compassion' | 'apologize';
+export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'compassion';
 
 interface RayLayer {
     path: SVGPathElement;

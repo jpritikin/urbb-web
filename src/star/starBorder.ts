@@ -4,6 +4,8 @@ export interface StarArmPoints {
     base2: { x: number; y: number };
     innerRadius: number;
     baseTipAngle: number; // tip angle without pulse offset, for stable expansion direction
+    curveCtrl1?: { x: number; y: number }; // Q control for base1→tip (pulse twist)
+    curveCtrl2?: { x: number; y: number }; // Q control for tip→base2 (pulse twist)
 }
 
 export interface BoundingBox {
@@ -109,6 +111,7 @@ interface RingVertex {
     segType: number;         // 0: base1→tip edge, 1: tip→base2 edge, 2: inner arc
     starPoint: Point;        // position on the original star contour (for sharp CP computation)
     expansionAngle: number;  // stable angle for expansion (unaffected by pulse twist)
+    curveCtrl?: Point;       // Q control point for this segment's outgoing edge (pulse twist)
 }
 
 // Distance from star at which segments abruptly become fully smooth
@@ -226,6 +229,18 @@ export class StarBorder {
                 sum + Math.hypot(rv.point.x - tc.x, rv.point.y - tc.y), 0) / n;
             const halfWidth = avgRadius > 1 ? (WOBBLE_ARC_PX / 2) / avgRadius : 0.5;
 
+            // Compute per-vertex knot density attenuation:
+            // where knots are sparse (near star), weaken wobble to avoid abruptness
+            const density = new Float64Array(n);
+            for (let vi = 0; vi < n; vi++) {
+                const prev = ring[(vi - 1 + n) % n].point;
+                const next = ring[(vi + 1) % n].point;
+                const avgGap = (Math.hypot(ring[vi].point.x - prev.x, ring[vi].point.y - prev.y) +
+                    Math.hypot(next.x - ring[vi].point.x, next.y - ring[vi].point.y)) * 0.5;
+                // knots/px = 1/avgGap; normalize so MAX_SEGMENT_LENGTH gap → 1.0
+                density[vi] = avgGap > 0.01 ? Math.min(1, MAX_SEGMENT_LENGTH / avgGap) : 1;
+            }
+
             for (let vi = 0; vi < n; vi++) {
                 const rv = ring[vi];
                 if (rv.smoothing < 0.01) continue;
@@ -240,7 +255,7 @@ export class StarBorder {
                         wobble += wave.amplitude * 0.5 * (1 + Math.cos(Math.PI * x));
                     }
                 }
-                wobble *= rv.smoothing;
+                wobble *= rv.smoothing * density[vi];
                 rv.point = {
                     x: rv.point.x + tableDir[vi * 2] * wobble,
                     y: rv.point.y + tableDir[vi * 2 + 1] * wobble,
@@ -278,9 +293,9 @@ export class StarBorder {
             const nextArm = sortedArms[(armIdx + 1) % N];
 
             // Stable angles: bases are un-twisted, tip uses baseTipAngle
-            const structural: { point: Point; segType: number; angle: number }[] = [
-                { point: arm.base1, segType: 0, angle: this.stableAngle(arm.base1) },
-                { point: arm.tip, segType: 1, angle: arm.baseTipAngle },
+            const structural: { point: Point; segType: number; angle: number; curveCtrl?: Point }[] = [
+                { point: arm.base1, segType: 0, angle: this.stableAngle(arm.base1), curveCtrl: arm.curveCtrl1 },
+                { point: arm.tip, segType: 1, angle: arm.baseTipAngle, curveCtrl: arm.curveCtrl2 },
                 { point: arm.base2, segType: 2, angle: this.stableAngle(arm.base2) },
             ];
 
@@ -290,6 +305,14 @@ export class StarBorder {
                 const smoothing = ef * t;
                 const expanded = this.expandPoint(sp.point, ef * t, sp.angle, clouds);
 
+                // Expand the curve control point the same way
+                let expandedCtrl: Point | undefined;
+                if (sp.curveCtrl) {
+                    const ctrlAngle = this.stableAngle(sp.curveCtrl);
+                    const ctrlEf = cloudDir ? this.computeExpansionFactorAtAngle(ctrlAngle, cloudDir) : 0;
+                    expandedCtrl = this.expandPoint(sp.curveCtrl, ctrlEf * t, ctrlAngle, clouds);
+                }
+
                 ring.push({
                     point: expanded,
                     smoothing,
@@ -297,6 +320,7 @@ export class StarBorder {
                     segType: sp.segType,
                     starPoint: sp.point,
                     expansionAngle: sp.angle,
+                    curveCtrl: expandedCtrl,
                 });
 
                 const nextSPData = vi < 2
@@ -311,6 +335,7 @@ export class StarBorder {
                     ring, expanded, sp.point, sp.angle, ef,
                     nextExpanded, nextSPData.point, nextSPData.angle, nextEf,
                     smoothing, nextSmoothing, t, sp.segType, clouds, 0,
+                    sp.curveCtrl,
                 );
             }
         }
@@ -331,9 +356,9 @@ export class StarBorder {
         aSmoothing: number, bSmoothing: number,
         t: number, segType: number,
         clouds: ConversationCloudInfo[] | null, depth: number,
+        curveCtrl?: Point,
     ): void {
         if (depth >= MAX_SUBDIVIDE_DEPTH) return;
-        // Only subdivide segments that are expanded beyond the star's outer radius
         const aDist = Math.hypot(aExpanded.x - this.centerX, aExpanded.y - this.centerY);
         const aStarDist = Math.hypot(aStar.x - this.centerX, aStar.y - this.centerY);
         const bDist = Math.hypot(bExpanded.x - this.centerX, bExpanded.y - this.centerY);
@@ -342,13 +367,20 @@ export class StarBorder {
         const gap = Math.hypot(bExpanded.x - aExpanded.x, bExpanded.y - aExpanded.y);
         if (gap <= MAX_SEGMENT_LENGTH) return;
 
-        const midStar = lerpPoint(aStar, bStar, 0.5);
+        // Sample midpoint: quadratic Bézier if curved, linear otherwise
+        const midStar = curveCtrl
+            ? { x: (aStar.x + 2 * curveCtrl.x + bStar.x) / 4, y: (aStar.y + 2 * curveCtrl.y + bStar.y) / 4 }
+            : lerpPoint(aStar, bStar, 0.5);
         const midAngle = aAngle + angleDiff(aAngle, bAngle) * 0.5;
         const midEf = (aEf + bEf) * 0.5;
         const midSmoothing = (aSmoothing + bSmoothing) * 0.5;
         const midExpanded = this.expandPoint(midStar, midEf * t, midAngle, clouds);
 
-        this.subdivideSegment(ring, aExpanded, aStar, aAngle, aEf, midExpanded, midStar, midAngle, midEf, aSmoothing, midSmoothing, t, segType, clouds, depth + 1);
+        // De Casteljau split: left half ctrl = mid(A, C), right half ctrl = mid(C, B)
+        const leftCtrl = curveCtrl ? lerpPoint(aStar, curveCtrl, 0.5) : undefined;
+        const rightCtrl = curveCtrl ? lerpPoint(curveCtrl, bStar, 0.5) : undefined;
+
+        this.subdivideSegment(ring, aExpanded, aStar, aAngle, aEf, midExpanded, midStar, midAngle, midEf, aSmoothing, midSmoothing, t, segType, clouds, depth + 1, leftCtrl);
         ring.push({
             point: midExpanded,
             smoothing: midSmoothing,
@@ -357,7 +389,7 @@ export class StarBorder {
             starPoint: midStar,
             expansionAngle: midAngle,
         });
-        this.subdivideSegment(ring, midExpanded, midStar, midAngle, midEf, bExpanded, bStar, bAngle, bEf, midSmoothing, bSmoothing, t, segType, clouds, depth + 1);
+        this.subdivideSegment(ring, midExpanded, midStar, midAngle, midEf, bExpanded, bStar, bAngle, bEf, midSmoothing, bSmoothing, t, segType, clouds, depth + 1, rightCtrl);
     }
 
     private insertThresholdKnots(ring: RingVertex[], clouds: ConversationCloudInfo[] | null): void {
@@ -494,7 +526,12 @@ export class StarBorder {
             // Sharp control points
             let sharpCP1: Point, sharpCP2: Point;
 
-            if (curr.isStructural && next.isStructural && curr.segType === 2) {
+            if (curr.curveCtrl) {
+                // Quadratic Bézier → equivalent cubic control points
+                const q = curr.curveCtrl;
+                sharpCP1 = { x: (start.x + 2 * q.x) / 3, y: (start.y + 2 * q.y) / 3 };
+                sharpCP2 = { x: (end.x + 2 * q.x) / 3, y: (end.y + 2 * q.y) / 3 };
+            } else if (curr.isStructural && next.isStructural && curr.segType === 2) {
                 // Inner arc between base2 and next base1 (only when no subdivisions between them)
                 const a1 = Math.atan2(curr.starPoint.y - this.centerY, curr.starPoint.x - this.centerX);
                 const a2 = Math.atan2(next.starPoint.y - this.centerY, next.starPoint.x - this.centerX);
