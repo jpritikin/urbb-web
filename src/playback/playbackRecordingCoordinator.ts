@@ -332,6 +332,17 @@ export class PlaybackRecordingCoordinator {
             getCurrentDragStanceDelta: () => {
                 return this.deps.getCarpetRenderer()?.getCurrentDragStanceDelta() ?? null;
             },
+            getDiagnostics: () => {
+                const model = this.deps.getModel();
+                const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
+                return {
+                    mode: model.getMode(),
+                    pendingAction: model.getPendingAction(),
+                    rngCallCount: this.rng.getCallCount(),
+                    orchestratorTimers: orchState?.blendTimers ?? {},
+                    orchestratorCooldowns: orchState?.cooldowns ?? {},
+                };
+            },
             simulateMouseDown: (x: number, y: number) => {
                 const { clientX, clientY } = this.svgToScreenCoords(x, y);
                 const element = document.elementFromPoint(clientX, clientY);
@@ -414,6 +425,15 @@ export class PlaybackRecordingCoordinator {
         const element = document.elementFromPoint(clientX, clientY);
         if (starElement) starElement.style.pointerEvents = '';
         if (!element) {
+            const svgElement = this.deps.getSvgElement();
+            const rect = svgElement?.getBoundingClientRect();
+            const viewBox = svgElement?.viewBox.baseVal;
+            console.warn('[Playback] elementFromPoint returned null', {
+                svgCoords: { x: x.toFixed(1), y: y.toFixed(1) },
+                screenCoords: { clientX: clientX.toFixed(1), clientY: clientY.toFixed(1) },
+                canvasRect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null,
+                viewBox: viewBox ? { width: viewBox.width, height: viewBox.height } : null,
+            });
             return { success: false, error: `No element at svg(${x.toFixed(0)}, ${y.toFixed(0)}) screen(${clientX.toFixed(0)}, ${clientY.toFixed(0)})` };
         }
 
@@ -461,8 +481,12 @@ export class PlaybackRecordingCoordinator {
             const actualModelCount = this.rng.getCallCount();
             if (action.rngCounts.model !== actualModelCount) {
                 const actualLog = this.rng.getCallLog();
+                const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
                 console.log('[Sync] RNG mismatch - expected count:', action.rngCounts.model,
-                    'actual count:', actualModelCount, 'log:', actualLog);
+                    'actual count:', actualModelCount,
+                    'log:', actualLog,
+                    'orchestratorTimers:', orchState?.blendTimers,
+                    'orchestratorPending:', orchState?.pending);
                 parts.push(`model RNG count: expected ${action.rngCounts.model}, got ${actualModelCount}`);
             }
         }

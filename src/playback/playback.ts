@@ -47,6 +47,7 @@ export interface PlaybackViewState {
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
+    getDiagnostics: () => Record<string, unknown>;
 }
 
 export interface PlaybackInputSimulator {
@@ -434,7 +435,12 @@ export class PlaybackController {
         }
 
         if (!clickResult.success && clickResult.error?.startsWith('No element') && retryCount < 5) {
-            console.warn(`[Playback] elementFromPoint miss at (${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`);
+            const rect = this.svgElement.getBoundingClientRect();
+            const viewBox = this.svgElement.viewBox.baseVal;
+            console.warn(`[Playback] elementFromPoint miss at svg(${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`, {
+                canvasRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                viewBox: { width: viewBox.width, height: viewBox.height },
+            });
             await this.delay(100);
             return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
         }
@@ -480,6 +486,26 @@ export class PlaybackController {
         console.error('[Playback Error]', this.errorMessage);
         console.error('[Playback] Current action:', this.actions[this.currentActionIndex]);
         console.error('[Playback] Action index:', this.currentActionIndex, 'of', this.actions.length);
+
+        const rect = this.svgElement.getBoundingClientRect();
+        const viewBox = this.svgElement.viewBox.baseVal;
+        console.error('[Playback] Diagnostics:', {
+            canvas: {
+                boundingRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
+                widthAttr: this.svgElement.getAttribute('width'),
+                heightAttr: this.svgElement.getAttribute('height'),
+            },
+            fullscreen: this.callbacks.getIsFullscreen(),
+            mobile: this.callbacks.isMobile(),
+            view: {
+                transitioning: this.callbacks.isTransitioning(),
+                pendingBlends: this.callbacks.hasPendingBlends(),
+                activeSpiralExits: this.callbacks.hasActiveSpiralExits(),
+            },
+            model: this.callbacks.getModelState(),
+            ...this.callbacks.getDiagnostics(),
+        });
 
         this.callbacks.onPlaybackError();
         this.updateControlPanel();
@@ -595,7 +621,7 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.isTransitioning()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for transition');
+                console.warn(`[Playback] Timeout waiting for transition after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);
@@ -608,7 +634,8 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.hasPendingBlends()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for pending blends');
+                const state = this.callbacks.getModelState();
+                console.warn(`[Playback] Timeout waiting for pending blends after ${maxWait}ms, blended: [${state.blended.join(', ')}]`);
                 break;
             }
             await this.delay(50);
@@ -621,7 +648,7 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.hasActiveSpiralExits()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for spiral exits');
+                console.warn(`[Playback] Timeout waiting for spiral exits after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);
