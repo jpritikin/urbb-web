@@ -19,9 +19,6 @@ export class ActionEffectApplicator {
                 result.uiFeedback.thoughtBubble.cloudId
             );
         }
-        if (result.uiFeedback?.actionLabel && this.view) {
-            this.view.setAction(result.uiFeedback.actionLabel);
-        }
         if (result.reduceBlending) {
             this.reduceBlending(result.reduceBlending.cloudId, result.reduceBlending.amount);
         }

@@ -6,7 +6,6 @@ export interface UIManagerConfig {
     setMode: (mode: 'panorama' | 'foreground') => void;
     onFullscreenToggle: () => void;
     onAnimationPauseToggle: () => void;
-    onTracePanelToggle: () => void;
     onDownloadSession?: () => void;
 }
 
@@ -18,8 +17,6 @@ export class UIManager {
 
     private modeToggleContainer: HTMLElement | null = null;
     private mobileBanner: HTMLElement | null = null;
-    private tracePanel: HTMLElement | null = null;
-    private traceVisible: boolean = false;
     private debugPauseButton: HTMLButtonElement | null = null;
     private recordingOverlay: SVGGElement | null = null;
     private isFullscreen: boolean = false;
@@ -40,8 +37,6 @@ export class UIManager {
     createAllUI(): void {
         this.createModeToggle();
         this.createFullscreenButton();
-        this.createTraceButton();
-        this.createTracePanel();
         this.createDebugPauseButton();
     }
 
@@ -202,79 +197,6 @@ export class UIManager {
         return window.innerWidth > window.innerHeight;
     }
 
-    // Trace panel
-
-    private createTraceButton(): void {
-        const btn = document.createElement('button');
-        btn.className = 'trace-toggle-btn';
-        btn.textContent = '📜 Trace';
-        btn.title = 'Show state change history';
-        btn.addEventListener('click', () => this.config.onTracePanelToggle());
-        this.container.appendChild(btn);
-    }
-
-    private createTracePanel(): void {
-        this.tracePanel = document.createElement('div');
-        this.tracePanel.className = 'trace-panel';
-        this.tracePanel.style.display = 'none';
-
-        const header = document.createElement('div');
-        header.className = 'trace-header';
-
-        const title = document.createElement('span');
-        title.textContent = 'State History';
-        header.appendChild(title);
-
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'trace-copy-btn';
-        copyBtn.textContent = 'Copy';
-        copyBtn.addEventListener('click', () => this.copyTraceToClipboard());
-        header.appendChild(copyBtn);
-
-        this.tracePanel.appendChild(header);
-
-        const content = document.createElement('pre');
-        content.className = 'trace-content';
-        this.tracePanel.appendChild(content);
-
-        this.container.appendChild(this.tracePanel);
-    }
-
-    toggleTracePanel(): void {
-        this.traceVisible = !this.traceVisible;
-        if (this.tracePanel) {
-            this.tracePanel.style.display = this.traceVisible ? 'block' : 'none';
-        }
-    }
-
-    isTracePanelVisible(): boolean {
-        return this.traceVisible;
-    }
-
-    updateTrace(trace: string): void {
-        if (!this.tracePanel || !this.traceVisible) return;
-        const content = this.tracePanel.querySelector('.trace-content');
-        if (content) {
-            content.textContent = trace;
-        }
-    }
-
-    private copyTraceToClipboard(): void {
-        const content = this.tracePanel?.querySelector('.trace-content');
-        if (!content?.textContent) return;
-
-        navigator.clipboard.writeText(content.textContent);
-
-        const copyBtn = this.tracePanel?.querySelector('.trace-copy-btn');
-        if (copyBtn) {
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-            }, 1000);
-        }
-    }
-
     // Debug pause button
 
     private createDebugPauseButton(): void {
@@ -311,6 +233,16 @@ export class UIManager {
             if (longPressTimer) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
+            }
+        });
+
+        let hovered = false;
+        btn.addEventListener('mouseenter', () => { hovered = true; });
+        btn.addEventListener('mouseleave', () => { hovered = false; });
+        document.addEventListener('keydown', (e) => {
+            if (hovered && e.key === 'r') {
+                e.preventDefault();
+                this.config.onDownloadSession?.();
             }
         });
 

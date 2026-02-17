@@ -12,6 +12,7 @@ import { PulseAnimation } from '../utils/pulseAnimation.js';
 import { TransitionElements } from '../utils/transitionElements.js';
 import { CoordinateConverter } from '../utils/coordinateConverter.js';
 import { LINEAR_INTERPOLATION_SPEED } from '../simulator/view/types.js';
+import { StarBorder, type StarArmPoints, type ConversationVisualState, type ConversationCloudInfo } from './starBorder.js';
 
 export { STAR_OUTER_RADIUS };
 
@@ -22,8 +23,41 @@ function scaleFromCenter(p: { x: number; y: number }, centerX: number, centerY: 
     };
 }
 
-function trianglePath(tip: { x: number; y: number }, b1: { x: number; y: number }, b2: { x: number; y: number }): string {
-    return `M ${tip.x.toFixed(2)},${tip.y.toFixed(2)} L ${b1.x.toFixed(2)},${b1.y.toFixed(2)} L ${b2.x.toFixed(2)},${b2.y.toFixed(2)} Z`;
+interface ArmGeometry {
+    tip: { x: number; y: number };
+    base1: { x: number; y: number };
+    base2: { x: number; y: number };
+    curveCtrl1?: { x: number; y: number };
+    curveCtrl2?: { x: number; y: number };
+}
+
+function computeArmGeometry(
+    centerX: number, centerY: number,
+    baseTipAngle: number, halfStep: number,
+    innerRadius: number, outerRadius: number,
+    tipAngleOffset: number,
+): ArmGeometry {
+    const tipAngle = baseTipAngle + tipAngleOffset;
+    const base1Angle = baseTipAngle - halfStep;
+    const base2Angle = baseTipAngle + halfStep;
+    const tip = { x: centerX + outerRadius * Math.cos(tipAngle), y: centerY + outerRadius * Math.sin(tipAngle) };
+    const base1 = { x: centerX + innerRadius * Math.cos(base1Angle), y: centerY + innerRadius * Math.sin(base1Angle) };
+    const base2 = { x: centerX + innerRadius * Math.cos(base2Angle), y: centerY + innerRadius * Math.sin(base2Angle) };
+    if (tipAngleOffset === 0) return { tip, base1, base2 };
+    const straightTip = { x: centerX + outerRadius * Math.cos(baseTipAngle), y: centerY + outerRadius * Math.sin(baseTipAngle) };
+    return {
+        tip, base1, base2,
+        curveCtrl1: { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 },
+        curveCtrl2: { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 },
+    };
+}
+
+function armPath(g: ArmGeometry): string {
+    const f = (p: { x: number; y: number }) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+    if (g.curveCtrl1 && g.curveCtrl2) {
+        return `M ${f(g.base1)} Q ${f(g.curveCtrl1)} ${f(g.tip)} Q ${f(g.curveCtrl2)} ${f(g.base2)} Z`;
+    }
+    return `M ${f(g.tip)} L ${f(g.base1)} L ${f(g.base2)} Z`;
 }
 
 type RotationState = 'stationary' | 'rotating_cw' | 'rotating_ccw';
@@ -111,11 +145,12 @@ export class AnimatedStar {
     private wrapperGroup: SVGGElement | null = null;
     private innerCircle: SVGCircleElement | null = null;
     private armElements: SVGPathElement[] = [];
-    private staticStarOutline: SVGPathElement | null = null;
+    private starBorder: StarBorder | null = null;
     private transitionOutlines: SVGPathElement[] = [];
     private borderHidden: boolean = false;
     private centerX: number;
     private centerY: number;
+    private conversationState: ConversationVisualState = { active: false, clouds: null, tableCenter: null };
 
     private armCount: number = 5;
     private rotation: number = 0;
@@ -220,12 +255,8 @@ export class AnimatedStar {
         this.clippedGroup.appendChild(this.foreignObject);
         this.wrapperGroup.appendChild(this.clippedGroup);
 
-        this.staticStarOutline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        this.staticStarOutline.setAttribute('fill', 'none');
-        this.staticStarOutline.setAttribute('stroke', '#f400d7');
-        this.staticStarOutline.setAttribute('stroke-width', '1');
-        this.staticStarOutline.setAttribute('stroke-dasharray', '2,2');
-        this.wrapperGroup.appendChild(this.staticStarOutline);
+        this.starBorder = new StarBorder(this.centerX, this.centerY);
+        this.wrapperGroup.appendChild(this.starBorder.getElement());
 
         this.createArmElements();
         this.updateArms();
@@ -290,6 +321,7 @@ export class AnimatedStar {
         this.updateRadiusScale(deltaTime);
         this.updateFillField(deltaTime);
         this.updateArms();
+        this.starBorder?.update(deltaTime, this.conversationState);
     }
 
     private updateRadiusScale(deltaTime: number): void {
@@ -518,6 +550,13 @@ export class AnimatedStar {
         return bundle;
     }
 
+    private getArmOuterRadius(armIndex: number, baseOuterRadius: number): number {
+        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[armIndex] || 0;
+        return alternatingOffset !== 0
+            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
+            : baseOuterRadius;
+    }
+
     private renderPulseArm(
         arm: SVGPathElement,
         armSpec: { tipAngle: number; halfStep: number },
@@ -526,35 +565,9 @@ export class AnimatedStar {
         baseOuterRadius: number,
         tipAngleOffset: number
     ): void {
-        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[armIndex] || 0;
-        const outerRadius = alternatingOffset !== 0
-            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-            : baseOuterRadius;
-
-        const baseCenterAngle = armSpec.tipAngle;
-        const tipAngle = baseCenterAngle + tipAngleOffset;
-        const base1Angle = baseCenterAngle - armSpec.halfStep;
-        const base2Angle = baseCenterAngle + armSpec.halfStep;
-
-        const tip = { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) };
-        const base1 = { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) };
-        const base2 = { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) };
-
-        if (tipAngleOffset !== 0) {
-            const straightTip = {
-                x: this.centerX + outerRadius * Math.cos(baseCenterAngle),
-                y: this.centerY + outerRadius * Math.sin(baseCenterAngle)
-            };
-            const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
-            const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
-            arm.setAttribute('d',
-                `M ${base1.x.toFixed(2)},${base1.y.toFixed(2)} ` +
-                `Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)} ` +
-                `Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)} Z`
-            );
-        } else {
-            arm.setAttribute('d', trianglePath(tip, base1, base2));
-        }
+        const outerRadius = this.getArmOuterRadius(armIndex, baseOuterRadius);
+        const g = computeArmGeometry(this.centerX, this.centerY, armSpec.tipAngle, armSpec.halfStep, innerRadius, outerRadius, tipAngleOffset);
+        arm.setAttribute('d', armPath(g));
     }
 
     private updateArms(): void {
@@ -597,10 +610,11 @@ export class AnimatedStar {
             }
 
             if (this.transitionBundle) {
-                const tip = scaleFromCenter(armSpec.tip, this.centerX, this.centerY, this.radiusScale);
-                const base1 = scaleFromCenter(armSpec.b1, this.centerX, this.centerY, this.radiusScale);
-                const base2 = scaleFromCenter(armSpec.b2, this.centerX, this.centerY, this.radiusScale);
-                arm.setAttribute('d', trianglePath(tip, base1, base2));
+                arm.setAttribute('d', armPath({
+                    tip: scaleFromCenter(armSpec.tip, this.centerX, this.centerY, this.radiusScale),
+                    base1: scaleFromCenter(armSpec.b1, this.centerX, this.centerY, this.radiusScale),
+                    base2: scaleFromCenter(armSpec.b2, this.centerX, this.centerY, this.radiusScale),
+                }));
             } else {
                 this.renderPulseArm(arm, armSpec, i, innerRadius, baseOuterRadius, tipAngleOffset);
             }
@@ -610,13 +624,13 @@ export class AnimatedStar {
         this.updateOutlines(spec, innerRadius, baseOuterRadius, tipAngleOffset);
     }
 
-    private computeOutlineArmPoints(
+    private computeOutlineArmGeometry(
         armSpec: { tipAngle: number; halfStep: number; tip: { x: number; y: number }; b1: { x: number; y: number }; b2: { x: number; y: number } },
         armIndex: number,
         innerRadius: number,
         baseOuterRadius: number,
         tipAngleOffset: number
-    ): { tip: { x: number; y: number }; base1: { x: number; y: number }; base2: { x: number; y: number } } {
+    ): ArmGeometry {
         if (this.transitionBundle) {
             return {
                 tip: scaleFromCenter(armSpec.tip, this.centerX, this.centerY, this.radiusScale),
@@ -624,20 +638,20 @@ export class AnimatedStar {
                 base2: scaleFromCenter(armSpec.b2, this.centerX, this.centerY, this.radiusScale),
             };
         }
+        const outerRadius = this.getArmOuterRadius(armIndex, baseOuterRadius);
+        return computeArmGeometry(this.centerX, this.centerY, armSpec.tipAngle, armSpec.halfStep, innerRadius, outerRadius, tipAngleOffset);
+    }
 
-        const base1Angle = armSpec.tipAngle - armSpec.halfStep;
-        const base2Angle = armSpec.tipAngle + armSpec.halfStep;
-        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[armIndex] || 0;
-        const outerRadius = alternatingOffset !== 0
-            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-            : baseOuterRadius;
-        const tipAngle = armSpec.tipAngle + tipAngleOffset;
+    setForeground(fg: boolean): void {
+        this.starBorder?.setForeground(fg);
+    }
 
-        return {
-            tip: { x: this.centerX + outerRadius * Math.cos(tipAngle), y: this.centerY + outerRadius * Math.sin(tipAngle) },
-            base1: { x: this.centerX + innerRadius * Math.cos(base1Angle), y: this.centerY + innerRadius * Math.sin(base1Angle) },
-            base2: { x: this.centerX + innerRadius * Math.cos(base2Angle), y: this.centerY + innerRadius * Math.sin(base2Angle) },
-        };
+    setConversationState(active: boolean, clouds: ConversationCloudInfo[] | null, tableCenter: { x: number; y: number } | null): void {
+        if (!active || !clouds) {
+            this.conversationState = { active: false, clouds: null, tableCenter: null };
+            return;
+        }
+        this.conversationState = { active: true, clouds, tableCenter };
     }
 
     private updateOutlines(
@@ -646,53 +660,20 @@ export class AnimatedStar {
         baseOuterRadius: number,
         tipAngleOffset: number
     ): void {
-        if (this.staticStarOutline && this.coordinateConverter) {
+        if (this.starBorder) {
             const visibleIndices: number[] = [];
             for (let i = 0; i < this.armCount; i++) {
                 if (spec.staticArms.has(i)) visibleIndices.push(i);
             }
 
-            if (visibleIndices.length === 0) {
-                this.staticStarOutline.setAttribute('d', '');
-            } else {
-                const pathParts: string[] = [];
-
-                for (let vi = 0; vi < visibleIndices.length; vi++) {
-                    const i = visibleIndices[vi];
-                    const armSpec = spec.staticArms.get(i)!;
-                    const { tip, base1, base2 } = this.computeOutlineArmPoints(armSpec, i, innerRadius, baseOuterRadius, tipAngleOffset);
-
-                    if (vi === 0) {
-                        pathParts.push(`M ${base1.x.toFixed(2)},${base1.y.toFixed(2)}`);
-                    }
-
-                    if (!this.transitionBundle && tipAngleOffset !== 0) {
-                        const alternatingOffset = this.pulse.outerAlternatingRadiusOffsets[i] || 0;
-                        const outerRadius = alternatingOffset !== 0
-                            ? STAR_OUTER_RADIUS * (1 + alternatingOffset) * this.radiusScale
-                            : baseOuterRadius;
-                        const straightTip = {
-                            x: this.centerX + outerRadius * Math.cos(armSpec.tipAngle),
-                            y: this.centerY + outerRadius * Math.sin(armSpec.tipAngle)
-                        };
-                        const ctrl1 = { x: (base1.x + straightTip.x) / 2, y: (base1.y + straightTip.y) / 2 };
-                        const ctrl2 = { x: (base2.x + straightTip.x) / 2, y: (base2.y + straightTip.y) / 2 };
-                        pathParts.push(`Q ${ctrl1.x.toFixed(2)},${ctrl1.y.toFixed(2)} ${tip.x.toFixed(2)},${tip.y.toFixed(2)}`);
-                        pathParts.push(`Q ${ctrl2.x.toFixed(2)},${ctrl2.y.toFixed(2)} ${base2.x.toFixed(2)},${base2.y.toFixed(2)}`);
-                    } else {
-                        pathParts.push(`L ${tip.x.toFixed(2)},${tip.y.toFixed(2)}`);
-                        pathParts.push(`L ${base2.x.toFixed(2)},${base2.y.toFixed(2)}`);
-                    }
-
-                    const nextVi = (vi + 1) % visibleIndices.length;
-                    const nextArmSpec = spec.staticArms.get(visibleIndices[nextVi])!;
-                    const nextPoints = this.computeOutlineArmPoints(nextArmSpec, visibleIndices[nextVi], innerRadius, baseOuterRadius, tipAngleOffset);
-                    pathParts.push(`A ${innerRadius.toFixed(2)},${innerRadius.toFixed(2)} 0 0 1 ${nextPoints.base1.x.toFixed(2)},${nextPoints.base1.y.toFixed(2)}`);
-                }
-                pathParts.push('Z');
-
-                this.staticStarOutline.setAttribute('d', pathParts.join(' '));
+            const arms: StarArmPoints[] = [];
+            for (const i of visibleIndices) {
+                const armSpec = spec.staticArms.get(i)!;
+                const g = this.computeOutlineArmGeometry(armSpec, i, innerRadius, baseOuterRadius, tipAngleOffset);
+                arms.push({ tip: g.tip, base1: g.base1, base2: g.base2, innerRadius, baseTipAngle: armSpec.tipAngle, curveCtrl1: g.curveCtrl1, curveCtrl2: g.curveCtrl2 });
             }
+
+            this.starBorder.updateStarGeometry(arms);
         }
 
         // Collect which transition arms need outlines
@@ -759,6 +740,7 @@ export class AnimatedStar {
     setPosition(centerX: number, centerY: number): void {
         this.centerX = centerX;
         this.centerY = centerY;
+        this.starBorder?.setCenter(centerX, centerY);
         this.coordinateConverter?.updateCenter(centerX, centerY);
         if (this.foreignObject && this.fillField) {
             const fieldSize = this.fillField.getSize();
@@ -900,12 +882,9 @@ export class AnimatedStar {
 
     setBorderOpacity(opacity: number): void {
         this.borderHidden = opacity === 0;
-        const opacityStr = String(opacity);
-        if (this.staticStarOutline) {
-            this.staticStarOutline.style.opacity = opacityStr;
-        }
+        this.starBorder?.setExpandDeepenOpacity(opacity);
         for (const outline of this.transitionOutlines) {
-            outline.style.opacity = opacityStr;
+            outline.style.opacity = String(opacity);
         }
     }
 
@@ -917,6 +896,7 @@ export class AnimatedStar {
     }
 
     testPulse(target?: 'inner' | 'outer' | 'tipAngle' | 'outerAlternating', direction?: 'expand' | 'contract', armCount?: number): void {
+        this.clearTransitionBundle();
         if (armCount !== undefined && VALID_ARM_COUNTS.has(armCount)) {
             this.armCount = armCount;
             this.pulse.setArmCount(armCount);

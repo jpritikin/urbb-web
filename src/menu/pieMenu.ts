@@ -83,6 +83,12 @@ export class PieMenu {
         return { x: this.menuCenterX, y: this.menuCenterY };
     }
 
+    selectSlice(index: number): boolean {
+        if (index < 0 || index >= this.itemSlices.length) return false;
+        this.itemSlices[index].select();
+        return true;
+    }
+
     getTargetCloudId(): string | null {
         return this.targetCloudId;
     }

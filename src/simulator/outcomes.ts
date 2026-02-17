@@ -39,8 +39,6 @@ export const OUTCOMES = {
     PROTECTOR_RECOGNIZED_BURDEN: 'protector_recognized_burden',
     PROTECTOR_UNBURDENED: 'protector_unburdened',
     PROTECTEE_RECOGNIZED_PROTECTOR: 'protectee_recognized_protector',
-    ATTACKER_RECOGNIZED_HARM: 'attacker_recognized_harm',
-
     // Backlash
     TRIGGERED_BACKLASH: 'triggered_backlash',
 
@@ -57,6 +55,10 @@ export const OUTCOMES = {
     // Validate outcomes
     VALIDATED: 'validated',
     VALIDATE_FAILED: 'validate_failed',
+
+    // Conversation stance
+    STANCE_NUDGED: 'stance_nudged',
+
 } as const;
 
 export type Outcome = typeof OUTCOMES[keyof typeof OUTCOMES];
@@ -94,7 +96,6 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
         OUTCOMES.PROTECTOR_RECOGNIZED_BURDEN,
         OUTCOMES.PROTECTOR_UNBURDENED,
         OUTCOMES.PROTECTEE_RECOGNIZED_PROTECTOR,
-        OUTCOMES.ATTACKER_RECOGNIZED_HARM,
     ],
 
     ray_field_select: [
@@ -108,6 +109,8 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
         OUTCOMES.VALIDATED,
         OUTCOMES.VALIDATE_FAILED,
     ],
+
+    nudge_stance: [OUTCOMES.STANCE_NUDGED],
 };
 
 // Helper to format stateChange string

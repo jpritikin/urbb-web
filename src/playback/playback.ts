@@ -3,13 +3,18 @@ import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
+import { SPEED_CONFIGS } from '../simulator/scenarioSelector.js';
+import { MAX_TILT } from '../star/carpetRenderer.js';
+import { REGULATION_STANCE_LIMIT } from '../simulator/messageOrchestrator.js';
+
+export type PlaybackSpeed = 'realtime' | 'highlights' | 'speedrun';
 
 const HOVER_PAUSE_MS = 0;
-const SLICE_HOVER_PAUSE_MS = 1500;
-const MOVE_BASE_DURATION_MS = 900;
+const BASE_SLICE_HOVER_PAUSE_MS = 1500;
+const BASE_MOVE_DURATION_MS = 900;
 const MOVE_BASE_DISTANCE = 300;
-const INTER_ACTION_DELAY_MS = 1000;
-const INTRA_ACTION_DELAY_MS = 800;
+const BASE_INTER_ACTION_DELAY_MS = 1000;
+const BASE_INTRA_ACTION_DELAY_MS = 800;
 
 export interface ActionResult {
     success: boolean;
@@ -37,12 +42,20 @@ export interface PlaybackViewState {
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
+    getCarpetCenter: (cloudId: string) => { x: number; y: number } | null;
+    getCarpetVisualCenter: (cloudId: string) => { x: number; y: number } | null;
+    getCarpetTiltSign: (cloudId: string) => number;
+    isCarpetSettled: (cloudId: string) => boolean;
+    getCurrentDragStanceDelta: () => number | null;
 }
 
 export interface PlaybackInputSimulator {
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
     simulateClickOnCloud: (cloudId: string) => ActionResult;
+    simulateMouseDown: (x: number, y: number, carpetCloudId?: string) => void;
+    simulateMouseMove: (x: number, y: number) => void;
+    simulateMouseUp: () => void;
 }
 
 export interface PlaybackModelAccess {
@@ -72,7 +85,7 @@ export interface PlaybackCallbacks extends
     PlaybackInputSimulator,
     PlaybackModelAccess,
     PlaybackTimeControl,
-    PlaybackLifecycle {}
+    PlaybackLifecycle { }
 
 type PlaybackState = 'idle' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
 
@@ -85,6 +98,10 @@ export class PlaybackController {
     private callbacks: PlaybackCallbacks;
     private errorMessage: string = '';
     private reticle: PlaybackReticle;
+    private speed: PlaybackSpeed;
+    private sliceHoverMs: number;
+    private interActionDelayMs: number;
+    private intraActionDelayMs: number;
 
     private controlPanel: HTMLDivElement | null = null;
     private countdownDisplay: HTMLSpanElement | null = null;
@@ -100,19 +117,24 @@ export class PlaybackController {
     constructor(
         private container: HTMLElement,
         private svgElement: SVGSVGElement,
-        callbacks: PlaybackCallbacks
+        callbacks: PlaybackCallbacks,
+        speed: PlaybackSpeed = 'highlights'
     ) {
         this.callbacks = callbacks;
-        this.reticle = new PlaybackReticle(svgElement);
+        this.speed = speed;
+        const divisor = SPEED_CONFIGS.find(c => c.speed === speed)?.divisor ?? 1;
+        this.sliceHoverMs = BASE_SLICE_HOVER_PAUSE_MS / divisor;
+        this.interActionDelayMs = BASE_INTER_ACTION_DELAY_MS / divisor;
+        this.intraActionDelayMs = BASE_INTRA_ACTION_DELAY_MS / divisor;
+        this.reticle = new PlaybackReticle(svgElement, divisor);
     }
 
     start(session: RecordedSession): void {
-        console.log(`[Playback] Starting playback with ${session.actions.length} actions`);
         this.actions = session.actions;
         this.currentActionIndex = 0;
         this.state = 'waiting';
         this.canResume = true;
-        this.waitCountdown = INTER_ACTION_DELAY_MS / 1000;
+        this.waitCountdown = this.getInterActionDelay();
 
         this.reticle.create();
         this.createControlPanel();
@@ -212,7 +234,6 @@ export class PlaybackController {
             await this.waitForSpiralExits();
             if (this.state !== 'executing') return;
             const verifyResult = this.callbacks.onActionCompleted(action);
-            console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) executed. Sync check:`, verifyResult);
             if (!verifyResult.success) {
                 this.handleError(verifyResult.error ?? 'Sync verification failed', `action ${this.currentActionIndex}`);
                 return;
@@ -230,7 +251,6 @@ export class PlaybackController {
         if (this.state !== 'executing') return;
 
         const verifyResult = this.callbacks.onActionCompleted(action);
-        console.log(`[Playback] Action ${this.currentActionIndex} (${action.action}) completed. Sync check:`, verifyResult);
         if (!verifyResult.success) {
             this.handleError(verifyResult.error ?? 'Sync verification failed', `action ${this.currentActionIndex}`);
             return;
@@ -240,9 +260,15 @@ export class PlaybackController {
         this.advanceToNextAction();
     }
 
+    private getInterActionDelay(): number {
+        if (this.speed !== 'realtime') return this.interActionDelayMs / 1000;
+        const nextAction = this.actions[this.currentActionIndex];
+        return nextAction?.elapsedTime ?? 1;
+    }
+
     private advanceToNextAction(): void {
         if (this.currentActionIndex < this.actions.length) {
-            this.waitCountdown = INTER_ACTION_DELAY_MS / 1000;
+            this.waitCountdown = this.getInterActionDelay();
             this.lastDisplayedCountdown = -1;
             this.state = 'waiting';
         } else {
@@ -266,6 +292,10 @@ export class PlaybackController {
 
             case 'mode_change':
                 await this.executeModeChange(action);
+                break;
+
+            case 'nudge_stance':
+                await this.executeNudgeStance(action);
                 break;
 
             default:
@@ -292,6 +322,13 @@ export class PlaybackController {
     }
 
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
+        if (action.targetCloudId) {
+            // Completing a pending action: just click the target cloud
+            await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
+            await this.reticle.fadeOut();
+            return;
+        }
+
         const openSuccess = await this.hoverAndClickCloud(action.cloudId, `opening cloud menu for ${action.cloudId}`);
         if (!openSuccess) return;
 
@@ -301,16 +338,17 @@ export class PlaybackController {
             return;
         }
 
-        const needsTargetClick = action.targetCloudId && action.targetCloudId !== action.cloudId;
-        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount, !needsTargetClick);
-
-        if (needsTargetClick) {
-            await this.hoverAndClickCloud(action.targetCloudId!, `${action.action} target ${action.targetCloudId}`, true);
-            await this.reticle.fadeOut();
-        }
+        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount);
     }
 
     private async executeStarMenuAction(action: RecordedAction): Promise<void> {
+        if (action.targetCloudId) {
+            // Completing a pending action: just click the target cloud
+            await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
+            await this.reticle.fadeOut();
+            return;
+        }
+
         const openSuccess = await this.hoverAndClickCloud(STAR_CLOUD_ID, 'opening star menu');
         if (!openSuccess) return;
 
@@ -320,18 +358,13 @@ export class PlaybackController {
             return;
         }
 
-        // Don't fade out - we need to continue to target cloud click
-        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount, false);
-
-        // Star menu actions require clicking target cloud
-        const targetCloudId = action.targetCloudId ?? action.cloudId;
-        await this.hoverAndClickCloud(targetCloudId, `${action.action} target ${targetCloudId}`, true);
-        await this.reticle.fadeOut();
+        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount);
     }
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
         const menuCenter = this.callbacks.getMenuCenter();
         if (!menuCenter) {
+            console.error(`[Playback] Menu center not found for ${menuCloudId}`);
             this.handleError('Menu center not found', menuCloudId);
             return;
         }
@@ -382,7 +415,7 @@ export class PlaybackController {
     private async hoverOnSlice(x: number, y: number): Promise<void> {
         await this.reticle.moveTo(x, y);
         this.callbacks.simulateHover(x, y);
-        await this.delay(SLICE_HOVER_PAUSE_MS);
+        await this.delay(this.sliceHoverMs);
     }
 
     private async clickAtPosition(x: number, y: number, context?: string, expectAction: boolean = false, retryCount: number = 0): Promise<boolean> {
@@ -396,6 +429,12 @@ export class PlaybackController {
         this.reticle.spawnKisses(x, y);
 
         if (clickResult.message === 'thought-bubble-dismissed' && retryCount < 3) {
+            await this.delay(100);
+            return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
+        }
+
+        if (!clickResult.success && clickResult.error?.startsWith('No element') && retryCount < 5) {
+            console.warn(`[Playback] elementFromPoint miss at (${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`);
             await this.delay(100);
             return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
         }
@@ -450,13 +489,93 @@ export class PlaybackController {
         if (this.callbacks.getMode() === 'panorama') return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, 'mode toggle');
         await this.reticle.fadeOut();
-        await this.delay(INTRA_ACTION_DELAY_MS);
+        await this.delay(this.intraActionDelayMs);
     }
 
     private async executeModeChange(action: RecordedAction): Promise<void> {
         const targetMode = action.newMode;
         if (!targetMode || this.callbacks.getMode() === targetMode) return;
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
+        await this.reticle.fadeOut();
+    }
+
+    private async executeNudgeStance(action: RecordedAction): Promise<void> {
+        const stanceDelta = action.stanceDelta ?? 0;
+        // Wait for carpet to finish entering/landing animation
+        const maxWait = 5000;
+        const start = performance.now();
+        while (!this.callbacks.isCarpetSettled(action.cloudId)) {
+            if (performance.now() - start > maxWait) {
+                console.warn('[NudgeDrag] Timeout waiting for carpet to settle');
+                break;
+            }
+            await this.delay(50);
+        }
+
+        const center = this.callbacks.getCarpetCenter(action.cloudId);
+        const visualCenter = this.callbacks.getCarpetVisualCenter(action.cloudId);
+        if (!center || !visualCenter) return;
+
+        const tiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
+        const dragRadius = 200;
+
+        // Target angle in degrees from the stance delta
+        const targetAngleDeg = (stanceDelta / REGULATION_STANCE_LIMIT) * MAX_TILT;
+        const targetAngleRad = targetAngleDeg * Math.PI / 180;
+
+        // Offset toward the side with more screen space to stay on canvas
+        const canvasWidth = this.svgElement.viewBox.baseVal.width || 800;
+        const horizontalDir = center.x < canvasWidth / 2 ? 1 : -1;
+
+        // End point far from center for angle accuracy
+        // computeRotation: angleDeg = atan2(dy, |dx|) * horizontalSign * tiltSign
+        // With consistent horizontalDir, directionSign = horizontalDir * tiltSign
+        // We want: relativeAngle = targetAngleDeg (startAngle ≈ 0)
+        // So: endAngleDeg = targetAngleDeg
+        // endAngleDeg = atan2(dy, |dx|) * horizontalDir * tiltSign = targetAngleDeg
+        // atan2(dy, |dx|) = targetAngleDeg / (horizontalDir * tiltSign)
+        const effectiveAngleRad = (targetAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
+        const endX = center.x + Math.abs(Math.cos(effectiveAngleRad)) * dragRadius * horizontalDir;
+        const endY = center.y + Math.sin(effectiveAngleRad) * dragRadius;
+
+        // Mousedown horizontally offset from logical center so startAngle ≈ 0
+        const startX = center.x + 40 * horizontalDir;
+        const startY = center.y;
+        await this.reticle.showAt(startX, startY);
+        this.callbacks.simulateMouseDown(startX, startY);
+
+        // Animate drag outward to end position
+        const steps = 8;
+        const stepDelay = 30;
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = center.x + (endX - center.x) * t;
+            const y = center.y + (endY - center.y) * t;
+            this.reticle.setTarget(x, y);
+            this.callbacks.simulateMouseMove(x, y);
+            await this.delay(stepDelay);
+        }
+
+        // Fine-tune: recompute end position using fresh center to correct for drift
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const currentDelta = this.callbacks.getCurrentDragStanceDelta();
+            if (currentDelta === null) break;
+            const error = stanceDelta - currentDelta;
+            if (Math.abs(error) < 0.02) break;
+            // Recompute target from fresh center with corrected angle
+            const freshCenter = this.callbacks.getCarpetCenter(action.cloudId);
+            if (!freshCenter) break;
+            const correctedAngleDeg = targetAngleDeg + (error / REGULATION_STANCE_LIMIT) * MAX_TILT;
+            const correctedRad = (correctedAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
+            const nx = freshCenter.x + Math.abs(Math.cos(correctedRad)) * dragRadius * horizontalDir;
+            const ny = freshCenter.y + Math.sin(correctedRad) * dragRadius;
+            this.reticle.setTarget(nx, ny);
+            this.callbacks.simulateMouseMove(nx, ny);
+            await this.delay(10);
+        }
+
+        // Mouse up triggers commitRotation → onRotationEnd
+        this.callbacks.simulateMouseUp();
         await this.reticle.fadeOut();
     }
 

@@ -1,10 +1,10 @@
 const RETICLE_TOP_HAND_X_OFFSET = -10;
 const RETICLE_BOTTOM_HAND_X_OFFSET = 10;
-const RETICLE_FADE_MS = 600;
-const HUG_DURATION_MS = 400;
-const MOVE_BASE_DURATION_MS = 900;
+const BASE_RETICLE_FADE_MS = 600;
+const BASE_HUG_DURATION_MS = 400;
+const BASE_MOVE_DURATION_MS = 900;
 const MOVE_BASE_DISTANCE = 300;
-const KISS_DURATION_MS = 1500;
+const BASE_KISS_DURATION_MS = 1500;
 const KISS_SPEED = 25;
 
 interface DriftingKiss {
@@ -52,7 +52,17 @@ export class PlaybackReticle {
     private static readonly HALO_OPACITY_CLICK = 1;
     private static readonly HALO_COLOR = '#E6B3CC';
 
-    constructor(private svgElement: SVGSVGElement) {}
+    private reticleFadeMs: number;
+    private hugDurationMs: number;
+    private moveDurationMs: number;
+    private kissDurationMs: number;
+
+    constructor(private svgElement: SVGSVGElement, speedDivisor: number = 1) {
+        this.reticleFadeMs = BASE_RETICLE_FADE_MS / speedDivisor;
+        this.hugDurationMs = BASE_HUG_DURATION_MS / speedDivisor;
+        this.moveDurationMs = BASE_MOVE_DURATION_MS / speedDivisor;
+        this.kissDurationMs = BASE_KISS_DURATION_MS / speedDivisor;
+    }
 
     create(): void {
         this.reticleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -107,7 +117,7 @@ export class PlaybackReticle {
             this.reticleTilt = 40 + (Math.random() - 0.5) * 60;
             this.reticleFadeDirection = 'in';
             this.fadeProgress = 0;
-            await this.trackingDelay(RETICLE_FADE_MS, trackCloudId, getCloudPosition);
+            await this.trackingDelay(this.reticleFadeMs, trackCloudId, getCloudPosition);
         }
     }
 
@@ -115,7 +125,7 @@ export class PlaybackReticle {
         const dx = x - this.reticleX;
         const dy = y - this.reticleY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const duration = MOVE_BASE_DURATION_MS * (distance / MOVE_BASE_DISTANCE);
+        const duration = this.moveDurationMs * (distance / MOVE_BASE_DISTANCE);
 
         this.reticleMoveStartX = this.reticleX;
         this.reticleMoveStartY = this.reticleY;
@@ -132,7 +142,7 @@ export class PlaybackReticle {
     async fadeOut(): Promise<void> {
         this.reticleFadeDirection = 'out';
         this.fadeOutArcAngle = -(10 + Math.random() * 10) * Math.PI / 180;
-        await this.delay(RETICLE_FADE_MS);
+        await this.delay(this.reticleFadeMs);
         this.reticleVisible = false;
         this.reticleOpacity = 0;
         this.fadeProgress = 0;
@@ -142,7 +152,7 @@ export class PlaybackReticle {
         this.hugAnimating = true;
         this.hugProgress = 0;
         this.hugRelaxFactor = 0.5 + Math.random() * 0.5;
-        await this.delay(HUG_DURATION_MS);
+        await this.delay(this.hugDurationMs);
         this.hugAnimating = false;
     }
 
@@ -186,7 +196,7 @@ export class PlaybackReticle {
     update(deltaTime: number): void {
         if (!this.reticleGroup) return;
 
-        const fadeRate = deltaTime / (RETICLE_FADE_MS / 1000);
+        const fadeRate = deltaTime / (this.reticleFadeMs / 1000);
         if (this.reticleFadeDirection === 'in') {
             this.fadeProgress = Math.min(1, this.fadeProgress + fadeRate);
             this.reticleOpacity = Math.min(1, this.reticleOpacity + fadeRate);
@@ -211,7 +221,7 @@ export class PlaybackReticle {
         }
 
         if (this.hugAnimating) {
-            this.hugProgress = Math.min(1, this.hugProgress + deltaTime / (HUG_DURATION_MS / 1000));
+            this.hugProgress = Math.min(1, this.hugProgress + deltaTime / (this.hugDurationMs / 1000));
         }
         this.updateHugHands(this.hugProgress);
 
@@ -272,14 +282,14 @@ export class PlaybackReticle {
             kiss.y += kiss.vy * deltaTime;
             kiss.rotation += kiss.angularVelocity * deltaTime;
 
-            const progress = kiss.age / KISS_DURATION_MS;
+            const progress = kiss.age / this.kissDurationMs;
             const opacity = 1 - progress;
             const scale = 1 + progress;
 
             kiss.element.setAttribute('transform', `translate(${kiss.x}, ${kiss.y}) rotate(${kiss.rotation}) scale(${scale})`);
             kiss.element.setAttribute('opacity', String(Math.max(0, opacity)));
 
-            if (kiss.age >= KISS_DURATION_MS) {
+            if (kiss.age >= this.kissDurationMs) {
                 kiss.element.remove();
                 this.kisses.splice(i, 1);
             }

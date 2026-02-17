@@ -8,6 +8,7 @@ export interface TherapistAction {
 export const STAR_MENU_ACTIONS: TherapistAction[] = [
     { id: 'feel_toward', question: 'How do you feel toward?', shortName: 'Feel', category: 'relationship' },
     { id: 'expand_deepen', question: 'Feel calm and patient. Allow this feeling to expand and deepen.', shortName: 'Expand', category: 'relationship' },
+    { id: 'add_target', question: 'Invite another part to the conference', shortName: 'Invite', category: 'relationship' },
 ];
 
 export const CLOUD_MENU_ACTIONS: TherapistAction[] = [
@@ -28,13 +29,13 @@ export const SELFRAY_MENU_ACTIONS: TherapistAction[] = [
     { id: 'identity', question: 'Who are you?', shortName: 'Identity', category: 'discovery' },
     { id: 'jobAppraisal', question: 'How do you like your job?', shortName: 'Appraisal', category: 'discovery' },
     { id: 'jobImpact', question: 'How do you understand the impact of your job?', shortName: 'Impact', category: 'discovery' },
-    { id: 'whatNeedToKnow', question: 'What do you need?', shortName: 'Need?', category: 'discovery' },
     { id: 'gratitude', question: 'Thank you for being here', shortName: 'Gratitude', category: 'relationship' },
     { id: 'compassion', question: 'I care about you', shortName: 'Compassion', category: 'relationship' },
-    { id: 'apologize', question: 'Apologize for allowing other parts to attack', shortName: 'Apologize', category: 'relationship' },
 ];
 
-export const ALL_ACTION_IDS = [...STAR_MENU_ACTIONS, ...CLOUD_MENU_ACTIONS, ...SELFRAY_MENU_ACTIONS].map(a => a.id);
+export const ALL_ACTION_IDS = [
+    ...STAR_MENU_ACTIONS, ...CLOUD_MENU_ACTIONS, ...SELFRAY_MENU_ACTIONS
+].map(a => a.id).concat('nudge_stance');
 
 export const STAR_ACTION_IDS = new Set(STAR_MENU_ACTIONS.map(a => a.id));
 export const CLOUD_ACTION_IDS = new Set(CLOUD_MENU_ACTIONS.map(a => a.id));

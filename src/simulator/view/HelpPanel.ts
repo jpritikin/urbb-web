@@ -1,6 +1,8 @@
 export interface HelpData {
     lowestTrust: { name: string; trust: number } | null;
     highestNeedAttention: { name: string; needAttention: number } | null;
+    mostSelfLoathing: { name: string; trust: number } | null;
+    worstInterPartDistrust: { fromName: string; toName: string; trust: number } | null;
     victoryAchieved?: boolean;
 }
 
@@ -60,13 +62,13 @@ export class HelpPanel {
 
         let html = '';
 
-        if (data.lowestTrust) {
-            const trustPct = Math.round(data.lowestTrust.trust * 100);
-            html += `<div class="help-row">
-                <span class="help-label">Lowest trust:</span>
-                <span class="help-value">${data.lowestTrust.name} (${trustPct}%)</span>
-            </div>`;
+        if (!data.lowestTrust && !data.highestNeedAttention) {
+            html = '<div class="help-row"><span class="help-value">No parts registered</span></div>';
+            content.innerHTML = html;
+            return;
         }
+
+        // Rows ordered by urgency
 
         if (data.highestNeedAttention) {
             const na = data.highestNeedAttention.needAttention;
@@ -78,8 +80,30 @@ export class HelpPanel {
             </div>`;
         }
 
-        if (!data.lowestTrust && !data.highestNeedAttention) {
-            html = '<div class="help-row"><span class="help-value">No parts registered</span></div>';
+        if (data.lowestTrust && data.lowestTrust.trust < 1) {
+            const trustPct = Math.round(data.lowestTrust.trust * 100);
+            html += `<div class="help-row">
+                <span class="help-label">Lowest trust:</span>
+                <span class="help-value">${data.lowestTrust.name} (${trustPct}%)</span>
+            </div>`;
+        }
+
+        if (data.mostSelfLoathing) {
+            const slPct = Math.round(data.mostSelfLoathing.trust * 100);
+            const slColor = slPct < 30 ? 'red' : slPct < 70 ? 'orange' : 'green';
+            html += `<div class="help-row">
+                <span class="help-label">Self-loathing:</span>
+                <span class="help-value">${data.mostSelfLoathing.name} (<span style="color:${slColor}">${slPct}%</span> self-trust)</span>
+            </div>`;
+        }
+
+        if (data.worstInterPartDistrust) {
+            const ipPct = Math.round(data.worstInterPartDistrust.trust * 100);
+            const ipColor = ipPct < 30 ? 'red' : ipPct < 70 ? 'orange' : 'green';
+            html += `<div class="help-row">
+                <span class="help-label">Distrust:</span>
+                <span class="help-value">${data.worstInterPartDistrust.fromName}→${data.worstInterPartDistrust.toName} (<span style="color:${ipColor}">${ipPct}%</span> trust)</span>
+            </div>`;
         }
 
         if (data.victoryAchieved) {

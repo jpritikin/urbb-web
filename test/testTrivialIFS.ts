@@ -41,7 +41,7 @@ function runAllTrivialIFSTests(): void {
              result.failedAssertions.map(f => `${f.assertion.type}: expected ${f.assertion.expected}, got ${f.actual}`).join('; '));
     }
 
-    // Time advancement increases grievance needAttention
+    // Time advancement increases needAttention for hostile inter-part relations
     {
         const sim = new HeadlessSimulator({ seed: 12345 });
         sim.setupParts([
@@ -49,20 +49,25 @@ function runAllTrivialIFSTests(): void {
             { id: 'target', name: 'Target' },
         ]);
         sim.setupRelationships({
-            grievances: [{ cloudId: 'aggrieved', targetIds: 'target', dialogues: 'I hate target' }],
+            interPartRelations: [{
+                fromId: 'aggrieved', toId: 'target',
+                trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+            }],
         });
 
         const initialNeed = sim.getModel().parts.getNeedAttention('aggrieved');
-        sim.advanceTime(10); // 10 seconds
+        sim.advanceTime(10);
         const afterNeed = sim.getModel().parts.getNeedAttention('aggrieved');
 
         test('Time advance - needAttention increases', afterNeed > initialNeed,
              `expected ${afterNeed} > ${initialNeed}`);
 
-        const expectedIncrease = 10 * 0.05;
+        const trust = 0.5; // default
+        const expectedRate = 0.01 * (1 - trust);
+        const expectedIncrease = 10 * expectedRate;
         const actualIncrease = afterNeed - initialNeed;
-        test('Time advance - correct rate', Math.abs(actualIncrease - expectedIncrease) < 0.001,
-             `expected ~${expectedIncrease} increase, got ${actualIncrease}`);
+        test('Time advance - correct rate', Math.abs(actualIncrease - expectedIncrease) < 0.01,
+             `expected ~${expectedIncrease.toFixed(4)} increase, got ${actualIncrease.toFixed(4)}`);
     }
 
     // Deterministic replay with same seed

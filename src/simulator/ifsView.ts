@@ -25,9 +25,11 @@ function getOffscreenPosition(fromX: number, fromY: number, canvasWidth: number,
     };
 }
 import { Vec3, CloudInstance } from '../utils/types.js';
-import { STAR_OUTER_RADIUS } from '../star/starAnimation.js';
+import { AnimatedStar, STAR_OUTER_RADIUS } from '../star/starAnimation.js';
+import type { HSLColor } from '../utils/colorUtils.js';
 import { ViewEventEmitter, ViewEventMap } from './view/ViewEvents.js';
 import { SeatManager } from './view/SeatManager.js';
+import type { ViewSnapshot } from '../playback/testability/types.js';
 import { TransitionAnimator } from './view/TransitionAnimator.js';
 import {
     PositionTarget,
@@ -62,6 +64,10 @@ export class SimulatorView {
     private perspectiveFactor: number = 600;
     private foregroundZoomFactor: number = 5.0;
 
+    private animatedStar: AnimatedStar | null = null;
+    private zoomGroup: SVGGElement | null = null;
+    private uiGroup: SVGGElement | null = null;
+
     private starElement: SVGElement | null = null;
     private starCurrentX: number = 0;
     private starCurrentY: number = 0;
@@ -72,11 +78,6 @@ export class SimulatorView {
     private rayContainer: SVGGElement | null = null;
     private pieMenuOverlay: SVGGElement | null = null;
     private onSelfRayClick: ((cloudId: string, x: number, y: number, event: MouseEvent | TouchEvent) => void) | null = null;
-
-    // Trace history for semantic events
-    private traceHistory: string[] = [];
-    private cloudNames: Map<string, string> = new Map();
-    private pendingAction: string | null = null;
 
     // Part-to-part messages
     private messageRenderer: MessageRenderer | null = null;
@@ -89,8 +90,19 @@ export class SimulatorView {
     private victoryBanner: VictoryBanner = new VictoryBanner();
     private htmlContainer: HTMLElement | null = null;
 
+    // Pending-action banner
+    private pendingActionBannerEl: HTMLElement | null = null;
+    private onPendingActionDismiss: (() => void) | null = null;
+
     // Help panel
     private helpPanel: HelpPanel = new HelpPanel();
+
+    // Cached model state for star scale (updated in syncWithModel)
+    private lastSyncTargetCount: number = 0;
+    private lastSyncBlendedCount: number = 0;
+
+    // Conversation visual state
+    private conversationParticipantIds: [string, string] | null = null;
 
     // Victory check throttle
     private lastVictoryCheck: number = 0;
@@ -117,8 +129,41 @@ export class SimulatorView {
         this.events.off(event, listener);
     }
 
-    setStarElement(element: SVGElement): void {
-        this.starElement = element;
+    setGroups(zoomGroup: SVGGElement, uiGroup: SVGGElement): void {
+        this.zoomGroup = zoomGroup;
+        this.uiGroup = uiGroup;
+    }
+
+    createStar(onStarClick: (x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
+        if (!this.uiGroup) return;
+
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+
+        this.animatedStar = new AnimatedStar(centerX, centerY);
+        this.animatedStar.setOnClick(onStarClick);
+        const starElement = this.animatedStar.createElement();
+
+        this.uiGroup.appendChild(starElement);
+        this.starElement = starElement;
+
+        (window as unknown as { star: AnimatedStar }).star = this.animatedStar;
+    }
+
+    getStarFillColor(): HSLColor | null {
+        return this.animatedStar?.getFillColor() ?? null;
+    }
+
+    getStarElement(): SVGGElement | null {
+        return this.animatedStar?.getElement() ?? null;
+    }
+
+    simulateStarClick(): void {
+        this.animatedStar?.simulateClick();
+    }
+
+    setStarBorderOpacity(opacity: number): void {
+        this.animatedStar?.setBorderOpacity(opacity);
     }
 
     setHtmlContainer(container: HTMLElement): void {
@@ -215,7 +260,6 @@ export class SimulatorView {
     }
 
     simulateRayClick(): void {
-        console.log('[IfsView] simulateRayClick - selfRay:', this.selfRay ? 'exists' : 'null');
         this.selfRay?.simulateClick();
     }
 
@@ -263,6 +307,7 @@ export class SimulatorView {
                 state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
             }
 
+            this.animatedStar?.setForeground(mode === 'foreground');
             this.events.emit('mode-changed', { mode });
             this.events.emit('transition-started', { direction: this.transitionDirection });
         }
@@ -493,16 +538,66 @@ export class SimulatorView {
         this.syncSelfRay(newModel);
         this.syncThoughtBubbles(newModel);
         this.syncMode(newModel);
+        this.syncPendingActionBanner(newModel);
 
-        this.generateTraceEntries(oldModel, newModel);
+        this.lastSyncTargetCount = newModel.getTargetCloudIds().size;
+        this.lastSyncBlendedCount = newModel.getBlendedParts().length;
+        const noBlendedParts = this.lastSyncBlendedCount === 0 && !newModel.peekPendingBlend();
+        const inForeground = newModel.getMode() === 'foreground';
+        this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
+
+        this.syncConversation(newModel);
 
         this.checkVictoryCondition(newModel);
+    }
+
+    private syncConversation(model: SimulatorModel): void {
+        const result = model.isConversationPossible();
+        this.conversationParticipantIds = result.participantIds;
+    }
+
+    getConversationParticipantIds(): [string, string] | null {
+        return this.conversationParticipantIds;
     }
 
     private syncMode(model: SimulatorModel): void {
         const modelMode = model.getMode();
         if (modelMode !== this.mode) {
             this.setMode(modelMode);
+        }
+    }
+
+    setOnPendingActionDismiss(callback: () => void): void {
+        this.onPendingActionDismiss = callback;
+    }
+
+    private static getPendingActionText(actionId: string): string {
+        switch (actionId) {
+            case 'add_target': return 'Select a part to invite';
+            case 'feel_toward': return 'How do you feel toward which part?';
+            case 'notice_part': return 'Notice which part?';
+            default: return 'Select a part';
+        }
+    }
+
+    private syncPendingActionBanner(model: SimulatorModel): void {
+        const pending = model.getPendingAction();
+        if (pending && !this.pendingActionBannerEl && this.htmlContainer) {
+            this.pendingActionBannerEl = document.createElement('div');
+            this.pendingActionBannerEl.className = 'pending-action-banner';
+            this.pendingActionBannerEl.innerHTML = `
+                <span class="pending-action-text">${SimulatorView.getPendingActionText(pending.actionId)}</span>
+                <button class="pending-action-dismiss">\u00d7</button>
+            `;
+            this.pendingActionBannerEl.querySelector('.pending-action-dismiss')!
+                .addEventListener('click', () => this.onPendingActionDismiss?.());
+            this.htmlContainer.appendChild(this.pendingActionBannerEl);
+        } else if (pending && this.pendingActionBannerEl) {
+            const textEl = this.pendingActionBannerEl.querySelector('.pending-action-text');
+            if (textEl) textEl.textContent = SimulatorView.getPendingActionText(pending.actionId);
+        } else if (!pending && this.pendingActionBannerEl) {
+            this.pendingActionBannerEl.remove();
+            this.pendingActionBannerEl = null;
         }
     }
 
@@ -993,6 +1088,126 @@ export class SimulatorView {
         };
     }
 
+    animateStarVisuals(deltaTime: number): void {
+        this.updateStarScale();
+        this.animatedStar?.animate(deltaTime);
+    }
+
+    updateStarConversationState(participantIds: [string, string] | null, instances: CloudInstance[]): void {
+        if (!this.animatedStar) return;
+        if (participantIds) {
+            const p0 = this.getCloudState(participantIds[0]);
+            const p1 = this.getCloudState(participantIds[1]);
+            if (p0 && p1) {
+                const BADGE_DROP = 50; // carpet occupied drop (35) + conversation drop (15)
+                const BADGE_HALF_W = 30;
+                const BADGE_HALF_H = 8;
+
+                const toCloudInfo = (cloudId: string, p: { x: number; y: number }) => {
+                    const inst = instances.find(i => i.cloud.id === cloudId);
+                    const lx = p.x - this.starCurrentX;
+                    const ly = p.y - this.starCurrentY;
+
+                    // Cloud shape bounding box in star-local coords
+                    let hw = 30, hh = 15;
+                    if (inst) {
+                        const bb = inst.cloud.getBoundingBox();
+                        hw = (bb.maxX - bb.minX) / 2;
+                        hh = (bb.maxY - bb.minY) / 2;
+                    }
+                    const cloudBox = { minX: lx - hw, maxX: lx + hw, minY: ly - hh, maxY: ly + hh };
+
+                    // Badge bounding box: carpet drops straight down from cloud position
+                    const badgeCX = lx;
+                    const badgeCY = ly + BADGE_DROP;
+                    // Badge box aligned to axes (approximation)
+                    const badgeBox = {
+                        minX: badgeCX - BADGE_HALF_W,
+                        maxX: badgeCX + BADGE_HALF_W,
+                        minY: badgeCY - BADGE_HALF_H,
+                        maxY: badgeCY + BADGE_HALF_H,
+                    };
+
+                    return { boxes: [cloudBox, badgeBox] };
+                };
+                const tableCenter = {
+                    x: this.canvasWidth / 2 - this.starCurrentX,
+                    y: this.canvasHeight / 2 - this.starCurrentY,
+                };
+                this.animatedStar.setConversationState(true, [
+                    toCloudInfo(participantIds[0], p0),
+                    toCloudInfo(participantIds[1], p1),
+                ], tableCenter);
+                return;
+            }
+        }
+        this.animatedStar.setConversationState(false, null, null);
+    }
+
+    private updateStarScale(): void {
+        if (!this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        const inZoomGroup = starElement?.parentNode === this.zoomGroup;
+        const isReverseTransition = this.getTransitionDirection() === 'reverse';
+
+        if (this.getVisualMode() === 'foreground') {
+            const totalParts = this.lastSyncTargetCount + this.lastSyncBlendedCount;
+            const visualTarget = totalParts > 0 ? 5 / Math.sqrt(totalParts) : 6;
+            this.animatedStar.setTargetRadiusScale(visualTarget);
+        } else if (isReverseTransition && !inZoomGroup) {
+            this.animatedStar.setTargetRadiusScale(1.5 * this.panoramaZoom);
+        } else {
+            this.animatedStar.setTargetRadiusScale(1.5);
+        }
+    }
+
+    private moveStarToUIGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.uiGroup) return;
+
+        const zoom = this.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        this.transformStarPosition(zoom);
+        this.animatedStar.setRadiusScale(scaleBefore * zoom);
+
+        this.uiGroup.insertBefore(starElement, this.uiGroup.firstChild);
+    }
+
+    private moveStarToZoomGroup(): void {
+        if (!this.zoomGroup || !this.uiGroup || !this.animatedStar) return;
+
+        const starElement = this.animatedStar.getElement();
+        if (!starElement || starElement.parentNode === this.zoomGroup) return;
+
+        const zoom = this.getCurrentZoomFactor();
+        const scaleBefore = this.animatedStar.getRadiusScale();
+        this.transformStarPosition(1 / zoom);
+        this.animatedStar.setRadiusScale(scaleBefore / zoom);
+
+        this.zoomGroup.appendChild(starElement);
+    }
+
+    onTransitionStartStar(direction: 'forward' | 'reverse'): void {
+        if (direction === 'forward') {
+            this.moveStarToUIGroup();
+        }
+    }
+
+    finalizeStarGroup(mode: 'panorama' | 'foreground'): void {
+        if (mode === 'foreground') {
+            this.moveStarToUIGroup();
+        } else {
+            this.moveStarToZoomGroup();
+        }
+    }
+
+    handleStarResize(width: number, height: number): void {
+        this.animatedStar?.setPosition(width / 2, height / 2);
+    }
+
     private updateStarPosition(model: SimulatorModel): void {
         const targetIds = model.getTargetCloudIds();
         const blendedParts = model.getBlendedParts();
@@ -1176,6 +1391,16 @@ export class SimulatorView {
         return this.transitionDirection;
     }
 
+    getViewSnapshot(): ViewSnapshot {
+        return {
+            seats: this.seatManager.getSeats().map(s => s.seatId),
+            carpets: this.seatManager.getCarpetSnapshot(),
+            conversationParticipantIds: this.conversationParticipantIds,
+            transitionDirection: this.transitionDirection,
+            transitionProgress: this.transitionProgress,
+        };
+    }
+
     getCurrentZoomFactor(): number {
         // Panorama mode uses panoramaZoom (adjustable via pinch)
         // Foreground mode zooms into foregroundZoomFactor for non-participating clouds
@@ -1193,145 +1418,6 @@ export class SimulatorView {
 
     getForegroundCloudIds(): Set<string> {
         return this.previousForegroundIds;
-    }
-
-    setCloudNames(names: Map<string, string>): void {
-        this.cloudNames = names;
-    }
-
-    getTrace(): string {
-        return this.traceHistory.map((entry, i) => `[${i}] ${entry}`).join('\n');
-    }
-
-    setAction(action: string): void {
-        this.pendingAction = action;
-    }
-
-    private addTraceEntry(action: string, effects: string[]): void {
-        if (effects.length === 0) return;
-        this.traceHistory.push(`${action} → ${effects.join(', ')}`);
-    }
-
-    private getName(cloudId: string): string {
-        return this.cloudNames.get(cloudId) ?? cloudId;
-    }
-
-    private generateTraceEntries(oldModel: SimulatorModel | null, newModel: SimulatorModel): void {
-        if (!oldModel) return;
-
-        const effects: string[] = [];
-        const oldTargets = oldModel.getTargetCloudIds();
-        const newTargets = newModel.getTargetCloudIds();
-        const oldBlended = new Set(oldModel.getBlendedParts());
-        const newBlended = new Set(newModel.getBlendedParts());
-
-        // Detect "demands attention" pattern: conference cleared + new spontaneous blend
-        const wasOccupied = oldTargets.size > 0 || oldBlended.size > 0;
-        const conferenceCleared = wasOccupied && newTargets.size === 0 && newBlended.size === 1;
-        if (conferenceCleared) {
-            const newBlendedId = Array.from(newBlended)[0];
-            const isNewBlend = !oldBlended.has(newBlendedId);
-            const reason = newModel.getBlendReason(newBlendedId);
-            if (isNewBlend && reason === 'spontaneous') {
-                const displaced = oldTargets.size + oldBlended.size;
-                const action = `${this.getName(newBlendedId)} demands attention`;
-                this.addTraceEntry(action, [`${displaced} displaced`]);
-                this.pendingAction = null;
-                return;
-            }
-        }
-
-        // Detect conference table clear (all empty now, wasn't before)
-        const nowEmpty = newTargets.size === 0 && newBlended.size === 0;
-        if (wasOccupied && nowEmpty) {
-            const action = this.pendingAction ?? 'Clear';
-            this.addTraceEntry(action, ['conference cleared']);
-            this.pendingAction = null;
-            return;
-        }
-
-        // Track conference membership changes
-        for (const id of newTargets) {
-            if (!oldTargets.has(id) && !oldBlended.has(id)) {
-                effects.push(`${this.getName(id)} joins`);
-            }
-        }
-
-        for (const id of oldTargets) {
-            if (!newTargets.has(id) && !newBlended.has(id)) {
-                effects.push(`${this.getName(id)} leaves`);
-            }
-        }
-
-        // Track blending changes
-        for (const id of newBlended) {
-            if (!oldBlended.has(id)) {
-                effects.push(`${this.getName(id)} blends`);
-            }
-        }
-
-        let actionDescribesEffect = false;
-        for (const id of oldBlended) {
-            if (!newBlended.has(id)) {
-                const effect = newTargets.has(id) ? `${this.getName(id)} separates` : `${this.getName(id)} unblends`;
-                if (this.pendingAction === effect) {
-                    actionDescribesEffect = true;
-                } else {
-                    effects.push(effect);
-                }
-            }
-        }
-
-        // Track biography reveals
-        this.collectBiographyEffects(oldModel, newModel, effects);
-
-        // Track trust changes
-        this.collectTrustEffects(oldModel, newModel, effects);
-
-        // Check for new messages (action label already describes the message)
-        const hasMessages = this.hasNewMessages(oldModel, newModel);
-
-        if (effects.length > 0) {
-            const action = this.pendingAction ?? 'Update';
-            this.addTraceEntry(action, effects);
-        } else if (this.pendingAction && (hasMessages || actionDescribesEffect)) {
-            this.traceHistory.push(this.pendingAction);
-        }
-        this.pendingAction = null;
-    }
-
-    private collectBiographyEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
-        for (const [cloudId] of this.cloudNames) {
-            const oldBio = oldModel.parts.getBiography(cloudId);
-            const newBio = newModel.parts.getBiography(cloudId);
-            if (!oldBio || !newBio) continue;
-
-            if (!oldBio.identityRevealed && newBio.identityRevealed) {
-                effects.push(`${this.getName(cloudId)} revealed`);
-            }
-            if (!oldBio.ageRevealed && newBio.ageRevealed) {
-                effects.push(`${this.getName(cloudId)} age revealed`);
-            }
-        }
-    }
-
-    private collectTrustEffects(oldModel: SimulatorModel, newModel: SimulatorModel, effects: string[]): void {
-        for (const [cloudId] of this.cloudNames) {
-            const oldTrust = oldModel.parts.getTrust(cloudId);
-            const newTrust = newModel.parts.getTrust(cloudId);
-            const diff = newTrust - oldTrust;
-            if (Math.abs(diff) > 0.01) {
-                const oldPct = Math.round(oldTrust * 100);
-                const newPct = Math.round(newTrust * 100);
-                const direction = diff > 0 ? '↑' : '↓';
-                effects.push(`${this.getName(cloudId)} trust ${oldPct}%${direction}${newPct}%`);
-            }
-        }
-    }
-
-    private hasNewMessages(oldModel: SimulatorModel, newModel: SimulatorModel): boolean {
-        const oldMessages = new Set(oldModel.getMessages().map(m => m.id));
-        return newModel.getMessages().some(m => !oldMessages.has(m.id));
     }
 
 }

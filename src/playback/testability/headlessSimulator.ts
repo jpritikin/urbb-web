@@ -12,7 +12,7 @@ import type {
 import type { BiographyField } from '../../star/selfRay.js';
 
 export interface TestableSimulator {
-    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground'): ActionResult;
+    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground', stanceDelta?: number): ActionResult;
     advanceIntervals(count: number): void;
     getModelStateSnapshot(): ModelSnapshot;
     getMode(): 'panorama' | 'foreground';
@@ -109,9 +109,11 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             this.rng,
             {
                 getMode: () => this.model.getMode(),
-                onSpontaneousBlend: () => {},
+                onSpontaneousBlend: (event) => {
+                    this.model.partDemandsAttention(event.cloudId);
+                },
             },
-            { skipAttentionChecks: true }
+            { skipAttentionChecks: false }
         );
     }
 
@@ -144,8 +146,14 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         for (const p of config.protections ?? []) {
             this.model.parts.addProtection(p.protectorId, p.protectedId);
         }
-        for (const g of config.grievances ?? []) {
-            this.model.parts.setGrievance(g.cloudId, g.targetIds, g.dialogues);
+        for (const r of config.interPartRelations ?? []) {
+            this.model.parts.setInterPartRelation(r.fromId, r.toId, {
+                trust: r.trust,
+                stance: r.stance,
+                stanceFlipOdds: r.stanceFlipOdds,
+                dialogues: r.dialogues,
+                rumination: r.rumination,
+            });
         }
         for (const p of config.proxies ?? []) {
             this.model.parts.addProxy(p.cloudId, p.proxyId);
@@ -164,19 +172,33 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         }
     }
 
-    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground'): ActionResult {
+    executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground', stanceDelta?: number): ActionResult {
         if (action === 'mode_change' && newMode) {
             this.model.setMode(newMode);
+            this.model.syncConversation(this.rng);
             return { success: true, stateChanges: [`mode -> ${newMode}`] };
+        }
+
+        // Handle add_target pending action completion (mirroring UI's completePendingAction)
+        const pending = this.model.getPendingAction();
+        if (pending?.actionId === 'add_target' && action === 'select_a_target') {
+            this.model.setPendingAction(null);
+            this.model.addTargetCloud(cloudId);
+            this.model.setMode('foreground');
+            this.model.syncConversation(this.rng);
+            this.model.checkAndSetVictory();
+            return { success: true, stateChanges: [`${cloudId}:selected_as_target`] };
         }
 
         const result = this.controller.executeAction(action, cloudId, {
             targetCloudId,
             field: field as BiographyField | undefined,
-            isBlended: this.model.isBlended(cloudId)
+            isBlended: this.model.isBlended(cloudId),
+            stanceDelta,
         });
 
         this.effectApplicator.apply(result, cloudId);
+        this.model.syncConversation(this.rng);
         this.model.checkAndSetVictory();
 
         return {
@@ -193,21 +215,10 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
 
     advanceTime(deltaTime: number): void {
         this.timeAdvancer.advance(deltaTime);
-        this.checkBlendedPartsAttention();
     }
 
     advanceIntervals(count: number): void {
         this.timeAdvancer.advanceIntervals(count);
-        this.checkBlendedPartsAttention();
-    }
-
-    private checkBlendedPartsAttention(): void {
-        for (const cloudId of this.model.getBlendedParts()) {
-            if (this.model.getBlendReason(cloudId) !== 'spontaneous') continue;
-            if (this.model.parts.getNeedAttention(cloudId) < 0.25) {
-                this.model.promoteBlendedToTarget(cloudId);
-            }
-        }
     }
 
     getModel(): SimulatorModel {

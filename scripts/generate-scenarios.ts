@@ -32,7 +32,14 @@ const easyScenario: Scenario = {
     ],
     relationships: {
         protections: [{ protectorId: 'inner-critic', protectedId: 'criticized' }],
-        grievances: [{ cloudId: 'inner-critic', targetIds: 'inner-critic', dialogues: ["I'm a terrible person.", "I hate myself."] }],
+        interPartRelations: [{
+            fromId: 'inner-critic', toId: 'inner-critic',
+            trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+            dialogues: { hostile: [
+                ["I'm a terrible person.", "You think you're terrible?", "Yes!", "..."],
+                ["I hate myself.", "You hate yourself?", "Obviously!", "..."],
+            ] },
+        }],
     },
     initialTargets: ['inner-critic'],
     actions: [],
@@ -82,9 +89,22 @@ const mediumScenario: Scenario = {
     ],
     relationships: {
         protections: [{ protectorId: 'inner-critic', protectedId: 'criticized' }],
-        grievances: [
-            { cloudId: 'inner-critic', targetIds: 'inner-critic', dialogues: ["I'm a terrible person."] },
-            { cloudId: 'inner-critic', targetIds: 'toddler', dialogues: ["You got us criticized.", "Don't do anything risky."] },
+        interPartRelations: [
+            {
+                fromId: 'inner-critic', toId: 'inner-critic',
+                trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+                dialogues: { hostile: [
+                    ["I'm a terrible person.", "You think you're terrible?", "Yes!", "..."],
+                ] },
+            },
+            {
+                fromId: 'inner-critic', toId: 'toddler',
+                trust: 0.2, stance: 0.6, stanceFlipOdds: 0.05,
+                dialogues: { hostile: [
+                    ["You got us criticized.", "I got us criticized?", "Yes!", "..."],
+                    ["Don't do anything risky.", "You want me to be careful?", "Obviously!", "..."],
+                ] },
+            },
         ],
         proxies: [
             { cloudId: 'inner-critic', proxyId: 'self-image' },
@@ -198,7 +218,7 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
                 pendingIntervals = 0;
             }
 
-            sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field);
+            sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field, undefined, action.stanceDelta);
 
             const rngCount = sim.getRngCount();
             const fullLog = sim.getModelRngLog();
@@ -211,6 +231,7 @@ function pathToRecordedSession(baseScenario: Scenario, path: WalkPath): Recorded
                 cloudId: action.cloudId,
                 targetCloudId: action.targetCloudId,
                 field: action.field,
+                stanceDelta: action.stanceDelta,
                 rngCounts: { model: rngCount },
                 rngLog,
                 orchState,
@@ -466,7 +487,7 @@ function replayAndCollectOutcomes(session: RecordedSession): OutcomeSignature[] 
     const outcomes: OutcomeSignature[] = [];
 
     for (const action of session.actions) {
-        // Advance time to allow message delivery (e.g., grievances)
+        // Advance time to allow message delivery
         if (action.elapsedTime && action.elapsedTime > 0) {
             sim.advanceTime(action.elapsedTime);
         }
@@ -475,7 +496,9 @@ function replayAndCollectOutcomes(session: RecordedSession): OutcomeSignature[] 
             action.action,
             action.cloudId,
             action.targetCloudId,
-            action.field
+            action.field,
+            undefined,
+            action.stanceDelta
         );
 
         const outcome = extractOutcome(
@@ -590,15 +613,11 @@ function runDebug(scenario: Scenario, args: Args): void {
     for (let i = 0; i < walk.actions.length; i++) {
         const a = walk.actions[i];
         const heur = a.heuristic;
-        const gp = heur?.grievancePath;
         const target = a.targetCloudId ? ':' + a.targetCloudId : '';
         const field = a.field ? ':' + a.field : '';
         console.log(`[${i}] ${a.action}:${a.cloudId}${target}${field} (score=${a.score ?? '?'})`);
         if (heur) {
             console.log(`     phase=${heur.phase} prot=${heur.protectorId} prot_ee=${heur.protecteeId}`);
-            if (gp) {
-                console.log(`     gp: atk=${gp.attackerId} vic=${gp.victimId} atkBlend=${gp.attackerBlended} vicAtk=${gp.victimAttacked} atkConf=${gp.attackerInConf} vicConf=${gp.victimInConf}`);
-            }
         }
     }
 }

@@ -14,6 +14,16 @@ export interface TimeAdvancerCallbacks {
     onSpontaneousBlend: (event: SpontaneousBlendEvent, accumulatedTime: number) => void;
 }
 
+export interface AttentionDemandEntry {
+    cloudId: string;
+    needAttention: number;
+    maxConference: number;
+    excess: number;
+    urgent: boolean;
+    randomVal: number;
+    triggered: boolean;
+}
+
 export interface TimeAdvancerOptions {
     skipAttentionChecks?: boolean;
 }
@@ -24,6 +34,7 @@ export class TimeAdvancer {
     private cumulativeTime = 0;
     private getModel: () => SimulatorModel;
     private skipAttentionChecks: boolean;
+    private attentionDemandLog: AttentionDemandEntry[] = [];
 
     constructor(
         getModel: () => SimulatorModel,
@@ -34,6 +45,10 @@ export class TimeAdvancer {
     ) {
         this.getModel = getModel;
         this.skipAttentionChecks = options?.skipAttentionChecks ?? false;
+    }
+
+    setRNG(rng: RNG): void {
+        this.rng = rng;
     }
 
     private get model(): SimulatorModel {
@@ -72,23 +87,44 @@ export class TimeAdvancer {
         return count;
     }
 
+    getAndResetAttentionDemandLog(): AttentionDemandEntry[] {
+        const log = this.attentionDemandLog;
+        this.attentionDemandLog = [];
+        return log;
+    }
+
     private processOneInterval(): void {
         const inConference = this.callbacks.getMode() === 'foreground';
         this.model.increaseNeedAttention(ATTENTION_CHECK_INTERVAL, inConference);
+        this.model.parts.decayFlipOdds(ATTENTION_CHECK_INTERVAL, this.model.getConferenceCloudIds());
+        this.model.decayTherapistStanceDeltas(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.updateTimers(ATTENTION_CHECK_INTERVAL);
-        this.orchestrator?.checkAndSendGrievanceMessages();
+        this.orchestrator?.checkAndSendBlendedUtterances(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
+        this.orchestrator?.checkAndShowSelfLoathing(ATTENTION_CHECK_INTERVAL);
+        this.orchestrator?.checkAndShowConversationDialogues(ATTENTION_CHECK_INTERVAL);
     }
 
     private checkAttentionDemands(): void {
-        const inPanorama = this.callbacks.getMode() === 'panorama';
-        const demand = this.model.checkAttentionDemands(this.rng, !inPanorama);
+        const inConference = this.callbacks.getMode() === 'foreground';
+        const demand = this.model.checkAttentionDemands(this.rng, inConference);
 
         if (demand) {
+            const maxConference = this.model.getMaxConferenceNeedAttention(demand.cloudId);
             const randomVal = this.rng.random('panorama_attention');
-            const panoramaTriggered = inPanorama && (demand.needAttention - 1) > randomVal;
+            const triggered = demand.urgent || (demand.needAttention - 1) > randomVal;
 
-            if (demand.urgent || panoramaTriggered) {
+            this.attentionDemandLog.push({
+                cloudId: demand.cloudId,
+                needAttention: demand.needAttention,
+                maxConference,
+                excess: demand.needAttention - maxConference,
+                urgent: demand.urgent,
+                randomVal,
+                triggered,
+            });
+
+            if (triggered) {
                 this.callbacks.onSpontaneousBlend({
                     cloudId: demand.cloudId,
                     urgent: demand.urgent

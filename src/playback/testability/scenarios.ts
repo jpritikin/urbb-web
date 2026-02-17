@@ -91,7 +91,7 @@ export function replaySession(session: RecordedSession): ReplayResult {
             blended: model.getBlendedParts(),
         };
 
-        const result = sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field, action.newMode);
+        const result = sim.executeAction(action.action, action.cloudId, action.targetCloudId, action.field, action.newMode, action.stanceDelta);
         actionResults.push(result);
 
         const postState = {

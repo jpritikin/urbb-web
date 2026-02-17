@@ -1,7 +1,7 @@
 import { ActionRecorder, sessionToJSON } from './testability/recorder.js';
 import { RNG, createModelRNG, SeededRNG } from './testability/rng.js';
-import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo } from './playback.js';
-import type { RecordedSession, RecordedAction, SerializedModel } from './testability/types.js';
+import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo, PlaybackSpeed } from './playback.js';
+import type { RecordedSession, RecordedAction, SerializedModel, ViewSnapshot } from './testability/types.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 
 export interface PlaybackRecordingDependencies {
@@ -14,6 +14,11 @@ export interface PlaybackRecordingDependencies {
         getAllPartIds(): string[];
         getMode(): 'panorama' | 'foreground';
         setSelfRay(cloudId: string): void;
+        getConversationEffectiveStances(): Map<string, number>;
+        getConversationPhases(): Map<string, string>;
+        getConversationTherapistDeltas(): Map<string, number>;
+        getConversationSpeakerId(): string | null;
+        getPendingAction(): { actionId: string; sourceCloudId: string } | null;
         parts: {
             isAgeRevealed(cloudId: string): boolean;
             isIdentityRevealed(cloudId: string): boolean;
@@ -22,6 +27,7 @@ export interface PlaybackRecordingDependencies {
             isJobImpactRevealed(cloudId: string): boolean;
             getNeedAttention(cloudId: string): number;
             getTrust(cloudId: string): number;
+            getRelationSummaries(): { fromId: string; toId: string; stance: number; trust: number }[];
         };
     };
     getCloudById: (id: string) => { text: string } | null;
@@ -32,9 +38,10 @@ export interface PlaybackRecordingDependencies {
         getCloudState(cloudId: string): { x: number; y: number } | undefined;
         isTransitioning(): boolean;
         hasActiveSpiralExits(): boolean;
+        getViewSnapshot(): ViewSnapshot;
     };
     getPendingBlendsCount: () => number;
-    getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void } | null;
+    getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
     getMessageOrchestrator: () => { getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
     getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null } | null;
@@ -45,6 +52,7 @@ export interface PlaybackRecordingDependencies {
     getCanvasDimensions: () => { width: number; height: number };
     simulateRayClick: () => void;
     executeSpontaneousBlendForPlayback: (cloudId: string) => void;
+    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null } | null;
     checkBlendedPartsAttention: () => void;
     onRngChanged: (rng: RNG) => void;
 }
@@ -57,7 +65,7 @@ export class PlaybackRecordingCoordinator {
     private lastActionResult: ActionResult | null = null;
     private downloadSessionHandler: (() => void) | null = null;
 
-    constructor(private deps: PlaybackRecordingDependencies) {}
+    constructor(private deps: PlaybackRecordingDependencies) { }
 
     getRNG(): RNG {
         return this.rng;
@@ -124,9 +132,17 @@ export class PlaybackRecordingCoordinator {
 
     recordIntervals(): void {
         if (this.recorder.isRecording()) {
-            const intervalCount = this.deps.getTimeAdvancer()?.getAndResetIntervalCount() ?? 0;
+            const timeAdvancer = this.deps.getTimeAdvancer();
+            const intervalCount = timeAdvancer?.getAndResetIntervalCount() ?? 0;
             if (intervalCount > 0) {
-                this.recorder.recordIntervals(intervalCount);
+                const attentionDemands = timeAdvancer?.getAndResetAttentionDemandLog();
+                const model = this.deps.getModel();
+                const needAttention: Record<string, number> = {};
+                for (const id of model.getAllPartIds()) {
+                    needAttention[id] = model.parts.getNeedAttention(id);
+                }
+                const isTransitioning = this.deps.getView().isTransitioning();
+                this.recorder.recordIntervals(intervalCount, attentionDemands, needAttention, isTransitioning);
             }
         }
     }
@@ -166,9 +182,16 @@ export class PlaybackRecordingCoordinator {
             targets: [...model.getTargetCloudIds()],
             blended: model.getBlendedParts(),
             selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
+            pendingAction: model.getPendingAction(),
             biography,
             needAttention,
             trust,
+            conversationEffectiveStances: Object.fromEntries(model.getConversationEffectiveStances()),
+            conversationPhases: Object.fromEntries(model.getConversationPhases()),
+            conversationTherapistDelta: Object.fromEntries(model.getConversationTherapistDeltas()),
+            conversationSpeakerId: model.getConversationSpeakerId(),
+            interPartRelations: model.parts.getRelationSummaries(),
+            viewState: this.deps.getView().getViewSnapshot(),
         };
 
         this.recorder.record(action, orchState, modelState);
@@ -176,13 +199,13 @@ export class PlaybackRecordingCoordinator {
 
     // Playback
 
-    startPlayback(session: RecordedSession): void {
+    startPlayback(session: RecordedSession, speed?: PlaybackSpeed): void {
         const container = this.deps.getContainer();
         const svgElement = this.deps.getSvgElement();
         if (!container || !svgElement) return;
 
         const callbacks = this.createPlaybackCallbacks();
-        this.playbackController = new PlaybackController(container, svgElement, callbacks);
+        this.playbackController = new PlaybackController(container, svgElement, callbacks, speed);
         this.playbackController.start(session);
     }
 
@@ -293,6 +316,44 @@ export class PlaybackRecordingCoordinator {
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.deps.executeSpontaneousBlendForPlayback(cloudId);
+            },
+            getCarpetCenter: (cloudId: string) => {
+                return this.deps.getCarpetRenderer()?.getCarpetCenter(cloudId) ?? null;
+            },
+            getCarpetVisualCenter: (cloudId: string) => {
+                return this.deps.getCarpetRenderer()?.getCarpetVisualCenter(cloudId) ?? null;
+            },
+            getCarpetTiltSign: (cloudId: string) => {
+                return this.deps.getCarpetRenderer()?.getTiltSign(cloudId) ?? 1;
+            },
+            isCarpetSettled: (cloudId: string) => {
+                return this.deps.getCarpetRenderer()?.isCarpetSettled(cloudId) ?? false;
+            },
+            getCurrentDragStanceDelta: () => {
+                return this.deps.getCarpetRenderer()?.getCurrentDragStanceDelta() ?? null;
+            },
+            simulateMouseDown: (x: number, y: number) => {
+                const { clientX, clientY } = this.svgToScreenCoords(x, y);
+                const element = document.elementFromPoint(clientX, clientY);
+                if (!element) return;
+                element.dispatchEvent(new MouseEvent('mousedown', {
+                    clientX, clientY, bubbles: true, cancelable: true
+                }));
+            },
+            simulateMouseMove: (x: number, y: number) => {
+                const { clientX, clientY } = this.svgToScreenCoords(x, y);
+                const element = document.elementFromPoint(clientX, clientY);
+                if (!element) return;
+                element.dispatchEvent(new MouseEvent('mousemove', {
+                    clientX, clientY, bubbles: true, cancelable: true
+                }));
+            },
+            simulateMouseUp: () => {
+                const svgElement = this.deps.getSvgElement();
+                if (!svgElement) return;
+                svgElement.dispatchEvent(new MouseEvent('mouseup', {
+                    bubbles: true, cancelable: true
+                }));
             },
             onActionCompleted: (action: RecordedAction): ActionResult => {
                 return this.verifyPlaybackSync(action);
@@ -436,6 +497,15 @@ export class PlaybackRecordingCoordinator {
             if (extraTargets.length) parts.push(`extra targets: ${extraTargets.map(getName).join(', ')}`);
             if (missingBlended.length) parts.push(`missing blended: ${missingBlended.map(getName).join(', ')}`);
             if (extraBlended.length) parts.push(`extra blended: ${extraBlended.map(getName).join(', ')}`);
+        }
+
+        if ('pendingAction' in expected) {
+            const actualPending = model.getPendingAction();
+            const expId = expected.pendingAction?.actionId ?? null;
+            const actId = actualPending?.actionId ?? null;
+            if (expId !== actId) {
+                parts.push(`pendingAction: expected ${expId ?? 'none'}, got ${actId ?? 'none'}`);
+            }
         }
 
         if (expected.biography) {

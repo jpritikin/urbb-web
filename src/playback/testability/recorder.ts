@@ -1,5 +1,6 @@
 import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type OrchestratorSnapshot, type ModelSnapshot } from './types.js';
 import type { RNG, SeededRNG, RngLogEntry } from './rng.js';
+import type { AttentionDemandEntry } from '../../simulator/timeAdvancer.js';
 
 export class ActionRecorder {
     private actions: RecordedAction[] = [];
@@ -44,7 +45,12 @@ export class ActionRecorder {
         this.accumulatedEffectiveTime += deltaTime;
     }
 
-    recordIntervals(count: number): void {
+    recordIntervals(
+        count: number,
+        attentionDemands?: AttentionDemandEntry[],
+        needAttention?: Record<string, number>,
+        isTransitioning?: boolean,
+    ): void {
         if (count <= 0 || !this.initialModel) return;
         let rngCounts: { model: number } | undefined;
         let rngLog: RngLogEntry[] | undefined;
@@ -61,6 +67,9 @@ export class ActionRecorder {
             count,
             rngCounts,
             rngLog,
+            attentionDemands: attentionDemands?.length ? attentionDemands : undefined,
+            needAttention,
+            isTransitioning,
         });
     }
 

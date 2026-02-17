@@ -36,7 +36,7 @@ interface CoreParts {
 
 function setupCoreParts(cloudManager: CloudManager): CoreParts {
     const innerCritic = cloudManager.addCloud('Inner Critic', {
-        trust: 0.3,
+        trust: 0,
         partAge: 8,
         dialogues: {
             burdenedJobAppraisal: [
@@ -64,10 +64,12 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
 
     const relationships = cloudManager.getRelationships();
     relationships.addProtection(innerCritic.id, criticized.id);
-    relationships.setGrievance(innerCritic.id, [innerCritic.id], [
-        "I'm a terrible person.",
-        "I hate myself."
-    ]);
+    relationships.setInterPartRelation(innerCritic.id, innerCritic.id, {
+        trust: 0.2,
+        stance: 0.6,
+        stanceFlipOdds: 0.05,
+        rumination: ["I'm a terrible person.", "I hate myself."],
+    });
 
     return { innerCritic, criticized };
 }
@@ -102,15 +104,55 @@ function setupMediumScenario(cloudManager: CloudManager): void {
     });
 
     const relationships = cloudManager.getRelationships();
-    relationships.setGrievance(innerCritic.id, [threeYearOld.id], [
-        "You got us criticized.",
-        "You always make mistakes.",
-        "Don't do anything risky.",
-        "Be careful or you'll embarrass yourself.",
-    ]);
+    // Inner critic speaks, toddler mirrors/empathizes
+    relationships.setInterPartRelation(innerCritic.id, threeYearOld.id, {
+        trust: 0.2,
+        stance: 0.6,
+        stanceFlipOdds: 0.05,
+        dialogues: {
+            hostile: [
+                ["You got us criticized.", "You think it's my fault?", "Yes!", "..."],
+                ["Don't do anything risky.", "You want me to stop?", "Obviously!", "..."],
+            ],
+            guarded: [
+                ["The risks are real.", "You're worried about risks?", "Yes, exactly.", "That sounds tiring."],
+                ["I'm tired of being the bad guy.", "You feel stuck?", "I suppose so.", "That must be hard."],
+            ],
+            opening: [
+                ["I worry because I care about us.", "You're saying you care?", "Yes.", "I didn't know that."],
+                ["Maybe I've been too hard on you.", "You think so?", "I think so, yes.", "That means a lot."],
+            ],
+            collaborative: [
+                ["What if I gave you safe times to be wild?", "You'd do that for me?", "Yes, we can find a balance.", "I'd really like that."],
+            ],
+        },
+    });
+
+    // Toddler speaks, inner critic mirrors/empathizes
+    relationships.setInterPartRelation(threeYearOld.id, innerCritic.id, {
+        trust: 0.2,
+        stance: -0.4,
+        stanceFlipOdds: 0.4,
+        dialogues: {
+            hostile: [
+                ["You're mean!", "You think I'm mean?", "YES!", "..."],
+                ["I don't wanna talk.", "You don't want to talk?", "...", "..."],
+            ],
+            guarded: [
+                ["You never let me do anything.", "You feel restricted?", "Maybe...", "I guess you're frustrated."],
+                ["Why do you always yell at me?!", "You feel yelled at?", "Fine, whatever!", "I hear you."],
+            ],
+            opening: [
+                ["I just want to play sometimes.", "You want to play?", "That's right.", "Okay, but be careful."],
+                ["I need to be free sometimes!", "You need more freedom?", "Yes!", "You must be tired of worrying."],
+            ],
+            collaborative: [
+                ["What if I check with you before doing something risky?", "You'd do that?", "Yeah! That would help us both.", "You've been carrying a lot of worry for us."],
+            ],
+        },
+    });
 
     relationships.addProxy(innerCritic.id, adult.id);
-    relationships.addProxy(criticized.id, adult.id);
     relationships.addProxy(threeYearOld.id, adult.id);
 }
 

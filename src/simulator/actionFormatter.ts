@@ -11,6 +11,7 @@ const KNOWN_ACTIONS = new Set([
     'job',
     'feel_toward',
     'expand_deepen',
+    'add_target',
     'who_do_you_see',
     'help_protected',
     'notice_part',
@@ -19,6 +20,7 @@ const KNOWN_ACTIONS = new Set([
     'backlash',
     'mode_change',
     'process_intervals',
+    'nudge_stance',
 ]);
 
 export function isValidAction(actionId: string): boolean {
@@ -69,6 +71,9 @@ export function formatActionLabel(
         case 'expand_deepen':
             return 'Expand and deepen';
 
+        case 'add_target':
+            return 'Invite a target';
+
         case 'who_do_you_see':
             return `Who do you see: ${name}`;
 
@@ -101,6 +106,11 @@ export function formatActionLabel(
 
         case 'process_intervals':
             return '';  // Silent action, not displayed
+
+        case 'nudge_stance': {
+            const dir = (action.stanceDelta ?? 0) > 0 ? 'speak' : 'listen';
+            return `Nudge ${name} to ${dir}`;
+        }
 
         default:
             throw new Error(`Unknown action: ${action.action}`);
