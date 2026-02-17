@@ -457,6 +457,7 @@ export class CloudManager {
         this.expandDeepenEffect?.setDimensions(width, height);
         this.panoramaMotion.setDimensions(width, height);
         this.updateViewBox();
+        this.playbackRecording.onCanvasResized();
     }
 
     private toggleFullscreen(): void {

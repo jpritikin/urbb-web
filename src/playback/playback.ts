@@ -146,8 +146,13 @@ export class PlaybackController {
     pause(): void {
         if (this.state !== 'waiting' && this.state !== 'executing') return;
         this.state = 'paused';
-        // Keep time effects paused to prevent blend timer drift
         this.updateControlPanel();
+    }
+
+    onCanvasResized(): void {
+        if (!this.isActive()) return;
+        console.log('[Playback] Canvas resized, cancelling playback');
+        this.cancel();
     }
 
     resume(): void {

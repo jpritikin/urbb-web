@@ -233,6 +233,10 @@ export class PlaybackRecordingCoordinator {
         this.playbackController?.cancel();
     }
 
+    onCanvasResized(): void {
+        this.playbackController?.onCanvasResized();
+    }
+
     setLastActionResult(result: ActionResult): void {
         this.lastActionResult = result;
     }
