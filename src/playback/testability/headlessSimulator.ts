@@ -37,8 +37,6 @@ class HeadlessView implements MessageOrchestratorView {
         this.onMessageReceived = callback;
     }
 
-    hasActiveSpiralExits(): boolean { return false; }
-    isAwaitingArrival(_cloudId: string): boolean { return false; }
     getCloudState(cloudId: string): unknown | null {
         if (!this.model) return null;
         // Return a truthy object if the part is in the conference (targeted or blended)
