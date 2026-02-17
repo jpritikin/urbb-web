@@ -76,7 +76,6 @@ export class SimulatorModel {
 
     setMode(mode: SimulatorMode): void {
         if (mode !== this.mode) {
-            console.log('[IfsModel] setMode:', this.mode, '->', mode, new Error().stack?.split('\n').slice(1, 4).join(' <- '));
             this.mode = mode;
             if (mode === 'panorama') {
                 this.clearSelfRay();
