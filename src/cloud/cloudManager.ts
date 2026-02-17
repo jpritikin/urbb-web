@@ -986,6 +986,9 @@ export class CloudManager {
         }
 
         const recordedAction = typeof action === 'string' ? undefined : action;
+        if (!recordedAction) {
+            this.playbackRecording.cancelIfReady();
+        }
         const oldModel = this.model.clone();
         if (recordedAction) {
             this.playbackRecording.recordIntervals();

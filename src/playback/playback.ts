@@ -88,7 +88,7 @@ export interface PlaybackCallbacks extends
     PlaybackTimeControl,
     PlaybackLifecycle { }
 
-type PlaybackState = 'idle' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
+type PlaybackState = 'idle' | 'ready' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
 
 export class PlaybackController {
     private state: PlaybackState = 'idle';
@@ -133,14 +133,18 @@ export class PlaybackController {
     start(session: RecordedSession): void {
         this.actions = session.actions;
         this.currentActionIndex = 0;
-        this.state = 'waiting';
+        this.state = 'ready';
         this.canResume = true;
-        this.waitCountdown = this.getInterActionDelay();
-
-        this.reticle.create();
         this.createControlPanel();
         this.updateControlPanel();
+    }
+
+    private beginPlayback(): void {
+        this.state = 'waiting';
+        this.waitCountdown = this.getInterActionDelay();
+        this.reticle.create();
         this.callbacks.pausePlayback();
+        this.updateControlPanel();
     }
 
     pause(): void {
@@ -150,7 +154,7 @@ export class PlaybackController {
     }
 
     onCanvasResized(): void {
-        if (!this.isActive()) return;
+        if (!this.isActive() || this.state === 'ready') return;
         console.log('[Playback] Canvas resized, cancelling playback');
         this.cancel();
     }
@@ -173,6 +177,11 @@ export class PlaybackController {
         this.callbacks.onPlaybackCancelled();
     }
 
+    cancelIfReady(): void {
+        if (this.state !== 'ready') return;
+        this.cancel();
+    }
+
     onUserStateModification(): void {
         if (this.state === 'idle' || this.state === 'complete') return;
         this.canResume = false;
@@ -192,7 +201,7 @@ export class PlaybackController {
     }
 
     update(deltaTime: number): void {
-        if (this.state === 'complete' || this.state === 'error') return;
+        if (this.state === 'ready' || this.state === 'complete' || this.state === 'error') return;
 
         this.reticle.update(deltaTime);
 
@@ -754,7 +763,11 @@ export class PlaybackController {
         });
 
         this.resumeButton?.addEventListener('click', () => {
-            this.exitDismissConfirmMode();
+            if (this.state === 'ready') {
+                this.beginPlayback();
+            } else {
+                this.exitDismissConfirmMode();
+            }
         });
 
         this.finalDismissButton?.addEventListener('click', () => {
@@ -796,18 +809,18 @@ export class PlaybackController {
         this.controlPanel.classList.toggle('error', this.state === 'error');
         this.controlPanel.classList.toggle('confirm-mode', this.dismissConfirmMode);
 
-        // Show/hide buttons based on confirm mode
+        const isReady = this.state === 'ready';
+
         if (this.dismissButton) {
-            this.dismissButton.style.display = this.dismissConfirmMode ? 'none' : 'flex';
+            this.dismissButton.style.display = (this.dismissConfirmMode || isReady) ? 'none' : 'flex';
         }
         if (this.resumeButton) {
-            this.resumeButton.style.display = this.dismissConfirmMode ? 'flex' : 'none';
+            this.resumeButton.style.display = (this.dismissConfirmMode || isReady) ? 'flex' : 'none';
         }
         if (this.finalDismissButton) {
-            this.finalDismissButton.style.display = this.dismissConfirmMode ? 'flex' : 'none';
+            this.finalDismissButton.style.display = (this.dismissConfirmMode && !isReady) ? 'flex' : 'none';
         }
 
-        // Show advance button only during long waits (not in confirm mode)
         const seconds = Math.ceil(this.waitCountdown);
         const isLongWait = this.state === 'waiting' && seconds >= PlaybackController.LONG_WAIT_THRESHOLD;
         if (this.advanceButton) {
@@ -815,7 +828,10 @@ export class PlaybackController {
         }
 
         if (this.countdownDisplay && this.actionDisplay) {
-            if (this.state === 'error') {
+            if (isReady) {
+                this.countdownDisplay.textContent = '';
+                this.actionDisplay.textContent = 'Start playback';
+            } else if (this.state === 'error') {
                 this.countdownDisplay.textContent = '❌ Error';
                 this.actionDisplay.textContent = this.errorMessage;
             } else if (this.dismissConfirmMode) {

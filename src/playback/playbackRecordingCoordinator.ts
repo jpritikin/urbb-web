@@ -233,6 +233,10 @@ export class PlaybackRecordingCoordinator {
         this.playbackController?.cancel();
     }
 
+    cancelIfReady(): void {
+        this.playbackController?.cancelIfReady();
+    }
+
     onCanvasResized(): void {
         this.playbackController?.onCanvasResized();
     }
