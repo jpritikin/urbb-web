@@ -50,6 +50,7 @@ export class ActionRecorder {
         attentionDemands?: AttentionDemandEntry[],
         needAttention?: Record<string, number>,
         isTransitioning?: boolean,
+        orchState?: OrchestratorSnapshot,
     ): void {
         if (count <= 0 || !this.initialModel) return;
         let rngCounts: { model: number } | undefined;
@@ -70,6 +71,7 @@ export class ActionRecorder {
             attentionDemands: attentionDemands?.length ? attentionDemands : undefined,
             needAttention,
             isTransitioning,
+            orchState,
         });
     }
 

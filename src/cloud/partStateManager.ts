@@ -27,11 +27,15 @@ export interface InterPartRelation {
     fromId: string;
     toId: string;
     trust: number;
+    trustFloor: number;
     stance: number;
     stanceFlipOdds: number;
     stanceFlipOddsSetPoint: number;
+    noticed?: boolean;
     dialogues?: ConversationDialogues;
     rumination?: string[];
+    impactRecognition?: string[];
+    impactRejection?: string[];
 }
 
 export class PartStateManager {
@@ -74,7 +78,6 @@ export class PartStateManager {
         if (bio.ageRevealed) openness += 0.5;
         if (bio.identityRevealed) openness += 0.2;
         if (bio.jobAppraisalRevealed) openness += 0.15;
-        if (bio.jobImpactRevealed) openness += 0.15;
         return openness;
     }
 
@@ -167,9 +170,11 @@ export class PartStateManager {
     }
 
     isFormerProtector(cloudId: string): boolean {
-        const hasSelfRelation = this.hasInterPartRelation(cloudId, cloudId);
-        const stillProtecting = this.getProtecting(cloudId).size > 0;
-        return hasSelfRelation && !stillProtecting;
+        return this.wasProtector(cloudId) && !this.getProtecting(cloudId).size;
+    }
+
+    wasProtector(cloudId: string): boolean {
+        return this.partStates.get(cloudId)?.wasProtector ?? false;
     }
 
     revealJob(cloudId: string): void {
@@ -194,17 +199,6 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.biography.jobAppraisalRevealed ?? false;
     }
 
-    revealJobImpact(cloudId: string): void {
-        const state = this.partStates.get(cloudId);
-        if (state && !state.biography.jobImpactRevealed) {
-            state.biography.jobImpactRevealed = true;
-        }
-    }
-
-    isJobImpactRevealed(cloudId: string): boolean {
-        return this.partStates.get(cloudId)?.biography.jobImpactRevealed ?? false;
-    }
-
     isFieldRevealed(cloudId: string, field: string): boolean {
         const bio = this.partStates.get(cloudId)?.biography;
         if (!bio) return false;
@@ -213,7 +207,6 @@ export class PartStateManager {
             case 'identity': return bio.identityRevealed;
             case 'job': return bio.jobRevealed;
             case 'jobAppraisal': return bio.jobAppraisalRevealed;
-            case 'jobImpact': return bio.jobImpactRevealed;
             default: return false;
         }
     }
@@ -298,6 +291,8 @@ export class PartStateManager {
                 this.protections.push({ protectorId, protectedId: id });
             }
         }
+        const state = this.partStates.get(protectorId);
+        if (state) state.wasProtector = true;
     }
 
     removeProtection(protectorId: string, protectedId: string): void {
@@ -336,6 +331,8 @@ export class PartStateManager {
         stanceFlipOdds: number;
         dialogues?: ConversationDialogues;
         rumination?: string[];
+        impactRecognition?: string[];
+        impactRejection?: string[];
     }): void {
         let fromMap = this.interPartRelations.get(fromId);
         if (!fromMap) {
@@ -346,11 +343,14 @@ export class PartStateManager {
             fromId,
             toId,
             trust: opts.trust,
+            trustFloor: 0,
             stance: opts.stance,
             stanceFlipOdds: opts.stanceFlipOdds,
             stanceFlipOddsSetPoint: opts.stanceFlipOdds,
             dialogues: opts.dialogues,
             rumination: opts.rumination,
+            impactRecognition: opts.impactRecognition,
+            impactRejection: opts.impactRejection,
         });
     }
 
@@ -456,15 +456,33 @@ export class PartStateManager {
     addInterPartTrust(fromId: string, toId: string, delta: number, rng: () => number): void {
         const rel = this.interPartRelations.get(fromId)?.get(toId);
         if (rel) {
+            if (rel.trustFloor > 0 && delta < 0) delta *= 0.5;
             const newTrust = rel.trust + delta;
-            if (newTrust < 0) {
-                const overflow = -newTrust;
+            if (newTrust < rel.trustFloor) {
+                const overflow = rel.trustFloor - newTrust;
                 const flipShare = rng();
                 rel.stanceFlipOdds += (1 - rel.stanceFlipOdds) * overflow * flipShare * 0.5;
                 const extremeDir = Math.sign(rel.stance) || 1;
                 rel.stance = Math.max(-1, Math.min(1, rel.stance + extremeDir * overflow * (1 - flipShare) * 0.4));
             }
-            rel.trust = Math.max(0, Math.min(1, newTrust));
+            rel.trust = Math.max(rel.trustFloor, Math.min(1, newTrust));
+        }
+    }
+
+    setNoticed(fromId: string, toId: string): void {
+        const rel = this.interPartRelations.get(fromId)?.get(toId);
+        if (rel) rel.noticed = true;
+    }
+
+    isNoticed(fromId: string, toId: string): boolean {
+        return this.interPartRelations.get(fromId)?.get(toId)?.noticed ?? false;
+    }
+
+    setInterPartTrustFloor(fromId: string, toId: string, floor: number): void {
+        const rel = this.interPartRelations.get(fromId)?.get(toId);
+        if (rel) {
+            rel.trustFloor = floor;
+            if (rel.trust < floor) rel.trust = floor;
         }
     }
 
@@ -611,11 +629,15 @@ export class PartStateManager {
                     fromId: rel.fromId,
                     toId: rel.toId,
                     trust: rel.trust,
+                    trustFloor: rel.trustFloor,
                     stance: rel.stance,
                     stanceFlipOdds: rel.stanceFlipOdds,
                     stanceFlipOddsSetPoint: rel.stanceFlipOddsSetPoint,
                     dialogues: rel.dialogues,
                     rumination: rel.rumination,
+                    noticed: rel.noticed,
+                    impactRecognition: rel.impactRecognition,
+                    impactRejection: rel.impactRejection,
                 });
             }
         }
@@ -649,11 +671,15 @@ export class PartStateManager {
                 fromId: r.fromId,
                 toId: r.toId,
                 trust: r.trust,
+                trustFloor: r.trustFloor ?? 0,
                 stance: r.stance,
                 stanceFlipOdds: r.stanceFlipOdds,
                 stanceFlipOddsSetPoint: r.stanceFlipOddsSetPoint ?? r.stanceFlipOdds,
+                noticed: r.noticed,
                 dialogues: r.dialogues,
                 rumination: r.rumination,
+                impactRecognition: r.impactRecognition,
+                impactRejection: r.impactRejection,
             });
         }
         for (const p of json.proxies) {

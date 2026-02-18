@@ -9,13 +9,11 @@ export interface PartBiography {
     identityRevealed: boolean;
     jobRevealed: boolean;
     jobAppraisalRevealed: boolean;
-    jobImpactRevealed: boolean;
     consentedToHelp: boolean;
 }
 
 export interface PartDialogues {
     burdenedJobAppraisal?: string[];
-    burdenedJobImpact?: string[];
     unburdenedJob?: string;
     gratitudeResponse?: string;
     compassionResponse?: string;
@@ -28,6 +26,7 @@ export interface PartState {
     trust: number;
     needAttention: number;
     wasProxy: boolean;
+    wasProtector: boolean;
     biography: PartBiography;
     dialogues: PartDialogues;
 }
@@ -44,6 +43,7 @@ export function createPartState(id: string, name: string, options?: {
         trust: options?.trust ?? 0.5,
         needAttention: options?.needAttention ?? 0.1,
         wasProxy: false,
+        wasProtector: false,
         biography: {
             ageRevealed: false,
             partAge: options?.partAge ?? null,
@@ -53,7 +53,6 @@ export function createPartState(id: string, name: string, options?: {
             identityRevealed: false,
             jobRevealed: false,
             jobAppraisalRevealed: false,
-            jobImpactRevealed: false,
             consentedToHelp: false,
         },
         dialogues: options?.dialogues ?? {},

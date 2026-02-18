@@ -285,11 +285,19 @@ export class SeatManager {
             }
         }
 
+        for (const carpetId of previousCarpetIds) {
+            const carpet = this.carpets.get(carpetId);
+            if (carpet?.exiting && newSeatIds.has(carpetId)) {
+                this.carpets.delete(carpetId);
+                this.carpetVelocities.delete(carpetId);
+            }
+        }
+
         this.setSeats(seatIds);
 
         let enteringCount = this.getEnteringCarpetCount();
         for (const seatId of seatIds) {
-            if (seatId !== STAR_CLOUD_ID && !previousCarpetIds.has(seatId) && !this.carpets.has(seatId)) {
+            if (seatId !== STAR_CLOUD_ID && !this.carpets.has(seatId)) {
                 this.createCarpet(seatId, seatIds.length, enteringCount);
                 enteringCount++;
             }

@@ -12,7 +12,6 @@ const KNOWN_ACTIONS = new Set([
     'feel_toward',
     'expand_deepen',
     'add_target',
-    'who_do_you_see',
     'help_protected',
     'notice_part',
     'ray_field_select',
@@ -21,6 +20,7 @@ const KNOWN_ACTIONS = new Set([
     'mode_change',
     'process_intervals',
     'nudge_stance',
+    'promote_pending_blend',
 ]);
 
 export function isValidAction(actionId: string): boolean {
@@ -74,13 +74,13 @@ export function formatActionLabel(
         case 'add_target':
             return 'Invite a target';
 
-        case 'who_do_you_see':
-            return `Who do you see: ${name}`;
-
         case 'help_protected':
             return `Help protected: ${name}`;
 
         case 'notice_part':
+            if (action.targetCloudId === '*') {
+                return `Who do you see: ${name}`;
+            }
             if (targetName) {
                 return `Notice: ${name} notices ${targetName}`;
             }
@@ -106,6 +106,9 @@ export function formatActionLabel(
 
         case 'process_intervals':
             return '';  // Silent action, not displayed
+
+        case 'promote_pending_blend':
+            return `${name} blends`;
 
         case 'nudge_stance': {
             const dir = (action.stanceDelta ?? 0) > 0 ? 'speak' : 'listen';

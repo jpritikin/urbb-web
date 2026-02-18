@@ -13,7 +13,7 @@ import type { BiographyField } from '../../star/selfRay.js';
 
 export interface TestableSimulator {
     executeAction(action: string, cloudId: string, targetCloudId?: string, field?: string, newMode?: 'panorama' | 'foreground', stanceDelta?: number): ActionResult;
-    advanceIntervals(count: number): void;
+    advanceIntervals(count: number, orchState?: OrchestratorSnapshot): void;
     getModelStateSnapshot(): ModelSnapshot;
     getMode(): 'panorama' | 'foreground';
     setMode(mode: 'panorama' | 'foreground'): void;
@@ -88,6 +88,7 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             {
                 act: (_label, fn) => fn(),
                 showThoughtBubble: (text, cloudId) => {
+                    this.model.addThoughtBubble(text, cloudId, true);
                     if (this.model.isBlended(cloudId)) {
                         this.model.parts.setUtterance(cloudId, text, this.timeAdvancer?.getTime() ?? 0);
                     }
@@ -151,6 +152,8 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
                 stanceFlipOdds: r.stanceFlipOdds,
                 dialogues: r.dialogues,
                 rumination: r.rumination,
+                impactRecognition: r.impactRecognition,
+                impactRejection: r.impactRejection,
             });
         }
         for (const p of config.proxies ?? []) {
@@ -175,6 +178,22 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             this.model.setMode(newMode);
             this.model.syncConversation(this.rng);
             return { success: true, stateChanges: [`mode -> ${newMode}`] };
+        }
+
+        if (action === 'promote_pending_blend') {
+            const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
+            let item = this.model.dequeuePendingBlend();
+            while (item && item.cloudId !== cloudId) {
+                tempQueue.push(item);
+                item = this.model.dequeuePendingBlend();
+            }
+            for (const temp of tempQueue) {
+                this.model.enqueuePendingBlend(temp.cloudId, temp.reason);
+            }
+            if (item) {
+                this.model.addBlendedPart(cloudId, item.reason);
+            }
+            return { success: true, stateChanges: [`${cloudId}:promoted_to_blended`] };
         }
 
         // Handle add_target pending action completion (mirroring UI's completePendingAction)
@@ -215,7 +234,10 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         this.timeAdvancer.advance(deltaTime);
     }
 
-    advanceIntervals(count: number): void {
+    advanceIntervals(count: number, orchState?: OrchestratorSnapshot): void {
+        if (orchState) {
+            this.orchestrator.restoreState(orchState);
+        }
         this.timeAdvancer.advanceIntervals(count);
     }
 
@@ -256,6 +278,7 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             targets: [...this.model.getTargetCloudIds()],
             blended: this.model.getBlendedParts(),
             selfRay: this.model.getSelfRay()?.targetCloudId ? { targetCloudId: this.model.getSelfRay()!.targetCloudId } : null,
+            thoughtBubbles: this.model.getThoughtBubbles().map(b => ({ id: b.id, cloudId: b.cloudId, text: b.text, validated: b.validated, partInitiated: b.partInitiated })),
         };
     }
 

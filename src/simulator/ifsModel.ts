@@ -24,9 +24,12 @@ export interface PartMessage {
 }
 
 export interface ThoughtBubble {
+    id: number;
     text: string;
     cloudId: string;
-    expiresAt: number;  // timestamp when this bubble should disappear
+    expiresAt: number;
+    validated?: boolean;
+    partInitiated?: boolean;
 }
 
 export type SimulatorMode = 'panorama' | 'foreground';
@@ -56,7 +59,16 @@ export class SimulatorModel {
     private conversationParticipantIds: [string, string] | null = null;
     private conversationPhases: Map<string, IfioPhase> = new Map();
     private conversationSpeakerId: string | null = null;
+    private simulationTime: number = 0;
     private onModeChange?: (mode: SimulatorMode) => void;
+
+    getSimulationTime(): number {
+        return this.simulationTime;
+    }
+
+    advanceSimulationTime(dt: number): void {
+        this.simulationTime += dt;
+    }
 
     getSelfAmplification(): number {
         return this.selfAmplification;
@@ -447,6 +459,7 @@ export class SimulatorModel {
         cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
         cloned.conversationEffectiveStances = new Map(this.conversationEffectiveStances);
         cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
+        cloned.simulationTime = this.simulationTime;
         return cloned;
     }
 
@@ -557,27 +570,39 @@ export class SimulatorModel {
         this.messages = [];
     }
 
-    static readonly THOUGHT_BUBBLE_DURATION_MS = 10000;
+    static readonly THOUGHT_BUBBLE_DURATION = 10;
 
-    addThoughtBubble(text: string, cloudId: string, now: number = Date.now()): void {
-        const expiresAt = now + SimulatorModel.THOUGHT_BUBBLE_DURATION_MS;
-        this.thoughtBubbles.unshift({ text, cloudId, expiresAt });
+    addThoughtBubble(text: string, cloudId: string, partInitiated: boolean = false): void {
+        const expiresAt = this.simulationTime + SimulatorModel.THOUGHT_BUBBLE_DURATION;
+        const id = ++this.messageIdCounter;
+        this.thoughtBubbles.push({ id, text, cloudId, expiresAt, partInitiated });
+    }
+
+    removeThoughtBubble(id: number): void {
+        const idx = this.thoughtBubbles.findIndex(b => b.id === id);
+        if (idx !== -1) {
+            this.thoughtBubbles.splice(idx, 1);
+        }
     }
 
     getThoughtBubbles(): ThoughtBubble[] {
         return [...this.thoughtBubbles];
     }
 
-    getCurrentThoughtBubble(): ThoughtBubble | null {
-        return this.thoughtBubbles[0] ?? null;
-    }
-
-    expireThoughtBubbles(now: number = Date.now()): void {
-        this.thoughtBubbles = this.thoughtBubbles.filter(b => b.expiresAt > now);
+    expireThoughtBubbles(): void {
+        this.thoughtBubbles = this.thoughtBubbles.filter(b => b.expiresAt > this.simulationTime);
     }
 
     clearThoughtBubbles(): void {
         this.thoughtBubbles = [];
+    }
+
+    validateThoughtBubble(bubbleId: number, extendSeconds: number): boolean {
+        const bubble = this.thoughtBubbles.find(b => b.id === bubbleId);
+        if (!bubble) return false;
+        bubble.validated = true;
+        bubble.expiresAt = this.simulationTime + extendSeconds;
+        return true;
     }
 
     removeThoughtBubblesForCloud(cloudId: string): void {
@@ -659,8 +684,13 @@ export class SimulatorModel {
     }
 
     addTherapistStanceDelta(cloudId: string, delta: number): void {
+        if (!this.conversationParticipantIds) return;
+        const [a, b] = this.conversationParticipantIds;
+        const otherId = cloudId === a ? b : a;
+        const stance = this.parts.getRelationStance(cloudId, otherId);
         const current = this.conversationTherapistDelta.get(cloudId) ?? 0;
-        this.conversationTherapistDelta.set(cloudId, Math.max(-1, Math.min(1, current + delta)));
+        const unclamped = current + delta;
+        this.conversationTherapistDelta.set(cloudId, Math.max(-1 - stance, Math.min(1 - stance, unclamped)));
     }
 
     getConversationTherapistDeltas(): Map<string, number> {
@@ -760,6 +790,7 @@ export class SimulatorModel {
             conversationParticipantIds: this.conversationParticipantIds,
             conversationPhases: Object.fromEntries(this.conversationPhases),
             conversationSpeakerId: this.conversationSpeakerId,
+            simulationTime: this.simulationTime,
         };
     }
 
@@ -778,7 +809,10 @@ export class SimulatorModel {
         model.messages = json.messages.map(m => ({ ...m }));
         model.messageIdCounter = json.messageIdCounter;
         (model as { parts: PartStateManager }).parts = PartStateManager.fromJSON(json);
-        model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({ ...b }));
+        model.thoughtBubbles = (json.thoughtBubbles ?? []).map(b => ({
+            ...b,
+            id: b.id ?? ++model.messageIdCounter,
+        }));
         model.victoryAchieved = json.victoryAchieved ?? false;
         model.selfAmplification = json.selfAmplification ?? 1;
         model.mode = json.mode ?? 'panorama';
@@ -800,6 +834,7 @@ export class SimulatorModel {
             }
         }
         model.conversationSpeakerId = json.conversationSpeakerId ?? null;
+        model.simulationTime = json.simulationTime ?? 0;
         return model;
     }
 }

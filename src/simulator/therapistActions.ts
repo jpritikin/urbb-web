@@ -13,7 +13,6 @@ export const STAR_MENU_ACTIONS: TherapistAction[] = [
 
 export const CLOUD_MENU_ACTIONS: TherapistAction[] = [
     { id: 'notice_part', question: 'What do you notice about that part?', shortName: 'Notice', category: 'discovery' },
-    { id: 'who_do_you_see', question: 'Who do you see when you look at the client?', shortName: 'Who?', category: 'discovery' },
     { id: 'job', question: "What is your job?", shortName: 'Job', category: 'role' },
     { id: 'join_conference', question: 'Can $PART join the conference?', shortName: 'Join', category: 'relationship' },
     { id: 'separate', question: 'Can you ask $PART to separate a bit and sit next to you?', shortName: 'Separate', category: 'relationship' },
@@ -28,7 +27,6 @@ export const SELFRAY_MENU_ACTIONS: TherapistAction[] = [
     { id: 'age', question: 'How old are you?', shortName: 'Age', category: 'discovery' },
     { id: 'identity', question: 'Who are you?', shortName: 'Identity', category: 'discovery' },
     { id: 'jobAppraisal', question: 'How do you like your job?', shortName: 'Appraisal', category: 'discovery' },
-    { id: 'jobImpact', question: 'How do you understand the impact of your job?', shortName: 'Impact', category: 'discovery' },
     { id: 'gratitude', question: 'Thank you for being here', shortName: 'Gratitude', category: 'relationship' },
     { id: 'compassion', question: 'I care about you', shortName: 'Compassion', category: 'relationship' },
 ];

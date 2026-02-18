@@ -81,7 +81,9 @@ export function computeBubblePlacement(
     bubbleHeight: number,
     canvasWidth: number,
     canvasHeight: number,
-    config: BubbleConfig
+    config: BubbleConfig,
+    siblingIndex: number = 0,
+    siblingCount: number = 1
 ): { bubbleX: number; bubbleY: number; tailDirX: number; tailDirY: number } {
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
@@ -92,8 +94,21 @@ export function computeBubblePlacement(
     const dirX = dist > 0 ? dx / dist : 0;
     const dirY = dist > 0 ? dy / dist : -1;
 
-    let bubbleX = anchorX + dirX * (config.tailLength + bubbleWidth / 2);
-    let bubbleY = anchorY + dirY * (config.tailLength + bubbleHeight / 2);
+    // Spread siblings by rotating the direction perpendicular to the tail
+    let effDirX = dirX;
+    let effDirY = dirY;
+    if (siblingCount > 1) {
+        const spreadAngle = Math.PI / 4; // 45° total spread
+        const t = siblingIndex / (siblingCount - 1) - 0.5; // -0.5 to 0.5
+        const angle = t * spreadAngle;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        effDirX = dirX * cos - dirY * sin;
+        effDirY = dirX * sin + dirY * cos;
+    }
+
+    let bubbleX = anchorX + effDirX * (config.tailLength + bubbleWidth / 2);
+    let bubbleY = anchorY + effDirY * (config.tailLength + bubbleHeight / 2);
 
     bubbleX = Math.max(config.margin + bubbleWidth / 2, Math.min(canvasWidth - config.margin - bubbleWidth / 2, bubbleX));
     bubbleY = Math.max(config.margin + bubbleHeight / 2, Math.min(canvasHeight - config.margin - bubbleHeight / 2, bubbleY));
@@ -113,7 +128,9 @@ export function computeBubbleLayout(
     text: string,
     canvasWidth: number,
     canvasHeight: number,
-    config: BubbleConfig
+    config: BubbleConfig,
+    siblingIndex: number = 0,
+    siblingCount: number = 1
 ): BubbleLayout {
     const size = computeBubbleSize(text, config);
     const placement = computeBubblePlacement(
@@ -123,7 +140,9 @@ export function computeBubbleLayout(
         size.height,
         canvasWidth,
         canvasHeight,
-        config
+        config,
+        siblingIndex,
+        siblingCount
     );
     return {
         bubbleX: placement.bubbleX,

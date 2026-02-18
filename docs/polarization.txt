@@ -1,0 +1,176 @@
+==== Polarizations
+
+Sometimes it is not feasible to xref:ifs-isolate-target[isolate a target part.]
+When parts are locked in conflict, working with one at a time can backfire. Imagine trying to mediate between feuding parents by only talking to one of them. The excluded parent would likely sabotage any progress.footnote:[<<booth2025>>, pp. 28–29.]
+
+Meet James, age 42, a divorced truck driver of Irish-American descent. He has been addicted to prescription painkillers for two years, since a back injury while unloading cargo. His attempts at sobriety come from a strong desire to be in his children's lives. But he's relapsed three times in 24 weeks. This led him to seek help, despite the shame of admitting his addiction to his family.
+
+.Hypothetical progress toward establishing trust in a polarized system. The number indicates the order in which we spoke with each part. We developed solid relationships with the Ashamed Exile, Caretaker Firefighter, and Determined Worker. The Addicted Protector is only partially trusting. This part may need more attention. The unequal progress reflects the unpredictable nature of the process. Notice how the Caretaker Firefighter barely let us in during #8, then suddenly softened four sessions later in #12. The Critical Manager may also need more attention. Though not pictured here, progress does not always move forward; trust can also be lost through therapist errors.
+[id=img-polarization]
+image::polarization.svg[]
+
+Using the xref:ex-conference-table[conference table technique], we can begin to get familiar with the parts that are in conflict. Since parts in polarizations are interconnected, you can start with any part and it will naturally lead you to discover the others. But before interviewing a part, it is prudent to ask "is any rival part concerned about me getting to know you better?" This prevents rival parts from feeling excluded or threatened.
+
+To maintain balance, don't hesitate to switch between parts. Another way to prioritize parts is to ask the client, "Do you favor one side or another?" A disfavored part is a good part to spend time with. Once parts are unblended, the Self doesn't have favorites. All parts hold equal value.
+
+Our goal is to strengthen the relationship between James and each part. A full example of interviewing polarized parts would mislead. The process is often unpredictable and non-linear (see xref:img-polarization[]). Suppose we have spent a few hours with James getting to know his parts. Here is what we have learned so far:
+
+**Addicted Protector** uses oxycodone to numb both physical and emotional pain. It desperately tries to help James function through his workday and mask his sense of failure. It believes "This is the only way to get through the day."
+
+**Ashamed Exile** carries the deep pain of letting down his children and failing as a father. It holds memories of missed weekends and phone calls. It feels fundamentally unworthy.
+
+**Critical Manager** berates James for his weakness. It pushes him to "just stop using" and compares him to his father who "never needed pills to deal with pain." It believes harsh self-judgment will force sobriety.
+
+**Caretaker Firefighter** emerges when the shame becomes too intense. It convinces James to isolate and avoid family to prevent them from detecting his intoxication. It believes "It's better to disappear than let them see you like this."
+
+**Determined Worker** desperately maintains his job performance. It regards his CDL as the last thread connecting him to his identity as a responsible provider. It's exhausted from trying to compensate for his impairment.
+
+We build trust with each part, as usual. We also pay particular attention to cross-part interactions. xref:ifs-protector-impact[What is each part's impact and how do other parts affect it in the polarization?] A good question is whether a part can recognize the positive intention behind rival parts' behavior. Connection with the Self and growth in mutual understanding invites de-escalation.
+
+* The Addicted Protector develops a more trusting relationship with James. It softens and feels a bit less panicked. It begins to allow small pauses before turning to drugs ("Maybe I can wait 30 minutes"). As it experiments with these delays, it discovers that not every pain spike is unbearable. This makes it feel less desperate and panicked about immediate relief. This reduced urgency, in turn, makes it less triggering to the Critical Manager.
+
+* The Critical Manager develops a more trusting relationship with James. It begins feeling more understood and softens its style of delivery. Instead of harsh attacks ("You're weak!"), it starts using more measured warnings ("This could affect your drug test").
+At the same time, it notices that the Addicted Protector occasionally manages pain without drug use.
+Its less extreme approach is being heard. So it feels less obliged to yell and condemn, which reduces its attacking stance.
+
+These parts enter an improving cycle. The Addicted One's brief pauses reduce the Manager's panic about total loss of control, leading to less harsh criticism. This in turn makes the Addicted One feel less attacked and more able to pause, which further reassures the Manager. Both parts remain active. But they shift from a crisis-driven clash to a more measured response to James's pain.
+
+Getting to know parts and helping them unblend isn't always enough. The therapist might check whether parts are willing to reach out to the Self rather than attacking each other. Sometimes this may be enough to de-escalate. But there are times when two opposing parts (or teams of parts) need to communicate directly. To reduce daily friction, it may be necessary to create or update working agreements.
+
+There are two ways to help parts have these important conversations. The therapist can choose the approach based on the polarization's complexity and the client's access to Self. The first method is more casual and quick: parts can speak through the therapist as an intermediary. The second approach takes more time to set up but can work better for complex negotiations.
+
+In this second method, both sides agree to talk directly and promise to stay respectful throughout their discussion. The client's Self, with therapist oversight, monitors whether parts treat each other respectfully and intervenes if a part gets too extreme. This requires that the client have enough Self-leadership to track the conversation and step in when needed. If the therapist doubts that the client has enough Self-energy to perform in this capacity, the first method is preferred.
+
+.Work with James's polarized parts.
+====
+[horizontal]
+[.smallcaps]#Therapist#:: Can you focus on the Addicted One?
+
+[.smallcaps]#James#:: It seems pretty beat down, but it's really concerned about my back pain. It is firm that the drugs help.
+
+[.smallcaps]#Therapist#:: How do you feel toward the Addicted One hearing its concern about your pain?
+
+[.smallcaps]#James#:: It's strange, almost grateful. It's been trying to help me keep working, keep seeing my kids.
+
+[.smallcaps]#Therapist#:: Can you let the Addicted One know? How does it react?
+
+[.smallcaps]#James#:: (_pauses, eyes closed_) It's... crying. I've never seen it cry before. Usually it's forceful about the need to medicate. But now it's showing me how exhausted it is.
+
+[.smallcaps]#Therapist#:: Do any rival parts object to us spending more time with the Addicted One?
+
+[.smallcaps]#James#:: Yeah, the Critical Manager is getting upset. This is exactly why I can't quit--making excuses and feeling sorry for myself.
+
+[.smallcaps]#Therapist#:: I see. Then let's hear from the Critical Manager. Can you let the Addicted One know that we'll come back soon?
+
+[.smallcaps]#James#:: Yeah... it seems okay with that.
+
+[.smallcaps]#Therapist#:: Okay, when you focus on the Critical Manager, what do you notice?
+
+[.smallcaps]#James#:: It's right here, standing over me. Arms crossed, glaring with anger.
+
+[.smallcaps]#Therapist#:: Can you invite it to say more about why it is angry?
+
+[.smallcaps]#James#:: (_voice hardening_) I'm angry because everything could fall apart! One more failed drug test and that's it--no more driving, no more income, no more weekends with my kids. This is about survival. The Addicted One is playing with fire. [_The part took over?_]
+
+[.smallcaps]#Therapist#:: Does that make sense? [_Invite it to unblend._]
+
+[.smallcaps]#James#:: Yeah, it does. [_James is back in Self._]
+
+[.smallcaps]#Therapist#:: Can you let the Critical Manager know that it makes sense? How does it react?
+
+[.smallcaps]#James#:: (_long pause, eyes closed_) It's a bit quieter.
+
+[.smallcaps]#Therapist#:: Is the Critical Manager willing to notice the Addicted One's positive intention for James?
+
+[.smallcaps]#James#:: (_frowning, internal struggle visible_) It's resisting. But it's showing me a memory--me pushing through a delivery when my back was on fire. The Addicted One made that possible. The Critical Manager actually respected that? This is weird.
+
+[.smallcaps]#Therapist#:: How do you feel toward the Critical Manager now?
+
+[.smallcaps]#James#:: I feel grateful. And sad. It's been trying so hard to keep my life from falling apart.
+
+[.smallcaps]#Therapist#:: Can you let the Critical Manager know? How does it react?
+
+[.smallcaps]#James#:: It's not really paying attention. It seems distracted. Ugh, I can't do this. I'm such a failure. I've messed everything up. My kids barely know me anymore. Tracy, she tried so hard to make things work.
+
+[.smallcaps]#Therapist#:: [_Not sure which part we're talking to._] What are you noticing now?
+
+[.smallcaps]#James#:: (choking up) I miss them so much. The kids used to run to the door when I came home. Now they barely look up from their phones during visits. I'm failing at everything that matters. [_Probably blended with the Ashamed Exile?_]
+
+[.smallcaps]#Therapist#:: Yeah, it must be awful to be so distant from your kids. [_Switch to implicit direct access._]
+
+[.smallcaps]#James#:: (_tears flowing_) They deserved better. Tracy deserved better.
+
+[.smallcaps]#Therapist#:: You wish you could have given more to your family?
+
+[.smallcaps]#James#:: (_nodding, covering face with hands_) Every day. Every single day.
+
+[.smallcaps]#Therapist#:: Yeah, that makes sense. Can you make a little space for James who-is-not-a-part? He could help.
+
+[.smallcaps]#James#:: (_taking deep breaths_) Okay, it's a little quieter now. [_The part agreed to unblend. We're back to in-sight._]
+
+[.smallcaps]#Therapist#:: Okay, now how do you feel toward this part that misses his wife and kids?
+
+[.smallcaps]#James#:: I feel bad for him. He's carrying so much pain, so much regret.
+
+[.smallcaps]#Therapist#:: Can you let the part know? How does it react?
+
+[.smallcaps]#James#:: It's a little better. He's not so alone with the pain anymore.
+
+[.smallcaps]#Therapist#:: Does this part need more help now or can we come back soon?
+
+[.smallcaps]#James#:: I think it'll be okay for now.
+
+[.smallcaps]#Therapist#:: Okay, can you focus on the Addicted One again?
+
+[.smallcaps]#James#:: Yeah, it's right here. It's really tired.
+
+[.smallcaps]#Therapist#:: What does the Addicted One need from you?
+
+[.smallcaps]#James#:: (thoughtfully) It would really like the critic to back off a bit.
+
+[.smallcaps]#Therapist#:: Does that make sense?
+
+[.smallcaps]#James#:: Yeah, it does. When the critic gets going, the Addicted One doesn't know what to do. Its job gets a lot harder.
+
+[.smallcaps]#Therapist#:: Is the Critical Manager available?
+
+[.smallcaps]#James#:: Yeah.
+
+[.smallcaps]#Therapist#:: Would the Critical Manager be willing to raise its concerns with you instead of beating up the Addicted One?
+
+[.smallcaps]#James#:: What do you mean? It doesn't trust me.
+
+[.smallcaps]#Therapist#:: Is the Critical Manager willing to look at you and describe who it sees?
+
+[.smallcaps]#James#:: (uncomfortable) It sees... a screw-up. Someone weak. Someone who... (voice catching) who's letting everyone down.
+
+[.smallcaps]#Therapist#:: Can you ask the Ashamed One to separate and sit next to you?
+
+[.smallcaps]#James#:: Hm, yeah okay.
+
+[.smallcaps]#Therapist#:: Can you ask Critical Manager to look at you again and describe who it sees?
+
+[.smallcaps]#James#:: It sees my dad.
+
+[.smallcaps]#Therapist#:: Can you ask your dad to separate and sit next to you?
+
+[.smallcaps]#James#:: Hm, yeah okay.
+
+[.smallcaps]#Therapist#:: Can you ask Critical Manager to look at you again and describe who it sees?
+
+[.smallcaps]#James#:: It's surprised. It didn't know I was grown up. [_This might be a xref:ifs-self-image-part[self-image part.] Let's check._]
+
+[.smallcaps]#Therapist#:: How do you feel toward the Critical Manager now?
+
+[.smallcaps]#James#:: I feel grateful. And sad.
+
+[.smallcaps]#Therapist#:: Is the Critical Manager getting that?
+
+[.smallcaps]#James#:: Yeah.
+
+[.smallcaps]#Therapist#:: What's it like for the Critical Manager to notice your appreciation?
+
+[.smallcaps]#James#:: It's surprised. It's not use to being appreciated. [_It wasn't a self-image part._]
+====
+
+Working with polarized parts is one of the most complex areas of the IFS model. The process rarely goes in a straight line. Both therapist and client need patience. Later in this book, we'll touch on other examples of polarized systems.footnote:[For example, the Prayer and Science teams can get locked in conflict. We'll help them get to know each other better in xref:7-morality#prayer-science-polarization[].]

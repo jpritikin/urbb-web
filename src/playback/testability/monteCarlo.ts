@@ -560,8 +560,8 @@ export class RandomWalkRunner {
                 const hasSelfRayOnProtectee = selfRay?.targetCloudId === protecteeId;
 
                 if (!proxyInTargets) {
-                    // Step 1: Get proxy blended via who_do_you_see on protectee
-                    if (action.action === 'who_do_you_see' && action.cloudId === protecteeId) {
+                    // Step 1: Get proxy blended via notice_part on star on protectee
+                    if (action.action === 'notice_part' && action.cloudId === protecteeId && action.targetCloudId === '*') {
                         score += 25;
                     }
                     if (action.action === 'join_conference' && action.cloudId === protecteeId) {
@@ -589,8 +589,8 @@ export class RandomWalkRunner {
                         }
                     }
                 } else {
-                    // Step 4: Use who_do_you_see to clear proxies (95% chance with ray)
-                    if (action.action === 'who_do_you_see' && action.cloudId === protecteeId) {
+                    // Step 4: Notice star to clear proxies (95% chance with ray)
+                    if (action.action === 'notice_part' && action.cloudId === protecteeId && action.targetCloudId === '*') {
                         score += 35;
                     }
                 }
@@ -733,8 +733,8 @@ export class RandomWalkRunner {
                 // Then: handle proxies (similar to clear_proxies phase)
                 else if (proxies.size > 0) {
                     if (!proxyInTargets) {
-                        // Get proxy blended via who_do_you_see
-                        if (action.action === 'who_do_you_see' && action.cloudId === partId) {
+                        // Get proxy blended via notice_part on star
+                        if (action.action === 'notice_part' && action.cloudId === partId && action.targetCloudId === '*') {
                             score += 35;
                         }
                     } else if (blendedParts.length > 0) {
@@ -747,7 +747,7 @@ export class RandomWalkRunner {
                         }
                     } else {
                         // Clear proxies with ray
-                        if (action.action === 'who_do_you_see' && action.cloudId === partId) {
+                        if (action.action === 'notice_part' && action.cloudId === partId && action.targetCloudId === '*') {
                             score += 45;
                         }
                     }

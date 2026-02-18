@@ -53,7 +53,7 @@ export function replaySession(session: RecordedSession): ReplayResult {
         if (action.action === 'process_intervals') {
             const count = action.count ?? 0;
             if (count > 0) {
-                sim.advanceIntervals(count);
+                sim.advanceIntervals(count, action.orchState);
             }
             if (action.rngCounts) {
                 const actual = sim.getRngCount();
@@ -133,9 +133,9 @@ export function replaySession(session: RecordedSession): ReplayResult {
         if (JSON.stringify(preState.targets) !== JSON.stringify(postState.targets) || JSON.stringify(preState.blended) !== JSON.stringify(postState.blended)) {
             stateTrace.push(`#${i}: targets ${JSON.stringify(preState.targets)}->${JSON.stringify(postState.targets)}, blended ${JSON.stringify(preState.blended)}->${JSON.stringify(postState.blended)}`);
         }
-        if (action.action === 'who_do_you_see') {
+        if (action.action === 'notice_part' && action.targetCloudId === '*') {
             const selfRay = model.getSelfRay();
-            stateTrace.push(`#${i} who_do_you_see: selfRay=${selfRay?.targetCloudId ?? 'none'}, success=${result.success}`);
+            stateTrace.push(`#${i} notice_star: selfRay=${selfRay?.targetCloudId ?? 'none'}, success=${result.success}`);
         }
 
         if (!firstRngDivergence && action.rngCounts) {

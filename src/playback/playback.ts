@@ -1,4 +1,4 @@
-import type { RecordedAction, RecordedSession } from './testability/types.js';
+import type { RecordedAction, RecordedSession, OrchestratorSnapshot } from './testability/types.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
@@ -72,8 +72,9 @@ export interface PlaybackModelAccess {
 export interface PlaybackTimeControl {
     pausePlayback: () => void;
     resumePlayback: () => void;
-    advanceIntervals: (count: number) => void;
+    advanceIntervals: (count: number, orchState?: OrchestratorSnapshot) => void;
     executeSpontaneousBlend: (cloudId: string) => void;
+    promotePendingBlend: (cloudId: string) => void;
 }
 
 export interface PlaybackLifecycle {
@@ -229,7 +230,7 @@ export class PlaybackController {
         if (action.action === 'process_intervals') {
             const count = action.count ?? 0;
             if (count > 0) {
-                this.callbacks.advanceIntervals(count);
+                this.callbacks.advanceIntervals(count, action.orchState);
             }
             if (action.rngCounts) {
                 const verifyResult = this.callbacks.onActionCompleted(action);
@@ -257,6 +258,14 @@ export class PlaybackController {
             }
             this.currentActionIndex++;
             this.advanceToNextAction();
+            return;
+        }
+
+        // For promote_pending_blend: promote immediately (no animation wait needed)
+        if (action.action === 'promote_pending_blend') {
+            this.callbacks.promotePendingBlend(action.cloudId);
+            this.currentActionIndex++;
+            this.waitCountdown = 0;
             return;
         }
 

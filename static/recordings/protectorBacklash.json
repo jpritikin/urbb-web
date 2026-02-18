@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "codeVersion": "v3.59.0",
-  "platform": "mobile",
-  "modelSeed": 1954097542,
-  "timestamp": 1771276381760,
+  "codeVersion": "v3.66.0",
+  "platform": "desktop",
+  "modelSeed": 825914689,
+  "timestamp": 1771454658605,
   "initialModel": {
     "targetCloudIds": [],
     "supportingParts": {},
@@ -20,6 +20,7 @@
         "trust": 0,
         "needAttention": 0.5,
         "wasProxy": false,
+        "wasProtector": true,
         "biography": {
           "ageRevealed": false,
           "partAge": 8,
@@ -29,16 +30,12 @@
           "identityRevealed": false,
           "jobRevealed": false,
           "jobAppraisalRevealed": false,
-          "jobImpactRevealed": false,
           "consentedToHelp": false
         },
         "dialogues": {
           "burdenedJobAppraisal": [
             "I'm exhausted with my job.",
             "I don't want to criticize, but I have to."
-          ],
-          "burdenedJobImpact": [
-            "I am harsh, but I help avoid critiques from outside."
           ],
           "unburdenedJob": "I help you foresee risks."
         }
@@ -49,6 +46,7 @@
         "trust": 0.2,
         "needAttention": 0.3,
         "wasProxy": false,
+        "wasProtector": false,
         "biography": {
           "ageRevealed": false,
           "partAge": "child",
@@ -58,7 +56,6 @@
           "identityRevealed": false,
           "jobRevealed": false,
           "jobAppraisalRevealed": false,
-          "jobImpactRevealed": false,
           "consentedToHelp": false
         },
         "dialogues": {
@@ -81,6 +78,7 @@
         "fromId": "cloud_1",
         "toId": "cloud_1",
         "trust": 0.2,
+        "trustFloor": 0,
         "stance": 0.6,
         "stanceFlipOdds": 0.05,
         "stanceFlipOddsSetPoint": 0.05,
@@ -100,25 +98,41 @@
     "conversationTherapistDelta": {},
     "conversationParticipantIds": null,
     "conversationPhases": {},
-    "conversationSpeakerId": null
+    "conversationSpeakerId": null,
+    "simulationTime": 0
   },
   "actions": [
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 18,
+      "count": 5,
       "rngCounts": {
         "model": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "select_a_target",
-      "cloudId": "cloud_2",
-      "elapsedTime": 9.01,
-      "effectiveTime": 9.006000000000014,
-      "waitCount": 4,
-      "cumulativeTime": 9.01,
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.507800000000745,
+      "effectiveTime": 2.5123999999985105,
+      "waitCount": 1,
+      "cumulativeTime": 2.507800000000745,
       "rngCounts": {
         "model": 0
       },
@@ -126,11 +140,16 @@
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
-          "cloud_2"
+          "cloud_1"
         ],
         "blended": [],
         "selfRay": null,
@@ -140,19 +159,17 @@
             "ageRevealed": false,
             "identityRevealed": false,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           },
           "cloud_2": {
             "ageRevealed": false,
             "identityRevealed": false,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.5900000000000001,
+          "cloud_1": 0.525,
           "cloud_2": 0.3
         },
         "trust": {
@@ -170,80 +187,24 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 22,
-      "rngCounts": {
-        "model": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "elapsedTime": 12.334,
-      "effectiveTime": 11.321000000000003,
-      "waitCount": 6,
-      "cumulativeTime": 21.344,
-      "rngCounts": {
-        "model": 0
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_2"
         ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": {
-          "actionId": "feel_toward",
-          "sourceCloudId": "*"
-        },
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": true,
+              "exiting": false,
+              "landingProgress": 0
+            }
           },
-          "cloud_2": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.7000000000000002,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0,
-          "cloud_2": 0.2
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
+          "conversationParticipantIds": null,
+          "transitionDirection": "forward",
+          "transitionProgress": 0
+        }
       }
     },
     {
@@ -253,16 +214,30 @@
       "rngCounts": {
         "model": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "*",
-      "targetCloudId": "cloud_2",
-      "elapsedTime": 0.694,
-      "effectiveTime": 0.7160000000000004,
-      "waitCount": 0,
-      "cumulativeTime": 22.038,
+      "elapsedTime": 2.203099999997765,
+      "effectiveTime": 1.2003000000007449,
+      "waitCount": 1,
+      "cumulativeTime": 4.71089999999851,
       "rngCounts": {
         "model": 0
       },
@@ -270,724 +245,12 @@
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.7100000000000002,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0,
-          "cloud_2": 0.2
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 11,
-      "rngCounts": {
-        "model": 0
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "identity",
-      "elapsedTime": 5.745,
-      "effectiveTime": 5.739999999999996,
-      "waitCount": 2,
-      "cumulativeTime": 27.783,
-      "rngCounts": {
-        "model": 1
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.7872183606959879
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.7650000000000002,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0,
-          "cloud_2": 0.25
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 16,
-      "rngCounts": {
-        "model": 1
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "age",
-      "elapsedTime": 7.917,
-      "effectiveTime": 7.9150000000000045,
-      "waitCount": 3,
-      "cumulativeTime": 35.7,
-      "rngCounts": {
-        "model": 3
-      },
-      "rngLog": [
-        {
-          "label": "age:backlash_check",
-          "value": 0.12106028874404728
-        },
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.9928774992004037
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "cloud_1"
-        ],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": false,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 1.5450000000000002,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 15,
-      "rngCounts": {
-        "model": 15
-      },
-      "rngLog": [
-        {
-          "label": "dialogue_pick",
-          "value": 0.10120117198675871
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.5876042929012328
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.5427264601457864
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.8336787885054946
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.7000557542778552
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.49895623163320124
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.284501226618886
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.03473042952828109
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.9701292847748846
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.12384549295529723
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.7350945651996881
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.23513736994937062
-        }
-      ]
-    },
-    {
-      "action": "job",
-      "cloudId": "cloud_1",
-      "elapsedTime": 7.561,
-      "effectiveTime": 7.563000000000006,
-      "waitCount": 3,
-      "cumulativeTime": 43.261,
-      "rngCounts": {
-        "model": 15
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "cloud_1": 7.5
-        },
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "cloud_1"
-        ],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 1.104064683775629,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 10,
-      "rngCounts": {
-        "model": 25
-      },
-      "rngLog": [
-        {
-          "label": "dialogue_pick",
-          "value": 0.1672900845296681
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.20026700291782618
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.5171850326005369
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.12934805499389768
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.482328963233158
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.1869573313742876
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.3815617721993476
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.16904831444844604
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.988290776964277
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.60204718564637
-        }
-      ]
-    },
-    {
-      "action": "be_with",
-      "cloudId": "cloud_1",
-      "elapsedTime": 5.17,
-      "effectiveTime": 5.17999999999999,
-      "waitCount": 2,
-      "cumulativeTime": 48.431,
-      "rngCounts": {
-        "model": 25
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "cloud_1": 12.5
-        },
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "cloud_1"
-        ],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6776883258094863,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 4,
-      "rngCounts": {
-        "model": 29
-      },
-      "rngLog": [
-        {
-          "label": "dialogue_pick",
-          "value": 0.42808685172349215
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.83693354181014
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.4807746054138988
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.607048240955919
-        }
-      ]
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 2.046,
-      "effectiveTime": 2.044999999999999,
-      "waitCount": 1,
-      "cumulativeTime": 50.477,
-      "rngCounts": {
-        "model": 29
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "cloud_1": 14.5
-        },
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [],
-        "blended": [
-          "cloud_1"
-        ],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6508518681074309,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 4,
-      "rngCounts": {
-        "model": 33
-      },
-      "rngLog": [
-        {
-          "label": "dialogue_pick",
-          "value": 0.16819014074280858
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.5218228765297681
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.8738560376223177
-        },
-        {
-          "label": "dialogue_pick",
-          "value": 0.010385115165263414
-        }
-      ]
-    },
-    {
-      "action": "separate",
-      "cloudId": "cloud_1",
-      "elapsedTime": 1.871,
-      "effectiveTime": 1.8609999999999998,
-      "waitCount": 0,
-      "cumulativeTime": 52.348,
-      "rngCounts": {
-        "model": 33
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {
-          "cloud_1": 16.5
-        },
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 13,
-      "rngCounts": {
-        "model": 33
-      },
-      "rngLog": []
-    },
-    {
-      "action": "help_protected",
-      "cloudId": "cloud_1",
-      "elapsedTime": 6.421,
-      "effectiveTime": 6.422999999999994,
-      "waitCount": 3,
-      "cumulativeTime": 58.769,
-      "rngCounts": {
-        "model": 34
-      },
-      "rngLog": [
-        {
-          "label": "help_protected:willing",
-          "value": 0.2818675593007356
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 7,
-      "rngCounts": {
-        "model": 34
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "elapsedTime": 3.629,
-      "effectiveTime": 3.6369999999999916,
-      "waitCount": 1,
-      "cumulativeTime": 62.398,
-      "rngCounts": {
-        "model": 34
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -1002,26 +265,24 @@
         "biography": {
           "cloud_1": {
             "ageRevealed": false,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
           },
           "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
+            "ageRevealed": false,
+            "identityRevealed": false,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.525,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
+          "cloud_1": 0,
+          "cloud_2": 0.2
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1034,34 +295,184 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": true,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 2,
+      "count": 1,
       "rngCounts": {
-        "model": 34
+        "model": 0
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "*",
       "targetCloudId": "cloud_1",
-      "elapsedTime": 0.802,
-      "effectiveTime": 0.8000000000000006,
+      "elapsedTime": 0.7485,
+      "effectiveTime": 0.7331999999992551,
       "waitCount": 0,
-      "cumulativeTime": 63.2,
+      "cumulativeTime": 5.45939999999851,
       "rngCounts": {
-        "model": 34
+        "model": 0
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.525,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0,
+          "cloud_2": 0.2
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5,
+      "rngCounts": {
+        "model": 0
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "identity",
+      "elapsedTime": 2.431300000000745,
+      "effectiveTime": 2.45010000000149,
+      "waitCount": 1,
+      "cumulativeTime": 7.890699999999255,
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.9569191341288388
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -1076,25 +487,23 @@
           "cloud_1": {
             "ageRevealed": false,
             "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
           },
           "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
+            "ageRevealed": false,
+            "identityRevealed": false,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.525,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 0.1,
-          "cloud_2": 0.15
+          "cloud_1": 0.05,
+          "cloud_2": 0.2
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1107,7 +516,390 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6,
+      "rngCounts": {
+        "model": 1
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "age",
+      "elapsedTime": 2.968699999999255,
+      "effectiveTime": 2.966800000000746,
+      "waitCount": 1,
+      "cumulativeTime": 10.85939999999851,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.3511246298439801
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.525,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.1,
+          "cloud_2": 0.2
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 1,
+            "cloudId": "cloud_1",
+            "text": "I'm 8 years old.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5,
+      "rngCounts": {
+        "model": 2
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.525,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobAppraisal",
+      "elapsedTime": 2.318300000000745,
+      "effectiveTime": 2.3176999999992565,
+      "waitCount": 1,
+      "cumulativeTime": 13.177699999999255,
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.9242035250645131
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": false,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.22500000000000003,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.15000000000000002,
+          "cloud_2": 0.2
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 1,
+            "cloudId": "cloud_1",
+            "text": "I'm 8 years old.",
+            "partInitiated": false
+          },
+          {
+            "id": 2,
+            "cloudId": "cloud_1",
+            "text": "I don't want to criticize, but I have to.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 14,
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.22500000000000003,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 6.905199999999255,
+      "effectiveTime": 6.901999999999993,
+      "waitCount": 3,
+      "cumulativeTime": 20.08289999999851,
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": false,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.22500000000000003,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.15000000000000002,
+          "cloud_2": 0.2
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 1,
+            "cloudId": "cloud_1",
+            "text": "I'm 8 years old.",
+            "partInitiated": false
+          },
+          {
+            "id": 3,
+            "cloudId": "cloud_1",
+            "text": "I protect criticized one.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
@@ -1115,35 +907,50 @@
       "cloudId": "",
       "count": 7,
       "rngCounts": {
-        "model": 34
+        "model": 3
       },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "age",
-      "elapsedTime": 3.554,
-      "effectiveTime": 3.547999999999996,
-      "waitCount": 1,
-      "cumulativeTime": 66.754,
-      "rngCounts": {
-        "model": 35
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.22500000000000003,
+        "cloud_2": 0.3
       },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.4788873731158674
-        }
-      ],
+      "isTransitioning": false,
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 3.7513000000007453,
+      "effectiveTime": 3.7476999999992593,
+      "waitCount": 1,
+      "cumulativeTime": 23.834199999999257,
+      "rngCounts": {
+        "model": 3
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
-          "cloud_1"
+          "cloud_1",
+          "cloud_2"
         ],
         "blended": [],
         "selfRay": {
@@ -1155,24 +962,22 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
-            "ageRevealed": true,
+            "ageRevealed": false,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.22500000000000003,
           "cloud_2": 0.3
         },
         "trust": {
           "cloud_1": 0.15000000000000002,
-          "cloud_2": 0.15
+          "cloud_2": 0.2
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1185,163 +990,30 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 5,
-      "rngCounts": {
-        "model": 35
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "jobAppraisal",
-      "elapsedTime": 2.53,
-      "effectiveTime": 2.533999999999999,
-      "waitCount": 1,
-      "cumulativeTime": 69.284,
-      "rngCounts": {
-        "model": 36
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.5333427486475557
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
         ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_1"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": false
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "cloud_2",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": true,
+              "exiting": false,
+              "landingProgress": 0
+            }
           },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.2,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 5,
-      "rngCounts": {
-        "model": 36
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "jobImpact",
-      "elapsedTime": 2.708,
-      "effectiveTime": 2.701999999999999,
-      "waitCount": 1,
-      "cumulativeTime": 71.992,
-      "rngCounts": {
-        "model": 37
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.4435058208182454
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
         }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_1"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 0.25,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
       }
     },
     {
@@ -1349,247 +1021,45 @@
       "cloudId": "",
       "count": 4,
       "rngCounts": {
-        "model": 37
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "gratitude",
-      "elapsedTime": 1.994,
-      "effectiveTime": 2.003,
-      "waitCount": 0,
-      "cumulativeTime": 73.986,
-      "rngCounts": {
-        "model": 38
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.03968827519565821
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 6,
-      "rngCounts": {
-        "model": 38
-      },
-      "rngLog": []
-    },
-    {
-      "action": "help_protected",
-      "cloudId": "cloud_1",
-      "elapsedTime": 2.908,
-      "effectiveTime": 2.900999999999997,
-      "waitCount": 1,
-      "cumulativeTime": 76.894,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": [
-        {
-          "label": "help_protected:willing",
-          "value": 0.04366260813549161
-        }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 11,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": []
-    },
-    {
-      "action": "join_conference",
-      "cloudId": "cloud_2",
-      "elapsedTime": 5.577,
-      "effectiveTime": 5.583999999999995,
-      "waitCount": 2,
-      "cumulativeTime": 82.471,
-      "rngCounts": {
-        "model": 39
+        "model": 3
       },
       "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.22500000000000003,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.15
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 6,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": []
     },
     {
       "action": "feel_toward",
       "cloudId": "*",
-      "elapsedTime": 2.897,
-      "effectiveTime": 2.8969999999999936,
-      "waitCount": 1,
-      "cumulativeTime": 85.368,
+      "elapsedTime": 1.6809000000022352,
+      "effectiveTime": 1.6828000000007448,
+      "waitCount": 0,
+      "cumulativeTime": 25.51510000000149,
       "rngCounts": {
-        "model": 39
+        "model": 3
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -1597,7 +1067,9 @@
           "cloud_2"
         ],
         "blended": [],
-        "selfRay": null,
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
         "pendingAction": {
           "actionId": "feel_toward",
           "sourceCloudId": "*"
@@ -1607,24 +1079,22 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
-            "ageRevealed": true,
+            "ageRevealed": false,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.22500000000000003,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.15
+          "cloud_1": 0.15000000000000002,
+          "cloud_2": 0.2
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1637,7 +1107,30 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "cloud_2",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
@@ -1645,26 +1138,46 @@
       "cloudId": "",
       "count": 2,
       "rngCounts": {
-        "model": 39
+        "model": 3
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.22500000000000003,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "feel_toward",
       "cloudId": "*",
       "targetCloudId": "cloud_2",
-      "elapsedTime": 0.65,
-      "effectiveTime": 0.6540000000000005,
+      "elapsedTime": 1.1675999999977649,
+      "effectiveTime": 1.1668000000007452,
       "waitCount": 0,
-      "cumulativeTime": 86.018,
+      "cumulativeTime": 26.682699999999254,
       "rngCounts": {
-        "model": 39
+        "model": 3
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -1681,24 +1194,22 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
-            "ageRevealed": true,
+            "ageRevealed": false,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.22500000000000003,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.15
+          "cloud_1": 0.15000000000000002,
+          "cloud_2": 0.2
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1711,160 +1222,30 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 4,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "age",
-      "elapsedTime": 2.079,
-      "effectiveTime": 2.078999999999998,
-      "waitCount": 1,
-      "cumulativeTime": 88.097,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
         ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "cloud_1",
+            "cloud_2",
+            "*"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
           },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.147
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 7,
-      "rngCounts": {
-        "model": 39
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 3.71,
-      "effectiveTime": 3.705999999999994,
-      "waitCount": 1,
-      "cumulativeTime": 91.807,
-      "rngCounts": {
-        "model": 40
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.3166671306826174
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
         }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0.6250781341303767,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.497
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
       }
     },
     {
@@ -1872,65 +1253,88 @@
       "cloudId": "",
       "count": 3,
       "rngCounts": {
-        "model": 40
+        "model": 3
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.22500000000000003,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "ray_field_select",
       "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 1.627,
-      "effectiveTime": 1.627,
+      "field": "age",
+      "elapsedTime": 1.784300000000745,
+      "effectiveTime": 1.783699999999255,
       "waitCount": 0,
-      "cumulativeTime": 93.434,
+      "cumulativeTime": 28.467,
       "rngCounts": {
-        "model": 41
+        "model": 6
       },
       "rngLog": [
         {
+          "label": "age:backlash_check",
+          "value": 0.7708096164278686
+        },
+        {
+          "label": "age:backlash_check:pick",
+          "value": 0.9701017022598535
+        },
+        {
           "label": "ray_field:clear_ray",
-          "value": 0.783770608715713
+          "value": 0.6725309710018337
         }
       ],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
+        "targets": [],
+        "blended": [
+          "cloud_1"
         ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
+        "selfRay": null,
         "pendingAction": null,
         "biography": {
           "cloud_1": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.8625,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
-          "cloud_2": 0.847
+          "cloud_1": 0.12500000000000003,
+          "cloud_2": 0.125
         },
         "conversationEffectiveStances": {},
         "conversationPhases": {},
@@ -1943,7 +1347,1323 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "__unblended__",
+            "*"
+          ],
+          "carpets": {
+            "cloud_2": {
+              "entering": false,
+              "exiting": true,
+              "landingProgress": 0
+            },
+            "__unblended__": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 8,
+      "rngCounts": {
+        "model": 11
+      },
+      "rngLog": [
+        {
+          "label": "dialogue_pick",
+          "value": 0.38638847158290446
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.9110411708243191
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.30750383832491934
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.2876522608567029
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.4802522952668369
+        }
+      ],
+      "needAttention": {
+        "cloud_1": 0.5554425380000002,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "validate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 3.9608999999985097,
+      "effectiveTime": 3.966699999999257,
+      "waitCount": 1,
+      "cumulativeTime": 32.42789999999851,
+      "rngCounts": {
+        "model": 11
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 4
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.5554425380000002,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.30000000000000004,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 5,
+            "cloudId": "cloud_1",
+            "text": "I'm a terrible person.",
+            "validated": true,
+            "partInitiated": true
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "__unblended__",
+            "*"
+          ],
+          "carpets": {
+            "__unblended__": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 7,
+      "rngCounts": {
+        "model": 18
+      },
+      "rngLog": [
+        {
+          "label": "dialogue_pick",
+          "value": 0.07466770079918206
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.3139734361320734
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.5787203323561698
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.19103251490741968
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.16319268103688955
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.95531464391388
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.41861873865127563
+        }
+      ],
+      "needAttention": {
+        "cloud_1": 0.5175238888865424,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 4
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "be_with",
+      "cloudId": "cloud_1",
+      "elapsedTime": 3.40770000000298,
+      "effectiveTime": 3.400800000000748,
+      "waitCount": 1,
+      "cumulativeTime": 35.83560000000149,
+      "rngCounts": {
+        "model": 18
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 7.5
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.4657714999978882,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.4,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 5,
+            "cloudId": "cloud_1",
+            "text": "I'm a terrible person.",
+            "validated": true,
+            "partInitiated": true
+          },
+          {
+            "id": 6,
+            "cloudId": "cloud_1",
+            "text": "🤗",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "__unblended__",
+            "*"
+          ],
+          "carpets": {
+            "__unblended__": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5,
+      "rngCounts": {
+        "model": 23
+      },
+      "rngLog": [
+        {
+          "label": "dialogue_pick",
+          "value": 0.6979366294108331
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.6713812018278986
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.7083961798343807
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.11566997179761529
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.6525347037240863
+        }
+      ],
+      "needAttention": {
+        "cloud_1": 0.44283108626555695,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 7.5
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 2.61539999999851,
+      "effectiveTime": 2.616099999997766,
+      "waitCount": 1,
+      "cumulativeTime": 38.451,
+      "rngCounts": {
+        "model": 23
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 10
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.44283108626555695,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.4,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 6,
+            "cloudId": "cloud_1",
+            "text": "🤗",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "__unblended__",
+            "*"
+          ],
+          "carpets": {
+            "__unblended__": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 9,
+      "rngCounts": {
+        "model": 32
+      },
+      "rngLog": [
+        {
+          "label": "dialogue_pick",
+          "value": 0.7323270332999527
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.8126327486243099
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.6484175492078066
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.2578417877666652
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.18892296799458563
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.8837552089244127
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.25223761331290007
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.32901180209591985
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.19417025265283883
+        }
+      ],
+      "needAttention": {
+        "cloud_1": 0.16905013180679151,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 10
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "validate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.3456000000014905,
+      "effectiveTime": 4.355900000002237,
+      "waitCount": 2,
+      "cumulativeTime": 42.79660000000149,
+      "rngCounts": {
+        "model": 32
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 14.5
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [],
+        "blended": [
+          "cloud_1"
+        ],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16905013180679151,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 6,
+            "cloudId": "cloud_1",
+            "text": "🤗",
+            "partInitiated": false
+          },
+          {
+            "id": 7,
+            "cloudId": "cloud_1",
+            "text": "I hate myself.",
+            "validated": true,
+            "partInitiated": true
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "__unblended__"
+          ],
+          "carpets": {
+            "__unblended__": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [
+        {
+          "label": "dialogue_pick",
+          "value": 0.7016323141288012
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.31590988021343946
+        },
+        {
+          "label": "dialogue_pick",
+          "value": 0.16149712121114135
+        }
+      ],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 14.5
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "separate",
+      "cloudId": "cloud_1",
+      "elapsedTime": 1.5915,
+      "effectiveTime": 1.577699999999254,
+      "waitCount": 0,
+      "cumulativeTime": 44.388100000001494,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 16
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 6,
+            "cloudId": "cloud_1",
+            "text": "🤗",
+            "partInitiated": false
+          },
+          {
+            "id": 7,
+            "cloudId": "cloud_1",
+            "text": "I hate myself.",
+            "validated": true,
+            "partInitiated": true
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 6,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {
+          "cloud_1": 16
+        },
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "elapsedTime": 3.111099999997765,
+      "effectiveTime": 3.1161999999992567,
+      "waitCount": 1,
+      "cumulativeTime": 47.499199999999256,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": {
+          "actionId": "feel_toward",
+          "sourceCloudId": "*"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 7,
+            "cloudId": "cloud_1",
+            "text": "I hate myself.",
+            "validated": true,
+            "partInitiated": true
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 2,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "targetCloudId": "cloud_1",
+      "elapsedTime": 0.6264000000022352,
+      "effectiveTime": 0.6344000000022352,
+      "waitCount": 0,
+      "cumulativeTime": 48.12560000000149,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 23,
+      "rngCounts": {
+        "model": 35
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "help_protected",
+      "cloudId": "cloud_1",
+      "elapsedTime": 11.65429999999702,
+      "effectiveTime": 11.649699999999237,
+      "waitCount": 5,
+      "cumulativeTime": 59.77989999999851,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [
+        {
+          "label": "help_protected:willing",
+          "value": 0.12711562402546406
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 8,
+            "cloudId": "cloud_1",
+            "text": "Yes, I'd like that.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 8,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "job",
+      "cloudId": "cloud_1",
+      "elapsedTime": 4.184400000002235,
+      "effectiveTime": 4.183699999999255,
+      "waitCount": 2,
+      "cumulativeTime": 63.96430000000075,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 9,
+            "cloudId": "cloud_1",
+            "text": "I protect criticized one.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "join_conference",
+      "cloudId": "cloud_2",
+      "elapsedTime": 2.415300000000745,
+      "effectiveTime": 2.4166999999992558,
+      "waitCount": 1,
+      "cumulativeTime": 66.37960000000149,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": true,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
@@ -1951,31 +2671,163 @@
       "cloudId": "",
       "count": 4,
       "rngCounts": {
-        "model": 41
+        "model": 36
       },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 1.612,
-      "effectiveTime": 1.6139999999999994,
-      "waitCount": 0,
-      "cumulativeTime": 95.046,
-      "rngCounts": {
-        "model": 42
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
       },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.47557186940684915
-        }
-      ],
+      "isTransitioning": false,
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "elapsedTime": 1.6970999999977647,
+      "effectiveTime": 1.6998000000007447,
+      "waitCount": 0,
+      "cumulativeTime": 68.07669999999925,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": {
+          "actionId": "feel_toward",
+          "sourceCloudId": "*"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 1,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "targetCloudId": "cloud_2",
+      "elapsedTime": 0.6399000000022351,
+      "effectiveTime": 0.6335000000000001,
+      "waitCount": 0,
+      "cumulativeTime": 68.71660000000149,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -1992,23 +2844,643 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.16400407053777702,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
+          "cloud_1": 0.52,
+          "cloud_2": 0.125
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 8,
+      "rngCounts": {
+        "model": 36
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 4.1765,
+      "effectiveTime": 4.183399999998515,
+      "waitCount": 2,
+      "cumulativeTime": 72.8931000000015,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.24617272661998868
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.475
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "elapsedTime": 1.991599999997765,
+      "effectiveTime": 1.983100000001491,
+      "waitCount": 0,
+      "cumulativeTime": 74.88469999999926,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": {
+          "actionId": "feel_toward",
+          "sourceCloudId": "*"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.475
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 1,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "targetCloudId": "cloud_2",
+      "elapsedTime": 0.5833000000007451,
+      "effectiveTime": 0.5863999999985099,
+      "waitCount": 0,
+      "cumulativeTime": 75.468,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.475
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3,
+      "rngCounts": {
+        "model": 37
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 1.40810000000149,
+      "effectiveTime": 1.4139000000022355,
+      "waitCount": 0,
+      "cumulativeTime": 76.87610000000149,
+      "rngCounts": {
+        "model": 38
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.9980075731873512
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 0.825
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 11,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 38
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_2",
+      "field": "compassion",
+      "elapsedTime": 2.1210999999977647,
+      "effectiveTime": 2.11639999999851,
+      "waitCount": 1,
+      "cumulativeTime": 78.99719999999925,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.5634037209674716
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0.16400407053777702,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
           "cloud_2": 1
         },
         "conversationEffectiveStances": {},
@@ -2022,33 +3494,95 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 11,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 12,
+            "cloudId": "cloud_2",
+            "text": "I feel understood.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 8,
+      "count": 6,
       "rngCounts": {
-        "model": 42
+        "model": 39
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
       "action": "notice_part",
       "cloudId": "cloud_1",
-      "elapsedTime": 4.385,
-      "effectiveTime": 4.371999999999994,
-      "waitCount": 2,
-      "cumulativeTime": 99.431,
+      "elapsedTime": 2.582800000000745,
+      "effectiveTime": 2.583800000000748,
+      "waitCount": 1,
+      "cumulativeTime": 81.58,
       "rngCounts": {
-        "model": 42
+        "model": 39
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -2068,23 +3602,21 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
-          "cloud_1": 0.6250781341303767,
+          "cloud_1": 0.16400407053777702,
           "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
+          "cloud_1": 0.52,
           "cloud_2": 1
         },
         "conversationEffectiveStances": {},
@@ -2098,456 +3630,49 @@
             "stance": 0.6,
             "trust": 0.2
           }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 3,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": []
-    },
-    {
-      "action": "notice_part",
-      "cloudId": "cloud_1",
-      "targetCloudId": "cloud_2",
-      "elapsedTime": 1.473,
-      "effectiveTime": 1.475999999999999,
-      "waitCount": 0,
-      "cumulativeTime": 100.904,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
         ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0.3
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
+        "thoughtBubbles": [
           {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 11,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 12,
+            "cloudId": "cloud_2",
+            "text": "I feel understood.",
+            "partInitiated": false
           }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 23,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_2",
-      "field": "compassion",
-      "elapsedTime": 11.382,
-      "effectiveTime": 11.38899999999999,
-      "waitCount": 5,
-      "cumulativeTime": 112.286,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
         ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
           },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 9,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "elapsedTime": 4.472,
-      "effectiveTime": 4.469999999999991,
-      "waitCount": 2,
-      "cumulativeTime": 116.758,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_2"
-        },
-        "pendingAction": {
-          "actionId": "feel_toward",
-          "sourceCloudId": "*"
-        },
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 1,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "targetCloudId": "cloud_1",
-      "elapsedTime": 0.698,
-      "effectiveTime": 0.6960000000000004,
-      "waitCount": 0,
-      "cumulativeTime": 117.456,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": {
-          "targetCloudId": "cloud_1"
-        },
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.2
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 7,
-      "rngCounts": {
-        "model": 42
-      },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "gratitude",
-      "elapsedTime": 3.491,
-      "effectiveTime": 3.4879999999999955,
-      "waitCount": 1,
-      "cumulativeTime": 120.947,
-      "rngCounts": {
-        "model": 43
-      },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.07645708043128252
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
         }
-      ],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": null,
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.7
-          }
-        ]
-      }
-    },
-    {
-      "action": "process_intervals",
-      "cloudId": "",
-      "count": 7,
-      "rngCounts": {
-        "model": 43
-      },
-      "rngLog": []
-    },
-    {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "elapsedTime": 3.383,
-      "effectiveTime": 3.3889999999999922,
-      "waitCount": 1,
-      "cumulativeTime": 124.33,
-      "rngCounts": {
-        "model": 43
-      },
-      "rngLog": [],
-      "orchState": {
-        "blendTimers": {},
-        "cooldowns": {},
-        "pending": {}
-      },
-      "modelState": {
-        "targets": [
-          "cloud_1",
-          "cloud_2"
-        ],
-        "blended": [],
-        "selfRay": null,
-        "pendingAction": {
-          "actionId": "feel_toward",
-          "sourceCloudId": "*"
-        },
-        "biography": {
-          "cloud_1": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
-          },
-          "cloud_2": {
-            "ageRevealed": true,
-            "identityRevealed": true,
-            "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
-          }
-        },
-        "needAttention": {
-          "cloud_1": 0,
-          "cloud_2": 0
-        },
-        "trust": {
-          "cloud_1": 1,
-          "cloud_2": 1
-        },
-        "conversationEffectiveStances": {},
-        "conversationPhases": {},
-        "conversationTherapistDelta": {},
-        "conversationSpeakerId": null,
-        "interPartRelations": [
-          {
-            "fromId": "cloud_1",
-            "toId": "cloud_1",
-            "stance": 0.6,
-            "trust": 0.7
-          }
-        ]
       }
     },
     {
@@ -2555,26 +3680,46 @@
       "cloudId": "",
       "count": 2,
       "rngCounts": {
-        "model": 43
+        "model": 39
       },
-      "rngLog": []
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0.16400407053777702,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
     },
     {
-      "action": "feel_toward",
-      "cloudId": "*",
-      "targetCloudId": "cloud_1",
-      "elapsedTime": 0.705,
-      "effectiveTime": 0.7040000000000005,
+      "action": "notice_part",
+      "cloudId": "cloud_1",
+      "targetCloudId": "cloud_2",
+      "elapsedTime": 0.9376000000014901,
+      "effectiveTime": 0.9333000000007452,
       "waitCount": 0,
-      "cumulativeTime": 125.035,
+      "cumulativeTime": 82.5176000000015,
       "rngCounts": {
-        "model": 43
+        "model": 39
       },
       "rngLog": [],
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -2583,7 +3728,7 @@
         ],
         "blended": [],
         "selfRay": {
-          "targetCloudId": "cloud_1"
+          "targetCloudId": "cloud_2"
         },
         "pendingAction": null,
         "biography": {
@@ -2591,23 +3736,21 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
           "cloud_1": 0,
-          "cloud_2": 0
+          "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
+          "cloud_1": 0.52,
           "cloud_2": 1
         },
         "conversationEffectiveStances": {},
@@ -2619,41 +3762,234 @@
             "fromId": "cloud_1",
             "toId": "cloud_1",
             "stance": 0.6,
-            "trust": 0.7
+            "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 10,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 11,
+            "cloudId": "cloud_2",
+            "text": "It feels good to hear that.",
+            "partInitiated": false
+          },
+          {
+            "id": 12,
+            "cloudId": "cloud_2",
+            "text": "I feel understood.",
+            "partInitiated": false
+          },
+          {
+            "id": 13,
+            "cloudId": "cloud_1",
+            "text": "I see that criticized one is okay now. I help you foresee risks.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     },
     {
       "action": "process_intervals",
       "cloudId": "",
-      "count": 6,
+      "count": 12,
       "rngCounts": {
-        "model": 43
+        "model": 39
       },
-      "rngLog": []
-    },
-    {
-      "action": "ray_field_select",
-      "cloudId": "cloud_1",
-      "field": "gratitude",
-      "elapsedTime": 3.034,
-      "effectiveTime": 3.035999999999995,
-      "waitCount": 1,
-      "cumulativeTime": 128.069,
-      "rngCounts": {
-        "model": 44
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
       },
-      "rngLog": [
-        {
-          "label": "ray_field:clear_ray",
-          "value": 0.5522867001127452
-        }
-      ],
+      "isTransitioning": false,
       "orchState": {
         "blendTimers": {},
         "cooldowns": {},
-        "pending": {}
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "elapsedTime": 6.3040999999977645,
+      "effectiveTime": 6.29980000000075,
+      "waitCount": 3,
+      "cumulativeTime": 88.82169999999925,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_2"
+        },
+        "pendingAction": {
+          "actionId": "feel_toward",
+          "sourceCloudId": "*"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.52,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 12,
+            "cloudId": "cloud_2",
+            "text": "I feel understood.",
+            "partInitiated": false
+          },
+          {
+            "id": 13,
+            "cloudId": "cloud_1",
+            "text": "I see that criticized one is okay now. I help you foresee risks.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 1,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "targetCloudId": "cloud_1",
+      "elapsedTime": 0.5034000000022352,
+      "effectiveTime": 0.5170000000000001,
+      "waitCount": 0,
+      "cumulativeTime": 89.32510000000148,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
       },
       "modelState": {
         "targets": [
@@ -2670,23 +4006,21 @@
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": true,
-            "jobAppraisalRevealed": true,
-            "jobImpactRevealed": true
+            "jobAppraisalRevealed": true
           },
           "cloud_2": {
             "ageRevealed": true,
             "identityRevealed": true,
             "jobRevealed": false,
-            "jobAppraisalRevealed": false,
-            "jobImpactRevealed": false
+            "jobAppraisalRevealed": false
           }
         },
         "needAttention": {
           "cloud_1": 0,
-          "cloud_2": 0
+          "cloud_2": 0.3
         },
         "trust": {
-          "cloud_1": 1,
+          "cloud_1": 0.52,
           "cloud_2": 1
         },
         "conversationEffectiveStances": {},
@@ -2698,9 +4032,850 @@
             "fromId": "cloud_1",
             "toId": "cloud_1",
             "stance": 0.6,
-            "trust": 1
+            "trust": 0.2
           }
-        ]
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 13,
+            "cloudId": "cloud_1",
+            "text": "I see that criticized one is okay now. I help you foresee risks.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 5,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "jobAppraisal",
+      "elapsedTime": 2.49639999999851,
+      "effectiveTime": 2.4836999999992573,
+      "waitCount": 1,
+      "cumulativeTime": 91.8215,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.5096,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.2
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 13,
+            "cloudId": "cloud_1",
+            "text": "I see that criticized one is okay now. I help you foresee risks.",
+            "partInitiated": false
+          },
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3,
+      "rngCounts": {
+        "model": 39
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 1.4471000000014902,
+      "effectiveTime": 1.4498999999985103,
+      "waitCount": 0,
+      "cumulativeTime": 93.26860000000148,
+      "rngCounts": {
+        "model": 40
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.669804694596678
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.824230832,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.31036916800000003
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          },
+          {
+            "id": 15,
+            "cloudId": "cloud_1",
+            "text": "Thank you... I'm starting to believe it.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 4,
+      "rngCounts": {
+        "model": 40
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 2.1203999999985097,
+      "effectiveTime": 2.127300000000746,
+      "waitCount": 1,
+      "cumulativeTime": 95.389,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.2208904733415693
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.9605043346217499,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.5990956653782502
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          },
+          {
+            "id": 15,
+            "cloudId": "cloud_1",
+            "text": "Thank you... I'm starting to believe it.",
+            "partInitiated": false
+          },
+          {
+            "id": 16,
+            "cloudId": "cloud_1",
+            "text": "Maybe I'm not so terrible after all.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 8,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "elapsedTime": 4.01789999999851,
+      "effectiveTime": 4.008300000000748,
+      "waitCount": 2,
+      "cumulativeTime": 99.40689999999852,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": null,
+        "pendingAction": {
+          "actionId": "feel_toward",
+          "sourceCloudId": "*"
+        },
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.9605043346217499,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.5990956653782502
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          },
+          {
+            "id": 15,
+            "cloudId": "cloud_1",
+            "text": "Thank you... I'm starting to believe it.",
+            "partInitiated": false
+          },
+          {
+            "id": 16,
+            "cloudId": "cloud_1",
+            "text": "Maybe I'm not so terrible after all.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 2,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "feel_toward",
+      "cloudId": "*",
+      "targetCloudId": "cloud_1",
+      "elapsedTime": 0.790800000000745,
+      "effectiveTime": 0.7978999999985098,
+      "waitCount": 0,
+      "cumulativeTime": 100.19769999999926,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.9605043346217499,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.5990956653782502
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          },
+          {
+            "id": 15,
+            "cloudId": "cloud_1",
+            "text": "Thank you... I'm starting to believe it.",
+            "partInitiated": false
+          },
+          {
+            "id": 16,
+            "cloudId": "cloud_1",
+            "text": "Maybe I'm not so terrible after all.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
+      }
+    },
+    {
+      "action": "process_intervals",
+      "cloudId": "",
+      "count": 3,
+      "rngCounts": {
+        "model": 41
+      },
+      "rngLog": [],
+      "needAttention": {
+        "cloud_1": 0,
+        "cloud_2": 0.3
+      },
+      "isTransitioning": false,
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      }
+    },
+    {
+      "action": "ray_field_select",
+      "cloudId": "cloud_1",
+      "field": "gratitude",
+      "elapsedTime": 1.4714000000022351,
+      "effectiveTime": 1.466699999999255,
+      "waitCount": 0,
+      "cumulativeTime": 101.66910000000149,
+      "rngCounts": {
+        "model": 42
+      },
+      "rngLog": [
+        {
+          "label": "ray_field:clear_ray",
+          "value": 0.5864711131434888
+        }
+      ],
+      "orchState": {
+        "blendTimers": {},
+        "cooldowns": {},
+        "pending": {},
+        "jealousyCooldowns": {},
+        "respondTimer": 0,
+        "regulationScore": 0,
+        "sustainedRegulationTimer": 0,
+        "newCycleTimer": 0
+      },
+      "modelState": {
+        "targets": [
+          "cloud_1",
+          "cloud_2"
+        ],
+        "blended": [],
+        "selfRay": {
+          "targetCloudId": "cloud_1"
+        },
+        "pendingAction": null,
+        "biography": {
+          "cloud_1": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": true,
+            "jobAppraisalRevealed": true
+          },
+          "cloud_2": {
+            "ageRevealed": true,
+            "identityRevealed": true,
+            "jobRevealed": false,
+            "jobAppraisalRevealed": false
+          }
+        },
+        "needAttention": {
+          "cloud_1": 0,
+          "cloud_2": 0.3
+        },
+        "trust": {
+          "cloud_1": 0.9934126894702024,
+          "cloud_2": 1
+        },
+        "conversationEffectiveStances": {},
+        "conversationPhases": {},
+        "conversationTherapistDelta": {},
+        "conversationSpeakerId": null,
+        "interPartRelations": [
+          {
+            "fromId": "cloud_1",
+            "toId": "cloud_1",
+            "stance": 0.6,
+            "trust": 0.9911873105297977
+          }
+        ],
+        "thoughtBubbles": [
+          {
+            "id": 14,
+            "cloudId": "cloud_1",
+            "text": "I told you already.",
+            "partInitiated": false
+          },
+          {
+            "id": 15,
+            "cloudId": "cloud_1",
+            "text": "Thank you... I'm starting to believe it.",
+            "partInitiated": false
+          },
+          {
+            "id": 16,
+            "cloudId": "cloud_1",
+            "text": "Maybe I'm not so terrible after all.",
+            "partInitiated": false
+          },
+          {
+            "id": 17,
+            "cloudId": "cloud_1",
+            "text": "Maybe I'm not so terrible after all.",
+            "partInitiated": false
+          }
+        ],
+        "viewState": {
+          "seats": [
+            "*",
+            "cloud_1",
+            "cloud_2"
+          ],
+          "carpets": {
+            "cloud_1": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            },
+            "cloud_2": {
+              "entering": false,
+              "exiting": false,
+              "landingProgress": 0
+            }
+          },
+          "conversationParticipantIds": null,
+          "transitionDirection": "none",
+          "transitionProgress": 1
+        }
       }
     }
   ],
@@ -2719,14 +4894,15 @@
     },
     "displacedParts": [],
     "messages": [],
-    "messageIdCounter": 0,
+    "messageIdCounter": 17,
     "partStates": {
       "cloud_1": {
         "id": "cloud_1",
         "name": "Inner Critic",
-        "trust": 1,
+        "trust": 0.9934126894702024,
         "needAttention": 0,
         "wasProxy": false,
+        "wasProtector": true,
         "biography": {
           "ageRevealed": true,
           "partAge": 8,
@@ -2736,16 +4912,12 @@
           "identityRevealed": true,
           "jobRevealed": true,
           "jobAppraisalRevealed": true,
-          "jobImpactRevealed": true,
           "consentedToHelp": true
         },
         "dialogues": {
           "burdenedJobAppraisal": [
             "I'm exhausted with my job.",
             "I don't want to criticize, but I have to."
-          ],
-          "burdenedJobImpact": [
-            "I am harsh, but I help avoid critiques from outside."
           ],
           "unburdenedJob": "I help you foresee risks."
         }
@@ -2754,8 +4926,9 @@
         "id": "cloud_2",
         "name": "criticized one",
         "trust": 1,
-        "needAttention": 0,
+        "needAttention": 0.3,
         "wasProxy": false,
+        "wasProtector": false,
         "biography": {
           "ageRevealed": true,
           "partAge": "child",
@@ -2765,7 +4938,6 @@
           "identityRevealed": true,
           "jobRevealed": false,
           "jobAppraisalRevealed": false,
-          "jobImpactRevealed": false,
           "consentedToHelp": false
         },
         "dialogues": {
@@ -2782,7 +4954,8 @@
       {
         "fromId": "cloud_1",
         "toId": "cloud_1",
-        "trust": 1,
+        "trust": 0.9911873105297977,
+        "trustFloor": 0,
         "stance": 0.6,
         "stanceFlipOdds": 0.05,
         "stanceFlipOddsSetPoint": 0.05,
@@ -2795,9 +4968,11 @@
     "proxies": [],
     "thoughtBubbles": [
       {
-        "text": "I forgive myself. I was doing my best.",
+        "id": 17,
+        "text": "Maybe I'm not so terrible after all.",
         "cloudId": "cloud_1",
-        "expiresAt": 1771276519830
+        "expiresAt": 110.66559999999812,
+        "partInitiated": false
       }
     ],
     "victoryAchieved": true,
@@ -2808,6 +4983,7 @@
     "conversationTherapistDelta": {},
     "conversationParticipantIds": null,
     "conversationPhases": {},
-    "conversationSpeakerId": null
+    "conversationSpeakerId": null,
+    "simulationTime": 105.23369999999969
   }
 }

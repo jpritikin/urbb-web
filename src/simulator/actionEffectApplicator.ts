@@ -14,10 +14,7 @@ export class ActionEffectApplicator {
 
     apply(result: ControllerActionResult, _cloudId: string): void {
         if (result.uiFeedback?.thoughtBubble && this.view) {
-            this.model.addThoughtBubble(
-                result.uiFeedback.thoughtBubble.text,
-                result.uiFeedback.thoughtBubble.cloudId
-            );
+            this.model.addThoughtBubble(result.uiFeedback.thoughtBubble.text, result.uiFeedback.thoughtBubble.cloudId);
         }
         if (result.reduceBlending) {
             this.reduceBlending(result.reduceBlending.cloudId, result.reduceBlending.amount);
@@ -43,7 +40,11 @@ export class ActionEffectApplicator {
         this.model.parts.adjustTrust(protecteeId, 0.5);
         const trust = this.model.parts.getTrust(protectorId);
         this.model.changeNeedAttention(protectorId, 0.5 * (1 - trust));
-        this.model.addBlendedPart(protectorId, 'spontaneous');
-        this.model.stepBackPart(protecteeId);
+        if (this.model.getConferenceCloudIds().has(protectorId)) {
+            this.model.addBlendedPart(protectorId, 'spontaneous');
+            this.model.stepBackPart(protecteeId);
+        } else {
+            this.model.partDemandsAttention(protectorId);
+        }
     }
 }
