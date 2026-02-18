@@ -366,7 +366,6 @@ export class PlaybackController {
             return;
         }
 
-        this.callbacks.setStarInteractive(true);
         const result = await this.openMenuWithRetry(STAR_CLOUD_ID, action.action, 'star');
         if (!result) return;
 
@@ -376,6 +375,9 @@ export class PlaybackController {
     private async openMenuWithRetry(cloudId: string, actionId: string, errorContext?: string): Promise<MenuSliceInfo | null> {
         const maxRetries = 5;
         for (let attempt = 0; attempt < maxRetries; attempt++) {
+            if (cloudId === STAR_CLOUD_ID) {
+                this.callbacks.setStarInteractive(true);
+            }
             const openSuccess = await this.hoverAndClickCloud(cloudId, `opening menu for ${cloudId}`);
             if (!openSuccess) return null;
 
