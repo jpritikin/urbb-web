@@ -1,7 +1,8 @@
 import { ActionRecorder, sessionToJSON } from './testability/recorder.js';
 import { RNG, createModelRNG, SeededRNG } from './testability/rng.js';
 import { PlaybackController, PlaybackCallbacks, ActionResult, ModelState, MenuSliceInfo, PlaybackSpeed } from './playback.js';
-import type { RecordedSession, RecordedAction, SerializedModel, ViewSnapshot } from './testability/types.js';
+import type { RecordedSession, RecordedAction, SerializedModel, ViewSnapshot, OrchestratorSnapshot } from './testability/types.js';
+import type { ThoughtBubble } from '../simulator/ifsModel.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 
 export interface PlaybackRecordingDependencies {
@@ -19,12 +20,12 @@ export interface PlaybackRecordingDependencies {
         getConversationTherapistDeltas(): Map<string, number>;
         getConversationSpeakerId(): string | null;
         getPendingAction(): { actionId: string; sourceCloudId: string } | null;
+        getThoughtBubbles(): ThoughtBubble[];
         parts: {
             isAgeRevealed(cloudId: string): boolean;
             isIdentityRevealed(cloudId: string): boolean;
             isJobRevealed(cloudId: string): boolean;
             isJobAppraisalRevealed(cloudId: string): boolean;
-            isJobImpactRevealed(cloudId: string): boolean;
             getNeedAttention(cloudId: string): number;
             getTrust(cloudId: string): number;
             getRelationSummaries(): { fromId: string; toId: string; stance: number; trust: number }[];
@@ -43,7 +44,7 @@ export interface PlaybackRecordingDependencies {
     };
     getPendingBlendsCount: () => number;
     getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
-    getMessageOrchestrator: () => { getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } } | null;
+    getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
     getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null; setPointerEventsEnabled(enabled: boolean): void } | null;
     getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void } | null;
@@ -52,6 +53,7 @@ export interface PlaybackRecordingDependencies {
     getCanvasDimensions: () => { width: number; height: number };
     simulateRayClick: () => void;
     executeSpontaneousBlendForPlayback: (cloudId: string) => void;
+    promotePendingBlendForPlayback: (cloudId: string) => void;
     getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
     checkBlendedPartsAttention: () => void;
     onRngChanged: (rng: RNG) => void;
@@ -65,6 +67,7 @@ export class PlaybackRecordingCoordinator {
     private playing: boolean = false;
     private lastActionResult: ActionResult | null = null;
     private downloadSessionHandler: (() => void) | null = null;
+    private lastOrchestratorSnapshot: OrchestratorSnapshot | undefined;
 
     constructor(private deps: PlaybackRecordingDependencies) { }
 
@@ -87,6 +90,7 @@ export class PlaybackRecordingCoordinator {
             this.setRNG(createModelRNG(seed));
         }
         const platform = isMobile ? 'mobile' : 'desktop';
+        this.lastOrchestratorSnapshot = this.deps.getMessageOrchestrator()?.getDebugState();
         this.recorder.start(
             this.deps.getModel().toJSON(),
             codeVersion,
@@ -143,7 +147,7 @@ export class PlaybackRecordingCoordinator {
                     needAttention[id] = model.parts.getNeedAttention(id);
                 }
                 const isTransitioning = this.deps.getView().isTransitioning();
-                this.recorder.recordIntervals(intervalCount, attentionDemands, needAttention, isTransitioning);
+                this.recorder.recordIntervals(intervalCount, attentionDemands, needAttention, isTransitioning, this.lastOrchestratorSnapshot);
             }
         }
     }
@@ -163,7 +167,7 @@ export class PlaybackRecordingCoordinator {
         const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
         const model = this.deps.getModel();
         const selfRay = model.getSelfRay();
-        const biography: Record<string, { ageRevealed: boolean; identityRevealed: boolean; jobRevealed: boolean; jobAppraisalRevealed: boolean; jobImpactRevealed: boolean }> = {};
+        const biography: Record<string, { ageRevealed: boolean; identityRevealed: boolean; jobRevealed: boolean; jobAppraisalRevealed: boolean }> = {};
         const needAttention: Record<string, number> = {};
         const trust: Record<string, number> = {};
 
@@ -173,7 +177,6 @@ export class PlaybackRecordingCoordinator {
                 identityRevealed: model.parts.isIdentityRevealed(cloudId),
                 jobRevealed: model.parts.isJobRevealed(cloudId),
                 jobAppraisalRevealed: model.parts.isJobAppraisalRevealed(cloudId),
-                jobImpactRevealed: model.parts.isJobImpactRevealed(cloudId),
             };
             needAttention[cloudId] = model.parts.getNeedAttention(cloudId);
             trust[cloudId] = model.parts.getTrust(cloudId);
@@ -192,10 +195,12 @@ export class PlaybackRecordingCoordinator {
             conversationTherapistDelta: Object.fromEntries(model.getConversationTherapistDeltas()),
             conversationSpeakerId: model.getConversationSpeakerId(),
             interPartRelations: model.parts.getRelationSummaries(),
+            thoughtBubbles: model.getThoughtBubbles().map(b => ({ id: b.id, cloudId: b.cloudId, text: b.text, validated: b.validated, partInitiated: b.partInitiated })),
             viewState: this.deps.getView().getViewSnapshot(),
         };
 
         this.recorder.record(action, orchState, modelState);
+        this.lastOrchestratorSnapshot = orchState;
     }
 
     // Playback
@@ -317,12 +322,18 @@ export class PlaybackRecordingCoordinator {
             resumePlayback: () => {
                 this.playing = false;
             },
-            advanceIntervals: (count: number) => {
+            advanceIntervals: (count: number, orchState?: OrchestratorSnapshot) => {
+                if (orchState) {
+                    this.deps.getMessageOrchestrator()?.restoreState(orchState);
+                }
                 this.deps.getTimeAdvancer()?.advanceIntervals(count);
                 this.deps.checkBlendedPartsAttention();
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.deps.executeSpontaneousBlendForPlayback(cloudId);
+            },
+            promotePendingBlend: (cloudId: string) => {
+                this.deps.promotePendingBlendForPlayback(cloudId);
             },
             getCarpetCenter: (cloudId: string) => {
                 return this.deps.getCarpetRenderer()?.getCarpetCenter(cloudId) ?? null;
@@ -525,7 +536,6 @@ export class PlaybackRecordingCoordinator {
                     identityRevealed: model.parts.isIdentityRevealed(cloudId),
                     jobRevealed: model.parts.isJobRevealed(cloudId),
                     jobAppraisalRevealed: model.parts.isJobAppraisalRevealed(cloudId),
-                    jobImpactRevealed: model.parts.isJobImpactRevealed(cloudId),
                 };
                 const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
                 for (const [field, expectedVal] of Object.entries(expectedBio)) {
@@ -569,6 +579,14 @@ export class PlaybackRecordingCoordinator {
         }
 
         if (parts.length > 0) {
+            const actualBubbles = model.getThoughtBubbles();
+            if (actualBubbles.length > 0) {
+                const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+                const desc = actualBubbles.map(b =>
+                    `#${b.id} ${getName(b.cloudId)}:"${b.text.slice(0, 30)}"${b.validated ? '[V]' : ''}${b.partInitiated ? '[P]' : ''}`
+                ).join(', ');
+                parts.push(`bubbles: ${desc}`);
+            }
             return { success: false, error: `Sync mismatch: ${parts.join('; ')}` };
         }
 

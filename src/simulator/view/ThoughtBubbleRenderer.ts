@@ -4,15 +4,33 @@ import { BubbleLayout, THOUGHT_BUBBLE_CONFIG, computeBubbleLayout } from './bubb
 
 interface CloudPosition { x: number; y: number; opacity?: number }
 
+interface HeartOrbit {
+    direction: 1 | -1;
+    startAngle: number;
+}
+
+interface BubbleEntry {
+    group: SVGGElement;
+    text: string;
+    cloudId: string;
+    validated: boolean;
+    heartOrbits: HeartOrbit[];
+    heartCreatedAt: number;
+    siblingIndex: number;
+    siblingCount: number;
+}
+
 const config = THOUGHT_BUBBLE_CONFIG;
+const ORBIT_RX = 6;
+const ORBIT_RY = 4;
+const ORBIT_PERIOD_MS = 3000;
 
 export class ThoughtBubbleRenderer {
     private container: SVGGElement;
-    private currentGroup: SVGGElement | null = null;
-    private renderedBubble: { text: string; cloudId: string } | null = null;
+    private entries: Map<number, BubbleEntry> = new Map();
     private getCloudPosition: (cloudId: string) => CloudPosition | null;
     private getDimensions: () => { width: number; height: number };
-    private onDismiss: (() => void) | null = null;
+    private onDismiss: ((id: number) => void) | null = null;
 
     constructor(
         container: SVGGElement,
@@ -24,63 +42,97 @@ export class ThoughtBubbleRenderer {
         this.getDimensions = getDimensions;
     }
 
-    setOnDismiss(callback: () => void): void {
+    setOnDismiss(callback: (id: number) => void): void {
         this.onDismiss = callback;
     }
 
-    sync(bubble: ThoughtBubble | null, now: number = Date.now()): void {
-        if (!bubble || bubble.expiresAt <= now) {
-            this.hide();
-            return;
+    sync(bubbles: ThoughtBubble[], now: number): void {
+        const activeIds = new Set<number>();
+
+        // Group active bubbles by cloudId to compute sibling indices
+        const cloudBubbleOrder = new Map<string, number[]>();
+
+        for (const bubble of bubbles) {
+            if (bubble.expiresAt <= now) continue;
+            activeIds.add(bubble.id);
+            const ids = cloudBubbleOrder.get(bubble.cloudId) ?? [];
+            ids.push(bubble.id);
+            cloudBubbleOrder.set(bubble.cloudId, ids);
         }
 
-        const isSameBubble = this.renderedBubble &&
-            this.renderedBubble.text === bubble.text &&
-            this.renderedBubble.cloudId === bubble.cloudId;
+        for (const bubble of bubbles) {
+            if (!activeIds.has(bubble.id)) continue;
 
-        if (isSameBubble) {
-            this.updateFade(bubble, now);
-            this.updatePosition(bubble.cloudId);
-            return;
+            const siblings = cloudBubbleOrder.get(bubble.cloudId)!;
+            const siblingIndex = siblings.indexOf(bubble.id);
+
+            const existing = this.entries.get(bubble.id);
+            if (existing) {
+                const same = existing.text === bubble.text &&
+                    existing.cloudId === bubble.cloudId &&
+                    existing.validated === (bubble.validated ?? false) &&
+                    existing.siblingIndex === siblingIndex &&
+                    existing.siblingCount === siblings.length;
+                if (same) {
+                    this.updateFade(existing.group, bubble, now);
+                    this.updatePosition(existing, bubble.cloudId);
+                    continue;
+                }
+                this.removeEntry(bubble.id);
+            }
+            this.createEntry(bubble, now, siblingIndex, siblings.length);
         }
 
-        this.hide();
-        this.show(bubble, now);
+        // Remove entries no longer in the active set
+        for (const id of this.entries.keys()) {
+            if (!activeIds.has(id)) {
+                console.log(`[TB] removing entry id=${id} (no longer in active set of ${activeIds.size} ids)`);
+                this.removeEntry(id);
+            }
+        }
+
+        // Ensure newer bubbles (higher id) render on top
+        const sorted = [...this.entries.entries()].sort((a, b) => a[0] - b[0]);
+        for (const [, entry] of sorted) {
+            this.container.appendChild(entry.group);
+        }
     }
 
-    private computeLayout(cloudId: string, text: string): BubbleLayout | null {
+    private computeLayout(cloudId: string, text: string, siblingIndex: number = 0, siblingCount: number = 1): BubbleLayout | null {
         const pos = this.getCloudPosition(cloudId);
         if (!pos || (pos.opacity !== undefined && pos.opacity < 0.1)) return null;
         const dims = this.getDimensions();
-        return computeBubbleLayout(pos.x, pos.y, text, dims.width, dims.height, config);
+        return computeBubbleLayout(pos.x, pos.y, text, dims.width, dims.height, config, siblingIndex, siblingCount);
     }
 
-    private show(bubble: ThoughtBubble, now: number): void {
-        const layout = this.computeLayout(bubble.cloudId, bubble.text);
+    private createEntry(bubble: ThoughtBubble, now: number, siblingIndex: number = 0, siblingCount: number = 1): void {
+        const layout = this.computeLayout(bubble.cloudId, bubble.text, siblingIndex, siblingCount);
         if (!layout) return;
 
         const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight, lines } = layout;
 
-        this.currentGroup = createGroup({ class: 'thought-bubble', 'pointer-events': 'none' });
+        const group = createGroup({ class: 'thought-bubble', 'pointer-events': 'auto', cursor: 'pointer' });
+        const bubbleId = bubble.id;
 
         const dismiss = () => {
-            this.hide();
-            this.onDismiss?.();
+            this.removeEntry(bubbleId);
+            this.onDismiss?.(bubbleId);
         };
 
-        const bubbleStyle = { rx: 8, fill: 'white', stroke: '#333', 'stroke-width': 1.5, opacity: 0.95, 'pointer-events': 'auto' };
+        setClickHandler(group, dismiss);
+
+        const bubbleStyle = { rx: 8, fill: 'white', stroke: '#333', 'stroke-width': 1.5, opacity: 0.95 };
         const rect = createRect(bubbleX - bubbleWidth / 2, bubbleY - bubbleHeight / 2, bubbleWidth, bubbleHeight, bubbleStyle);
-        setClickHandler(rect, dismiss);
-        this.currentGroup.appendChild(rect);
+        group.appendChild(rect);
 
         const tailStyle = { fill: 'white', stroke: '#333', 'stroke-width': 1.5, 'pointer-events': 'none' };
         const circle1Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 8;
         const circle2Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 18;
         const smallCircle1 = createCircle(bubbleX - tailDirX * circle1Dist, bubbleY - tailDirY * circle1Dist, 6, tailStyle);
-        this.currentGroup.appendChild(smallCircle1);
+        group.appendChild(smallCircle1);
 
         const smallCircle2 = createCircle(bubbleX - tailDirX * circle2Dist, bubbleY - tailDirY * circle2Dist, 4, tailStyle);
-        this.currentGroup.appendChild(smallCircle2);
+        group.appendChild(smallCircle2);
 
         const textStartY = bubbleY - textHeight / 2 + config.fontSize;
         const textLines: TextLine[] = lines.map(line => ({
@@ -93,47 +145,93 @@ export class ThoughtBubbleRenderer {
             'text-anchor': 'middle',
             fill: '#333',
         }, config.lineHeight);
-        this.currentGroup.appendChild(text);
+        text.style.userSelect = 'none';
+        group.appendChild(text);
 
-        this.container.appendChild(this.currentGroup);
-        this.renderedBubble = { text: bubble.text, cloudId: bubble.cloudId };
+        const entry: BubbleEntry = {
+            group,
+            text: bubble.text,
+            cloudId: bubble.cloudId,
+            validated: bubble.validated ?? false,
+            heartOrbits: [],
+            heartCreatedAt: 0,
+            siblingIndex,
+            siblingCount,
+        };
 
-        this.updateFade(bubble, now);
+        if (bubble.validated) {
+            this.appendHearts(entry, bubbleX, bubbleY, bubbleWidth, bubbleHeight, now);
+        }
+
+        this.container.appendChild(group);
+        this.entries.set(bubble.id, entry);
+
+        this.updateFade(group, bubble, now);
     }
 
-    private updateFade(bubble: ThoughtBubble, now: number): void {
-        if (!this.currentGroup) return;
+    private removeEntry(id: number): void {
+        const entry = this.entries.get(id);
+        if (!entry) return;
+        entry.group.parentNode?.removeChild(entry.group);
+        this.entries.delete(id);
+    }
 
-        const fadeStartMs = 2000;
+    private updateFade(group: SVGGElement, bubble: ThoughtBubble, now: number): void {
+        const fadeStart = 2;
         const timeRemaining = bubble.expiresAt - now;
 
-        if (timeRemaining <= fadeStartMs) {
-            const fadeProgress = 1 - (timeRemaining / fadeStartMs);
+        if (timeRemaining <= fadeStart) {
+            const fadeProgress = 1 - (timeRemaining / fadeStart);
             const opacity = 0.95 * (1 - fadeProgress);
-            this.currentGroup.setAttribute('opacity', String(Math.max(0, opacity)));
+            group.setAttribute('opacity', String(Math.max(0, opacity)));
         } else {
-            this.currentGroup.setAttribute('opacity', '0.95');
+            group.setAttribute('opacity', '0.95');
         }
     }
 
-    private updatePosition(cloudId: string): void {
-        if (!this.currentGroup || !this.renderedBubble) return;
+    private heartAnchors(bubbleX: number, bubbleY: number, bubbleWidth: number, bubbleHeight: number): [number, number][] {
+        const inset = bubbleWidth * 0.25;
+        const left = bubbleX - bubbleWidth / 2 + inset;
+        const right = bubbleX + bubbleWidth / 2 - inset;
+        const topY = bubbleY - bubbleHeight / 2 + config.fontSize * 0.8;
+        const bottomY = bubbleY + bubbleHeight / 2 - config.fontSize * 0.3;
+        return [[left, topY], [right, topY], [left, bottomY], [right, bottomY]];
+    }
 
-        const layout = this.computeLayout(cloudId, this.renderedBubble.text);
+    private appendHearts(entry: BubbleEntry, bubbleX: number, bubbleY: number, bubbleWidth: number, bubbleHeight: number, now: number): void {
+        entry.heartCreatedAt = now;
+        entry.heartOrbits = [];
+        const anchors = this.heartAnchors(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+        for (const [hx, hy] of anchors) {
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            const startAngle = Math.random() * Math.PI * 2;
+            entry.heartOrbits.push({ direction: dir as 1 | -1, startAngle });
+            const heart = createText(hx, hy, [{ text: '❤️', fontSize: config.fontSize }], {
+                'text-anchor': 'middle',
+                'font-size': config.fontSize,
+                'pointer-events': 'none',
+                class: 'validate-heart',
+            }, 0);
+            entry.group.appendChild(heart);
+        }
+    }
+
+    private updatePosition(entry: BubbleEntry, cloudId: string): void {
+        const layout = this.computeLayout(cloudId, entry.text, entry.siblingIndex, entry.siblingCount);
         if (!layout) {
-            this.hide();
+            this.removeEntry(this.findEntryId(entry)!);
             return;
         }
 
         const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight } = layout;
 
-        const rect = this.currentGroup.querySelector('rect');
+        const rect = entry.group.querySelector('rect');
         if (rect) {
             rect.setAttribute('x', String(bubbleX - bubbleWidth / 2));
             rect.setAttribute('y', String(bubbleY - bubbleHeight / 2));
         }
 
-        const circles = this.currentGroup.querySelectorAll('circle');
+        const circles = entry.group.querySelectorAll('circle');
         const circle1Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 8;
         const circle2Dist = Math.max(bubbleWidth, bubbleHeight) / 2 + 18;
         if (circles[0]) {
@@ -145,7 +243,7 @@ export class ThoughtBubbleRenderer {
             circles[1].setAttribute('cy', String(bubbleY - tailDirY * circle2Dist));
         }
 
-        const text = this.currentGroup.querySelector('text');
+        const text = entry.group.querySelector('text:not(.validate-heart)');
         if (text) {
             const textStartY = bubbleY - textHeight / 2 + config.fontSize;
             text.setAttribute('x', String(bubbleX));
@@ -156,13 +254,39 @@ export class ThoughtBubbleRenderer {
                 tspan.setAttribute('y', String(textStartY + i * config.lineHeight));
             });
         }
+
+        const hearts = entry.group.querySelectorAll('.validate-heart');
+        if (hearts.length > 0) {
+            const anchors = this.heartAnchors(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+            const elapsed = Date.now() - entry.heartCreatedAt;
+            hearts.forEach((heart, i) => {
+                if (!anchors[i] || !entry.heartOrbits[i]) return;
+                const orbit = entry.heartOrbits[i];
+                const angle = orbit.startAngle + orbit.direction * (elapsed / ORBIT_PERIOD_MS) * Math.PI * 2;
+                const ox = anchors[i][0] + Math.cos(angle) * ORBIT_RX;
+                const oy = anchors[i][1] + Math.sin(angle) * ORBIT_RY;
+                heart.setAttribute('x', String(ox));
+                heart.setAttribute('y', String(oy));
+                const tspan = heart.querySelector('tspan');
+                if (tspan) {
+                    tspan.setAttribute('x', String(ox));
+                    tspan.setAttribute('y', String(oy));
+                }
+            });
+        }
+    }
+
+    private findEntryId(entry: BubbleEntry): number | undefined {
+        for (const [id, e] of this.entries) {
+            if (e === entry) return id;
+        }
+        return undefined;
     }
 
     hide(): void {
-        if (this.currentGroup?.parentNode) {
-            this.currentGroup.parentNode.removeChild(this.currentGroup);
+        for (const entry of this.entries.values()) {
+            entry.group.parentNode?.removeChild(entry.group);
         }
-        this.currentGroup = null;
-        this.renderedBubble = null;
+        this.entries.clear();
     }
 }

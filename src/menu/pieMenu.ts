@@ -543,6 +543,7 @@ export class PieMenu {
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
         textEl.setAttribute('pointer-events', 'none');
+        textEl.style.userSelect = 'none';
 
         const boldSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
         boldSpan.setAttribute('font-weight', 'bold');

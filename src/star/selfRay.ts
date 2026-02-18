@@ -12,7 +12,7 @@ export interface PartContext {
     partName: string;
 }
 
-export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'jobImpact' | 'gratitude' | 'compassion';
+export type BiographyField = 'age' | 'identity' | 'job' | 'jobAppraisal' | 'gratitude' | 'compassion';
 
 interface RayLayer {
     path: SVGPathElement;

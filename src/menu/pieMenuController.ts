@@ -161,9 +161,6 @@ export class PieMenuController {
         const validActions = controller?.getValidActions() ?? [];
         const validForCloud = validActions.filter(a => a.cloudId === cloudId);
 
-        const proxyAsTargetId = this.getProxyAsTarget(cloudId);
-        const proxyRevealed = proxyAsTargetId && model.parts.isIdentityRevealed(proxyAsTargetId);
-
         const items: PieMenuItem[] = [];
         const seenActions = new Set<string>();
 
@@ -176,11 +173,7 @@ export class PieMenuController {
 
             let label = action.question;
 
-            if (action.id === 'who_do_you_see' && model.getSelfRay()?.targetCloudId === cloudId && proxyRevealed) {
-                const proxyCloud = this.deps.getCloudById(proxyAsTargetId!);
-                const proxyName = proxyCloud?.text ?? 'the proxy';
-                label = `Who do you see when you look at the client?\nWould you be willing to notice the compassion instead of seeing ${proxyName}?`;
-            } else if (action.id === 'separate') {
+            if (action.id === 'separate') {
                 label = "Can you make a little space for client?";
             }
 
@@ -247,15 +240,4 @@ export class PieMenuController {
         return items;
     }
 
-    private getProxyAsTarget(cloudId: string): string | null {
-        const model = this.deps.getModel();
-        const relationships = this.deps.getRelationships();
-        const targetIds = model.getTargetCloudIds();
-        if (!targetIds.has(cloudId)) return null;
-        const proxies = relationships.getProxies(cloudId);
-        for (const proxyId of proxies) {
-            if (targetIds.has(proxyId)) return proxyId;
-        }
-        return null;
-    }
 }

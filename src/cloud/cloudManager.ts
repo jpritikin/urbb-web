@@ -118,6 +118,7 @@ export class CloudManager {
             getCanvasDimensions: () => ({ width: this.canvasWidth, height: this.canvasHeight }),
             simulateRayClick: () => this.view.simulateRayClick(),
             executeSpontaneousBlendForPlayback: (cloudId) => this.executeSpontaneousBlendForPlayback(cloudId),
+            promotePendingBlendForPlayback: (cloudId) => this.promotePendingBlendForPlayback(cloudId),
             getCarpetRenderer: () => this.carpetRenderer,
             checkBlendedPartsAttention: () => this.checkBlendedPartsAttention(),
             onRngChanged: (rng) => {
@@ -271,7 +272,7 @@ export class CloudManager {
             this.playbackRecording.getRNG(),
             {
                 act: (label, fn) => this.act(label, fn),
-                showThoughtBubble: (text, cloudId) => this.showThoughtBubble(text, cloudId),
+                showThoughtBubble: (text, cloudId, partInitiated) => this.showThoughtBubble(text, cloudId, partInitiated),
                 getCloudById: (id) => this.getCloudById(id),
                 getTime: () => this.timeAdvancer?.getTime() ?? 0,
             }
@@ -295,7 +296,7 @@ export class CloudManager {
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container' });
         this.uiGroup.appendChild(thoughtBubbleContainer);
         this.view.setThoughtBubbleContainer(thoughtBubbleContainer);
-        this.view.setOnThoughtBubbleDismiss(() => this.model.clearThoughtBubbles());
+        this.view.setOnThoughtBubbleDismiss((id) => this.model.removeThoughtBubble(id));
 
         this.pieMenuController = new PieMenuController(this.uiGroup, this.pieMenuOverlay, {
             getCloudById: (id) => this.getCloudById(id),
@@ -389,6 +390,11 @@ export class CloudManager {
 
         this.view.setGroups(this.zoomGroup!, this.uiGroup!);
         this.view.createStar((_x, _y, event) => {
+            const pending = this.model.getPendingAction();
+            if (pending) {
+                this.completePendingAction(STAR_CLOUD_ID);
+                return;
+            }
             if (this.pieMenuController && this.model.getMode() === 'foreground') {
                 const starPos = this.view.getStarScreenPosition();
                 const touchEvent = (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) ? event : undefined;
@@ -538,8 +544,8 @@ export class CloudManager {
         return this.selectedAction;
     }
 
-    private showThoughtBubble(text: string, cloudId: string): void {
-        this.model.addThoughtBubble(text, cloudId);
+    private showThoughtBubble(text: string, cloudId: string, partInitiated: boolean = true): void {
+        this.model.addThoughtBubble(text, cloudId, partInitiated);
         if (this.model.isBlended(cloudId)) {
             const time = this.timeAdvancer?.getTime() ?? 0;
             this.model.parts.setUtterance(cloudId, text, time);
@@ -569,7 +575,7 @@ export class CloudManager {
         trust?: number;
         needAttention?: number;
         partAge?: number | string;
-        dialogues?: { burdenedJobAppraisal?: string[]; burdenedJobImpact?: string[]; unburdenedJob?: string; genericBlendedDialogues?: string[] };
+        dialogues?: { burdenedJobAppraisal?: string[]; unburdenedJob?: string; genericBlendedDialogues?: string[] };
     }): Cloud {
         if (!this.svgElement) throw new Error('SVG element not initialized');
 
@@ -618,7 +624,9 @@ export class CloudManager {
         if (!cloudState || cloudState.opacity < 0.1) return null;
         const mode = this.view.getVisualMode();
         const transitioning = this.view.isTransitioning();
-        let pos = { x: cloudState.x, y: cloudState.y };
+        // Use cloud's visual center which accounts for stretch/lattice deformation
+        const cloud = this.getCloudById(cloudId);
+        let pos = cloud ? cloud.getVisualCenter() : { x: cloudState.x, y: cloudState.y };
         if (mode !== 'foreground' && !transitioning) {
             const zoom = this.view.getCurrentZoomFactor();
             const centerX = this.canvasWidth / 2;
@@ -811,21 +819,30 @@ export class CloudManager {
         const pending = this.model.getPendingBlends().find(p => p.cloudId === cloudId);
         if (!pending) return;
 
-        const name = this.model.parts.getPartName(cloudId);
-        this.act(`${name} blends`, () => {
-            const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
-            let item = this.model.dequeuePendingBlend();
-            while (item && item.cloudId !== cloudId) {
-                tempQueue.push(item);
-                item = this.model.dequeuePendingBlend();
-            }
-            for (const temp of tempQueue) {
-                this.model.enqueuePendingBlend(temp.cloudId, temp.reason);
-            }
-            if (item) {
-                this.model.addBlendedPart(cloudId, item.reason);
-            }
+        this.act({ action: 'promote_pending_blend', cloudId }, () => {
+            this.doPendingBlendPromotion(cloudId);
         });
+    }
+
+    private doPendingBlendPromotion(cloudId: string): void {
+        const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
+        let item = this.model.dequeuePendingBlend();
+        while (item && item.cloudId !== cloudId) {
+            tempQueue.push(item);
+            item = this.model.dequeuePendingBlend();
+        }
+        for (const temp of tempQueue) {
+            this.model.enqueuePendingBlend(temp.cloudId, temp.reason);
+        }
+        if (item) {
+            this.model.addBlendedPart(cloudId, item.reason);
+        }
+    }
+
+    private promotePendingBlendForPlayback(cloudId: string): void {
+        const oldModel = this.model.clone();
+        this.doPendingBlendPromotion(cloudId);
+        this.syncViewWithModel(oldModel);
     }
 
     private finishUnblending(cloudId: string): void {
@@ -1062,7 +1079,10 @@ export class CloudManager {
         this.updateZoomGroup();
 
         if (mode === 'foreground') {
-            this.updateThoughtBubbles();
+            if (!this.playbackRecording.isPlaying()) {
+                this.model.expireThoughtBubbles();
+            }
+            this.view.syncThoughtBubbles(this.model);
             this.view.updateSelfRayPosition();
             this.view.animateSelfRay(deltaTime);
             this.view.animateStretchEffects(deltaTime);

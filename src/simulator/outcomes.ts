@@ -39,6 +39,8 @@ export const OUTCOMES = {
     PROTECTOR_RECOGNIZED_BURDEN: 'protector_recognized_burden',
     PROTECTOR_UNBURDENED: 'protector_unburdened',
     PROTECTEE_RECOGNIZED_PROTECTOR: 'protectee_recognized_protector',
+    RECOGNIZED_PROTECTOR_IMPACT: 'recognized_protector_impact',
+    IMPACT_RECOGNITION_FAILED: 'impact_recognition_failed',
     // Backlash
     TRIGGERED_BACKLASH: 'triggered_backlash',
 
@@ -77,13 +79,6 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
 
     help_protected: [OUTCOMES.CONSENTED_TO_HELP, OUTCOMES.REFUSED_TO_HELP],
 
-    who_do_you_see: [
-        OUTCOMES.IDENTITY_REVEALED,
-        OUTCOMES.PROXIES_CLEARED,
-        OUTCOMES.BLENDED_AS_PROXY,
-        OUTCOMES.NO_CHANGE,
-    ],
-
     feel_toward: [
         OUTCOMES.REGARD_PART,
     ],
@@ -96,6 +91,12 @@ export const ACTION_OUTCOMES: Record<string, Outcome[]> = {
         OUTCOMES.PROTECTOR_RECOGNIZED_BURDEN,
         OUTCOMES.PROTECTOR_UNBURDENED,
         OUTCOMES.PROTECTEE_RECOGNIZED_PROTECTOR,
+        OUTCOMES.RECOGNIZED_PROTECTOR_IMPACT,
+        OUTCOMES.IMPACT_RECOGNITION_FAILED,
+        OUTCOMES.IDENTITY_REVEALED,
+        OUTCOMES.PROXIES_CLEARED,
+        OUTCOMES.BLENDED_AS_PROXY,
+        OUTCOMES.NO_CHANGE,
     ],
 
     ray_field_select: [

@@ -58,6 +58,7 @@ export class TimeAdvancer {
     advance(deltaTime: number): void {
         this.accumulatedTime += deltaTime;
         this.cumulativeTime += deltaTime;
+        this.model.advanceSimulationTime(deltaTime);
         while (this.accumulatedTime >= ATTENTION_CHECK_INTERVAL) {
             this.accumulatedTime -= ATTENTION_CHECK_INTERVAL;
             this.intervalCount++;
@@ -73,6 +74,7 @@ export class TimeAdvancer {
     }
 
     advanceIntervals(count: number): void {
+        this.model.advanceSimulationTime(count * ATTENTION_CHECK_INTERVAL);
         for (let i = 0; i < count; i++) {
             this.processOneInterval();
             if (!this.skipAttentionChecks) {
@@ -102,6 +104,7 @@ export class TimeAdvancer {
         this.orchestrator?.checkAndSendBlendedUtterances(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndShowGenericDialogues(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndShowSelfLoathing(ATTENTION_CHECK_INTERVAL);
+        this.orchestrator?.checkJealousy(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndShowConversationDialogues(ATTENTION_CHECK_INTERVAL);
     }
 
