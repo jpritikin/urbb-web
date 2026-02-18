@@ -205,10 +205,11 @@ export class CarpetRenderer {
             return el?.dataset?.carpetId;
         };
 
-        // --- Mouse handlers (single pointer, unchanged behavior) ---
+        let syntheticDrag = false;
         this.carpetGroup.addEventListener('mousedown', (e: MouseEvent) => {
             const carpetId = findCarpetId(e.target);
             if (!carpetId) return;
+            syntheticDrag = !e.isTrusted;
             if (this.conversationActive) {
                 this.rotationDragCarpetId = carpetId;
                 const pos = toSvgCoords(e.clientX, e.clientY);
@@ -222,6 +223,7 @@ export class CarpetRenderer {
         });
 
         svg.addEventListener('mousemove', (e: MouseEvent) => {
+            if (syntheticDrag && e.isTrusted) return;
             if (this.rotationDragCarpetId) {
                 const pos = toSvgCoords(e.clientX, e.clientY);
                 this.updateRotationMouseIndicator(pos.x, pos.y);
@@ -234,7 +236,9 @@ export class CarpetRenderer {
             e.preventDefault();
         });
 
-        const onMouseEnd = () => {
+        const onMouseEnd = (e?: Event) => {
+            if (syntheticDrag && e?.isTrusted) return;
+            syntheticDrag = false;
             if (this.rotationDragCarpetId) {
                 this.commitRotation();
                 return;

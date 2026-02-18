@@ -47,6 +47,7 @@ export interface PlaybackViewState {
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
+    getDiagnostics: () => Record<string, unknown>;
 }
 
 export interface PlaybackInputSimulator {
@@ -87,7 +88,7 @@ export interface PlaybackCallbacks extends
     PlaybackTimeControl,
     PlaybackLifecycle { }
 
-type PlaybackState = 'idle' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
+type PlaybackState = 'idle' | 'ready' | 'waiting' | 'executing' | 'paused' | 'complete' | 'error';
 
 export class PlaybackController {
     private state: PlaybackState = 'idle';
@@ -132,21 +133,30 @@ export class PlaybackController {
     start(session: RecordedSession): void {
         this.actions = session.actions;
         this.currentActionIndex = 0;
-        this.state = 'waiting';
+        this.state = 'ready';
         this.canResume = true;
-        this.waitCountdown = this.getInterActionDelay();
-
-        this.reticle.create();
         this.createControlPanel();
         this.updateControlPanel();
+    }
+
+    private beginPlayback(): void {
+        this.state = 'waiting';
+        this.waitCountdown = this.getInterActionDelay();
+        this.reticle.create();
         this.callbacks.pausePlayback();
+        this.updateControlPanel();
     }
 
     pause(): void {
         if (this.state !== 'waiting' && this.state !== 'executing') return;
         this.state = 'paused';
-        // Keep time effects paused to prevent blend timer drift
         this.updateControlPanel();
+    }
+
+    onCanvasResized(): void {
+        if (!this.isActive() || this.state === 'ready') return;
+        console.log('[Playback] Canvas resized, cancelling playback');
+        this.cancel();
     }
 
     resume(): void {
@@ -165,6 +175,11 @@ export class PlaybackController {
         this.state = 'complete';
         this.cleanup();
         this.callbacks.onPlaybackCancelled();
+    }
+
+    cancelIfReady(): void {
+        if (this.state !== 'ready') return;
+        this.cancel();
     }
 
     onUserStateModification(): void {
@@ -186,7 +201,7 @@ export class PlaybackController {
     }
 
     update(deltaTime: number): void {
-        if (this.state === 'complete' || this.state === 'error') return;
+        if (this.state === 'ready' || this.state === 'complete' || this.state === 'error') return;
 
         this.reticle.update(deltaTime);
 
@@ -434,7 +449,12 @@ export class PlaybackController {
         }
 
         if (!clickResult.success && clickResult.error?.startsWith('No element') && retryCount < 5) {
-            console.warn(`[Playback] elementFromPoint miss at (${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`);
+            const rect = this.svgElement.getBoundingClientRect();
+            const viewBox = this.svgElement.viewBox.baseVal;
+            console.warn(`[Playback] elementFromPoint miss at svg(${x.toFixed(0)}, ${y.toFixed(0)}), retry ${retryCount + 1}/5`, {
+                canvasRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                viewBox: { width: viewBox.width, height: viewBox.height },
+            });
             await this.delay(100);
             return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
         }
@@ -480,6 +500,26 @@ export class PlaybackController {
         console.error('[Playback Error]', this.errorMessage);
         console.error('[Playback] Current action:', this.actions[this.currentActionIndex]);
         console.error('[Playback] Action index:', this.currentActionIndex, 'of', this.actions.length);
+
+        const rect = this.svgElement.getBoundingClientRect();
+        const viewBox = this.svgElement.viewBox.baseVal;
+        console.error('[Playback] Diagnostics:', {
+            canvas: {
+                boundingRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
+                widthAttr: this.svgElement.getAttribute('width'),
+                heightAttr: this.svgElement.getAttribute('height'),
+            },
+            fullscreen: this.callbacks.getIsFullscreen(),
+            mobile: this.callbacks.isMobile(),
+            view: {
+                transitioning: this.callbacks.isTransitioning(),
+                pendingBlends: this.callbacks.hasPendingBlends(),
+                activeSpiralExits: this.callbacks.hasActiveSpiralExits(),
+            },
+            model: this.callbacks.getModelState(),
+            ...this.callbacks.getDiagnostics(),
+        });
 
         this.callbacks.onPlaybackError();
         this.updateControlPanel();
@@ -595,7 +635,7 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.isTransitioning()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for transition');
+                console.warn(`[Playback] Timeout waiting for transition after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);
@@ -608,7 +648,8 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.hasPendingBlends()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for pending blends');
+                const state = this.callbacks.getModelState();
+                console.warn(`[Playback] Timeout waiting for pending blends after ${maxWait}ms, blended: [${state.blended.join(', ')}]`);
                 break;
             }
             await this.delay(50);
@@ -621,7 +662,7 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.hasActiveSpiralExits()) {
             if (performance.now() - start > maxWait) {
-                console.warn('[Playback] Timeout waiting for spiral exits');
+                console.warn(`[Playback] Timeout waiting for spiral exits after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);
@@ -722,7 +763,11 @@ export class PlaybackController {
         });
 
         this.resumeButton?.addEventListener('click', () => {
-            this.exitDismissConfirmMode();
+            if (this.state === 'ready') {
+                this.beginPlayback();
+            } else {
+                this.exitDismissConfirmMode();
+            }
         });
 
         this.finalDismissButton?.addEventListener('click', () => {
@@ -764,18 +809,18 @@ export class PlaybackController {
         this.controlPanel.classList.toggle('error', this.state === 'error');
         this.controlPanel.classList.toggle('confirm-mode', this.dismissConfirmMode);
 
-        // Show/hide buttons based on confirm mode
+        const isReady = this.state === 'ready';
+
         if (this.dismissButton) {
-            this.dismissButton.style.display = this.dismissConfirmMode ? 'none' : 'flex';
+            this.dismissButton.style.display = (this.dismissConfirmMode || isReady) ? 'none' : 'flex';
         }
         if (this.resumeButton) {
-            this.resumeButton.style.display = this.dismissConfirmMode ? 'flex' : 'none';
+            this.resumeButton.style.display = (this.dismissConfirmMode || isReady) ? 'flex' : 'none';
         }
         if (this.finalDismissButton) {
-            this.finalDismissButton.style.display = this.dismissConfirmMode ? 'flex' : 'none';
+            this.finalDismissButton.style.display = (this.dismissConfirmMode && !isReady) ? 'flex' : 'none';
         }
 
-        // Show advance button only during long waits (not in confirm mode)
         const seconds = Math.ceil(this.waitCountdown);
         const isLongWait = this.state === 'waiting' && seconds >= PlaybackController.LONG_WAIT_THRESHOLD;
         if (this.advanceButton) {
@@ -783,7 +828,10 @@ export class PlaybackController {
         }
 
         if (this.countdownDisplay && this.actionDisplay) {
-            if (this.state === 'error') {
+            if (isReady) {
+                this.countdownDisplay.textContent = '';
+                this.actionDisplay.textContent = 'Start playback';
+            } else if (this.state === 'error') {
                 this.countdownDisplay.textContent = '❌ Error';
                 this.actionDisplay.textContent = this.errorMessage;
             } else if (this.dismissConfirmMode) {

@@ -457,6 +457,7 @@ export class CloudManager {
         this.expandDeepenEffect?.setDimensions(width, height);
         this.panoramaMotion.setDimensions(width, height);
         this.updateViewBox();
+        this.playbackRecording.onCanvasResized();
     }
 
     private toggleFullscreen(): void {
@@ -985,6 +986,9 @@ export class CloudManager {
         }
 
         const recordedAction = typeof action === 'string' ? undefined : action;
+        if (!recordedAction) {
+            this.playbackRecording.cancelIfReady();
+        }
         const oldModel = this.model.clone();
         if (recordedAction) {
             this.playbackRecording.recordIntervals();

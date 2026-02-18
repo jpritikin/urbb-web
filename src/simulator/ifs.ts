@@ -89,9 +89,6 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     cloudManager.finalizePanoramaSetup();
 
     cloudManager.applyAssessedNeedAttention();
-    if (playbackMode && recordedSession) {
-        cloudManager.pausePlayback();
-    }
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
 

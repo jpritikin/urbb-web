@@ -5,8 +5,6 @@ import { RNG, pickRandom } from '../playback/testability/rng.js';
 export const REGULATION_STANCE_LIMIT = 0.3;
 
 export interface MessageOrchestratorView {
-    hasActiveSpiralExits(): boolean;
-    isAwaitingArrival(cloudId: string): boolean;
     getCloudState(cloudId: string): unknown | null;
     startMessage(message: PartMessage, senderId: string, targetId: string): void;
 }
@@ -28,6 +26,7 @@ export class MessageOrchestrator {
     private messageCooldownTimers: Map<string, number> = new Map();
     private blendStartTimers: Map<string, number> = new Map();
     private pendingSummonTargets: Map<string, string> = new Map();
+    private summonArrivalTimers: Map<string, number> = new Map();
     private genericDialogueCooldowns: Map<string, number> = new Map();
     private selfLoathingCooldowns: Map<string, number> = new Map();
     private sustainedRegulationTimer: number = 0;
@@ -44,6 +43,7 @@ export class MessageOrchestrator {
     private readonly SUSTAINED_TRUST_INTERVAL = 10;
     private readonly REGULATION_RECOVER_RATE = 0.5;
     private readonly REGULATION_DECAY_RATE = 0.3;
+    private readonly SUMMON_ARRIVAL_DELAY = 2;
 
     constructor(
         getModel: () => SimulatorModel,
@@ -83,6 +83,15 @@ export class MessageOrchestrator {
         for (const blendedId of this.blendStartTimers.keys()) {
             if (!blendedParts.includes(blendedId)) {
                 this.blendStartTimers.delete(blendedId);
+            }
+        }
+
+        for (const [key, time] of this.summonArrivalTimers) {
+            const remaining = time - deltaTime;
+            if (remaining <= 0) {
+                this.summonArrivalTimers.delete(key);
+            } else {
+                this.summonArrivalTimers.set(key, remaining);
             }
         }
 
@@ -135,11 +144,12 @@ export class MessageOrchestrator {
                     this.model.addTargetCloud(targetId);
                 });
                 this.pendingSummonTargets.set(blendedId, targetId);
+                this.summonArrivalTimers.set(targetId, this.SUMMON_ARRIVAL_DELAY);
                 this.messageCooldownTimers.set(blendedId, 0);
                 continue;
             }
 
-            if (this.view.isAwaitingArrival(targetId)) continue;
+            if (this.summonArrivalTimers.has(targetId)) continue;
 
             this.sendBlendedUtterance(blendedId, targetId, text);
             this.messageCooldownTimers.set(blendedId, 0);
