@@ -1323,6 +1323,10 @@ export class SimulatorView {
         return this.transitionAnimator.hasActiveSpiralExits();
     }
 
+    hasActiveSupportingEntries(): boolean {
+        return this.transitionAnimator.hasActiveSupportingEntries();
+    }
+
     animateSpiralExits(): void {
         this.transitionAnimator.animateSpiralExits();
     }

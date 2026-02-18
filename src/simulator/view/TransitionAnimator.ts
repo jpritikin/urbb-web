@@ -118,6 +118,10 @@ export class TransitionAnimator {
         return this.spiralExits.size > 0;
     }
 
+    hasActiveSupportingEntries(): boolean {
+        return this.supportingEntries.size > 0;
+    }
+
     animateSpiralExits(): void {
         const now = performance.now();
         const toRemove: string[] = [];

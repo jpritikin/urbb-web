@@ -112,7 +112,6 @@ export class CloudManager {
             getMessageOrchestrator: () => this.messageOrchestrator,
             getPieMenuController: () => this.pieMenuController,
             getAnimatedStar: () => ({ simulateClick: () => this.view.simulateStarClick(), getElement: () => this.view.getStarElement() }),
-            getInputHandler: () => this.inputHandler,
             getUIManager: () => this.uiManager,
             getContainer: () => this.container,
             getSvgElement: () => this.svgElement,
@@ -126,6 +125,10 @@ export class CloudManager {
                 this.messageOrchestrator?.setRNG(rng);
                 this.timeAdvancer?.setRNG(rng);
                 this.panoramaMotion.setRandom(() => Math.random());
+            },
+            pauseAnimation: () => {
+                this.animationLoop.stop();
+                this.uiManager?.setAnimationPaused(true);
             },
         });
 

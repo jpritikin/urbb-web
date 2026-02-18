@@ -39,6 +39,7 @@ export interface PlaybackViewState {
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
     hasActiveSpiralExits: () => boolean;
+    hasActiveSupportingEntries: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
@@ -47,13 +48,13 @@ export interface PlaybackViewState {
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
+    setCarpetsInteractive: (enabled: boolean) => void;
     getDiagnostics: () => Record<string, unknown>;
 }
 
 export interface PlaybackInputSimulator {
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
-    simulateClickOnCloud: (cloudId: string) => ActionResult;
     simulateMouseDown: (x: number, y: number, carpetCloudId?: string) => void;
     simulateMouseMove: (x: number, y: number) => void;
     simulateMouseUp: () => void;
@@ -295,6 +296,7 @@ export class PlaybackController {
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
         await this.waitForPendingBlends();
+        await this.waitForSupportingEntries();
 
         switch (action.action) {
             case 'select_a_target':
@@ -339,9 +341,16 @@ export class PlaybackController {
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
         if (action.targetCloudId) {
             // Completing a pending action: just click the target cloud
+            if (!this.callbacks.getCloudPosition(action.targetCloudId)) {
+                await this.toggleToPanorama();
+            }
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
             await this.reticle.fadeOut();
             return;
+        }
+
+        if (!this.callbacks.getCloudPosition(action.cloudId)) {
+            await this.toggleToPanorama();
         }
 
         const openSuccess = await this.hoverAndClickCloud(action.cloudId, `opening cloud menu for ${action.cloudId}`);
@@ -395,7 +404,9 @@ export class PlaybackController {
     }
 
     private async executeRayFieldAction(action: RecordedAction): Promise<void> {
+        this.callbacks.setCarpetsInteractive(false);
         const openSuccess = await this.hoverAndClickCloud(RAY_CLOUD_ID, 'opening ray menu');
+        this.callbacks.setCarpetsInteractive(true);
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.field ?? '');
@@ -411,9 +422,13 @@ export class PlaybackController {
     private async hoverAndClickCloud(cloudId: string, context?: string, expectAction: boolean = false): Promise<boolean> {
         await this.showReticleAtCloud(cloudId);
         const pos = this.callbacks.getCloudPosition(cloudId);
-        if (pos) this.callbacks.simulateHover(pos.x, pos.y);
+        if (!pos) {
+            this.handleError(`Cloud position not found: ${cloudId}`, context ?? cloudId);
+            return false;
+        }
+        this.callbacks.simulateHover(pos.x, pos.y);
         await this.trackCloudDelay(HOVER_PAUSE_MS, cloudId);
-        return this.clickOnCloud(cloudId, context, expectAction);
+        return this.clickAtPosition(pos.x, pos.y, context ?? `click cloud ${cloudId}`, expectAction);
     }
 
     private async trackCloudDelay(ms: number, cloudId: string): Promise<void> {
@@ -462,17 +477,6 @@ export class PlaybackController {
         return this.handleClickResult(clickResult, context ?? `at (${x.toFixed(0)}, ${y.toFixed(0)})`, expectAction);
     }
 
-    private async clickOnCloud(cloudId: string, context?: string, expectAction: boolean = false): Promise<boolean> {
-        await this.waitForCanvasOnScreen();
-        await this.reticle.animateHug();
-        this.callbacks.clearLastActionResult();
-
-        const pos = this.callbacks.getCloudPosition(cloudId);
-        const clickResult = this.callbacks.simulateClickOnCloud(cloudId);
-        if (pos) this.reticle.spawnKisses(pos.x, pos.y);
-
-        return this.handleClickResult(clickResult, context ?? cloudId, expectAction);
-    }
 
     private async handleClickResult(clickResult: ActionResult, context: string, expectAction: boolean): Promise<boolean> {
         if (!clickResult.success) {
@@ -663,6 +667,19 @@ export class PlaybackController {
         while (this.callbacks.hasActiveSpiralExits()) {
             if (performance.now() - start > maxWait) {
                 console.warn(`[Playback] Timeout waiting for spiral exits after ${maxWait}ms`);
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
+    private async waitForSupportingEntries(): Promise<void> {
+        if (!this.callbacks.hasActiveSupportingEntries()) return;
+        const maxWait = 5000;
+        const start = performance.now();
+        while (this.callbacks.hasActiveSupportingEntries()) {
+            if (performance.now() - start > maxWait) {
+                console.warn(`[Playback] Timeout waiting for supporting entries after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);

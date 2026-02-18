@@ -38,6 +38,7 @@ export interface PlaybackRecordingDependencies {
         getCloudState(cloudId: string): { x: number; y: number } | undefined;
         isTransitioning(): boolean;
         hasActiveSpiralExits(): boolean;
+        hasActiveSupportingEntries(): boolean;
         getViewSnapshot(): ViewSnapshot;
     };
     getPendingBlendsCount: () => number;
@@ -45,16 +46,16 @@ export interface PlaybackRecordingDependencies {
     getMessageOrchestrator: () => { getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
     getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null } | null;
-    getInputHandler: () => { handleCloudClick(cloud: { text: string }): void } | null;
     getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void } | null;
     getContainer: () => HTMLElement | null;
     getSvgElement: () => SVGSVGElement | null;
     getCanvasDimensions: () => { width: number; height: number };
     simulateRayClick: () => void;
     executeSpontaneousBlendForPlayback: (cloudId: string) => void;
-    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null } | null;
+    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
     checkBlendedPartsAttention: () => void;
     onRngChanged: (rng: RNG) => void;
+    pauseAnimation: () => void;
 }
 
 export class PlaybackRecordingCoordinator {
@@ -295,6 +296,7 @@ export class PlaybackRecordingCoordinator {
             isTransitioning: () => this.deps.getView().isTransitioning(),
             hasPendingBlends: () => this.deps.getPendingBlendsCount() > 0,
             hasActiveSpiralExits: () => this.deps.getView().hasActiveSpiralExits(),
+            hasActiveSupportingEntries: () => this.deps.getView().hasActiveSupportingEntries(),
             isMobile: () => this.deps.getUIManager()?.isMobile() ?? false,
             getIsFullscreen: () => this.deps.getUIManager()?.getIsFullscreen() ?? false,
             findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
@@ -308,9 +310,6 @@ export class PlaybackRecordingCoordinator {
             },
             simulateClickAtPosition: (x, y) => {
                 return this.simulateClickAtPosition(x, y);
-            },
-            simulateClickOnCloud: (cloudId) => {
-                return this.simulateClickOnCloud(cloudId);
             },
             pausePlayback: () => {
                 this.playing = true;
@@ -339,6 +338,9 @@ export class PlaybackRecordingCoordinator {
             },
             getCurrentDragStanceDelta: () => {
                 return this.deps.getCarpetRenderer()?.getCurrentDragStanceDelta() ?? null;
+            },
+            setCarpetsInteractive: (enabled: boolean) => {
+                this.deps.getCarpetRenderer()?.setCarpetsInteractive(enabled);
             },
             getDiagnostics: () => {
                 const model = this.deps.getModel();
@@ -384,6 +386,7 @@ export class PlaybackRecordingCoordinator {
                 this.playbackController = null;
             },
             onPlaybackError: () => {
+                this.deps.pauseAnimation();
                 this.downloadSessionHandler?.();
             }
         };
@@ -445,40 +448,15 @@ export class PlaybackRecordingCoordinator {
             return { success: false, error: `No element at svg(${x.toFixed(0)}, ${y.toFixed(0)}) screen(${clientX.toFixed(0)}, ${clientY.toFixed(0)})` };
         }
 
-        const clickEvent = new MouseEvent('click', {
-            clientX,
-            clientY,
-            bubbles: true,
-            cancelable: true
-        });
-
-        element.dispatchEvent(clickEvent);
+        const eventOpts = { clientX, clientY, bubbles: true, cancelable: true };
+        element.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+        element.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+        element.dispatchEvent(new MouseEvent('click', eventOpts));
 
         if (element.closest('.thought-bubble')) {
             return { success: true, message: 'thought-bubble-dismissed' };
         }
 
-        return { success: true };
-    }
-
-    private simulateClickOnCloud(cloudId: string): ActionResult {
-        if (cloudId === STAR_CLOUD_ID) {
-            this.deps.getAnimatedStar()?.simulateClick();
-            return { success: true };
-        }
-        if (cloudId === RAY_CLOUD_ID) {
-            this.deps.simulateRayClick();
-            return { success: true };
-        }
-        if (cloudId === MODE_TOGGLE_CLOUD_ID) {
-            this.deps.getUIManager()?.simulateModeToggleClick();
-            return { success: true };
-        }
-        const cloud = this.deps.getCloudById(cloudId);
-        if (!cloud) {
-            return { success: false, error: `Cloud not found: ${cloudId}` };
-        }
-        this.deps.getInputHandler()?.handleCloudClick(cloud as any);
         return { success: true };
     }
 
