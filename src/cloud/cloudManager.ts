@@ -111,7 +111,7 @@ export class CloudManager {
             getTimeAdvancer: () => this.timeAdvancer,
             getMessageOrchestrator: () => this.messageOrchestrator,
             getPieMenuController: () => this.pieMenuController,
-            getAnimatedStar: () => ({ simulateClick: () => this.view.simulateStarClick(), getElement: () => this.view.getStarElement() }),
+            getAnimatedStar: () => ({ simulateClick: () => this.view.simulateStarClick(), getElement: () => this.view.getStarElement(), setPointerEventsEnabled: (enabled: boolean) => this.view.setStarPointerEventsEnabled(enabled) }),
             getUIManager: () => this.uiManager,
             getContainer: () => this.container,
             getSvgElement: () => this.svgElement,

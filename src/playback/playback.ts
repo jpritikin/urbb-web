@@ -49,6 +49,7 @@ export interface PlaybackViewState {
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
     setCarpetsInteractive: (enabled: boolean) => void;
+    setStarInteractive: (enabled: boolean) => void;
     getDiagnostics: () => Record<string, unknown>;
 }
 
@@ -413,7 +414,9 @@ export class PlaybackController {
 
     private async executeRayFieldAction(action: RecordedAction): Promise<void> {
         this.callbacks.setCarpetsInteractive(false);
+        this.callbacks.setStarInteractive(false);
         const openSuccess = await this.hoverAndClickCloud(RAY_CLOUD_ID, 'opening ray menu');
+        this.callbacks.setStarInteractive(true);
         this.callbacks.setCarpetsInteractive(true);
         if (!openSuccess) return;
 

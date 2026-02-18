@@ -45,7 +45,7 @@ export interface PlaybackRecordingDependencies {
     getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
     getMessageOrchestrator: () => { getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
-    getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null } | null;
+    getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null; setPointerEventsEnabled(enabled: boolean): void } | null;
     getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void } | null;
     getContainer: () => HTMLElement | null;
     getSvgElement: () => SVGSVGElement | null;
@@ -342,6 +342,9 @@ export class PlaybackRecordingCoordinator {
             setCarpetsInteractive: (enabled: boolean) => {
                 this.deps.getCarpetRenderer()?.setCarpetsInteractive(enabled);
             },
+            setStarInteractive: (enabled: boolean) => {
+                this.deps.getAnimatedStar()?.setPointerEventsEnabled(enabled);
+            },
             getDiagnostics: () => {
                 const model = this.deps.getModel();
                 const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
@@ -431,10 +434,7 @@ export class PlaybackRecordingCoordinator {
 
     private simulateClickAtPosition(x: number, y: number, retryCount: number = 0): ActionResult {
         const { clientX, clientY } = this.svgToScreenCoords(x, y);
-        const starElement = this.deps.getAnimatedStar()?.getElement();
-        if (starElement) starElement.style.pointerEvents = 'none';
         const element = document.elementFromPoint(clientX, clientY);
-        if (starElement) starElement.style.pointerEvents = '';
         if (!element) {
             const svgElement = this.deps.getSvgElement();
             const rect = svgElement?.getBoundingClientRect();

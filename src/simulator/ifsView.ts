@@ -162,6 +162,10 @@ export class SimulatorView {
         this.animatedStar?.simulateClick();
     }
 
+    setStarPointerEventsEnabled(enabled: boolean): void {
+        this.animatedStar?.setPointerEventsEnabled(enabled);
+    }
+
     setStarBorderOpacity(opacity: number): void {
         this.animatedStar?.setBorderOpacity(opacity);
     }
