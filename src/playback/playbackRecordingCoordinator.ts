@@ -467,12 +467,12 @@ export class PlaybackRecordingCoordinator {
             const actualModelCount = this.rng.getCallCount();
             if (action.rngCounts.model !== actualModelCount) {
                 const actualLog = this.rng.getCallLog();
-                const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
-                console.log('[Sync] RNG mismatch - expected count:', action.rngCounts.model,
-                    'actual count:', actualModelCount,
-                    'log:', actualLog,
-                    'orchestratorTimers:', orchState?.blendTimers,
-                    'orchestratorPending:', orchState?.pending);
+                const expectedDelta = action.rngLog ?? [];
+                const prevExpectedCount = action.rngCounts.model - expectedDelta.length;
+                const actualDelta = actualLog.slice(prevExpectedCount);
+                console.log(`[Sync] RNG mismatch - expected: ${action.rngCounts.model}, actual: ${actualModelCount} (delta from ${prevExpectedCount})`,
+                    `\n  expected (${expectedDelta.length}):`, expectedDelta.map(e => e.label).join(', '),
+                    `\n  actual   (${actualDelta.length}):`, actualDelta.map(e => e.label).join(', '));
                 parts.push(`model RNG count: expected ${action.rngCounts.model}, got ${actualModelCount}`);
             }
         }

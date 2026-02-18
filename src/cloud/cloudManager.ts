@@ -957,7 +957,7 @@ export class CloudManager {
         if (this.model.isConversationInitialized()) {
             this.carpetRenderer?.setConversationActive(true);
             this.carpetRenderer?.setOnRotationEnd((carpetId, stanceDelta) => {
-                const rounded = Math.round(stanceDelta * 10) / 10;
+                const rounded = Math.round(stanceDelta * 5) / 5;
                 if (Math.abs(rounded) < 0.01) return;
                 const rec: RecordedAction = { action: 'nudge_stance', cloudId: carpetId, stanceDelta: rounded };
                 this.act(rec, () => {

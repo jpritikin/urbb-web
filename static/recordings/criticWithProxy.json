@@ -10200,7 +10200,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_3",
-      "stanceDelta": -0.5,
+      "stanceDelta": -0.6,
       "elapsedTime": 1.7801999999955296,
       "effectiveTime": 1.7810999999940393,
       "waitCount": 0,
@@ -10648,7 +10648,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_3",
-      "stanceDelta": -0.3,
+      "stanceDelta": -0.4,
       "elapsedTime": 4.13470000000298,
       "effectiveTime": 4.132500000000001,
       "waitCount": 2,
@@ -11109,7 +11109,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_1",
-      "stanceDelta": 0.9,
+      "stanceDelta": 1,
       "elapsedTime": 1.585,
       "effectiveTime": 1.5838000000044694,
       "waitCount": 0,
@@ -11408,7 +11408,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_1",
-      "stanceDelta": 0.7,
+      "stanceDelta": 0.8,
       "elapsedTime": 1.2671999999955297,
       "effectiveTime": 1.2719999999999996,
       "waitCount": 0,
@@ -11570,7 +11570,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_3",
-      "stanceDelta": -0.3,
+      "stanceDelta": -0.4,
       "elapsedTime": 8.09320000000298,
       "effectiveTime": 8.097899999998507,
       "waitCount": 4,
@@ -11724,7 +11724,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_1",
-      "stanceDelta": 0.7,
+      "stanceDelta": 0.8,
       "elapsedTime": 2.0327999999970197,
       "effectiveTime": 2.0306000000014905,
       "waitCount": 1,
@@ -12475,7 +12475,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_3",
-      "stanceDelta": -0.5,
+      "stanceDelta": -0.6,
       "elapsedTime": 2.00789999999851,
       "effectiveTime": 2.00580000000447,
       "waitCount": 1,
@@ -13235,7 +13235,7 @@
     {
       "action": "nudge_stance",
       "cloudId": "cloud_1",
-      "stanceDelta": 0.5,
+      "stanceDelta": 0.6,
       "elapsedTime": 1.633,
       "effectiveTime": 1.6337999999970192,
       "waitCount": 0,
