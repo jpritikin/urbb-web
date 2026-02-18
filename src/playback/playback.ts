@@ -340,7 +340,6 @@ export class PlaybackController {
 
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
         if (action.targetCloudId) {
-            // Completing a pending action: just click the target cloud
             if (!this.callbacks.getCloudPosition(action.targetCloudId)) {
                 await this.toggleToPanorama();
             }
@@ -353,36 +352,45 @@ export class PlaybackController {
             await this.toggleToPanorama();
         }
 
-        const openSuccess = await this.hoverAndClickCloud(action.cloudId, `opening cloud menu for ${action.cloudId}`);
-        if (!openSuccess) return;
+        const result = await this.openMenuWithRetry(action.cloudId, action.action);
+        if (!result) return;
 
-        const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        if (!sliceInfo) {
-            this.handleError(`Action '${action.action}' not found in open menu`, action.cloudId);
-            return;
-        }
-
-        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount);
+        await this.executeSliceSelection(action.cloudId, result.sliceIndex, result.itemCount);
     }
 
     private async executeStarMenuAction(action: RecordedAction): Promise<void> {
         if (action.targetCloudId) {
-            // Completing a pending action: just click the target cloud
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
             await this.reticle.fadeOut();
             return;
         }
 
-        const openSuccess = await this.hoverAndClickCloud(STAR_CLOUD_ID, 'opening star menu');
-        if (!openSuccess) return;
+        const result = await this.openMenuWithRetry(STAR_CLOUD_ID, action.action, 'star');
+        if (!result) return;
 
-        const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        if (!sliceInfo) {
-            this.handleError(`Action '${action.action}' not found in star menu`, 'star');
-            return;
+        await this.executeSliceSelection(STAR_CLOUD_ID, result.sliceIndex, result.itemCount);
+    }
+
+    private async openMenuWithRetry(cloudId: string, actionId: string, errorContext?: string): Promise<MenuSliceInfo | null> {
+        const maxRetries = 5;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const openSuccess = await this.hoverAndClickCloud(cloudId, `opening menu for ${cloudId}`);
+            if (!openSuccess) return null;
+
+            if (this.callbacks.getMenuCenter()) {
+                const sliceInfo = this.callbacks.findActionInOpenMenu(actionId);
+                if (sliceInfo) return sliceInfo;
+                this.handleError(`Action '${actionId}' not found in open menu`, errorContext ?? cloudId);
+                return null;
+            }
+
+            if (attempt < maxRetries - 1) {
+                console.warn(`[Playback] Menu didn't open for ${cloudId}, retry ${attempt + 1}/${maxRetries}`);
+                await this.delay(200);
+            }
         }
-
-        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount);
+        this.handleError('Menu failed to open after retries', errorContext ?? cloudId);
+        return null;
     }
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
