@@ -366,6 +366,7 @@ export class PlaybackController {
             return;
         }
 
+        this.callbacks.setStarInteractive(true);
         const result = await this.openMenuWithRetry(STAR_CLOUD_ID, action.action, 'star');
         if (!result) return;
 
