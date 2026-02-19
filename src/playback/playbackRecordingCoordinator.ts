@@ -38,6 +38,7 @@ export interface PlaybackRecordingDependencies {
         getStarScreenPosition(): { x: number; y: number };
         getCloudState(cloudId: string): { x: number; y: number } | undefined;
         isTransitioning(): boolean;
+        forceCompleteTransition(): void;
         hasActiveSpiralExits(): boolean;
         hasActiveSupportingEntries(): boolean;
         getViewSnapshot(): ViewSnapshot;
@@ -300,6 +301,7 @@ export class PlaybackRecordingCoordinator {
                 };
             },
             isTransitioning: () => this.deps.getView().isTransitioning(),
+            forceCompleteTransition: () => this.deps.getView().forceCompleteTransition(),
             hasPendingBlends: () => this.deps.getPendingBlendsCount() > 0,
             hasResolvingClouds: () => this.deps.hasResolvingClouds(),
             hasActiveSpiralExits: () => this.deps.getView().hasActiveSpiralExits(),

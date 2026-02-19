@@ -530,12 +530,13 @@ export class MessageOrchestrator {
         this.model.setConversationPhase(speakerId, 'listen');
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; pendingJealousy: Record<string, { favoredId: string; diff: number }>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
             pending: Object.fromEntries(this.pendingSummonTargets),
             jealousyCooldowns: Object.fromEntries(this.jealousyCooldowns),
+            pendingJealousy: Object.fromEntries(this.pendingJealousy),
             respondTimer: this.respondTimer,
             regulationScore: this.regulationScore,
             sustainedRegulationTimer: this.sustainedRegulationTimer,
@@ -544,7 +545,7 @@ export class MessageOrchestrator {
         };
     }
 
-    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number }): void {
+    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; pendingJealousy?: Record<string, { favoredId: string; diff: number }>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number }): void {
         if (snapshot.blendTimers) {
             this.blendStartTimers = new Map(Object.entries(snapshot.blendTimers));
         }
@@ -556,6 +557,9 @@ export class MessageOrchestrator {
         }
         if (snapshot.jealousyCooldowns) {
             this.jealousyCooldowns = new Map(Object.entries(snapshot.jealousyCooldowns));
+        }
+        if (snapshot.pendingJealousy) {
+            this.pendingJealousy = new Map(Object.entries(snapshot.pendingJealousy));
         }
         if (snapshot.respondTimer !== undefined) this.respondTimer = snapshot.respondTimer;
         if (snapshot.regulationScore !== undefined) this.regulationScore = snapshot.regulationScore;

@@ -1391,6 +1391,12 @@ export class SimulatorView {
         return this.transitionDirection !== 'none' && this.transitionProgress < 1;
     }
 
+    forceCompleteTransition(): void {
+        if (this.isTransitioning()) {
+            this.animate(2.0);
+        }
+    }
+
     getTransitionProgress(): number {
         return this.transitionProgress;
     }

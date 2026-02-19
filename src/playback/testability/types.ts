@@ -49,6 +49,8 @@ export interface OrchestratorSnapshot {
     blendTimers: Record<string, number>;
     cooldowns: Record<string, number>;
     pending: Record<string, string>;
+    jealousyCooldowns?: Record<string, number>;
+    pendingJealousy?: Record<string, { favoredId: string; diff: number }>;
     respondTimer?: number;
     regulationScore?: number;
     sustainedRegulationTimer?: number;
