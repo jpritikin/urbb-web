@@ -84,7 +84,7 @@ export class SimulatorView {
 
     // Thought bubbles
     private thoughtBubbleRenderer: ThoughtBubbleRenderer | null = null;
-    private onThoughtBubbleDismiss: (() => void) | null = null;
+    private onThoughtBubbleDismiss: ((id: number) => void) | null = null;
 
     // Victory banner
     private victoryBanner: VictoryBanner = new VictoryBanner();
@@ -162,6 +162,10 @@ export class SimulatorView {
         this.animatedStar?.simulateClick();
     }
 
+    setStarPointerEventsEnabled(enabled: boolean): void {
+        this.animatedStar?.setPointerEventsEnabled(enabled);
+    }
+
     setStarBorderOpacity(opacity: number): void {
         this.animatedStar?.setBorderOpacity(opacity);
     }
@@ -232,12 +236,12 @@ export class SimulatorView {
             (cloudId) => this.getCloudState(cloudId) ?? null,
             () => ({ width: this.canvasWidth, height: this.canvasHeight })
         );
-        this.thoughtBubbleRenderer.setOnDismiss(() => {
-            this.onThoughtBubbleDismiss?.();
+        this.thoughtBubbleRenderer.setOnDismiss((id) => {
+            this.onThoughtBubbleDismiss?.(id);
         });
     }
 
-    setOnThoughtBubbleDismiss(callback: () => void): void {
+    setOnThoughtBubbleDismiss(callback: (id: number) => void): void {
         this.onThoughtBubbleDismiss = callback;
     }
 
@@ -247,8 +251,7 @@ export class SimulatorView {
             this.thoughtBubbleRenderer.hide();
             return;
         }
-        const bubble = model.getCurrentThoughtBubble();
-        this.thoughtBubbleRenderer.sync(bubble);
+        this.thoughtBubbleRenderer.sync(model.getThoughtBubbles(), model.getSimulationTime());
     }
 
     hideThoughtBubbles(): void {
@@ -544,7 +547,8 @@ export class SimulatorView {
         this.lastSyncBlendedCount = newModel.getBlendedParts().length;
         const noBlendedParts = this.lastSyncBlendedCount === 0 && !newModel.peekPendingBlend();
         const inForeground = newModel.getMode() === 'foreground';
-        this.animatedStar?.setPointerEventsEnabled(inForeground && noBlendedParts);
+        const hasPendingNotice = newModel.getPendingAction()?.actionId === 'notice_part';
+        this.animatedStar?.setPointerEventsEnabled(inForeground && (noBlendedParts || hasPendingNotice));
 
         this.syncConversation(newModel);
 
@@ -1321,6 +1325,10 @@ export class SimulatorView {
 
     hasActiveSpiralExits(): boolean {
         return this.transitionAnimator.hasActiveSpiralExits();
+    }
+
+    hasActiveSupportingEntries(): boolean {
+        return this.transitionAnimator.hasActiveSupportingEntries();
     }
 
     animateSpiralExits(): void {

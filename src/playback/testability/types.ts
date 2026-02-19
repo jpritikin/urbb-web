@@ -21,11 +21,15 @@ export interface SerializedModel {
         fromId: string;
         toId: string;
         trust: number;
+        trustFloor?: number;
         stance: number;
         stanceFlipOdds: number;
         stanceFlipOddsSetPoint?: number;
         dialogues?: ConversationDialogues;
+        noticed?: boolean;
         rumination?: string[];
+        impactRecognition?: string[];
+        impactRejection?: string[];
     }[];
     proxies: { cloudId: string; proxyId: string }[];
     thoughtBubbles?: ThoughtBubble[];
@@ -38,12 +42,17 @@ export interface SerializedModel {
     conversationParticipantIds?: [string, string] | null;
     conversationPhases?: Record<string, string>;
     conversationSpeakerId?: string | null;
+    simulationTime?: number;
 }
 
 export interface OrchestratorSnapshot {
     blendTimers: Record<string, number>;
     cooldowns: Record<string, number>;
     pending: Record<string, string>;
+    respondTimer?: number;
+    regulationScore?: number;
+    sustainedRegulationTimer?: number;
+    newCycleTimer?: number;
 }
 
 export interface BiographySnapshot {
@@ -51,7 +60,6 @@ export interface BiographySnapshot {
     identityRevealed: boolean;
     jobRevealed: boolean;
     jobAppraisalRevealed: boolean;
-    jobImpactRevealed: boolean;
 }
 
 export interface ViewSnapshot {
@@ -75,6 +83,7 @@ export interface ModelSnapshot {
     conversationTherapistDelta?: Record<string, number>;
     conversationSpeakerId?: string | null;
     interPartRelations?: { fromId: string; toId: string; stance: number; trust: number }[];
+    thoughtBubbles?: { id: number; cloudId: string; text: string; validated?: boolean; partInitiated?: boolean }[];
     viewState?: ViewSnapshot;
 }
 
@@ -132,6 +141,8 @@ export interface InterPartRelationConfig {
     stanceFlipOddsSetPoint?: number;
     dialogues?: ConversationDialogues;
     rumination?: string[];
+    impactRecognition?: string[];
+    impactRejection?: string[];
 }
 
 export interface RelationshipConfig {

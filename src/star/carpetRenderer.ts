@@ -353,6 +353,12 @@ export class CarpetRenderer {
         return this.carpetElements.find(el => el.dataset.carpetId === carpetId) ?? null;
     }
 
+    setCarpetsInteractive(enabled: boolean): void {
+        for (const el of this.carpetElements) {
+            el.style.pointerEvents = enabled ? '' : 'none';
+        }
+    }
+
     getCarpetCenter(carpetId: string): { x: number; y: number } | null {
         const carpet = this.latestCarpetStates?.get(carpetId);
         if (!carpet) return null;

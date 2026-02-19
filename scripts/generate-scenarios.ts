@@ -16,7 +16,6 @@ const easyScenario: Scenario = {
             partAge: 8,
             dialogues: {
                 burdenedJobAppraisal: ["I'm exhausted with my job.", "I don't want to criticize, but I have to."],
-                burdenedJobImpact: ["I am harsh, but I help avoid critiques from outside."],
                 unburdenedJob: "I help you foresee risks.",
             },
         },
@@ -55,7 +54,6 @@ const mediumScenario: Scenario = {
             partAge: 8,
             dialogues: {
                 burdenedJobAppraisal: ["I'm exhausted with my job."],
-                burdenedJobImpact: ["I am harsh, but I help avoid critiques from outside."],
                 unburdenedJob: "I help you foresee risks.",
             },
         },

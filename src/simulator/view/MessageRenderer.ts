@@ -200,6 +200,7 @@ export class MessageRenderer {
             'text-anchor': 'middle',
             fill: '#333',
         }, config.lineHeight);
+        textEl.style.userSelect = 'none';
         group.appendChild(textEl);
 
         return group;

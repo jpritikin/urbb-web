@@ -1,0 +1,476 @@
+Imago Conversation Dynamics
+===========================
+
+Stance instability, phase progression, and trust growth for the IFS
+simulator's Imago dialogue system.
+
+
+ALREADY IMPLEMENTED
+-------------------
+
+- Inter-part relations: InterPartRelation with trust, stance, stanceFlipOdds
+- Grievance messages using inter-part dialogues (hostile/speak pool)
+- Carpet landing/flattening, star border morph, badge text
+- Carpet grayscale desaturation at stance -1
+- therapistStanceDelta map on model with getters/setters/serialization
+- getConversationEffectiveStance() = sampled stance + therapist delta
+- Imago pie menu (Listen/Speak) on carpet clicks during conversation
+- checkAndShowConversationDialogues() with discrete frequency thresholds
+- Effective stance passed to carpet renderer
+- Reactive blending, needAttention growth from inter-part trust
+- Stance drift toward set point (DRIFT_RATE=0.02/sec)
+- nudgeStance(), getPhaseStance(), addInterPartTrust()
+
+
+WHAT NEEDS TO CHANGE
+--------------------
+
+Problem 1: No instability — nothing for the therapist to do.
+Stance is static (sampled once) + therapist delta (never decays). Click
+"Speak" once and the part speaks forever.
+
+Problem 2: No phase progression.
+Parts only "speak" — no mirror/validate/empathize, no imago cycle, no
+trust growth.
+
+Problem 3: Discrete thresholds feel mechanical.
+effectiveStance > 0.8 → frequent, > 0.4 → infrequent. Artificial.
+
+Problem 4: Self-part trust has no role in conversation.
+Building Self-trust before conversation should matter.
+
+
+CORE DYNAMICS
+-------------
+
+Effective stance (live, not one-shot sampled):
+
+    effectiveStance = interPartRelation.stance + therapistStanceDelta
+
+Read the live relation.stance (which drifts toward set point at 0.02/sec)
+plus the therapist's overlay (which decays toward 0). Both are unstable —
+the therapist must keep intervening.
+
+
+THERAPIST DELTA DECAY
+---------------------
+
+therapistStanceDelta decays toward 0:
+
+    delta *= Math.exp(-decayRate * deltaTime)    // decayRate ≈ 0.17
+
+A single "Ask to speak" (+0.2) wears off in ~4 seconds. The therapist
+must keep clicking to maintain regulated stance.
+
+Remove sampleConversationStances() — no longer needed. The
+conversationEffectiveStances map becomes a cache updated each frame
+from live relation.stance + therapist delta.
+
+
+STANCE SHOCK ON UTTERANCE
+-------------------------
+
+When part A speaks at effective stance s, part B receives a stance shock:
+
+    shockMagnitude = |s| * 2 / ((1 + selfTrust_B) * (1 + B_A_trust))
+
+Shock direction depends on B's stanceFlipOdds:
+
+    if rng() < B_relation.stanceFlipOdds:
+        B.stance += sign(s) * shockMagnitude    // same direction (mutual escalation/shutdown)
+    else:
+        B.stance += -sign(s) * shockMagnitude   // opposite direction (pursuer/distancer)
+
+- Self-trust buffers reactivity: high Self-trust → smaller shocks
+- Inter-part trust buffers reactivity: as B→A trust grows, shocks shrink
+  At hostile trust (0.2): shock factor ≈ 1.67x
+  At collaborative trust (0.7): shock factor ≈ 1.18x
+- Volatile parts (high flipOdds) react unpredictably
+- Stable parts (low flipOdds) reliably do pursuer/distancer
+
+Examples:
+- Volatile toddler (flipOdds=0.4): might withdraw OR explode in response
+  to domination
+- Rigid manager (flipOdds=0.05): reliably dominates back
+
+
+PROBABILISTIC SPEAKING
+----------------------
+
+Replaces discrete thresholds. Each tick, probability of speaking (only
+when part's phase is 'speak'):
+
+    speakProbability = max(0, effectiveStance + 0.1)² * baseRate
+
+    Stance +1.0:  probability ≈ 0.36/sec  (floods, won't stop)
+    Stance +0.4:  probability ≈ 0.075/sec (speaks occasionally)
+    Stance  0.0:  probability ≈ 0.003/sec (regulated, rare spontaneous speech)
+    Stance -0.1:  probability = 0          (withdrawing, won't speak voluntarily)
+    Stance -0.8:  probability = 0          (shut down completely)
+
+baseRate ≈ 0.3/sec. The +0.1 offset means parts near 0 still occasionally
+speak — regulated parts aren't silent, just measured. Deep withdrawal
+(< -0.1) produces silence.
+
+Remove CONVERSATION_SPEAK_FREQUENT/INFREQUENT constants.
+
+
+CONVERSATION PHASES
+-------------------
+
+Each part has a conversationPhase: 'speak' | 'listen' | 'mirror' |
+'validate' | 'empathize'.
+
+    type ImagoPhase = 'speak' | 'listen' | 'mirror' | 'validate' | 'empathize';
+
+Initialize: speaker = part with highest effective stance. Listener = other.
+
+    conversationPhases: Map<string, ImagoPhase>
+    conversationSpeakerId: string | null   // tracks who "owns" the cycle
+
+Fixed Imago cycle (A = speaker, B = listener):
+
+    A phase     B phase     What's happening
+    -------     -------     ----------------
+    speak       listen      A speaks, B listens
+    listen      mirror      B reflects back what A said
+    validate    listen      A judges B's mirror (always accurate)
+    listen      empathize   B imagines what A feels
+
+The listener role alternates each step. When B completes empathize:
++0.25 proportional trust both directions, both → 'listen'.
+
+RESET ON LISTENER VIOLATION: If the designated listener's effective
+stance goes positive past REGULATION_STANCE_LIMIT, the conversation
+resets to step 1. The violator becomes the new speaker. No extra
+trust penalty (stance shock already damages trust). This creates
+stakes: the large empathize trust reward is lost on reset.
+
+After empathize completion, both parts are at 'listen'. A new cycle
+starts when any part's stance drifts positive past REGULATION_STANCE_LIMIT
+(or the therapist nudges). That part becomes the new speaker.
+
+Phase progression is AUTOMATIC when both parts are regulated
+(|stance| < 0.3) — phases advance on a timer without therapist
+intervention. When dysregulated, phase progression stalls.
+
+
+IMAGO PIE MENU
+--------------
+
+Keep the existing Listen/Speak actions. These are the therapist's
+primary lever — adjustments to therapistStanceDelta:
+
+- "Ask to listen" (imago_listen): addTherapistStanceDelta(partId, -0.2)
+  Nudges part toward withdrawing/listening. Use when dominating.
+
+- "Ask to speak" (imago_speak): addTherapistStanceDelta(partId, +0.2)
+  Nudges part toward speaking. Use when withdrawing.
+
+No new action IDs needed. The therapist's job is stance regulation —
+keeping parts in the zone where automatic phase progression can happen.
+The variety of real-world Imago phrasing ("Can you reflect back?",
+"I need to interrupt you", "Do you have more to say?") maps to the
+same two underlying mechanics: nudge stance positive or negative.
+
+
+TRUST GROWTH
+------------
+
+Trust grows when:
+- Any phase advance: +0.02 inter-part trust (listener toward speaker)
+- Full empathize completion: +0.05 both directions
+- Being regulated for sustained period: +0.01/10sec (presence helps)
+
+Trust affects dialogue content via getTrustBand() — as trust crosses
+thresholds (hostile→guarded→opening→collaborative), the dialogue pool
+shifts automatically.
+
+Asymmetric trust handling: when A→B trust >> B→A trust, the therapist
+may run multiple cycles with B as speaker (A keeps listening/mirroring/
+validating B). The phase model supports this — no forced role swap.
+
+
+BADGE VISUALS
+-------------
+
+Carpet badge text from conversationPhases map (S, M, V, E).
+
+Badge styling based on stance:
+- Dominating: badge pulses/grows, urgent
+- Withdrawing: badge dims/shrinks, fading
+- Regulated: badge steady, clear
+
+Two parts both showing "S" = both speaking, nobody listening — visible
+problem. One "S" and one "M" = process is working.
+
+
+BLENDING DURING CONVERSATION
+-----------------------------
+
+Conversation is possible when isConversationPossible() returns true
+(existing code). When a part blends, that condition breaks and the
+conversation ends naturally. The player brings the parts back together
+using the usual flow. No special "pinned" or "paused" state needed.
+
+Inter-part trust can be further damaged during conversation: if a part
+gives up on trying to converse (trust dropping from repeated stance
+shocks), it may blend and exit the conversation. This is realistic —
+sometimes conversation attempts fail and you need more individual work
+before trying again.
+
+
+CONVERSATION FAILURE MODES BY STANCE PAIRING
+--------------------------------------------
+
+    Sender stance    Receiver stance    Failure mode
+    -------------    ---------------    ------------
+    Dominating       Withdrawing        Overwhelms → shuts down → escalates
+    Dominating       Dominating         Mutual interruption → both blend → chaos
+    Withdrawing      Withdrawing        Awkward silence → dies of neglect
+    Withdrawing      Dominating         Receiver takes over → inappropriate role flip
+
+
+EXITING CONVERSATION
+--------------------
+
+Conversation ends when isConversationPossible() returns false (existing
+code). This happens naturally when a part blends, is removed as target,
+etc. Success: both inter-part trust values cross 0.7 — conversation is
+no longer needed, reactivity minimal.
+
+
+VICTORY CONDITION CHANGES
+-------------------------
+
+Current: All parts trust >= 0.9, needAttention < 1, protectors unburdened.
+
+Addition: For parts that started with inter-part trust < 0.4 (hostile),
+they must reach inter-part trust >= 0.6 (no longer hostile).
+
+This ensures polarizations are resolved, not just individually worked around.
+
+
+DIALOGUE STRUCTURE BY TRUST
+---------------------------
+
+    interface ConversationDialogues {
+        hostile?: string[][];    // array of 4-line conversations
+        guarded?: string[][];
+        opening?: string[][];
+        collaborative?: string[][];
+    }
+
+Each conversation is a 4-element string array: [speak, mirror, validate, empathize].
+Index maps to phase via PHASE_INDEX. Multiple conversations per trust band to
+pick from. The stance game handles dominating/withdrawing — dialogues don't need
+to branch on stance.
+
+
+WORKED EXAMPLE: TODDLER ↔ INNER CRITIC
+---------------------------------------
+
+Each conversation is [speak, mirror, validate, empathize]. The speaker
+says speak + validate; the listener says mirror + empathize.
+
+Toddler → Inner Critic (toddler speaks, inner critic mirrors):
+
+    relationships.setInterPartRelation(toddler.id, innerCritic.id, {
+        trust: 0.2,
+        stance: -0.4,          // Leans withdrawing
+        stanceFlipOdds: 0.4,   // But volatile - may tantrum
+        dialogues: {
+            hostile: [
+                ["You're mean!",             "You think I'm mean?",           "YES!",                    "..."],
+                ["I don't wanna talk.",       "You don't want to talk?",       "...",                     "..."],
+            ],
+            guarded: [
+                ["You never let me do anything.", "You feel restricted?",       "Maybe...",                "I guess you're frustrated."],
+                ["Why do you always yell at me?!", "You feel yelled at?",       "Fine, whatever!",         "I hear you."],
+            ],
+            opening: [
+                ["I just want to play sometimes.",  "You want to play?",        "That's right.",           "Okay, but be careful."],
+                ["I need to be free sometimes!",    "You need more freedom?",   "Yes!",  "You must be tired of worrying."],
+            ],
+            collaborative: [
+                ["What if I check with you before doing something risky?", "You'd do that?", "Yeah! That would help us both.", "You've been carrying a lot of worry for us."],
+            ],
+        }
+    });
+
+Inner Critic → Toddler (inner critic speaks, toddler mirrors):
+
+    relationships.setInterPartRelation(innerCritic.id, toddler.id, {
+        trust: 0.2,
+        stance: 0.6,           // Dominates toward Toddler
+        stanceFlipOdds: 0.05,  // Rarely collapses
+        dialogues: {
+            hostile: [
+                ["You got us criticized.",       "You think it's my fault?",    "Yes!",              "..."],
+                ["Don't do anything risky.",      "You want me to stop?",       "Obviously!",        "..."],
+            ],
+            guarded: [
+                ["The risks are real.",           "You're worried about risks?", "Yes, exactly.",     "That sounds tiring."],
+                ["I'm tired of being the bad guy.", "You feel stuck?",           "I suppose so.",     "That must be hard."],
+            ],
+            opening: [
+                ["I worry because I care about us.", "You're saying you care?",  "Yes.",              "I didn't know that."],
+                ["Maybe I've been too hard on you.", "You think so?",            "I think so, yes.",  "That means a lot."],
+            ],
+            collaborative: [
+                ["What if I gave you safe times to be wild?", "You'd do that for me?", "Yes, we can find a balance.", "I'd really like that."],
+            ],
+        }
+    });
+
+
+WORKED EXAMPLE: ADDICTION SCENARIO
+-----------------------------------
+
+Parts:
+- Exile (Ashamed One): carries childhood pain
+- Manager (Critical Manager): criticizes drinking behavior
+- Firefighter (Numbing Part): drinks to suppress exile's pain
+
+Initial relationships:
+- Numbing Part protects Exile (protection relationship)
+- Manager↔NumbingPart: polarized rivals
+
+    Manager → NumbingPart:
+        trust: 0.2 (hostile)
+        stance: +0.6 (dominating - lectures, criticizes)
+        stanceFlipOdds: 0.05 (rarely collapses)
+
+    NumbingPart → Manager:
+        trust: 0.2 (hostile)
+        stance: -0.6 (withdrawing - shuts down, avoids)
+        stanceFlipOdds: 0.1 (occasionally lashes out)
+
+Classic pursuer/distancer. Manager dominates, Numbing Part withdraws,
+which provokes more domination, which provokes more withdrawal.
+Occasionally the Numbing Part flips to dominating (lashing out).
+
+Numbing Part → Manager (NP speaks, Manager mirrors):
+
+    genericBlendedDialogues: [
+        "Just one drink to take the edge off.",
+        "I can't let you feel that."
+    ]
+    conversationDialogues:
+        hostile: [
+            ["...",                "You have nothing to say?",     "...",            "..."],
+            ["What's the point?",  "You feel hopeless?",          "Sure.",          "I guess."],
+        ]
+        guarded: [
+            ["It's complicated.",  "You're saying it's not simple?", "Maybe that's true.", "I suppose you're frustrated."],
+        ]
+        opening: [
+            ["I didn't realize how much this affected you.", "You're saying it hurts to watch?", "That makes sense.", "You must feel helpless."],
+        ]
+        collaborative: [
+            ["What if I tried waiting before reaching for a drink?", "You'd try that?", "That's a good idea.", "You're hopeful we can change this."],
+        ]
+
+Manager → Numbing Part (Manager speaks, NP mirrors):
+
+    genericBlendedDialogues: [
+        "This is pathetic.",
+        "You're destroying everything.",
+        "Just stop drinking!"
+    ]
+    conversationDialogues:
+        hostile: [
+            ["You're making things worse.",  "You think I'm the problem?",  "Yes!",                "..."],
+        ]
+        guarded: [
+            ["The damage is real.",   "You're worried about damage?",  "I suppose so.",       "You feel overwhelmed."],
+        ]
+        opening: [
+            ["Maybe I've been too harsh.",  "You think so?",   "That makes sense.",   "You must feel trapped."],
+        ]
+        collaborative: [
+            ["What if I raised concerns differently?", "You'd do that?", "Working together would help.", "You're hoping for real change."],
+        ]
+
+Gameplay flow:
+
+1. Panorama: Select Manager (high needAttention from hostile inter-part trust)
+2. Foreground: Work with Manager individually - learn job, build Self→Part trust
+3. Manager sends grievance messages to Numbing Part (informal, hostile/speak
+   dialogues delivered as one-directional attacks)
+4. Numbing Part's needAttention spikes (reactive, low inter-trust with Manager)
+5. Numbing Part blends spontaneously, displaces Manager
+6. Help Numbing Part separate, build Self→Part trust
+7. Get both as targets in fg mode → "Invite dialogue" appears in pie menu
+8. Start conversation → carpets land with phase badges (both "S"), star
+   shrinks, Imago circle expands
+9. Manager speaks probabilistically (dominating) — flooding, Manager's "S"
+   badge pulses. Each utterance shocks NP's stance further negative
+   (pursuer/distancer: Manager dominates, NP withdraws)
+10. Click Manager's carpet → "Ask to listen" → therapist delta -0.2
+    Manager's speaking rate drops
+11. Wait — therapist delta decays, Manager's stance drifts back toward +0.6
+    → therapist must click "Ask to listen" again
+12. Manager regulated enough → phases auto-advance: Manager→listen, NP→mirror
+    NP reflects back what Manager said (mirror utterance, small shock)
+13. Both still regulated → auto-advance: NP→validate, then NP→empathize
+    Each phase advance: trust +0.02
+14. NP completes empathize → +0.05 trust BOTH directions, NP→listen
+15. Role swap is EMERGENT: stance shock from NP's empathize utterance
+    may push Manager's stance positive → Manager spontaneously speaks.
+    Or therapist clicks Manager's carpet → "Ask to speak" → delta +0.2
+16. OR: therapist decides NP needs to speak (asymmetric trust) → clicks
+    NP's carpet → "Ask to speak" → run another cycle with NP as speaker
+18. Mid-conversation: Ashamed Exile's needAttention spikes (reactive to
+    emotional content) → blends spontaneously → conversation pauses
+19. Help Exile unblend (or do brief individual work via Self-ray)
+20. Exile leaves table → 2 targets restored → conversation resumes
+21. Repeat cycles, managing stance shocks and therapist delta decay,
+    until inter-part trust reaches 0.7
+22. Conversation dissolves: badges disappear, Imago circle contracts,
+    carpets lift
+23. Reactivity dampened - can now work with Exile without cascade
+24. Build Exile trust to 1.0
+25. Numbing Part notices Exile is okay → unburdened
+26. Victory
+
+
+IMPLEMENTATION STEPS
+--------------------
+
+Step 1: Therapist delta decay + live effective stance
+- Decay in animation loop: therapistStanceDelta *= Math.exp(-0.17 * dt)
+- getConversationEffectiveStance() reads live relation.stance + delta
+- Remove sampleConversationStances()
+- Repurpose conversationEffectiveStances as cache updated each frame
+
+Step 2: Probabilistic speaking + stance shock
+- Replace discrete thresholds with speakProbability = max(0, s+0.1)² * 0.3
+- On utterance: stance shock on receiver, direction by stanceFlipOdds
+- Self-trust buffers: shock /= (1 + selfTrust)
+- Remove CONVERSATION_SPEAK_FREQUENT/INFREQUENT
+
+Step 3: Conversation phases
+- Add conversationPhases: Map<string, ImagoPhase> to model
+- Initialize: each part by effective stance (>= 0 → 'speak', < 0 → 'listen')
+- Badge text from phase map
+- Serialize/deserialize
+
+Step 4: Automatic phase progression + trust growth
+- When both parts regulated (|effectiveStance| < 0.3), advance phases on timer
+- Phase advance: trust +0.02 (listener toward speaker)
+- Empathize completion: +0.05 both directions, empathizer→listen
+- When dysregulated, phase progression stalls
+- Sustained regulation trust: +0.01/10sec
+
+Step 6: Badge visuals
+- Badge text from conversationPhases map (S, M, V, E)
+- Pulse if dominating, dim if withdrawing, steady if regulated
+
+Files to modify:
+- src/simulator/ifsModel.ts — decay delta, phases, live effective stance
+- src/simulator/messageOrchestrator.ts — probabilistic speaking, stance shock, auto phase advance
+- src/cloud/cloudManager.ts — wire phases, decay delta in animation loop
+- src/star/carpetRenderer.ts — badge text from phase, badge styling
+- src/playback/testability/types.ts — conversationPhases in SerializedModel
+- content/ifs/_index.md — bump version

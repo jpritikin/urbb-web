@@ -127,6 +127,15 @@ export class PieMenu {
         this.targetCloudId = cloudId;
         this.visible = true;
         this.hoverIndex = -1;
+
+        const menuExtent = this.radius + 20;
+        const svg = this.container.ownerSVGElement;
+        const viewBox = svg?.viewBox.baseVal;
+        if (viewBox) {
+            x = Math.max(viewBox.x + menuExtent, Math.min(x, viewBox.x + viewBox.width - menuExtent));
+            y = Math.max(viewBox.y + menuExtent, Math.min(y, viewBox.y + viewBox.height - menuExtent));
+        }
+
         this.menuCenterX = x;
         this.menuCenterY = y;
         this.itemSlices = [];
@@ -534,6 +543,7 @@ export class PieMenu {
         textEl.setAttribute('font-size', String(fontSize));
         textEl.setAttribute('fill', '#fff');
         textEl.setAttribute('pointer-events', 'none');
+        textEl.style.userSelect = 'none';
 
         const boldSpan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
         boldSpan.setAttribute('font-weight', 'bold');

@@ -23,6 +23,8 @@ src/simulator/ifsModel.ts        - Pure state. Targets, blended parts, supportin
                                    conversationTherapistDelta, conversationParticipantIds,
                                    conversationPhases, conversationSpeakerId,
                                    messageIdCounter, onModeChange callback.
+                                   ThoughtBubble has validated flag; validateThoughtBubble()
+                                   marks bubble validated and extends expiry.
                                    All state serializable to JSON.
 src/simulator/ifsView.ts         - View state + rendering coordination. Manages per-cloud
                                    animated state (position, opacity, scale, blending degree).
@@ -62,15 +64,23 @@ src/simulator/timeAdvancer.ts    - Advances simulation time. Increases needAtten
                                    decays flip odds and therapist stance deltas,
                                    checks attention thresholds, triggers spontaneous blends.
                                    Also runs generic dialogue checks, self-loathing checks,
-                                   orchestrator timer updates. Processes in 0.5s interval chunks.
+                                   jealousy checks, orchestrator timer updates.
+                                   Processes in 0.5s interval chunks.
 src/simulator/messageOrchestrator.ts - Timed message exchanges between parts, blend-start
                                    delays, cooldown timers (per-sender, generic dialogue,
-                                   self-loathing). Grievance and pendulum dialogue responses.
+                                   self-loathing, jealousy). Grievance and pendulum dialogue
+                                   responses. Jealousy system: when trust gap between two
+                                   related parts exceeds inter-part trust + 0.15, the
+                                   lower-trust part demands attention and shows jealousy
+                                   thought bubble; pending jealousy deferred until part
+                                   joins conference.
                                    Drives IFIO conversation phase progression: regulation
                                    scoring, phase advancement, stance shock propagation,
                                    listener violation detection, cycle reset logic.
                                    Exports REGULATION_STANCE_LIMIT threshold.
-src/simulator/scenarios.ts       - Scenario interface for named test scenarios, session loading.
+src/simulator/scenarios.ts       - Scenario definitions. Easy (Inner Critic + criticized),
+                                   Medium/Alcohol (Drinker + Shamer protect lonely one,
+                                   proxy to alcoholic parent). Session loading.
 src/simulator/scenarioSelector.ts - Scenario selection UI/logic with difficulty levels.
 
 Part State
@@ -79,12 +89,17 @@ src/cloud/partStateManager.ts    - PartState (individual part data), PartBiograp
                                    revelation), PartDialogues (conditional responses).
                                    Protection relations, proxy relations, inter-part
                                    trust/stance. InterPartRelation has stanceFlipOdds with
-                                   stanceFlipOddsSetPoint (decays back when not in conference).
+                                   stanceFlipOddsSetPoint (decays back when not in conference),
+                                   trustFloor (minimum inter-part trust, set by impact
+                                   recognition), impactRecognition/impactRejection dialogue
+                                   arrays. Trust overflow below trustFloor feeds into
+                                   stanceFlipOdds and stance extremity.
                                    Conversational dialogue sets with phases
                                    (speak, listen, mirror, validate, empathize).
                                    Fallback dialogues for dominating/withdrawing stances.
                                    getRelation(), getRelationStance(), applyStanceFlip(),
-                                   getRelationSummaries() for conversation introspection.
+                                   getRelationSummaries(), setInterPartTrustFloor() for
+                                   conversation introspection.
 src/star/partState.ts            - Part biography and dialogue definitions.
 
 Visual/Animation
@@ -102,7 +117,7 @@ src/star/starFillField.ts        - Star field fill/animation.
 src/star/starDebugPanel.ts       - Debug visualization.
 src/star/sparkleColors.ts        - Sparkle color generation.
 src/star/selfRay.ts              - Beam from star to target part. BiographyField type:
-                                   'age'|'identity'|'job'|'jobAppraisal'|'jobImpact'|
+                                   'age'|'identity'|'job'|'jobAppraisal'|
                                    'gratitude'|'compassion'.
                                    PartContext interface for conditional field validation.
 src/star/carpetRenderer.ts       - Seat carpets for conference table positions. During
@@ -169,6 +184,14 @@ Action Flow
 Internal actions (not user-initiated): ray_field_select, spontaneous_blend, backlash,
 mode_change, process_intervals. All tracked via actionFormatter's KNOWN_ACTIONS.
 
+Notice_part on a protector from a related part triggers impact recognition:
+if noticer's trust > protector's trust, sets inter-part trustFloor to 0.25
+(impactRecognition dialogues); otherwise shows impactRejection dialogues.
+
+Validate action now requires an unvalidated thought bubble; validated bubbles
+get extended expiry. Gratitude on active protectors requires jobAppraisal
+revealed first.
+
 Pending Actions
 ---------------
 Some actions (feel_toward, notice_part, add_target) need a second click to pick a
@@ -215,6 +238,13 @@ the conversation resets with that part as the new speaker.
 
 When both parts are in listen/listen after empathize completes, after NEW_CYCLE_DELAY
 the part with highest stance becomes the new speaker and a fresh cycle begins.
+
+Backlash
+--------
+checkBacklash() iterates ALL non-consenting protectors of a protectee,
+reducing each protector's trust by trustGain/2 and probabilistically
+triggering backlash (newTrust < rng). All protectors are checked (not
+short-circuited); if multiple trigger, one is picked randomly.
 
 Stance shock: when a part speaks, the receiver's stance shifts proportional to
 speaker stance magnitude, modulated by self-trust and inter-part trust. Also damages

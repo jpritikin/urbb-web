@@ -1,4 +1,4 @@
-import type { RecordedAction, RecordedSession } from './testability/types.js';
+import type { RecordedAction, RecordedSession, OrchestratorSnapshot } from './testability/types.js';
 import { formatActionLabel } from '../simulator/actionFormatter.js';
 import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/view/SeatManager.js';
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
@@ -39,6 +39,7 @@ export interface PlaybackViewState {
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
     hasActiveSpiralExits: () => boolean;
+    hasActiveSupportingEntries: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
@@ -47,13 +48,14 @@ export interface PlaybackViewState {
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
+    setCarpetsInteractive: (enabled: boolean) => void;
+    setStarInteractive: (enabled: boolean) => void;
     getDiagnostics: () => Record<string, unknown>;
 }
 
 export interface PlaybackInputSimulator {
     simulateHover: (x: number, y: number) => void;
     simulateClickAtPosition: (x: number, y: number) => ActionResult;
-    simulateClickOnCloud: (cloudId: string) => ActionResult;
     simulateMouseDown: (x: number, y: number, carpetCloudId?: string) => void;
     simulateMouseMove: (x: number, y: number) => void;
     simulateMouseUp: () => void;
@@ -70,8 +72,9 @@ export interface PlaybackModelAccess {
 export interface PlaybackTimeControl {
     pausePlayback: () => void;
     resumePlayback: () => void;
-    advanceIntervals: (count: number) => void;
+    advanceIntervals: (count: number, orchState?: OrchestratorSnapshot) => void;
     executeSpontaneousBlend: (cloudId: string) => void;
+    promotePendingBlend: (cloudId: string) => void;
 }
 
 export interface PlaybackLifecycle {
@@ -227,7 +230,7 @@ export class PlaybackController {
         if (action.action === 'process_intervals') {
             const count = action.count ?? 0;
             if (count > 0) {
-                this.callbacks.advanceIntervals(count);
+                this.callbacks.advanceIntervals(count, action.orchState);
             }
             if (action.rngCounts) {
                 const verifyResult = this.callbacks.onActionCompleted(action);
@@ -255,6 +258,14 @@ export class PlaybackController {
             }
             this.currentActionIndex++;
             this.advanceToNextAction();
+            return;
+        }
+
+        // For promote_pending_blend: promote immediately (no animation wait needed)
+        if (action.action === 'promote_pending_blend') {
+            this.callbacks.promotePendingBlend(action.cloudId);
+            this.currentActionIndex++;
+            this.waitCountdown = 0;
             return;
         }
 
@@ -295,6 +306,7 @@ export class PlaybackController {
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
         await this.waitForPendingBlends();
+        await this.waitForSupportingEntries();
 
         switch (action.action) {
             case 'select_a_target':
@@ -338,42 +350,60 @@ export class PlaybackController {
 
     private async executeCloudMenuAction(action: RecordedAction): Promise<void> {
         if (action.targetCloudId) {
-            // Completing a pending action: just click the target cloud
+            if (!this.callbacks.getCloudPosition(action.targetCloudId)) {
+                await this.toggleToPanorama();
+            }
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
             await this.reticle.fadeOut();
             return;
         }
 
-        const openSuccess = await this.hoverAndClickCloud(action.cloudId, `opening cloud menu for ${action.cloudId}`);
-        if (!openSuccess) return;
-
-        const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        if (!sliceInfo) {
-            this.handleError(`Action '${action.action}' not found in open menu`, action.cloudId);
-            return;
+        if (!this.callbacks.getCloudPosition(action.cloudId)) {
+            await this.toggleToPanorama();
         }
 
-        await this.executeSliceSelection(action.cloudId, sliceInfo.sliceIndex, sliceInfo.itemCount);
+        const result = await this.openMenuWithRetry(action.cloudId, action.action);
+        if (!result) return;
+
+        await this.executeSliceSelection(action.cloudId, result.sliceIndex, result.itemCount);
     }
 
     private async executeStarMenuAction(action: RecordedAction): Promise<void> {
         if (action.targetCloudId) {
-            // Completing a pending action: just click the target cloud
             await this.hoverAndClickCloud(action.targetCloudId, `${action.action} target ${action.targetCloudId}`, true);
             await this.reticle.fadeOut();
             return;
         }
 
-        const openSuccess = await this.hoverAndClickCloud(STAR_CLOUD_ID, 'opening star menu');
-        if (!openSuccess) return;
+        const result = await this.openMenuWithRetry(STAR_CLOUD_ID, action.action, 'star');
+        if (!result) return;
 
-        const sliceInfo = this.callbacks.findActionInOpenMenu(action.action);
-        if (!sliceInfo) {
-            this.handleError(`Action '${action.action}' not found in star menu`, 'star');
-            return;
+        await this.executeSliceSelection(STAR_CLOUD_ID, result.sliceIndex, result.itemCount);
+    }
+
+    private async openMenuWithRetry(cloudId: string, actionId: string, errorContext?: string): Promise<MenuSliceInfo | null> {
+        const maxRetries = 5;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            if (cloudId === STAR_CLOUD_ID) {
+                this.callbacks.setStarInteractive(true);
+            }
+            const openSuccess = await this.hoverAndClickCloud(cloudId, `opening menu for ${cloudId}`);
+            if (!openSuccess) return null;
+
+            if (this.callbacks.getMenuCenter()) {
+                const sliceInfo = this.callbacks.findActionInOpenMenu(actionId);
+                if (sliceInfo) return sliceInfo;
+                this.handleError(`Action '${actionId}' not found in open menu`, errorContext ?? cloudId);
+                return null;
+            }
+
+            if (attempt < maxRetries - 1) {
+                console.warn(`[Playback] Menu didn't open for ${cloudId}, retry ${attempt + 1}/${maxRetries}`);
+                await this.delay(200);
+            }
         }
-
-        await this.executeSliceSelection(STAR_CLOUD_ID, sliceInfo.sliceIndex, sliceInfo.itemCount);
+        this.handleError('Menu failed to open after retries', errorContext ?? cloudId);
+        return null;
     }
 
     private async executeSliceSelection(menuCloudId: string, sliceIndex: number, itemCount: number, fadeOut: boolean = true): Promise<void> {
@@ -395,7 +425,11 @@ export class PlaybackController {
     }
 
     private async executeRayFieldAction(action: RecordedAction): Promise<void> {
+        this.callbacks.setCarpetsInteractive(false);
+        this.callbacks.setStarInteractive(false);
         const openSuccess = await this.hoverAndClickCloud(RAY_CLOUD_ID, 'opening ray menu');
+        this.callbacks.setStarInteractive(true);
+        this.callbacks.setCarpetsInteractive(true);
         if (!openSuccess) return;
 
         const sliceInfo = this.callbacks.findActionInOpenMenu(action.field ?? '');
@@ -411,9 +445,13 @@ export class PlaybackController {
     private async hoverAndClickCloud(cloudId: string, context?: string, expectAction: boolean = false): Promise<boolean> {
         await this.showReticleAtCloud(cloudId);
         const pos = this.callbacks.getCloudPosition(cloudId);
-        if (pos) this.callbacks.simulateHover(pos.x, pos.y);
+        if (!pos) {
+            this.handleError(`Cloud position not found: ${cloudId}`, context ?? cloudId);
+            return false;
+        }
+        this.callbacks.simulateHover(pos.x, pos.y);
         await this.trackCloudDelay(HOVER_PAUSE_MS, cloudId);
-        return this.clickOnCloud(cloudId, context, expectAction);
+        return this.clickAtPosition(pos.x, pos.y, context ?? `click cloud ${cloudId}`, expectAction);
     }
 
     private async trackCloudDelay(ms: number, cloudId: string): Promise<void> {
@@ -462,17 +500,6 @@ export class PlaybackController {
         return this.handleClickResult(clickResult, context ?? `at (${x.toFixed(0)}, ${y.toFixed(0)})`, expectAction);
     }
 
-    private async clickOnCloud(cloudId: string, context?: string, expectAction: boolean = false): Promise<boolean> {
-        await this.waitForCanvasOnScreen();
-        await this.reticle.animateHug();
-        this.callbacks.clearLastActionResult();
-
-        const pos = this.callbacks.getCloudPosition(cloudId);
-        const clickResult = this.callbacks.simulateClickOnCloud(cloudId);
-        if (pos) this.reticle.spawnKisses(pos.x, pos.y);
-
-        return this.handleClickResult(clickResult, context ?? cloudId, expectAction);
-    }
 
     private async handleClickResult(clickResult: ActionResult, context: string, expectAction: boolean): Promise<boolean> {
         if (!clickResult.success) {
@@ -663,6 +690,19 @@ export class PlaybackController {
         while (this.callbacks.hasActiveSpiralExits()) {
             if (performance.now() - start > maxWait) {
                 console.warn(`[Playback] Timeout waiting for spiral exits after ${maxWait}ms`);
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
+    private async waitForSupportingEntries(): Promise<void> {
+        if (!this.callbacks.hasActiveSupportingEntries()) return;
+        const maxWait = 5000;
+        const start = performance.now();
+        while (this.callbacks.hasActiveSupportingEntries()) {
+            if (performance.now() - start > maxWait) {
+                console.warn(`[Playback] Timeout waiting for supporting entries after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);

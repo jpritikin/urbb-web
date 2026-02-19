@@ -11,7 +11,7 @@ export interface MessageOrchestratorView {
 
 export interface MessageOrchestratorCallbacks {
     act: (label: string, fn: () => void) => void;
-    showThoughtBubble: (text: string, cloudId: string) => void;
+    showThoughtBubble: (text: string, cloudId: string, partInitiated?: boolean) => void;
     getCloudById: (id: string) => { id: string } | null;
     getTime: () => number;
 }
@@ -29,6 +29,8 @@ export class MessageOrchestrator {
     private summonArrivalTimers: Map<string, number> = new Map();
     private genericDialogueCooldowns: Map<string, number> = new Map();
     private selfLoathingCooldowns: Map<string, number> = new Map();
+    private jealousyCooldowns: Map<string, number> = new Map();
+    private pendingJealousy: Map<string, { favoredId: string; diff: number }> = new Map();
     private sustainedRegulationTimer: number = 0;
     private regulationScore: number = 0;
     private respondTimer: number = 0;
@@ -37,6 +39,7 @@ export class MessageOrchestrator {
     private readonly BLEND_MESSAGE_DELAY = 2;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
     private readonly SELF_LOATHING_INTERVAL = 10;
+    private readonly JEALOUSY_INTERVAL = 10;
     private readonly SPEAK_BASE_RATE = 0.5;
     private readonly RESPOND_DELAY = 3;
     private readonly NEW_CYCLE_DELAY = 4;
@@ -246,6 +249,57 @@ export class MessageOrchestrator {
         }
     }
 
+    checkJealousy(deltaTime: number): void {
+        for (const [jealousId, { favoredId, diff }] of this.pendingJealousy) {
+            if (this.model.getConferenceCloudIds().has(jealousId)) {
+                this.applyJealousy(jealousId, favoredId, diff);
+                this.pendingJealousy.delete(jealousId);
+            }
+        }
+
+        const relations = this.relationships.getRelationSummaries();
+
+        for (const rel of relations) {
+            if (rel.fromId === rel.toId) continue;
+            const jealousId = rel.fromId;
+            const favoredId = rel.toId;
+            const jealousTrust = this.relationships.getTrust(jealousId);
+            if (jealousTrust >= 0.75) continue;
+            const favoredTrust = this.relationships.getTrust(favoredId);
+            if (jealousTrust >= favoredTrust) continue;
+            const diff = favoredTrust - jealousTrust;
+            if (this.relationships.isNoticed(jealousId, favoredId)) continue;
+            const interTrust = this.relationships.getInterPartTrust(jealousId, favoredId);
+            if (diff <= interTrust + 0.15) continue;
+
+            let cooldown = this.jealousyCooldowns.get(jealousId) ?? this.JEALOUSY_INTERVAL;
+            cooldown += deltaTime;
+            if (cooldown < this.JEALOUSY_INTERVAL) {
+                this.jealousyCooldowns.set(jealousId, cooldown);
+                continue;
+            }
+            cooldown -= this.JEALOUSY_INTERVAL;
+            this.jealousyCooldowns.set(jealousId, cooldown);
+
+            if (!this.model.getConferenceCloudIds().has(jealousId)) {
+                this.model.partDemandsAttention(jealousId);
+                this.pendingJealousy.set(jealousId, { favoredId, diff });
+                continue;
+            }
+
+            this.applyJealousy(jealousId, favoredId, diff);
+        }
+    }
+
+    private applyJealousy(jealousId: string, favoredId: string, diff: number): void {
+        const oldTrust = this.relationships.getTrust(jealousId);
+        this.relationships.addTrust(jealousId, -diff);
+        const overflow = Math.max(0, diff - oldTrust);
+        if (overflow > 0) this.model.changeNeedAttention(jealousId, overflow);
+        const favoredName = this.model.parts.getPartName(favoredId);
+        this.callbacks.showThoughtBubble(`You like ${favoredName} more than me`, jealousId, false);
+    }
+
     checkAndShowConversationDialogues(deltaTime: number): void {
         const participantIds = this.model.getConversationParticipantIds();
         if (!participantIds) {
@@ -359,10 +413,6 @@ export class MessageOrchestrator {
     }
 
     private sendConversationMessage(senderId: string, targetId: string, text: string): void {
-        const senderState = this.view.getCloudState(senderId);
-        const targetState = this.view.getCloudState(targetId);
-        if (!senderState || !targetState) return;
-
         const senderName = this.model.parts.getPartName(senderId);
         const targetName = this.model.parts.getPartName(targetId);
         let message: PartMessage | null = null;
@@ -370,7 +420,11 @@ export class MessageOrchestrator {
             message = this.model.sendMessage(senderId, targetId, text, 'conversation');
         });
         if (message) {
-            this.view.startMessage(message, senderId, targetId);
+            const senderState = this.view.getCloudState(senderId);
+            const targetState = this.view.getCloudState(targetId);
+            if (senderState && targetState) {
+                this.view.startMessage(message, senderId, targetId);
+            }
             this.model.parts.setUtterance(senderId, text, this.callbacks.getTime());
         }
     }
@@ -465,19 +519,39 @@ export class MessageOrchestrator {
         this.model.setConversationPhase(speakerId, 'listen');
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string> } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
             pending: Object.fromEntries(this.pendingSummonTargets),
+            jealousyCooldowns: Object.fromEntries(this.jealousyCooldowns),
+            respondTimer: this.respondTimer,
+            regulationScore: this.regulationScore,
+            sustainedRegulationTimer: this.sustainedRegulationTimer,
+            newCycleTimer: this.newCycleTimer,
         };
     }
 
-    private sendMessage(senderId: string, targetId: string, text: string): void {
-        const senderState = this.view.getCloudState(senderId);
-        const targetState = this.view.getCloudState(targetId);
-        if (!senderState || !targetState) return;
+    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number }): void {
+        if (snapshot.blendTimers) {
+            this.blendStartTimers = new Map(Object.entries(snapshot.blendTimers));
+        }
+        if (snapshot.cooldowns) {
+            this.messageCooldownTimers = new Map(Object.entries(snapshot.cooldowns));
+        }
+        if (snapshot.pending) {
+            this.pendingSummonTargets = new Map(Object.entries(snapshot.pending));
+        }
+        if (snapshot.jealousyCooldowns) {
+            this.jealousyCooldowns = new Map(Object.entries(snapshot.jealousyCooldowns));
+        }
+        if (snapshot.respondTimer !== undefined) this.respondTimer = snapshot.respondTimer;
+        if (snapshot.regulationScore !== undefined) this.regulationScore = snapshot.regulationScore;
+        if (snapshot.sustainedRegulationTimer !== undefined) this.sustainedRegulationTimer = snapshot.sustainedRegulationTimer;
+        if (snapshot.newCycleTimer !== undefined) this.newCycleTimer = snapshot.newCycleTimer;
+    }
 
+    private sendMessage(senderId: string, targetId: string, text: string): void {
         const senderName = this.model.parts.getPartName(senderId);
         const targetName = this.model.parts.getPartName(targetId);
         const actionLabel = `${senderName} speaks to ${targetName}`;
@@ -486,7 +560,11 @@ export class MessageOrchestrator {
             message = this.model.sendMessage(senderId, targetId, text, 'conversation');
         });
         if (message) {
-            this.view.startMessage(message, senderId, targetId);
+            const senderState = this.view.getCloudState(senderId);
+            const targetState = this.view.getCloudState(targetId);
+            if (senderState && targetState) {
+                this.view.startMessage(message, senderId, targetId);
+            }
             this.model.parts.setUtterance(senderId, text, this.callbacks.getTime());
         }
     }
