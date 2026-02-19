@@ -37,6 +37,7 @@ export interface PlaybackViewState {
     getMenuCenter: () => { x: number; y: number } | null;
     getSlicePosition: (sliceIndex: number, menuCenter: { x: number; y: number }, itemCount: number) => { x: number; y: number };
     isTransitioning: () => boolean;
+    forceCompleteTransition: () => void;
     hasPendingBlends: () => boolean;
     hasResolvingClouds: () => boolean;
     hasActiveSpiralExits: () => boolean;
@@ -664,7 +665,8 @@ export class PlaybackController {
         const start = performance.now();
         while (this.callbacks.isTransitioning()) {
             if (performance.now() - start > maxWait) {
-                console.warn(`[Playback] Timeout waiting for transition after ${maxWait}ms`);
+                console.warn(`[Playback] Timeout waiting for transition after ${maxWait}ms, forcing completion`);
+                this.callbacks.forceCompleteTransition();
                 break;
             }
             await this.delay(50);
