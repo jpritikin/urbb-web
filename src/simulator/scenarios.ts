@@ -40,10 +40,10 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
         partAge: 8,
         dialogues: {
             burdenedJobAppraisal: [
-                "I'm exhausted with my job.",
-                "I don't want to criticize, but I have to.",
+                "Criticizing you wears me out.",
+                "I hate doing this job.",
             ],
-            unburdenedJob: "I help you foresee risks.",
+            unburdenedJob: "I help you spot danger early.",
         },
     });
 
@@ -52,9 +52,9 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
         trust: 0.2,
         dialogues: {
             genericBlendedDialogues: [
-                "Please don't look at me.",
-                "I'm trying to hide.",
-                "Is it safe?",
+                "Don't look at me.",
+                "I need to hide.",
+                "Are we safe yet?",
             ],
         },
     });
@@ -65,7 +65,7 @@ function setupCoreParts(cloudManager: CloudManager): CoreParts {
         trust: 0.2,
         stance: 0.6,
         stanceFlipOdds: 0.05,
-        rumination: ["I'm a terrible person.", "I hate myself."],
+        rumination: ["I'm a terrible person for criticizing.", "I hate what criticizing does."],
     });
 
     return { innerCritic, criticized };
@@ -81,9 +81,9 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         trust: 0.2,
         dialogues: {
             genericBlendedDialogues: [
-                "Nobody's coming.",
-                "I just want someone to stay.",
-                "Is it safe yet?",
+                "Nobody comes.",
+                "Please don't leave.",
+                "Are we safe yet?",
             ],
         },
     });
@@ -92,9 +92,9 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         partAge: 'adult',
         dialogues: {
             genericBlendedDialogues: [
-                "This is just what we do.",
-                "You'll understand when you're older.",
-                "Everyone needs something to take the edge off.",
+                "This is what families do.",
+                "Drinking takes the edge off.",
+                "Drinking makes sense when you're older.",
             ],
         },
     });
@@ -104,10 +104,10 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         partAge: 15,
         dialogues: {
             burdenedJobAppraisal: [
-                "I'm the only one who can quiet things down.",
-                "Without me, everything gets too loud.",
+                "Drinking quiets the pain — nothing else works.",
+                "Without drinking, the feelings flood in.",
             ],
-            unburdenedJob: "I help you rest.",
+            unburdenedJob: "I help you rest and recover.",
         },
     });
 
@@ -116,10 +116,10 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         partAge: 8,
         dialogues: {
             burdenedJobAppraisal: [
-                "Someone has to hold the line.",
-                "If I stop watching, we lose control.",
+                "Shaming the Drinker is the only brake we have.",
+                "If the Shamer stops, the drinking gets worse.",
             ],
-            unburdenedJob: "I help you notice patterns.",
+            unburdenedJob: "I help you learn from patterns.",
         },
     });
 
@@ -136,28 +136,28 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         stance: 0.6,
         stanceFlipOdds: 0.05,
         impactRecognition: [
-            "The Drinker learned this from our parent. It's the only comfort they know.",
-            "The Drinker is just trying to quiet the noise. I get that now.",
+            "The Drinker learned drinking from our parent — drinking is the only comfort the Drinker knows.",
+            "The Drinker drinks to quiet the loneliness. The Shamer can see that now.",
         ],
         impactRejection: [
-            "The Drinker is destroying us. I can't see past that.",
-            "All the Drinker does is repeat our parent's mistakes.",
+            "The Drinker is tearing us apart. The Shamer can't get past the damage.",
+            "The Drinker is repeating our parent's mistakes exactly.",
         ],
         dialogues: {
             hostile: [
-                ["You're turning us into them.", "You don't know what you're talking about.", "I see exactly what's happening!", "..."],
-                ["Put it down.", "You can't make me.", "Watch me.", "..."],
+                ["The Drinker is turning us into our parent.", "The Shamer doesn't know what the Drinker carries.", "The Shamer sees exactly what's happening.", "..."],
+                ["Put the bottle down.", "The Shamer can't stop the Drinker.", "Watch the Shamer try.", "..."],
             ],
             guarded: [
-                ["I've seen where this goes.", "You think you know everything?", "I know enough.", "Maybe you do."],
-                ["I'm trying to protect us.", "From what?", "From becoming our parent.", "That's... a lot to carry."],
+                ["The Shamer has seen where drinking leads.", "The Shamer thinks the Shamer knows everything.", "The Shamer knows enough.", "Maybe the Shamer does."],
+                ["The Shamer is trying to protect us.", "Protect us from what?", "From becoming our parent.", "That's a heavy burden to carry."],
             ],
             opening: [
-                ["I'm scared for us.", "You're scared?", "Yes. I don't want us to end up like them.", "I didn't know you were scared too."],
-                ["I'm not trying to punish you.", "Then what are you doing?", "Trying to break the cycle.", "That sounds exhausting."],
+                ["The Shamer is scared for us both.", "The Shamer is scared?", "Yes — scared we'll end up like our parent.", "The Drinker didn't know the Shamer was scared too."],
+                ["The Shamer isn't trying to punish the Drinker.", "Then what is the Shamer doing?", "Trying to break the cycle.", "Breaking the cycle sounds exhausting."],
             ],
             collaborative: [
-                ["What if we found another way to rest?", "You'd stop yelling at me?", "If you'd let me help.", "I'm listening."],
+                ["What if we found another way to rest?", "Would the Shamer stop attacking the Drinker?", "If the Drinker lets the Shamer help.", "The Drinker is listening."],
             ],
         },
     });
@@ -167,28 +167,28 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         stance: -0.4,
         stanceFlipOdds: 0.4,
         impactRecognition: [
-            "The Shamer is terrified we'll end up like our parent. That's why they won't stop.",
-            "The Shamer is trying to break a cycle. I just wish they'd stop yelling.",
+            "The Shamer is terrified we'll repeat our parent's pattern — that's why the Shamer won't stop.",
+            "The Shamer is trying to break the cycle. The Drinker just wishes the Shamer would stop yelling.",
         ],
         impactRejection: [
-            "The Shamer sounds exactly like our parent. I can't hear them.",
-            "All the Shamer does is make everything louder.",
+            "The Shamer sounds exactly like our parent. The Drinker can't hear the Shamer.",
+            "The Shamer just makes the pain louder — the Drinker needs to drink more.",
         ],
         dialogues: {
             hostile: [
-                ["Leave me alone.", "You think ignoring me fixes anything?", "It's better than your lectures.", "..."],
-                ["You sound just like them.", "Don't say that.", "Then stop acting like it.", "..."],
+                ["Leave the Drinker alone.", "Ignoring the Shamer doesn't fix anything.", "The Shamer's lectures make everything worse.", "..."],
+                ["The Shamer sounds just like our parent.", "Don't say that.", "Stop acting like our parent, then.", "..."],
             ],
             guarded: [
-                ["I'm just trying to get through the night.", "By doing the same thing they did?", "It's different.", "Is it though?"],
-                ["You don't understand how loud it gets.", "The feelings?", "Everything.", "I hear you."],
+                ["The Drinker is just trying to get through tonight.", "By doing exactly what our parent did?", "Drinking is different.", "Is drinking really different?"],
+                ["The Shamer doesn't know how loud the loneliness gets.", "The loneliness?", "Everything gets loud.", "The Drinker is heard."],
             ],
             opening: [
-                ["I don't want to do this either.", "You don't?", "No. But I don't know what else to do.", "Maybe we can figure that out."],
-                ["I learned this from them, didn't I?", "You're starting to see it?", "Yeah.", "That takes courage to say."],
+                ["The Drinker doesn't want to drink.", "The Drinker doesn't?", "No — the Drinker doesn't know what else to do.", "Maybe we can find something together."],
+                ["The Drinker learned drinking from our parent, didn't the Drinker?", "Is the Drinker starting to see the pattern?", "Yes.", "Saying that takes courage."],
             ],
             collaborative: [
-                ["What if you helped me instead of shaming me?", "I... could try.", "I need you on my side.", "I've always been on your side. I was just afraid."],
+                ["What if the Shamer helped instead of shaming?", "The Shamer could try.", "The Drinker needs the Shamer on the Drinker's side.", "The Shamer has always been on the Drinker's side — just afraid."],
             ],
         },
     });
@@ -197,14 +197,14 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         trust: 0.2,
         stance: -0.3,
         stanceFlipOdds: 0.3,
-        rumination: ["I'm just like them.", "I can't stop.", "I disgust myself."],
+        rumination: ["The Drinker is turning into our parent.", "The Drinker can't stop drinking.", "Drinking disgusts the Drinker."],
     });
 
     relationships.setInterPartRelation(shamer.id, shamer.id, {
         trust: 0.2,
         stance: 0.6,
         stanceFlipOdds: 0.05,
-        rumination: ["We're turning into them.", "I can't stop this."],
+        rumination: ["We're turning into our parent.", "The Shamer can't stop the drinking."],
     });
 }
 

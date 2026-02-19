@@ -518,8 +518,8 @@ export class PartStateManager {
     }
 
     private static FALLBACK_CONVERSATIONS: string[][] = [
-        ["No!", "So you're saying — no, that's ridiculous!", "Fine!", "I don't care!"],
-        ["...", "You said... something.", "Maybe.", "I guess."],
+        ["No!", "That's ridiculous!", "Fine!", "Whatever."],
+        ["...", "Something was said.", "Maybe.", "I guess."],
     ];
 
     getInterPartDialogue(fromId: string, toId: string, phase: IfioPhase, rng: () => number): string | null {
