@@ -35,6 +35,7 @@ export class MessageOrchestrator {
     private regulationScore: number = 0;
     private respondTimer: number = 0;
     private newCycleTimer: number = 0;
+    private listenerViolationTimer: number = 0;
 
     private readonly BLEND_MESSAGE_DELAY = 2;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
@@ -47,6 +48,7 @@ export class MessageOrchestrator {
     private readonly REGULATION_RECOVER_RATE = 0.5;
     private readonly REGULATION_DECAY_RATE = 0.3;
     private readonly SUMMON_ARRIVAL_DELAY = 2;
+    private readonly LISTENER_VIOLATION_GRACE = 1.0;
 
     constructor(
         getModel: () => SimulatorModel,
@@ -395,11 +397,20 @@ export class MessageOrchestrator {
         else if (phaseS === 'validate' && phaseL === 'listen') currentListeningPart = listenerId;
         else if (phaseS === 'listen' && phaseL === 'empathize') currentListeningPart = speakerId;
 
-        if (!currentListeningPart) return;
+        if (!currentListeningPart) {
+            this.listenerViolationTimer = 0;
+            return;
+        }
 
         const stance = this.model.getConversationEffectiveStance(currentListeningPart);
         if (stance > REGULATION_STANCE_LIMIT) {
-            this.resetConversation(currentListeningPart, partA, partB);
+            this.listenerViolationTimer += deltaTime;
+            if (this.listenerViolationTimer >= this.LISTENER_VIOLATION_GRACE) {
+                this.listenerViolationTimer = 0;
+                this.resetConversation(currentListeningPart, partA, partB);
+            }
+        } else {
+            this.listenerViolationTimer = 0;
         }
     }
 
@@ -519,7 +530,7 @@ export class MessageOrchestrator {
         this.model.setConversationPhase(speakerId, 'listen');
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
@@ -529,10 +540,11 @@ export class MessageOrchestrator {
             regulationScore: this.regulationScore,
             sustainedRegulationTimer: this.sustainedRegulationTimer,
             newCycleTimer: this.newCycleTimer,
+            listenerViolationTimer: this.listenerViolationTimer,
         };
     }
 
-    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number }): void {
+    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number }): void {
         if (snapshot.blendTimers) {
             this.blendStartTimers = new Map(Object.entries(snapshot.blendTimers));
         }
@@ -549,6 +561,7 @@ export class MessageOrchestrator {
         if (snapshot.regulationScore !== undefined) this.regulationScore = snapshot.regulationScore;
         if (snapshot.sustainedRegulationTimer !== undefined) this.sustainedRegulationTimer = snapshot.sustainedRegulationTimer;
         if (snapshot.newCycleTimer !== undefined) this.newCycleTimer = snapshot.newCycleTimer;
+        if (snapshot.listenerViolationTimer !== undefined) this.listenerViolationTimer = snapshot.listenerViolationTimer;
     }
 
     private sendMessage(senderId: string, targetId: string, text: string): void {

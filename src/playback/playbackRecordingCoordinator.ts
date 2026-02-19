@@ -43,6 +43,7 @@ export interface PlaybackRecordingDependencies {
         getViewSnapshot(): ViewSnapshot;
     };
     getPendingBlendsCount: () => number;
+    hasResolvingClouds: () => boolean;
     getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
     getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
@@ -300,6 +301,7 @@ export class PlaybackRecordingCoordinator {
             },
             isTransitioning: () => this.deps.getView().isTransitioning(),
             hasPendingBlends: () => this.deps.getPendingBlendsCount() > 0,
+            hasResolvingClouds: () => this.deps.hasResolvingClouds(),
             hasActiveSpiralExits: () => this.deps.getView().hasActiveSpiralExits(),
             hasActiveSupportingEntries: () => this.deps.getView().hasActiveSupportingEntries(),
             isMobile: () => this.deps.getUIManager()?.isMobile() ?? false,
