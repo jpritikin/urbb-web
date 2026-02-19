@@ -53,6 +53,7 @@ export interface OrchestratorSnapshot {
     regulationScore?: number;
     sustainedRegulationTimer?: number;
     newCycleTimer?: number;
+    listenerViolationTimer?: number;
 }
 
 export interface BiographySnapshot {

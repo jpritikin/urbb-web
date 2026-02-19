@@ -38,6 +38,7 @@ export interface PlaybackViewState {
     getSlicePosition: (sliceIndex: number, menuCenter: { x: number; y: number }, itemCount: number) => { x: number; y: number };
     isTransitioning: () => boolean;
     hasPendingBlends: () => boolean;
+    hasResolvingClouds: () => boolean;
     hasActiveSpiralExits: () => boolean;
     hasActiveSupportingEntries: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
@@ -306,6 +307,7 @@ export class PlaybackController {
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
         await this.waitForPendingBlends();
+        await this.waitForResolvingClouds();
         await this.waitForSupportingEntries();
 
         switch (action.action) {
@@ -677,6 +679,19 @@ export class PlaybackController {
             if (performance.now() - start > maxWait) {
                 const state = this.callbacks.getModelState();
                 console.warn(`[Playback] Timeout waiting for pending blends after ${maxWait}ms, blended: [${state.blended.join(', ')}]`);
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
+    private async waitForResolvingClouds(): Promise<void> {
+        if (!this.callbacks.hasResolvingClouds()) return;
+        const maxWait = 5000;
+        const start = performance.now();
+        while (this.callbacks.hasResolvingClouds()) {
+            if (performance.now() - start > maxWait) {
+                console.warn(`[Playback] Timeout waiting for resolving clouds after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);

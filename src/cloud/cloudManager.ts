@@ -108,6 +108,7 @@ export class CloudManager {
             getCloudVisualCenter: (cloudId) => this.getCloudVisualCenter(cloudId),
             getView: () => this.view,
             getPendingBlendsCount: () => this.model.getPendingBlends().length,
+            hasResolvingClouds: () => this.resolvingClouds.size > 0,
             getTimeAdvancer: () => this.timeAdvancer,
             getMessageOrchestrator: () => this.messageOrchestrator,
             getPieMenuController: () => this.pieMenuController,
