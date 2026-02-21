@@ -1,14 +1,14 @@
 ---
 title: "Gallery"
 subtitle: "Moments with Luminaries"
-version: "v1.0.0"
+version: "v1.1.0"
 ---
 
 ## Book Sizzle Reel
 
 A "sizzle reel" is Hollywood jargon for a short promotional video designed to generate excitement—typically used to pitch films or TV shows to executives. 🎬 Since books are tragically un-cinematic (no explosions, car chases, or CGI dragons), the concept rarely crosses over to publishing. But this isn't a normal book. 📚✨ What you're about to watch is a two-minute montage showcasing the artwork and design elements that make *Unburdened* more than words on a page. 🎨 Think of it as a trailer for a movie that happens entirely inside your head.
 
-<div class="video-container" style="display: flex; justify-content: center; margin: 0 auto; padding: 0 10%;">
+<div id="sizzle-reel" class="video-container" style="display: flex; justify-content: center; padding: 0 10%;">
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Dkf7jwk-PnA?si=prgMHqVowiGtf62d" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
 
@@ -123,3 +123,115 @@ From groundbreaking researchers in psychedelic science 🍄 to spiritual leaders
     <p class="caption">With Elon Musk at the White House, 2025. Nothing says "credible consciousness researcher" like being mistaken for a tech billionaire's four-year-old during official government business. This is either my most successful infiltration of elite circles or my most elaborate piece of performance satire. Possibly both.</p>
   </div>
 </div>
+
+## 🧘 Yoga with Joshua
+
+<div class="yoga-header">
+  <img src="/images/gallery/yoga-logo.webp" alt="Yoga with Joshua logo" class="yoga-logo">
+</div>
+
+The book is about embodied practice, and I believe in walking the talk. 🌿 I've been developing a yoga offering that integrates the somatic awareness work from *Unburdened* with classical hatha postures. It's a gentle, accessible class—no prior experience required.
+
+Each session moves through four foundational poses: grounding in stillness, spinal opening, a heart-opening backbend, and a full-body inversion to close. Simple, effective, and rooted in the same principles of presence the book explores. ✨
+
+If you're interested in joining a session, reach out through the contact page.
+
+<div class="yoga-gallery">
+  <div class="yoga-item">
+    <div class="yoga-image-wrapper">
+      <img src="/images/gallery/yoga1.webp" alt="Joshua in Easy Pose with raised prayer hands">
+    </div>
+    <p class="caption"><em>Sukhasana with Anjali Mudra.</em> We begin seated, legs crossed, hands lifted in prayer. This is the pose of arriving—settling into the body and signaling readiness to begin.</p>
+  </div>
+
+  <div class="yoga-item">
+    <div class="yoga-image-wrapper">
+      <img src="/images/gallery/yoga2.webp" alt="Joshua in Cow Pose">
+    </div>
+    <p class="caption"><em>Bitilasana.</em> Cow Pose opens the spine and syncs movement with breath. Grounding, accessible, and a good reminder that the body already knows what to do.</p>
+  </div>
+
+  <div class="yoga-item">
+    <div class="yoga-image-wrapper">
+      <img src="/images/gallery/yoga3.webp" alt="Joshua in Camel Pose">
+    </div>
+    <p class="caption"><em>Ustrasana.</em> Camel Pose is a deep heart opener—the chest lifts toward the sky as the hands find the heels. It asks something of you. Most people find it worth giving.</p>
+  </div>
+
+  <div class="yoga-item">
+    <div class="yoga-image-wrapper">
+      <img src="/images/gallery/yoga4.webp" alt="Joshua in Downward Facing Dog">
+    </div>
+    <p class="caption"><em>Adho Mukha Svanasana.</em> Downward Dog is where everything integrates—length through the spine, weight through the hands, breath returning to normal. We close here.</p>
+  </div>
+</div>
+
+### The Aftermath
+
+Everybody who starts a religion teaches yoga classes to cash in on being a well-known public figure, correct?
+
+Bitilasana: me, looking less like a yoga instructor and more like an old man trying to remember where he left his keys. The word *embarrassment* seemed inadequate. Ustrasana: me again, neck thrown back, chest offered skyward like an old man having an unexpected emotional breakthrough in a parking lot. *Disgust* doesn't really cover it either.
+
+Is it normal to feel a wave of revulsion when you look at your own photos? Maybe I shouldn't have done this. Maybe this is a step too far.
+
+James, my divorce lawyer, had advised me roughly eleven months ago to project dominance. His exact words were: "You need to be projecting strength right now." What that means in practice, he explained, is restraint—no impulsive decisions, no chaotic expenses, no behavior that a mediator or a judge could characterize as destabilizing. Assets should look stable. Financial judgment should look sound. James is a good lawyer.
+
+The week the photos went up, I called my friend Betina, who is also a lawyer.
+
+"I want to sue myself for defamation," I said.
+
+I explained. I had posted photographs of myself online that materially misrepresented my mental health. The photographs damaged my reputation. I was the injured party. I happened to be the defaming party, but I didn't see why that should be a disqualifying factor.
+
+"So you want to file a defamation claim," she said. "Against yourself."
+
+"Correct."
+
+"In Oregon."
+
+"Yes."
+
+"Where you live?"
+
+"That's right."
+
+"This would be unusual," she said.
+
+"I understand."
+
+"Courts don't love this kind of thing."
+
+"Sure."
+
+"It would be—" She stopped. "I'm going to have to look at some things." She hung up.
+
+Betina called back a few hours later.
+
+"Five thousand," she said. "To file and litigate the initial stages."
+
+"Really?" I startled.
+
+She waited.
+
+"That's a steal. Let's get things rolling."
+
+I had not told James about the yoga photos, or about Betina, or about the defamation suit. The money, in the context of an Oregon no-fault divorce, would presumably be counted somewhere among the assets being divided equally between me and Priya. In some technical sense, I was spending Priya's money to sue myself for posting them.
+
+Priya had gone quiet in a particular register when she saw them. Not the register that means she's distracted, or tired, or thinking about something else. The register that means her estimation of me had dropped another floor. I am familiar with her nonverbals. We have been married for twenty-three years.
+
+James called again the following week, as he does. "How are things?" he asked. Professionally cheerful. He's been at this for almost a year, and he still sounded like he meant it.
+
+"Fine," I said.
+
+"Everything stable on your end? No major changes to the asset picture?"
+
+"No," I said. "Stable."
+
+"Good. That's what we want." A pause. "Nothing I should know about? Any new obligations, expenses, anything like that?"
+
+James has this quality where the question sounds casual but isn't. I have noticed that he files things away. He doesn't push hard when he senses he's not going to get an answer. He just notes the shape of what he wasn't told.
+
+"No," I said. "Nothing significant."
+
+He waited exactly one beat. "Great," he said. "Keep doing what you're doing."
+
+The antidote to meaninglessness is presence. I dropped the check off that afternoon.

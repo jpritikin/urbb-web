@@ -109,9 +109,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  document.querySelectorAll('.yoga-item').forEach((item) => {
+    const wrapper = item.querySelector('.yoga-image-wrapper');
+    const img = item.querySelector('img') as HTMLImageElement;
+    if (wrapper && img) {
+      (wrapper as HTMLElement).style.cursor = 'pointer';
+      wrapper.addEventListener('click', () => {
+        showImagePopup(img, false);
+      });
+    }
+  });
 });
 
-function showImagePopup(img: HTMLImageElement) {
+function showImagePopup(img: HTMLImageElement, allowRotation = true) {
   const existingPopup = document.querySelector('.image-popup-overlay');
   if (existingPopup) return;
 
@@ -126,7 +137,7 @@ function showImagePopup(img: HTMLImageElement) {
   popupImg.alt = img.alt;
   popupImg.className = 'image-popup-img';
 
-  if (Math.random() < 0.2) {
+  if (allowRotation && Math.random() < 0.2) {
     const rotation = Math.random() < 0.5 ? 90 : 270;
     popupImg.style.transform = `rotate(${rotation}deg)`;
   }
