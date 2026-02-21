@@ -102,6 +102,16 @@ src/cloud/partStateManager.ts    - PartState (individual part data), PartBiograp
                                    conversation introspection.
 src/star/partState.ts            - Part biography and dialogue definitions.
 
+Dialogue Writing Guidelines
+----------------------------
+Dialogues flash by fast in the app and appear with minimal context. Write them
+so they make sense standalone:
+- Spell out what you mean; avoid pronouns like "it", "this", "that" where the
+  referent isn't obvious from the line itself.
+- Prefer specific language ("Self is asking about my job") over vague references
+  ("Self wants to know about it").
+- Keep lines short enough to read at a glance.
+
 Visual/Animation
 ----------------
 src/cloud/cloudShape.ts          - SVG cloud rendering, lattice deformation for blending.
