@@ -10,7 +10,7 @@ export interface SerializedModel {
     targetCloudIds: string[];
     supportingParts: Record<string, string[]>;
     blendedParts: Record<string, BlendedPartState>;
-    pendingBlends: { cloudId: string; reason: BlendReason }[];
+    pendingBlends: { cloudId: string; reason: BlendReason; timer?: number }[];
     selfRay: SelfRayState | null;
     displacedParts: string[];
     messages: PartMessage[];
@@ -26,7 +26,6 @@ export interface SerializedModel {
         stanceFlipOdds: number;
         stanceFlipOddsSetPoint?: number;
         dialogues?: ConversationDialogues;
-        noticed?: boolean;
         rumination?: string[];
         impactRecognition?: string[];
         impactRejection?: string[];
@@ -43,19 +42,21 @@ export interface SerializedModel {
     conversationPhases?: Record<string, string>;
     conversationSpeakerId?: string | null;
     simulationTime?: number;
+    orchestratorState?: OrchestratorSnapshot;
 }
 
 export interface OrchestratorSnapshot {
     blendTimers: Record<string, number>;
     cooldowns: Record<string, number>;
     pending: Record<string, string>;
-    jealousyCooldowns?: Record<string, number>;
-    pendingJealousy?: Record<string, { favoredId: string; diff: number }>;
     respondTimer?: number;
     regulationScore?: number;
     sustainedRegulationTimer?: number;
     newCycleTimer?: number;
     listenerViolationTimer?: number;
+    selfLoathingCooldowns?: Record<string, number>;
+    genericDialogueCooldowns?: Record<string, number>;
+    summonArrivalTimers?: Record<string, number>;
 }
 
 export interface BiographySnapshot {
@@ -76,15 +77,16 @@ export interface ViewSnapshot {
 export interface ModelSnapshot {
     targets: string[];
     blended: string[];
+    pendingBlends?: string[];
     selfRay: { targetCloudId: string } | null;
     pendingAction?: { actionId: string; sourceCloudId: string } | null;
     biography?: Record<string, BiographySnapshot>;
     needAttention?: Record<string, number>;
     trust?: Record<string, number>;
-    conversationEffectiveStances?: Record<string, number>;
     conversationPhases?: Record<string, string>;
     conversationTherapistDelta?: Record<string, number>;
     conversationSpeakerId?: string | null;
+    conversationParticipantIds?: [string, string] | null;
     interPartRelations?: { fromId: string; toId: string; stance: number; trust: number }[];
     thoughtBubbles?: { id: number; cloudId: string; text: string; validated?: boolean; partInitiated?: boolean }[];
     viewState?: ViewSnapshot;
@@ -121,6 +123,8 @@ export interface RecordedSession {
     platform: 'desktop' | 'mobile';
     modelSeed: number;
     timestamp: number;
+    playbackOf?: string;
+    playbackOfHash?: string;
     initialModel: SerializedModel;
     actions: RecordedAction[];
     finalModel?: SerializedModel;
@@ -190,7 +194,7 @@ export interface ControllerActionResult {
     message?: string;
     stateChanges: string[];
     uiFeedback?: UIFeedback;
-    triggerBacklash?: { protectorId: string; protecteeId: string };
+    triggerBacklash?: { protectorId: string; protecteeId: string; extras: string[] };
     createSelfRay?: { cloudId: string };
     reduceBlending?: { cloudId: string; amount: number };
     trustGain?: number;

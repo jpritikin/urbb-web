@@ -427,7 +427,8 @@ export class SeatManager {
             vertices: createCarpetVertices(),
             landingProgress: 0,
             effectiveStance: 0,
-            tiltAngle: 0
+            tiltAngle: 0,
+            positionFrozen: false
         });
         this.carpetVelocities.set(seatId, { vx: 0, vy: 0 });
     }
@@ -592,7 +593,7 @@ export class SeatManager {
             carpet.targetX = targetPos.x;
             carpet.targetY = targetPos.y;
 
-            if (carpetId === this.draggingCarpetId) continue;
+            if (carpetId === this.draggingCarpetId || carpet.positionFrozen) continue;
 
             const velocity = this.carpetVelocities.get(carpetId) ?? { vx: 0, vy: 0 };
 

@@ -3,6 +3,7 @@ import type {
     Scenario, ScenarioResult, Assertion, ActionResult,
     RecordedSession, SerializedModel
 } from './types.js';
+import type { RngLogEntry } from './rng.js';
 
 export function runScenario(scenario: Scenario): ScenarioResult {
     const sim = new HeadlessSimulator({ seed: scenario.seed });
@@ -31,6 +32,41 @@ export interface ReplayResult extends ScenarioResult {
     differences: string[];
 }
 
+function findOrchStateMismatches(actual: Record<string, unknown>, expected: Record<string, unknown>): string[] {
+    const mismatches: string[] = [];
+    for (const key of new Set([...Object.keys(actual), ...Object.keys(expected)])) {
+        const a = actual[key];
+        const e = expected[key];
+        if (typeof e === 'number' && typeof a === 'number') {
+            if (Math.abs(a - e) > 0.001) mismatches.push(`${key}: ${a.toFixed(3)} vs ${e.toFixed(3)}`);
+        } else if (typeof e === 'object' && e !== null && typeof a === 'object' && a !== null) {
+            const aRec = a as Record<string, number>;
+            const eRec = e as Record<string, number>;
+            for (const k of new Set([...Object.keys(aRec), ...Object.keys(eRec)])) {
+                const av = aRec[k] ?? 0;
+                const ev = eRec[k] ?? 0;
+                if (Math.abs(av - ev) > 0.001) mismatches.push(`${key}.${k}: ${av.toFixed(3)} vs ${ev.toFixed(3)}`);
+            }
+        }
+    }
+    return mismatches;
+}
+
+function findRngLogMismatch(actual: RngLogEntry[], expected: RngLogEntry[]): string | undefined {
+    for (let i = 0; i < Math.max(actual.length, expected.length); i++) {
+        if (i >= expected.length) {
+            return `extra RNG call [${i}] label=${actual[i].label} value=${actual[i].value.toFixed(4)}`;
+        }
+        if (i >= actual.length) {
+            return `missing RNG call [${i}] expected label=${expected[i].label} value=${expected[i].value.toFixed(4)}`;
+        }
+        if (Math.abs(actual[i].value - expected[i].value) > 1e-10) {
+            return `RNG[${i}] label=${actual[i].label} value=${actual[i].value.toFixed(6)} vs expected label=${expected[i].label} value=${expected[i].value.toFixed(6)}`;
+        }
+    }
+    return undefined;
+}
+
 export function replaySession(session: RecordedSession): ReplayResult {
     const sim = HeadlessSimulator.fromSession(
         session.initialModel,
@@ -55,7 +91,13 @@ export function replaySession(session: RecordedSession): ReplayResult {
             if (count > 0) {
                 sim.advanceIntervals(count, action.orchState);
             }
-            if (action.rngCounts) {
+            if (action.rngLog?.length) {
+                const actualLog = sim.getModelRngLog().slice(rngBefore);
+                const rngMismatch = findRngLogMismatch(actualLog, action.rngLog);
+                if (rngMismatch && !firstRngDivergence) {
+                    firstRngDivergence = `#${i} process_intervals: ${rngMismatch}; trace: ${stateTrace.join(' | ')}`;
+                }
+            } else if (action.rngCounts) {
                 const actual = sim.getRngCount();
                 if (actual !== action.rngCounts.model) {
                     stateTrace.push(`#${i} process_intervals RNG mismatch: ${actual} vs ${action.rngCounts.model}`);
@@ -138,10 +180,27 @@ export function replaySession(session: RecordedSession): ReplayResult {
             stateTrace.push(`#${i} notice_star: selfRay=${selfRay?.targetCloudId ?? 'none'}, success=${result.success}`);
         }
 
-        if (!firstRngDivergence && action.rngCounts) {
-            const actual = sim.getRngCount();
-            if (actual !== action.rngCounts.model) {
-                firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual} vs ${action.rngCounts.model}; trace: ${stateTrace.join(' | ')}`;
+        // Check orchState matches
+        if (action.orchState) {
+            const actualOrch = sim.getOrchestratorDebugState();
+            const orchMismatches = findOrchStateMismatches(actualOrch, action.orchState);
+            for (const m of orchMismatches) {
+                differences.push(`#${i} orch: ${m}`);
+            }
+        }
+
+        if (!firstRngDivergence) {
+            if (action.rngLog?.length) {
+                const actualLog = sim.getModelRngLog().slice(rngBefore);
+                const rngMismatch = findRngLogMismatch(actualLog, action.rngLog);
+                if (rngMismatch) {
+                    firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): ${rngMismatch}; trace: ${stateTrace.join(' | ')}`;
+                }
+            } else if (action.rngCounts) {
+                const actual = sim.getRngCount();
+                if (actual !== action.rngCounts.model) {
+                    firstRngDivergence = `#${i} ${action.action}(${action.cloudId}): model RNG ${actual} vs ${action.rngCounts.model}; trace: ${stateTrace.join(' | ')}`;
+                }
             }
         }
     }

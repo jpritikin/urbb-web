@@ -28,6 +28,7 @@ export interface CarpetState {
     landingProgress: number;
     effectiveStance: number;
     tiltAngle: number;
+    positionFrozen: boolean;
 }
 
 export const CARPET_FLY_DURATION = 1.5;
@@ -158,13 +159,14 @@ export class CarpetRenderer {
     private conversationPhases: Map<string, string> | null = null;
 
     private rotationDragCarpetId: string | null = null;
-    private rotationStartAngle: number = 0;
+    private rotationLockedDirectionSign: number = 1;
     private rotationIndicator: SVGGElement | null = null;
     private latestCarpetStates: Map<string, CarpetState> | null = null;
     private latestConversationParticipants: Set<string> | null = null;
     private onRotationEnd: ((carpetId: string, stanceDelta: number) => void) | null = null;
+    private onRotationPauseChanged: ((paused: boolean) => void) | null = null;
 
-    private activeRotations: Map<number, { carpetId: string; startAngle: number; indicator: SVGGElement }> = new Map();
+    private activeRotations: Map<number, { carpetId: string; lockedDirectionSign: number; indicator: SVGGElement }> = new Map();
     private activeDragTouch: number | null = null;
 
     private readonly CARPET_OCCUPIED_DROP = 35;
@@ -208,13 +210,19 @@ export class CarpetRenderer {
         let syntheticDrag = false;
         this.carpetGroup.addEventListener('mousedown', (e: MouseEvent) => {
             const carpetId = findCarpetId(e.target);
+            console.log(`[CarpetMousedown] target=${(e.target as Element)?.tagName} carpetId=${carpetId} isTrusted=${e.isTrusted} conversationActive=${this.conversationActive} rotationDragCarpetId=${this.rotationDragCarpetId}`);
             if (!carpetId) return;
             syntheticDrag = !e.isTrusted;
             if (this.conversationActive) {
                 this.rotationDragCarpetId = carpetId;
+                this.freezeCarpetPosition(carpetId, true);
+                this.freezePartnerPosition(carpetId, true);
                 const pos = toSvgCoords(e.clientX, e.clientY);
-                this.rotationStartAngle = this.computeRotation(carpetId, pos.x, pos.y).angleDeg;
+                this.lockDirectionSign(carpetId, pos.x);
+                const center = this.getCarpetCenter(carpetId);
+                console.log(`[CarpetDragStart] ${carpetId} pos=(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) center=(${center?.x.toFixed(1)},${center?.y.toFixed(1)}) startAngle=0 lockedSign=${this.rotationLockedDirectionSign} tiltSign=${this.getTiltSign(carpetId)}`);
                 this.showRotationIndicator(carpetId);
+                this.onRotationPauseChanged?.(true);
             } else {
                 this.draggingCarpetId = carpetId;
             }
@@ -226,6 +234,7 @@ export class CarpetRenderer {
             if (syntheticDrag && e.isTrusted) return;
             if (this.rotationDragCarpetId) {
                 const pos = toSvgCoords(e.clientX, e.clientY);
+                console.log(`[CarpetMousemove] svg(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) isTrusted=${e.isTrusted}`);
                 this.updateRotationMouseIndicator(pos.x, pos.y);
                 e.preventDefault();
                 return;
@@ -237,10 +246,14 @@ export class CarpetRenderer {
         });
 
         const onMouseEnd = (e?: Event) => {
+            console.log(`[onMouseEnd] type=${e?.type} isTrusted=${(e as MouseEvent)?.isTrusted} syntheticDrag=${syntheticDrag} rotationDragCarpetId=${this.rotationDragCarpetId}`);
             if (syntheticDrag && e?.isTrusted) return;
             syntheticDrag = false;
             if (this.rotationDragCarpetId) {
+                this.freezePartnerPosition(this.rotationDragCarpetId, false);
+                this.freezeCarpetPosition(this.rotationDragCarpetId, false);
                 this.commitRotation();
+                this.onRotationPauseChanged?.(false);
                 return;
             }
             this.draggingCarpetId = null;
@@ -258,10 +271,17 @@ export class CarpetRenderer {
 
                 if (this.conversationActive) {
                     if (this.activeRotations.has(touch.identifier)) continue;
+                    const wasPaused = this.activeRotations.size > 0;
                     const pos = toSvgCoords(touch.clientX, touch.clientY);
-                    const startAngle = this.computeRotation(carpetId, pos.x, pos.y).angleDeg;
+                    const center = this.getCarpetCenter(carpetId);
+                    const dx = center ? pos.x - center.x : 1;
+                    const horizontalSign = dx >= 0 ? 1 : -1;
+                    const lockedDirectionSign = horizontalSign * this.getTiltSign(carpetId);
                     const indicator = this.createRotationIndicator(carpetId);
-                    this.activeRotations.set(touch.identifier, { carpetId, startAngle, indicator });
+                    this.activeRotations.set(touch.identifier, { carpetId, lockedDirectionSign, indicator });
+                    this.freezeCarpetPosition(carpetId, true);
+                    this.freezePartnerPosition(carpetId, true);
+                    if (!wasPaused) this.onRotationPauseChanged?.(true);
                 } else {
                     if (this.activeDragTouch === null) {
                         this.activeDragTouch = touch.identifier;
@@ -296,8 +316,11 @@ export class CarpetRenderer {
                 const touch = e.changedTouches[i];
                 const rotation = this.activeRotations.get(touch.identifier);
                 if (rotation) {
+                    this.freezePartnerPosition(rotation.carpetId, false);
+                    this.freezeCarpetPosition(rotation.carpetId, false);
                     const pos = toSvgCoords(touch.clientX, touch.clientY);
                     this.commitTouchRotation(touch.identifier, pos.x, pos.y);
+                    if (this.activeRotations.size === 0) this.onRotationPauseChanged?.(false);
                     continue;
                 }
                 if (touch.identifier === this.activeDragTouch) {
@@ -318,6 +341,22 @@ export class CarpetRenderer {
 
     setOnRotationEnd(callback: ((carpetId: string, stanceDelta: number) => void) | null): void {
         this.onRotationEnd = callback;
+    }
+
+    setOnRotationPauseChanged(callback: ((paused: boolean) => void) | null): void {
+        this.onRotationPauseChanged = callback;
+    }
+
+    private freezePartnerPosition(carpetId: string, frozen: boolean): void {
+        if (!this.latestConversationParticipants) return;
+        for (const pid of this.latestConversationParticipants) {
+            if (pid !== carpetId) this.freezeCarpetPosition(pid, frozen);
+        }
+    }
+
+    private freezeCarpetPosition(carpetId: string, frozen: boolean): void {
+        const carpet = this.latestCarpetStates?.get(carpetId);
+        if (carpet) carpet.positionFrozen = frozen;
     }
 
     setConversationActive(active: boolean): void {
@@ -394,18 +433,33 @@ export class CarpetRenderer {
         return partner.currentX >= carpet.currentX ? 1 : -1;
     }
 
+    private lockDirectionSign(carpetId: string, mouseX: number): void {
+        const center = this.getCarpetCenter(carpetId);
+        if (!center) return;
+        const dx = mouseX - center.x;
+        const horizontalSign = dx >= 0 ? 1 : -1;
+        this.rotationLockedDirectionSign = horizontalSign * this.getTiltSign(carpetId);
+    }
+
     private computeRotation(carpetId: string, mouseX: number, mouseY: number): { angleDeg: number; lineLength: number } {
         const center = this.getCarpetCenter(carpetId);
         if (!center) return { angleDeg: 0, lineLength: 0 };
         const dx = mouseX - center.x;
         const dy = mouseY - center.y;
         const lineLength = Math.sqrt(dx * dx + dy * dy);
-        // Angle off horizontal: atan2(dy, |dx|) so left and right both produce positive angle for downward drag
         const rawAngle = Math.atan2(dy, Math.abs(dx)) * 180 / Math.PI;
+        // Use locked direction sign during active drag to prevent mid-drag inversions
+        if (this.rotationDragCarpetId === carpetId) {
+            return { angleDeg: rawAngle * this.rotationLockedDirectionSign, lineLength };
+        }
+        for (const rot of this.activeRotations.values()) {
+            if (rot.carpetId === carpetId) {
+                return { angleDeg: rawAngle * rot.lockedDirectionSign, lineLength };
+            }
+        }
         const tiltSign = this.getTiltSign(carpetId);
         const horizontalSign = dx >= 0 ? 1 : -1;
-        const directionSign = horizontalSign * tiltSign;
-        return { angleDeg: rawAngle * directionSign, lineLength };
+        return { angleDeg: rawAngle * horizontalSign * tiltSign, lineLength };
     }
 
     private createRotationIndicator(carpetId: string): SVGGElement {
@@ -465,12 +519,18 @@ export class CarpetRenderer {
     private commitTouchRotation(touchId: number, x: number, y: number): void {
         const rotation = this.activeRotations.get(touchId);
         if (!rotation) return;
-        this.activeRotations.delete(touchId);
+        // Compute before deleting so computeRotation can find the locked direction sign
         const { angleDeg } = this.computeRotation(rotation.carpetId, x, y);
-        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg - rotation.startAngle));
+        this.activeRotations.delete(touchId);
+        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg));
         const stanceDelta = (relativeAngle / MAX_TILT) * REGULATION_STANCE_LIMIT;
         rotation.indicator.remove();
         this.onRotationEnd?.(rotation.carpetId, stanceDelta);
+    }
+
+    getLockedDragSign(): number | null {
+        if (!this.rotationDragCarpetId) return null;
+        return this.rotationLockedDirectionSign;
     }
 
     getCurrentDragStanceDelta(): number | null {
@@ -478,7 +538,7 @@ export class CarpetRenderer {
         const x2 = parseFloat(this.rotationIndicator.dataset.cursorX ?? '0');
         const y2 = parseFloat(this.rotationIndicator.dataset.cursorY ?? '0');
         const { angleDeg } = this.computeRotation(this.rotationDragCarpetId, x2, y2);
-        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg - this.rotationStartAngle));
+        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg));
         return (relativeAngle / MAX_TILT) * REGULATION_STANCE_LIMIT;
     }
 
@@ -500,8 +560,9 @@ export class CarpetRenderer {
         const x2 = parseFloat(this.rotationIndicator.dataset.cursorX ?? '0');
         const y2 = parseFloat(this.rotationIndicator.dataset.cursorY ?? '0');
         const { angleDeg } = this.computeRotation(this.rotationDragCarpetId, x2, y2);
-        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg - this.rotationStartAngle));
+        const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg));
         const stanceDelta = (relativeAngle / MAX_TILT) * REGULATION_STANCE_LIMIT;
+        console.log(`[commitRotation] ${this.rotationDragCarpetId} cursor=(${x2.toFixed(1)},${y2.toFixed(1)}) angleDeg=${angleDeg.toFixed(2)} relative=${relativeAngle.toFixed(2)} delta=${stanceDelta.toFixed(3)} lockedSign=${this.rotationLockedDirectionSign}`);
         const carpetId = this.rotationDragCarpetId;
         this.hideRotationIndicator();
         this.rotationDragCarpetId = null;
@@ -560,29 +621,33 @@ export class CarpetRenderer {
 
             carpet.effectiveStance = effectiveStances?.get(seatId) ?? 0;
 
-            if (conversationParticipants?.has(seatId) && conversationParticipants.size === 2) {
-                let partnerId: string | null = null;
-                for (const pid of conversationParticipants) {
-                    if (pid !== seatId) { partnerId = pid; break; }
+            if (!carpet.positionFrozen) {
+                if (conversationParticipants?.has(seatId) && conversationParticipants.size === 2) {
+                    let partnerId: string | null = null;
+                    for (const pid of conversationParticipants) {
+                        if (pid !== seatId) { partnerId = pid; break; }
+                    }
+                    const partner = partnerId ? carpetStates.get(partnerId) : null;
+                    if (partner) {
+                        const dx = partner.currentX - carpet.currentX;
+                        const tiltSign = dx >= 0 ? 1 : -1;
+                        const clampedStance = Math.max(-REGULATION_STANCE_LIMIT, Math.min(REGULATION_STANCE_LIMIT, carpet.effectiveStance));
+                        const targetTilt = tiltSign * (clampedStance / REGULATION_STANCE_LIMIT) * MAX_TILT;
+                        carpet.tiltAngle += (targetTilt - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
+                    }
+                } else {
+                    carpet.tiltAngle += (0 - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
                 }
-                const partner = partnerId ? carpetStates.get(partnerId) : null;
-                if (partner) {
-                    const dx = partner.currentX - carpet.currentX;
-                    const tiltSign = dx >= 0 ? 1 : -1;
-                    const clampedStance = Math.max(-REGULATION_STANCE_LIMIT, Math.min(REGULATION_STANCE_LIMIT, carpet.effectiveStance));
-                    const targetTilt = tiltSign * (clampedStance / REGULATION_STANCE_LIMIT) * MAX_TILT;
-                    carpet.tiltAngle += (targetTilt - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
-                }
-            } else {
-                carpet.tiltAngle += (0 - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
             }
 
             carpet.isOccupied = seat !== undefined;
-            const targetOffset = carpet.isOccupied ? this.CARPET_OCCUPIED_DROP : 0;
-            const landingDrop = carpet.landingProgress * CARPET_CONVERSATION_DROP;
-            const offsetSmoothing = 4;
-            const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
-            carpet.occupiedOffset += (targetOffset + landingDrop - carpet.occupiedOffset) * offsetFactor;
+            if (!carpet.positionFrozen) {
+                const targetOffset = carpet.isOccupied ? this.CARPET_OCCUPIED_DROP : 0;
+                const landingDrop = carpet.landingProgress * CARPET_CONVERSATION_DROP;
+                const offsetSmoothing = 4;
+                const offsetFactor = 1 - Math.exp(-offsetSmoothing * deltaTime);
+                carpet.occupiedOffset += (targetOffset + landingDrop - carpet.occupiedOffset) * offsetFactor;
+            }
 
             const windDampen = 1 - Math.min(1, carpet.landingProgress / 0.4);
 
