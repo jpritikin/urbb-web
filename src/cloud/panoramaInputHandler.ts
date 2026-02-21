@@ -4,7 +4,7 @@ export interface PanoramaInputConfig {
     rotationSensitivity: number;
 }
 
-const DEFAULT_CONFIG: PanoramaInputConfig = {
+export const DEFAULT_PANORAMA_INPUT_CONFIG: PanoramaInputConfig = {
     minZoom: 0.7,
     maxZoom: 1.5,
     rotationSensitivity: 0.01,
@@ -42,7 +42,7 @@ export class PanoramaInputHandler {
         this.getMode = options.getMode;
         this.getZoom = options.getZoom;
         this.setZoom = options.setZoom;
-        this.config = { ...DEFAULT_CONFIG, ...options.config };
+        this.config = { ...DEFAULT_PANORAMA_INPUT_CONFIG, ...options.config };
 
         this.setupEventListeners();
     }

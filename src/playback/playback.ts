@@ -564,8 +564,16 @@ export class PlaybackController {
 
     private async executeModeChange(action: RecordedAction): Promise<void> {
         const targetMode = action.newMode;
-        if (!targetMode || this.callbacks.getMode() === targetMode) return;
+        const currentMode = this.callbacks.getMode();
+        console.log(`[ModeChange] target=${targetMode} current=${currentMode}`);
+        if (!targetMode || currentMode === targetMode) {
+            console.log(`[ModeChange] skipped`);
+            return;
+        }
+        await this.waitForSpiralExits();
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
+        console.log(`[ModeChange] after click mode=${this.callbacks.getMode()}`);
+        await this.waitForTransition();
         await this.reticle.fadeOut();
     }
 
@@ -643,6 +651,10 @@ export class PlaybackController {
             this.callbacks.simulateMouseMove(nx, ny);
             await this.delay(10);
         }
+
+        // Log final delta before committing
+        const finalDelta = this.callbacks.getCurrentDragStanceDelta();
+        console.log(`[NudgeDrag] ${action.cloudId} target=${stanceDelta} final=${finalDelta?.toFixed(3) ?? 'null'} rotationActive=${finalDelta !== null}`);
 
         // Mouse up triggers commitRotation → onRotationEnd
         this.callbacks.simulateMouseUp();

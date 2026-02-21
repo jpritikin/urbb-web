@@ -13,7 +13,6 @@ export interface MessageOrchestratorCallbacks {
     act: (label: string, fn: () => void) => void;
     showThoughtBubble: (text: string, cloudId: string, partInitiated?: boolean) => void;
     getCloudById: (id: string) => { id: string } | null;
-    getTime: () => number;
 }
 
 export class MessageOrchestrator {
@@ -29,8 +28,6 @@ export class MessageOrchestrator {
     private summonArrivalTimers: Map<string, number> = new Map();
     private genericDialogueCooldowns: Map<string, number> = new Map();
     private selfLoathingCooldowns: Map<string, number> = new Map();
-    private jealousyCooldowns: Map<string, number> = new Map();
-    private pendingJealousy: Map<string, { favoredId: string; diff: number }> = new Map();
     private sustainedRegulationTimer: number = 0;
     private regulationScore: number = 0;
     private respondTimer: number = 0;
@@ -40,7 +37,6 @@ export class MessageOrchestrator {
     private readonly BLEND_MESSAGE_DELAY = 2;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
     private readonly SELF_LOATHING_INTERVAL = 10;
-    private readonly JEALOUSY_INTERVAL = 10;
     private readonly SPEAK_BASE_RATE = 0.5;
     private readonly RESPOND_DELAY = 3;
     private readonly NEW_CYCLE_DELAY = 4;
@@ -62,6 +58,10 @@ export class MessageOrchestrator {
         this.getRelationships = getRelationships;
         this.rng = rng;
         this.callbacks = callbacks;
+        const savedState = getModel().getOrchestratorState();
+        if (savedState) {
+            this.restoreState(savedState);
+        }
     }
 
     private get model(): SimulatorModel {
@@ -102,12 +102,17 @@ export class MessageOrchestrator {
 
         const arrivedMessages = this.model.advanceMessages(deltaTime);
         for (const message of arrivedMessages) {
-            this.onMessageReceived(message);
+            this.callbacks.act(`message arrived ${message.id}`, () => {
+                this.model.removeMessage(message.id);
+            });
         }
+        this.model.setOrchestratorState(this.getDebugState());
     }
 
     onMessageReceived(message: PartMessage): void {
-        this.model.removeMessage(message.id);
+        this.callbacks.act(`message arrived ${message.id}`, () => {
+            this.model.removeMessage(message.id);
+        });
     }
 
     checkAndSendBlendedUtterances(deltaTime: number): void {
@@ -176,16 +181,9 @@ export class MessageOrchestrator {
 
     private sendBlendedUtterance(senderId: string, targetId: string, text: string): void {
         const damage = 0.3;
-        const trustBefore = this.relationships.getRelation(targetId, senderId)?.trust ?? 0;
         this.model.parts.addInterPartTrust(senderId, targetId, -damage, () => this.rng.random('blended_trust_damage'));
         this.model.parts.adjustTrust(targetId, 0.99);
         this.model.changeNeedAttention(senderId, -0.25);
-        const absorbed = trustBefore - Math.max(0, trustBefore - damage);
-        const overflow = damage - absorbed;
-        if (overflow > 0) {
-            const selfTrust = this.model.getSelfTrust(targetId);
-            this.model.changeNeedAttention(targetId, overflow / (1 + selfTrust));
-        }
         this.sendMessage(senderId, targetId, text);
     }
 
@@ -236,13 +234,12 @@ export class MessageOrchestrator {
 
             if (!this.relationships.hasHostileRelation(blendedId, blendedId)) continue;
 
-            const dialogue = this.relationships.getRumination(blendedId, () => this.rng.random('dialogue_pick'));
-            if (!dialogue) continue;
-
             let cooldown = this.selfLoathingCooldowns.get(blendedId) ?? this.SELF_LOATHING_INTERVAL;
             cooldown += deltaTime;
 
             while (cooldown >= this.SELF_LOATHING_INTERVAL) {
+                const dialogue = this.relationships.getRumination(blendedId, () => this.rng.random('dialogue_pick'));
+                if (!dialogue) break;
                 this.callbacks.showThoughtBubble(dialogue, blendedId);
                 this.model.changeNeedAttention(blendedId, -0.25);
                 cooldown -= this.SELF_LOATHING_INTERVAL;
@@ -252,52 +249,37 @@ export class MessageOrchestrator {
     }
 
     checkJealousy(deltaTime: number): void {
-        for (const [jealousId, { favoredId, diff }] of this.pendingJealousy) {
-            if (this.model.getConferenceCloudIds().has(jealousId)) {
-                this.applyJealousy(jealousId, favoredId, diff);
-                this.pendingJealousy.delete(jealousId);
-            }
-        }
-
         const relations = this.relationships.getRelationSummaries();
 
         for (const rel of relations) {
             if (rel.fromId === rel.toId) continue;
             const jealousId = rel.fromId;
             const favoredId = rel.toId;
+            if (this.model.isBlended(jealousId)) continue;
             const jealousTrust = this.relationships.getTrust(jealousId);
             if (jealousTrust >= 0.75) continue;
             const favoredTrust = this.relationships.getTrust(favoredId);
             if (jealousTrust >= favoredTrust) continue;
             const diff = favoredTrust - jealousTrust;
-            if (this.relationships.isNoticed(jealousId, favoredId)) continue;
+            const interPartRel = this.relationships.getInterPartRelation(jealousId, favoredId);
+            if (interPartRel && interPartRel.trustFloor > 0) continue;
             const interTrust = this.relationships.getInterPartTrust(jealousId, favoredId);
-            if (diff <= interTrust + 0.15) continue;
-
-            let cooldown = this.jealousyCooldowns.get(jealousId) ?? this.JEALOUSY_INTERVAL;
-            cooldown += deltaTime;
-            if (cooldown < this.JEALOUSY_INTERVAL) {
-                this.jealousyCooldowns.set(jealousId, cooldown);
-                continue;
-            }
-            cooldown -= this.JEALOUSY_INTERVAL;
-            this.jealousyCooldowns.set(jealousId, cooldown);
+            const triggerProb = diff - (interTrust + 0.15);
+            if (triggerProb <= 0) continue;
+            if (this.rng.random('jealousy') >= Math.sqrt(triggerProb) * 0.09) continue;
 
             if (!this.model.getConferenceCloudIds().has(jealousId)) {
-                this.model.partDemandsAttention(jealousId);
-                this.pendingJealousy.set(jealousId, { favoredId, diff });
+                this.model.changeNeedAttention(jealousId, diff);
                 continue;
             }
 
-            this.applyJealousy(jealousId, favoredId, diff);
+            this.applyJealousy(jealousId, favoredId);
         }
     }
 
-    private applyJealousy(jealousId: string, favoredId: string, diff: number): void {
-        const oldTrust = this.relationships.getTrust(jealousId);
-        this.relationships.addTrust(jealousId, -diff);
-        const overflow = Math.max(0, diff - oldTrust);
-        if (overflow > 0) this.model.changeNeedAttention(jealousId, overflow);
+    private applyJealousy(jealousId: string, favoredId: string): void {
+        this.relationships.setTrust(jealousId, 0);
+        this.model.changeNeedAttention(jealousId, 1.0);
         const favoredName = this.model.parts.getPartName(favoredId);
         this.callbacks.showThoughtBubble(`You like ${favoredName} more than me`, jealousId, false);
     }
@@ -415,10 +397,12 @@ export class MessageOrchestrator {
     }
 
     private resetConversation(newSpeakerId: string, partA: string, partB: string): void {
-        const newListenerId = newSpeakerId === partA ? partB : partA;
-        this.model.setConversationSpeakerId(newSpeakerId);
-        this.model.setConversationPhase(newSpeakerId, 'speak');
-        this.model.setConversationPhase(newListenerId, 'listen');
+        this.callbacks.act(`reset conversation → ${newSpeakerId}`, () => {
+            const newListenerId = newSpeakerId === partA ? partB : partA;
+            this.model.setConversationSpeakerId(newSpeakerId);
+            this.model.setConversationPhase(newSpeakerId, 'speak');
+            this.model.setConversationPhase(newListenerId, 'listen');
+        });
         this.respondTimer = 0;
         this.newCycleTimer = 0;
     }
@@ -436,7 +420,6 @@ export class MessageOrchestrator {
             if (senderState && targetState) {
                 this.view.startMessage(message, senderId, targetId);
             }
-            this.model.parts.setUtterance(senderId, text, this.callbacks.getTime());
         }
     }
 
@@ -449,16 +432,10 @@ export class MessageOrchestrator {
         const sameDirection = this.rng.random('stance_shock') < rel.stanceFlipOdds;
         const direction = sameDirection ? Math.sign(speakerStance) : -Math.sign(speakerStance);
         if (direction === 0) return;
-        rel.stance = Math.max(-1, Math.min(1, rel.stance + direction * shockMagnitude));
-
-        const damage = shockMagnitude;
-        const trustBefore = rel.trust;
-        this.relationships.addInterPartTrust(receiverId, speakerId, -damage, () => this.rng.random('shock_trust'));
-        const absorbed = trustBefore - Math.max(0, rel.trust);
-        const overflow = damage - absorbed;
-        if (overflow > 0) {
-            this.model.changeNeedAttention(receiverId, overflow / (1 + selfTrust));
-        }
+        this.callbacks.act(`stance shock ${speakerId}→${receiverId}`, () => {
+            rel.stance = Math.max(-1, Math.min(1, rel.stance + direction * shockMagnitude));
+            this.relationships.addInterPartTrust(receiverId, speakerId, -shockMagnitude, () => this.rng.random('shock_trust'));
+        });
     }
 
     private advanceConversationPhases(deltaTime: number, partA: string, partB: string): void {
@@ -530,22 +507,22 @@ export class MessageOrchestrator {
         this.model.setConversationPhase(speakerId, 'listen');
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; jealousyCooldowns: Record<string, number>; pendingJealousy: Record<string, { favoredId: string; diff: number }>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number; selfLoathingCooldowns: Record<string, number>; genericDialogueCooldowns: Record<string, number> } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
             pending: Object.fromEntries(this.pendingSummonTargets),
-            jealousyCooldowns: Object.fromEntries(this.jealousyCooldowns),
-            pendingJealousy: Object.fromEntries(this.pendingJealousy),
             respondTimer: this.respondTimer,
             regulationScore: this.regulationScore,
             sustainedRegulationTimer: this.sustainedRegulationTimer,
             newCycleTimer: this.newCycleTimer,
             listenerViolationTimer: this.listenerViolationTimer,
+            selfLoathingCooldowns: Object.fromEntries(this.selfLoathingCooldowns),
+            genericDialogueCooldowns: Object.fromEntries(this.genericDialogueCooldowns),
         };
     }
 
-    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; jealousyCooldowns?: Record<string, number>; pendingJealousy?: Record<string, { favoredId: string; diff: number }>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number }): void {
+    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number; selfLoathingCooldowns?: Record<string, number>; genericDialogueCooldowns?: Record<string, number> }): void {
         if (snapshot.blendTimers) {
             this.blendStartTimers = new Map(Object.entries(snapshot.blendTimers));
         }
@@ -555,17 +532,17 @@ export class MessageOrchestrator {
         if (snapshot.pending) {
             this.pendingSummonTargets = new Map(Object.entries(snapshot.pending));
         }
-        if (snapshot.jealousyCooldowns) {
-            this.jealousyCooldowns = new Map(Object.entries(snapshot.jealousyCooldowns));
-        }
-        if (snapshot.pendingJealousy) {
-            this.pendingJealousy = new Map(Object.entries(snapshot.pendingJealousy));
-        }
         if (snapshot.respondTimer !== undefined) this.respondTimer = snapshot.respondTimer;
         if (snapshot.regulationScore !== undefined) this.regulationScore = snapshot.regulationScore;
         if (snapshot.sustainedRegulationTimer !== undefined) this.sustainedRegulationTimer = snapshot.sustainedRegulationTimer;
         if (snapshot.newCycleTimer !== undefined) this.newCycleTimer = snapshot.newCycleTimer;
         if (snapshot.listenerViolationTimer !== undefined) this.listenerViolationTimer = snapshot.listenerViolationTimer;
+        if (snapshot.selfLoathingCooldowns) {
+            this.selfLoathingCooldowns = new Map(Object.entries(snapshot.selfLoathingCooldowns));
+        }
+        if (snapshot.genericDialogueCooldowns) {
+            this.genericDialogueCooldowns = new Map(Object.entries(snapshot.genericDialogueCooldowns));
+        }
     }
 
     private sendMessage(senderId: string, targetId: string, text: string): void {
@@ -582,7 +559,6 @@ export class MessageOrchestrator {
             if (senderState && targetState) {
                 this.view.startMessage(message, senderId, targetId);
             }
-            this.model.parts.setUtterance(senderId, text, this.callbacks.getTime());
         }
     }
 }

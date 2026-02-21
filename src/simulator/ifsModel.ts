@@ -1,6 +1,7 @@
 import { PartStateManager, PartState, PartBiography, PartDialogues, type IfioPhase } from '../cloud/partStateManager.js';
-import type { SerializedModel } from '../playback/testability/types.js';
+import type { SerializedModel, OrchestratorSnapshot } from '../playback/testability/types.js';
 import type { RNG } from '../playback/testability/rng.js';
+import { CARPET_FLY_DURATION } from '../star/carpetRenderer.js';
 
 export type BlendReason = 'spontaneous' | 'therapist';
 export type MessageType = 'conversation';
@@ -44,7 +45,7 @@ export class SimulatorModel {
     private supportingParts: Map<string, Set<string>> = new Map();
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
-    private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
+    private pendingBlends: { cloudId: string; reason: BlendReason; timer: number }[] = [];
     readonly parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
     private messages: PartMessage[] = [];
@@ -60,6 +61,7 @@ export class SimulatorModel {
     private conversationPhases: Map<string, IfioPhase> = new Map();
     private conversationSpeakerId: string | null = null;
     private simulationTime: number = 0;
+    private orchestratorState: OrchestratorSnapshot | null = null;
     private onModeChange?: (mode: SimulatorMode) => void;
 
     getSimulationTime(): number {
@@ -68,6 +70,14 @@ export class SimulatorModel {
 
     advanceSimulationTime(dt: number): void {
         this.simulationTime += dt;
+    }
+
+    getOrchestratorState(): OrchestratorSnapshot | null {
+        return this.orchestratorState;
+    }
+
+    setOrchestratorState(state: OrchestratorSnapshot): void {
+        this.orchestratorState = state;
     }
 
     getSelfAmplification(): number {
@@ -142,6 +152,7 @@ export class SimulatorModel {
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
         }
+        this.supportingParts.delete(cloudId);
     }
 
     toggleTargetCloud(cloudId: string): void {
@@ -216,8 +227,6 @@ export class SimulatorModel {
         this.supportingParts.clear();
     }
 
-    private static readonly REACTIVITY_MULTIPLIER = 2;
-
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
         if (this.targetCloudIds.has(cloudId)) {
             this.removeTargetCloud(cloudId);
@@ -225,23 +234,15 @@ export class SimulatorModel {
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
             this.clearSelfRay();
-            this.triggerReactiveBlending(cloudId);
         }
     }
 
-    private triggerReactiveBlending(blendingCloudId: string): void {
-        const hostileSenders = this.parts.getHostileRelationSenders(blendingCloudId);
-        for (const senderId of hostileSenders) {
-            const trust = this.parts.getInterPartTrust(senderId, blendingCloudId);
-            const spike = (0.3 - trust) * SimulatorModel.REACTIVITY_MULTIPLIER;
-            this.changeNeedAttention(senderId, spike);
-        }
-    }
 
     removeBlendedPart(cloudId: string): void {
         if (this.blendedParts.has(cloudId)) {
             this.blendedParts.delete(cloudId);
             this.parts.clearBeWithUsed(cloudId);
+            this.changeNeedAttention(cloudId, -0.5);
         }
     }
 
@@ -313,8 +314,27 @@ export class SimulatorModel {
 
     enqueuePendingBlend(cloudId: string, reason: BlendReason): void {
         if (!this.pendingBlends.some(p => p.cloudId === cloudId)) {
-            this.pendingBlends.push({ cloudId, reason });
+            this.pendingBlends.push({ cloudId, reason, timer: CARPET_FLY_DURATION });
         }
+    }
+
+    canDisplaceBlended(cloudId: string): boolean {
+        const demandingNeed = this.parts.getNeedAttention(cloudId);
+        for (const blendedId of this.blendedParts.keys()) {
+            if (demandingNeed <= this.parts.getNeedAttention(blendedId) + 1) return false;
+        }
+        return true;
+    }
+
+    tickPendingBlendTimers(dt: number): string[] {
+        if (this.pendingBlends.length === 0) return [];
+        const front = this.pendingBlends[0];
+        if (this.blendedParts.size > 0 && !this.canDisplaceBlended(front.cloudId)) return [];
+        // If already in conference, no exit animation to wait for
+        if (this.getConferenceCloudIds().has(front.cloudId)) return [front.cloudId];
+        front.timer -= dt;
+        if (front.timer <= 0) return [front.cloudId];
+        return [];
     }
 
     dequeuePendingBlend(): { cloudId: string; reason: BlendReason } | null {
@@ -331,6 +351,10 @@ export class SimulatorModel {
 
     isPendingBlend(cloudId: string): boolean {
         return this.pendingBlends.some(p => p.cloudId === cloudId);
+    }
+
+    removePendingBlend(cloudId: string): void {
+        this.pendingBlends = this.pendingBlends.filter(p => p.cloudId !== cloudId);
     }
 
     clearPendingBlends(): void {
@@ -353,7 +377,7 @@ export class SimulatorModel {
         return this.selfRay !== null;
     }
 
-    stepBackPart(cloudId: string): void {
+    removeFromConference(cloudId: string): void {
         this.targetCloudIds.delete(cloudId);
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
@@ -377,10 +401,18 @@ export class SimulatorModel {
         if (this.isBlended(demandingCloudId)) {
             return;
         }
+        this.removePendingBlend(demandingCloudId);
 
         if (this.isTarget(demandingCloudId)) {
-            this.removeTargetCloud(demandingCloudId);
-            this.addBlendedPart(demandingCloudId, 'spontaneous');
+            if (this.canDisplaceBlended(demandingCloudId)) {
+                for (const blendedId of this.getBlendedParts()) {
+                    this.promoteBlendedToTarget(blendedId);
+                }
+                this.removeTargetCloud(demandingCloudId);
+                this.addBlendedPart(demandingCloudId, 'spontaneous');
+            } else {
+                this.enqueuePendingBlend(demandingCloudId, 'spontaneous');
+            }
             return;
         }
 
@@ -393,12 +425,12 @@ export class SimulatorModel {
 
         for (const targetId of currentTargets) {
             this.displacedParts.add(targetId);
-            this.stepBackPart(targetId);
+            this.removeFromConference(targetId);
         }
         for (const blendedId of currentBlended) {
             if (!currentTargets.includes(blendedId)) {
                 this.displacedParts.add(blendedId);
-                this.stepBackPart(blendedId);
+                this.removeFromConference(blendedId);
             }
         }
 
@@ -460,6 +492,7 @@ export class SimulatorModel {
         cloned.conversationEffectiveStances = new Map(this.conversationEffectiveStances);
         cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
         cloned.simulationTime = this.simulationTime;
+        cloned.orchestratorState = this.orchestratorState ? { ...this.orchestratorState } : null;
         return cloned;
     }
 
@@ -791,6 +824,7 @@ export class SimulatorModel {
             conversationPhases: Object.fromEntries(this.conversationPhases),
             conversationSpeakerId: this.conversationSpeakerId,
             simulationTime: this.simulationTime,
+            orchestratorState: this.orchestratorState ?? undefined,
         };
     }
 
@@ -803,7 +837,10 @@ export class SimulatorModel {
         for (const [k, v] of Object.entries(json.blendedParts)) {
             model.blendedParts.set(k, { ...v });
         }
-        model.pendingBlends = json.pendingBlends.map(p => ({ ...p }));
+        model.pendingBlends = json.pendingBlends.map(p => ({
+            ...p,
+            timer: (p as { timer?: number }).timer ?? CARPET_FLY_DURATION
+        }));
         model.selfRay = json.selfRay ? { ...json.selfRay } : null;
         model.displacedParts = new Set(json.displacedParts);
         model.messages = json.messages.map(m => ({ ...m }));
@@ -835,6 +872,7 @@ export class SimulatorModel {
         }
         model.conversationSpeakerId = json.conversationSpeakerId ?? null;
         model.simulationTime = json.simulationTime ?? 0;
+        model.orchestratorState = json.orchestratorState ?? null;
         return model;
     }
 }

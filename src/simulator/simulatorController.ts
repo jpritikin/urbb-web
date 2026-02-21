@@ -11,7 +11,6 @@ export interface ControllerDependencies {
     getRelationships: () => PartStateManager;
     rng: RNG;
     getPartName: (cloudId: string) => string;
-    getTime: () => number;
 }
 
 export interface ActionOptions {
@@ -71,14 +70,12 @@ export class SimulatorController {
     private getRelationships: () => PartStateManager;
     private rng: RNG;
     private getPartName: (cloudId: string) => string;
-    private getTime: () => number;
 
     constructor(deps: ControllerDependencies) {
         this.getModel = deps.getModel;
         this.getRelationships = deps.getRelationships;
         this.rng = deps.rng;
         this.getPartName = deps.getPartName;
-        this.getTime = deps.getTime;
     }
 
     private get model(): SimulatorModel {
@@ -227,7 +224,7 @@ export class SimulatorController {
         return openness / targetCount;
     }
 
-    private checkBacklash(cloudId: string, trustGain: number, rngLabel: string): { protectorId: string; protecteeId: string } | undefined {
+    private checkBacklash(cloudId: string, trustGain: number, rngLabel: string): { protectorId: string; protecteeId: string; extras: string[] } | undefined {
         const protectorIds = this.relationships.getProtectedBy(cloudId);
         const triggered: string[] = [];
         for (const protectorId of protectorIds) {
@@ -241,8 +238,10 @@ export class SimulatorController {
             }
         }
         if (triggered.length > 0) {
-            const pick = triggered[Math.floor(this.rng.random(rngLabel + ':pick') * triggered.length)];
-            return { protectorId: pick, protecteeId: cloudId };
+            const pickIndex = Math.floor(this.rng.random(rngLabel + ':pick') * triggered.length);
+            const pick = triggered[pickIndex];
+            const extras = triggered.filter((_, i) => i !== pickIndex);
+            return { protectorId: pick, protecteeId: cloudId, extras };
         }
     }
 
@@ -342,7 +341,7 @@ export class SimulatorController {
             };
         }
 
-        this.model.stepBackPart(cloudId);
+        this.model.removeFromConference(cloudId);
         return {
             success: true,
             stateChanges: [outcome(cloudId, OUTCOMES.STEPPED_BACK)]
@@ -351,6 +350,10 @@ export class SimulatorController {
 
     private handleSeparate(cloudId: string, isBlended: boolean): ControllerActionResult {
         if (!isBlended) {
+            // Part may have been promoted to target while menu was open (timing race)
+            if (this.model.isTarget(cloudId)) {
+                return { success: true, stateChanges: [outcome(cloudId, OUTCOMES.UNBLENDED)] };
+            }
             return { success: false, message: 'Not blended', stateChanges: [] };
         }
 
@@ -635,18 +638,8 @@ export class SimulatorController {
         } else if (myProtectors.has(targetCloudId)) {
             result = this.handleProtecteeNoticingProtector(cloudId, targetCloudId);
         } else {
-            const targetIsProtector = this.relationships.wasProtector(targetCloudId);
-            const targetIdentityRevealed = this.relationships.isIdentityRevealed(targetCloudId);
-            if (targetIsProtector && this.relationships.hasInterPartRelation(cloudId, targetCloudId)) {
-                if (!targetIdentityRevealed) {
-                    result = {
-                        success: false,
-                        stateChanges: [],
-                        uiFeedback: { thoughtBubble: { text: 'Notice who?', cloudId } }
-                    };
-                } else {
-                    result = this.handleImpactRecognition(cloudId, targetCloudId);
-                }
+            if (this.relationships.hasInterPartRelation(cloudId, targetCloudId)) {
+                result = this.handleImpactRecognition(cloudId, targetCloudId);
             } else {
                 const partsIHurt = this.relationships.getHostileRelationTargets(cloudId);
                 if (partsIHurt.has(targetCloudId)) {
@@ -657,9 +650,6 @@ export class SimulatorController {
             }
         }
 
-        if (result.success) {
-            this.relationships.setNoticed(cloudId, targetCloudId);
-        }
         return result;
     }
 
@@ -866,21 +856,26 @@ export class SimulatorController {
             };
         }
 
-        let response: string | null;
+        let response: string | null = null;
         let trustGain = 0;
-        let backlash: { protectorId: string; protecteeId: string } | undefined;
+        let backlash: { protectorId: string; protecteeId: string; extras: string[] } | undefined;
 
         switch (field) {
             case 'compassion': {
                 const isProtector = this.relationships.getProtecting(cloudId).size > 0;
                 trustGain = this.calculateTrustGain(cloudId);
                 if (isProtector) {
-                    response = "*Shrug*";
                     trustGain *= 0.25;
                 }
-                this.model.parts.addTrust(cloudId, trustGain);
-                const trust = this.model.parts.getTrust(cloudId);
-                response = trust >= 1 ? "I feel understood." : pickRandom(COMPASSION_RECEIVED_RESPONSES);
+                backlash = this.checkBacklash(cloudId, trustGain, 'compassion:backlash_check');
+                if (!backlash) {
+                    this.model.parts.addTrust(cloudId, trustGain);
+                    const trust = this.model.parts.getTrust(cloudId);
+                    response = trust >= 1 ? "I feel understood." : pickRandom(COMPASSION_RECEIVED_RESPONSES);
+                } else {
+                    response = "*Shrug*";
+                    trustGain = 0;
+                }
                 break;
             }
 
@@ -894,22 +889,26 @@ export class SimulatorController {
                 }
                 if (stillProtecting) {
                     trustGain = this.calculateTrustGain(cloudId);
-                    this.model.parts.addTrust(cloudId, trustGain);
                     backlash = this.checkBacklash(cloudId, trustGain, 'gratitude:backlash_check');
-                    const protecteeIds = this.relationships.getProtecting(cloudId);
-                    const protecteeName = protecteeIds.size > 0
-                        ? this.getPartName([...protecteeIds][0])
-                        : null;
-                    if (this.model.parts.getTrust(cloudId) >= 0.95 && protecteeName) {
-                        response = `Thank you. But I can't stop yet — I'm still watching over ${protecteeName}.`;
+                    if (!backlash) {
+                        this.model.parts.addTrust(cloudId, trustGain);
+                        const protecteeIds = this.relationships.getProtecting(cloudId);
+                        const protecteeName = protecteeIds.size > 0
+                            ? this.getPartName([...protecteeIds][0])
+                            : null;
+                        if (this.model.parts.getTrust(cloudId) >= 0.95 && protecteeName) {
+                            response = `Thank you. But I can't stop yet — I'm still watching over ${protecteeName}.`;
+                        } else {
+                            const gratitudeResponses = [
+                                "I'm not used to being appreciated. Thank you.",
+                                "This is unfamiliar. No one ever thanks me.",
+                                "You're grateful? That's new.",
+                                "I've been working so hard for so long. Thank you for noticing.",
+                            ];
+                            response = pickRandom(gratitudeResponses);
+                        }
                     } else {
-                        const gratitudeResponses = [
-                            "I'm not used to being appreciated. Thank you.",
-                            "This is unfamiliar. No one ever thanks me.",
-                            "You're grateful? That's new.",
-                            "I've been working so hard for so long. Thank you for noticing.",
-                        ];
-                        response = pickRandom(gratitudeResponses);
+                        trustGain = 0;
                     }
                 } else if (isFormerProtector) {
                     const selfTrust = this.model.parts.getTrust(cloudId);
@@ -944,19 +943,26 @@ export class SimulatorController {
                 break;
 
             case 'jobAppraisal':
-                response = this.handleJobAppraisalInternal(cloudId);
                 backlash = this.checkBacklash(cloudId, 0.05, 'jobAppraisal:backlash_check');
+                if (!backlash) {
+                    response = this.handleJobAppraisalInternal(cloudId);
+                }
                 break;
 
             case 'age':
-                response = this.revealAge(cloudId);
-                this.model.parts.addTrust(cloudId, 0.05);
                 backlash = this.checkBacklash(cloudId, 0.05, 'age:backlash_check');
+                if (!backlash) {
+                    response = this.revealAge(cloudId);
+                    this.model.parts.addTrust(cloudId, 0.05);
+                }
                 break;
 
             case 'identity':
                 response = this.revealIdentity(cloudId);
-                this.model.parts.addTrust(cloudId, 0.05);
+                backlash = this.checkBacklash(cloudId, 0.05, 'identity:backlash_check');
+                if (!backlash) {
+                    this.model.parts.addTrust(cloudId, 0.05);
+                }
                 break;
 
             default:
@@ -1030,15 +1036,13 @@ export class SimulatorController {
         return {
             success: true,
             stateChanges: [outcome(protectorId, OUTCOMES.TRIGGERED_BACKLASH, protecteeId)],
-            triggerBacklash: { protectorId, protecteeId }
+            triggerBacklash: { protectorId, protecteeId, extras: [] }
         };
     }
 
     private handleValidate(cloudId: string): ControllerActionResult {
-        const utterance = this.model.parts.getUtterance(cloudId, this.getTime());
         const bubble = this.model.getThoughtBubbles().find(b => b.cloudId === cloudId && !b.validated && b.partInitiated);
-
-        if (utterance === null || !bubble) {
+        if (!bubble) {
             this.model.parts.addTrust(cloudId, -0.1);
             return {
                 success: true,
@@ -1049,7 +1053,6 @@ export class SimulatorController {
             };
         }
 
-        this.model.parts.clearUtterance(cloudId);
         const trust = this.model.parts.getTrust(cloudId);
         const trustGain = 0.2 * (1 - trust);
         this.model.parts.addTrust(cloudId, trustGain);

@@ -20,6 +20,7 @@ export interface PlaybackRecordingDependencies {
         getConversationTherapistDeltas(): Map<string, number>;
         getConversationSpeakerId(): string | null;
         getPendingAction(): { actionId: string; sourceCloudId: string } | null;
+        getPendingBlends(): { cloudId: string }[];
         getThoughtBubbles(): ThoughtBubble[];
         parts: {
             isAgeRevealed(cloudId: string): boolean;
@@ -108,6 +109,7 @@ export class PlaybackRecordingCoordinator {
     }
 
     stopRecording(): RecordedSession | null {
+        this.recordIntervals();
         const session = this.recorder.getSession(
             this.deps.getModel().toJSON()
         );
@@ -187,6 +189,7 @@ export class PlaybackRecordingCoordinator {
         const modelState = {
             targets: [...model.getTargetCloudIds()],
             blended: model.getBlendedParts(),
+            pendingBlends: model.getPendingBlends().map(p => p.cloudId),
             selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
             pendingAction: model.getPendingAction(),
             biography,
@@ -330,8 +333,14 @@ export class PlaybackRecordingCoordinator {
                 if (orchState) {
                     this.deps.getMessageOrchestrator()?.restoreState(orchState);
                 }
+                const rngBefore = this.rng.getCallCount();
+                const speakerBefore = this.deps.getModel().getConversationSpeakerId();
                 this.deps.getTimeAdvancer()?.advanceIntervals(count);
                 this.deps.checkBlendedPartsAttention();
+                const rngAfter = this.rng.getCallCount();
+                if (rngAfter !== rngBefore) {
+                    console.log(`[AdvanceIntervals] count=${count} rngDelta=${rngAfter - rngBefore} speaker=${speakerBefore} orchReg=${orchState?.regulationScore?.toFixed(2)} orchResp=${orchState?.respondTimer?.toFixed(2)}`);
+                }
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.deps.executeSpontaneousBlendForPlayback(cloudId);
@@ -515,6 +524,16 @@ export class PlaybackRecordingCoordinator {
         const extraTargets = [...actualTargets].filter(t => !expectedTargets.has(t));
         const missingBlended = [...expectedBlended].filter(b => !actualBlended.has(b));
         const extraBlended = [...actualBlended].filter(b => !expectedBlended.has(b));
+
+        if (expected.pendingBlends !== undefined) {
+            const expectedPending = new Set(expected.pendingBlends);
+            const actualPending = new Set(model.getPendingBlends().map(p => p.cloudId));
+            const missingPending = [...expectedPending].filter(p => !actualPending.has(p));
+            const extraPending = [...actualPending].filter(p => !expectedPending.has(p));
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            if (missingPending.length) parts.push(`missing pending: ${missingPending.map(getName).join(', ')}`);
+            if (extraPending.length) parts.push(`extra pending: ${extraPending.map(getName).join(', ')}`);
+        }
 
         if (missingTargets.length || extraTargets.length || missingBlended.length || extraBlended.length) {
             const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;

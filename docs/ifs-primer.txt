@@ -1,6 +1,8 @@
 IFS Simulator Architecture Primer
 ==================================
 
+Strictly enforce model-view separation to ensure playback of recorded sessions works correctly. Playback has intermittent failures indication violations of this architectural principal. Model state that depends on timers much use simulation time not wallclock time.
+
 Core pattern: Model-View-Controller with act/sync flow.
 All state mutations go through cloudManager.act(action, fn), which:
   1. Clones model (for diff)
@@ -186,8 +188,9 @@ Action Flow
 2. Pie menu shows valid actions (filtered by simulatorController.getValidActions())
 3. User selects action → pieMenuController dispatches to cloudManager handler
 4. cloudManager calls act(recordedAction, () => {
+     if blendReason is 'spontaneous', setBlendReason to 'therapist'  // inside act()
      result = controller.executeAction(actionId, cloudId, options);
-     effectApplicator.apply(result, cloudId);
+     effectApplicator.apply(result, cloudId);  // includes promoteBlendedToTarget if degree→0
    })
 5. act() then calls syncViewWithModel() to propagate all changes
 
@@ -219,7 +222,10 @@ spontaneous (needAttention threshold) → partDemandsAttention() → addBlendedP
   animated as spiral exits).
   Blended parts' needAttention decays over time (0.98^dt).
 therapist-initiated: blend action → removeTargetCloud + addBlendedPart
-Separation: separate action → reduceBlending → degree reaches 0 → promoteBlendedToTarget
+Separation: separate action → reduceBlending (inside act()) → degree reaches 0 →
+  promoteBlendedToTarget (synchronously inside act()) → syncViewWithModel() →
+  animateCloudStates() emits completedUnblendings → finishUnblending() triggers
+  visual stretch-resolution animation (view-only, no model mutations)
 Pending blends: enqueuePendingBlend → view animates arrival → promotePendingBlend
 
 Conference Participants

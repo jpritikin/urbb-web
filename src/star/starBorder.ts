@@ -20,6 +20,7 @@ export interface ConversationVisualState {
     active: boolean;
     clouds: ConversationCloudInfo[] | null;
     tableCenter: Point | null; // conference table center in star-local coords
+    tableRadius: number; // conference table radius in pixels
 }
 
 interface Point { x: number; y: number }
@@ -129,6 +130,7 @@ export class StarBorder {
     private armSegments: StarArmPoints[] = [];
     private lastClouds: ConversationCloudInfo[] | null = null;
     private lastTableCenter: Point | null = null;
+    private lastTableRadius: number = 0;
     private lastArcAngles: Float64Array = new Float64Array(0); // per-vertex arc angle [0, 2π)
 
     constructor(centerX: number, centerY: number) {
@@ -194,10 +196,11 @@ export class StarBorder {
         // Use live clouds when active, frozen last clouds when deflating
         const clouds = conversation.active ? conversation.clouds : this.lastClouds;
         const tableCenter = conversation.active ? conversation.tableCenter : this.lastTableCenter;
+        const tableRadius = conversation.active ? conversation.tableRadius : this.lastTableRadius;
         const cloudDir = t > 0.001 ? this.computeCloudCentroidDir(clouds) : null;
 
         // Build the densified ring of vertices
-        const ring = this.buildRing(sorted, t, cloudDir, clouds);
+        const ring = this.buildRing(sorted, t, cloudDir, clouds, tableCenter, tableRadius);
 
         // Snap to fully smooth for vertices displaced beyond threshold
         for (const rv of ring) {
@@ -266,9 +269,11 @@ export class StarBorder {
         if (conversation.active) {
             this.lastClouds = conversation.clouds;
             this.lastTableCenter = conversation.tableCenter;
+            this.lastTableRadius = conversation.tableRadius;
         } else if (t < 0.001) {
             this.lastClouds = null;
             this.lastTableCenter = null;
+            this.lastTableRadius = 0;
         }
         this.pathElement.setAttribute('d', this.buildPath(ring));
         this.updateDebug(ring);
@@ -284,6 +289,8 @@ export class StarBorder {
         t: number,
         cloudDir: Point | null,
         clouds: ConversationCloudInfo[] | null,
+        tableCenter: Point | null,
+        tableRadius: number,
     ): RingVertex[] {
         const N = sortedArms.length;
         const ring: RingVertex[] = [];
@@ -303,14 +310,14 @@ export class StarBorder {
                 const sp = structural[vi];
                 const ef = cloudDir ? this.computeExpansionFactorAtAngle(sp.angle, cloudDir) : 0;
                 const smoothing = ef * t;
-                const expanded = this.expandPoint(sp.point, ef * t, sp.angle, clouds);
+                const expanded = this.expandPoint(sp.point, ef * t, sp.angle, clouds, tableCenter, tableRadius);
 
                 // Expand the curve control point the same way
                 let expandedCtrl: Point | undefined;
                 if (sp.curveCtrl) {
                     const ctrlAngle = this.stableAngle(sp.curveCtrl);
                     const ctrlEf = cloudDir ? this.computeExpansionFactorAtAngle(ctrlAngle, cloudDir) : 0;
-                    expandedCtrl = this.expandPoint(sp.curveCtrl, ctrlEf * t, ctrlAngle, clouds);
+                    expandedCtrl = this.expandPoint(sp.curveCtrl, ctrlEf * t, ctrlAngle, clouds, tableCenter, tableRadius);
                 }
 
                 ring.push({
@@ -328,13 +335,13 @@ export class StarBorder {
                     : { point: nextArm.base1, segType: 0, angle: this.stableAngle(nextArm.base1) };
                 const nextEf = cloudDir ? this.computeExpansionFactorAtAngle(nextSPData.angle, cloudDir) : 0;
                 const nextSmoothing = nextEf * t;
-                const nextExpanded = this.expandPoint(nextSPData.point, nextEf * t, nextSPData.angle, clouds);
+                const nextExpanded = this.expandPoint(nextSPData.point, nextEf * t, nextSPData.angle, clouds, tableCenter, tableRadius);
 
                 // Adaptive subdivision: bisect until expanded gap <= MAX_SEGMENT_LENGTH
                 this.subdivideSegment(
                     ring, expanded, sp.point, sp.angle, ef,
                     nextExpanded, nextSPData.point, nextSPData.angle, nextEf,
-                    smoothing, nextSmoothing, t, sp.segType, clouds, 0,
+                    smoothing, nextSmoothing, t, sp.segType, clouds, tableCenter, tableRadius, 0,
                     sp.curveCtrl,
                 );
             }
@@ -343,7 +350,7 @@ export class StarBorder {
         // Insert boundary knots at the smooth/sharp transition so straight segments
         // don't get too long (important for 3-arm stars with few structural vertices)
         if (t > 0.01) {
-            this.insertThresholdKnots(ring, clouds);
+            this.insertThresholdKnots(ring, clouds, tableCenter, tableRadius);
         }
 
         return ring;
@@ -355,7 +362,9 @@ export class StarBorder {
         bExpanded: Point, bStar: Point, bAngle: number, bEf: number,
         aSmoothing: number, bSmoothing: number,
         t: number, segType: number,
-        clouds: ConversationCloudInfo[] | null, depth: number,
+        clouds: ConversationCloudInfo[] | null,
+        tableCenter: Point | null, tableRadius: number,
+        depth: number,
         curveCtrl?: Point,
     ): void {
         if (depth >= MAX_SUBDIVIDE_DEPTH) return;
@@ -374,13 +383,13 @@ export class StarBorder {
         const midAngle = aAngle + angleDiff(aAngle, bAngle) * 0.5;
         const midEf = (aEf + bEf) * 0.5;
         const midSmoothing = (aSmoothing + bSmoothing) * 0.5;
-        const midExpanded = this.expandPoint(midStar, midEf * t, midAngle, clouds);
+        const midExpanded = this.expandPoint(midStar, midEf * t, midAngle, clouds, tableCenter, tableRadius);
 
         // De Casteljau split: left half ctrl = mid(A, C), right half ctrl = mid(C, B)
         const leftCtrl = curveCtrl ? lerpPoint(aStar, curveCtrl, 0.5) : undefined;
         const rightCtrl = curveCtrl ? lerpPoint(curveCtrl, bStar, 0.5) : undefined;
 
-        this.subdivideSegment(ring, aExpanded, aStar, aAngle, aEf, midExpanded, midStar, midAngle, midEf, aSmoothing, midSmoothing, t, segType, clouds, depth + 1, leftCtrl);
+        this.subdivideSegment(ring, aExpanded, aStar, aAngle, aEf, midExpanded, midStar, midAngle, midEf, aSmoothing, midSmoothing, t, segType, clouds, tableCenter, tableRadius, depth + 1, leftCtrl);
         ring.push({
             point: midExpanded,
             smoothing: midSmoothing,
@@ -389,10 +398,10 @@ export class StarBorder {
             starPoint: midStar,
             expansionAngle: midAngle,
         });
-        this.subdivideSegment(ring, midExpanded, midStar, midAngle, midEf, bExpanded, bStar, bAngle, bEf, midSmoothing, bSmoothing, t, segType, clouds, depth + 1, rightCtrl);
+        this.subdivideSegment(ring, midExpanded, midStar, midAngle, midEf, bExpanded, bStar, bAngle, bEf, midSmoothing, bSmoothing, t, segType, clouds, tableCenter, tableRadius, depth + 1, rightCtrl);
     }
 
-    private insertThresholdKnots(ring: RingVertex[], clouds: ConversationCloudInfo[] | null): void {
+    private insertThresholdKnots(ring: RingVertex[], clouds: ConversationCloudInfo[] | null, tableCenter: Point | null, tableRadius: number): void {
         const displacement = (rv: RingVertex) => {
             const dist = Math.hypot(rv.point.x - this.centerX, rv.point.y - this.centerY);
             const starDist = Math.hypot(rv.starPoint.x - this.centerX, rv.starPoint.y - this.centerY);
@@ -414,7 +423,7 @@ export class StarBorder {
             const interpAngle = curr.expansionAngle + angleDiff(curr.expansionAngle, next.expansionAngle) * frac;
             const interpStar = lerpPoint(curr.starPoint, next.starPoint, frac);
             const interpSmoothing = lerp(curr.smoothing, next.smoothing, frac);
-            const interpExpanded = this.expandPoint(interpStar, interpSmoothing, interpAngle, clouds);
+            const interpExpanded = this.expandPoint(interpStar, interpSmoothing, interpAngle, clouds, tableCenter, tableRadius);
 
             const boundaryVertex: RingVertex = {
                 point: interpExpanded,
@@ -431,13 +440,14 @@ export class StarBorder {
     private expandPoint(
         starPoint: Point, ef: number, expansionAngle: number,
         clouds: ConversationCloudInfo[] | null,
+        tableCenter: Point | null, tableRadius: number,
     ): Point {
         if (ef < 0.001) return starPoint;
         const dx = starPoint.x - this.centerX;
         const dy = starPoint.y - this.centerY;
         const dist = Math.hypot(dx, dy);
         if (dist < 0.01) return starPoint;
-        const enclosingR = this.computeEnclosingRadius(expansionAngle, clouds);
+        const enclosingR = this.computeEnclosingRadius(expansionAngle, clouds, tableCenter, tableRadius);
         const expandedDist = lerp(dist, enclosingR, ef);
         const cosA = Math.cos(expansionAngle);
         const sinA = Math.sin(expansionAngle);
@@ -481,16 +491,26 @@ export class StarBorder {
         return Math.max(0, (dot + 0.5) / 1.5);
     }
 
-    private computeEnclosingRadius(angle: number, clouds: ConversationCloudInfo[] | null): number {
+    private computeEnclosingRadius(
+        angle: number,
+        clouds: ConversationCloudInfo[] | null,
+        tableCenter: Point | null,
+        tableRadius: number,
+    ): number {
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
         const innerR = this.armSegments.length > 0 ? this.armSegments[0].innerRadius : 10;
         const wobbleMargin = Math.max(...WOBBLE_WAVES.map(w => w.amplitude), 0);
         let maxProjection = innerR + ENCLOSING_PADDING;
+        const maxAllowed = tableRadius * 1.2;
+        const tc = tableCenter ?? { x: this.centerX, y: this.centerY };
         if (clouds) {
             for (const cloud of clouds) {
                 for (const b of cloud.boxes) {
-                    // Project all 4 corners of the box
+                    const boxCX = (b.minX + b.maxX) / 2;
+                    const boxCY = (b.minY + b.maxY) / 2;
+                    const distFromTable = Math.hypot(boxCX - tc.x, boxCY - tc.y);
+                    if (distFromTable > maxAllowed) continue;
                     const corners = [
                         { x: b.minX - this.centerX, y: b.minY - this.centerY },
                         { x: b.maxX - this.centerX, y: b.minY - this.centerY },

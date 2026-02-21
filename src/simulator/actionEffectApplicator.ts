@@ -20,7 +20,7 @@ export class ActionEffectApplicator {
             this.reduceBlending(result.reduceBlending.cloudId, result.reduceBlending.amount);
         }
         if (result.triggerBacklash) {
-            this.triggerBacklash(result.triggerBacklash.protectorId, result.triggerBacklash.protecteeId);
+            this.triggerBacklash(result.triggerBacklash.protectorId, result.triggerBacklash.protecteeId, result.triggerBacklash.extras);
         }
         if (result.createSelfRay) {
             this.model.setSelfRay(result.createSelfRay.cloudId);
@@ -34,17 +34,21 @@ export class ActionEffectApplicator {
         const currentDegree = this.model.getBlendingDegree(cloudId);
         const targetDegree = Math.max(0, currentDegree - amount);
         this.model.setBlendingDegree(cloudId, targetDegree);
+        if (targetDegree === 0) {
+            this.model.promoteBlendedToTarget(cloudId);
+        }
     }
 
-    private triggerBacklash(protectorId: string, protecteeId: string): void {
-        this.model.parts.adjustTrust(protecteeId, 0.5);
+    private triggerBacklash(protectorId: string, protecteeId: string, extras: string[]): void {
         const trust = this.model.parts.getTrust(protectorId);
         this.model.changeNeedAttention(protectorId, 0.5 * (1 - trust));
         if (this.model.getConferenceCloudIds().has(protectorId)) {
             this.model.addBlendedPart(protectorId, 'spontaneous');
-            this.model.stepBackPart(protecteeId);
         } else {
             this.model.partDemandsAttention(protectorId);
+        }
+        for (const extraId of extras) {
+            this.model.enqueuePendingBlend(extraId, 'spontaneous');
         }
     }
 }

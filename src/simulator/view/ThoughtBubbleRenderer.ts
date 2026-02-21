@@ -86,7 +86,6 @@ export class ThoughtBubbleRenderer {
         // Remove entries no longer in the active set
         for (const id of this.entries.keys()) {
             if (!activeIds.has(id)) {
-                console.log(`[TB] removing entry id=${id} (no longer in active set of ${activeIds.size} ids)`);
                 this.removeEntry(id);
             }
         }
@@ -115,8 +114,7 @@ export class ThoughtBubbleRenderer {
         const bubbleId = bubble.id;
 
         const dismiss = () => {
-            this.removeEntry(bubbleId);
-            this.onDismiss?.(bubbleId);
+            this.removeEntry(bubbleId, true);
         };
 
         setClickHandler(group, dismiss);
@@ -169,11 +167,12 @@ export class ThoughtBubbleRenderer {
         this.updateFade(group, bubble, now);
     }
 
-    private removeEntry(id: number): void {
+    private removeEntry(id: number, notifyDismiss = false): void {
         const entry = this.entries.get(id);
         if (!entry) return;
         entry.group.parentNode?.removeChild(entry.group);
         this.entries.delete(id);
+        if (notifyDismiss) this.onDismiss?.(id);
     }
 
     private updateFade(group: SVGGElement, bubble: ThoughtBubble, now: number): void {

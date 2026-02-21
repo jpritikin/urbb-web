@@ -93,10 +93,14 @@ export class InputHandler {
         this.deps.updateAllCloudStyles();
 
         if (this.deps.getModel().getMode() !== 'foreground') return;
-        if (this.deps.getModel().getPendingAction()) return;
+        if (this.deps.getModel().getPendingAction()) {
+            e.preventDefault();
+            return;
+        }
 
         const cloudState = this.deps.view.getCloudState(cloud.id);
         if (cloudState && cloudState.opacity > 0) {
+            e.preventDefault();
             this.touchOpenedPieMenu = true;
             this.deps.pieMenuController.toggle(cloud.id, cloudState.x, cloudState.y, e);
         }

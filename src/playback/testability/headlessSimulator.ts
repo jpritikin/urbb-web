@@ -75,7 +75,6 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             getRelationships: () => this.model.parts,
             rng: this.rng,
             getPartName: (id) => this.model.parts.getPartName(id),
-            getTime: () => this.timeAdvancer?.getTime() ?? 0
         });
     }
 
@@ -89,12 +88,8 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
                 act: (_label, fn) => fn(),
                 showThoughtBubble: (text, cloudId) => {
                     this.model.addThoughtBubble(text, cloudId, true);
-                    if (this.model.isBlended(cloudId)) {
-                        this.model.parts.setUtterance(cloudId, text, this.timeAdvancer?.getTime() ?? 0);
-                    }
                 },
                 getCloudById: (id) => this.model.getPartState(id) ? { id } : null,
-                getTime: () => this.timeAdvancer?.getTime() ?? 0,
             }
         );
         this.headlessView.setOnMessageReceived((message) => orchestrator.onMessageReceived(message));
@@ -110,6 +105,17 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
                 getMode: () => this.model.getMode(),
                 onSpontaneousBlend: (event) => {
                     this.model.partDemandsAttention(event.cloudId);
+                },
+                onPendingBlendReady: (cloudId) => {
+                    const pending = this.model.getPendingBlends().find(p => p.cloudId === cloudId);
+                    if (pending) {
+                        this.model.removePendingBlend(cloudId);
+                        if (this.model.getConferenceCloudIds().has(cloudId)) {
+                            this.model.addBlendedPart(cloudId, pending.reason);
+                        } else {
+                            this.model.partDemandsAttention(cloudId);
+                        }
+                    }
                 },
             },
             { skipAttentionChecks: false }
@@ -247,10 +253,6 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
 
     getRelationships(): PartStateManager {
         return this.model.parts;
-    }
-
-    getTime(): number {
-        return this.timeAdvancer.getTime();
     }
 
     getModelJSON(): SerializedModel {

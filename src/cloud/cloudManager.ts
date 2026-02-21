@@ -143,7 +143,6 @@ export class CloudManager {
             getRelationships: () => this.model.parts,
             rng: this.playbackRecording.getRNG(),
             getPartName: (id) => this.getCloudById(id)?.text ?? id,
-            getTime: () => this.timeAdvancer?.getTime() ?? 0
         });
         this.effectApplicator = new ActionEffectApplicator(() => this.model, this.view);
     }
@@ -275,7 +274,6 @@ export class CloudManager {
                 act: (label, fn) => this.act(label, fn),
                 showThoughtBubble: (text, cloudId, partInitiated) => this.showThoughtBubble(text, cloudId, partInitiated),
                 getCloudById: (id) => this.getCloudById(id),
-                getTime: () => this.timeAdvancer?.getTime() ?? 0,
             }
         );
         this.view.setOnMessageReceived((message) => this.messageOrchestrator!.onMessageReceived(message));
@@ -290,6 +288,10 @@ export class CloudManager {
                     this.playbackRecording.recordIntervals();
                     this.playbackRecording.markSpontaneousBlendTriggered(accumulatedTime);
                     this.handleSpontaneousBlend(event.cloudId, event.urgent);
+                },
+                onPendingBlendReady: (cloudId: string) => {
+                    this.playbackRecording.recordIntervals();
+                    this.promotePendingBlend(cloudId);
                 },
             }//, { skipAttentionChecks: true }
         );
@@ -512,14 +514,13 @@ export class CloudManager {
 
         this.selectedAction = action;
 
-        if (this.model.getBlendReason(cloud.id) === 'spontaneous') {
-            this.model.setBlendReason(cloud.id, 'therapist');
-        }
-
         const rec: RecordedAction = { action: action.id, cloudId: cloud.id };
         const isBlended = this.model.isBlended(cloud.id);
 
         this.act(rec, () => {
+            if (this.model.getBlendReason(cloud.id) === 'spontaneous') {
+                this.model.setBlendReason(cloud.id, 'therapist');
+            }
             const result = this.controller!.executeAction(action.id, cloud.id, { isBlended });
             this.applyActionResult(result, cloud.id);
         });
@@ -547,10 +548,6 @@ export class CloudManager {
 
     private showThoughtBubble(text: string, cloudId: string, partInitiated: boolean = true): void {
         this.model.addThoughtBubble(text, cloudId, partInitiated);
-        if (this.model.isBlended(cloudId)) {
-            const time = this.timeAdvancer?.getTime() ?? 0;
-            this.model.parts.setUtterance(cloudId, text, time);
-        }
     }
 
     private hideThoughtBubble(): void {
@@ -622,7 +619,10 @@ export class CloudManager {
 
     private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
         const cloudState = this.view.getCloudState(cloudId);
-        if (!cloudState || cloudState.opacity < 0.1) return null;
+        if (!cloudState || cloudState.opacity < 0.1) {
+            console.log(`[getCloudVisualCenter] ${cloudId} null: state=${!!cloudState} opacity=${cloudState?.opacity?.toFixed(3)}`);
+            return null;
+        }
         const mode = this.view.getVisualMode();
         const transitioning = this.view.isTransitioning();
         // Use cloud's visual center which accounts for stretch/lattice deformation
@@ -826,17 +826,13 @@ export class CloudManager {
     }
 
     private doPendingBlendPromotion(cloudId: string): void {
-        const tempQueue: { cloudId: string; reason: 'spontaneous' | 'therapist' }[] = [];
-        let item = this.model.dequeuePendingBlend();
-        while (item && item.cloudId !== cloudId) {
-            tempQueue.push(item);
-            item = this.model.dequeuePendingBlend();
-        }
-        for (const temp of tempQueue) {
-            this.model.enqueuePendingBlend(temp.cloudId, temp.reason);
-        }
-        if (item) {
-            this.model.addBlendedPart(cloudId, item.reason);
+        const pending = this.model.getPendingBlends().find(p => p.cloudId === cloudId);
+        if (!pending) return;
+        this.model.removePendingBlend(cloudId);
+        if (this.model.getConferenceCloudIds().has(cloudId)) {
+            this.model.addBlendedPart(cloudId, pending.reason);
+        } else {
+            this.model.partDemandsAttention(cloudId);
         }
     }
 
@@ -850,20 +846,9 @@ export class CloudManager {
         const cloud = this.getCloudById(cloudId);
         if (!cloud) return;
 
-        // Get target seat position while still blended
-        const targetPos = this.view.getBlendedStretchTarget(cloud, this.model);
-        if (!targetPos) {
-            this.completeUnblending(cloudId);
-            return;
-        }
+        // Promotion already happened in act(). Only trigger stretch animation if there's stretch to resolve.
+        if (!cloud.getBlendedStretch()) return;
 
-        // Skip stretch animation for spontaneous blends - go directly to target
-        if (this.model.getBlendReason(cloudId) !== 'therapist') {
-            this.completeUnblending(cloudId);
-            return;
-        }
-
-        // Animate the stretch resolving smoothly, then promote
         this.animateStretchResolution(cloudId, 1.0);
     }
 
@@ -872,10 +857,7 @@ export class CloudManager {
         if (!cloud) return;
 
         const initialStretch = cloud.getBlendedStretch();
-        if (!initialStretch) {
-            this.completeUnblending(cloudId);
-            return;
-        }
+        if (!initialStretch) return;
 
         // Get the ACTUAL current lattice offset, not the target stretch
         const actualOffset = cloud.getActualLatticeOffset();
@@ -942,18 +924,10 @@ export class CloudManager {
                 if (cloudState) {
                     cloudState.smoothing.position = 8;
                 }
-                this.completeUnblending(cloudId);
             }
         };
 
         requestAnimationFrame(animate);
-    }
-
-    private completeUnblending(cloudId: string): void {
-        const name = this.model.parts.getPartName(cloudId);
-        this.act(`${name} separates`, () => {
-            this.model.promoteBlendedToTarget(cloudId);
-        });
     }
 
     private syncViewWithModel(oldModel: SimulatorModel | null = null): void {
@@ -971,7 +945,10 @@ export class CloudManager {
 
         this.view.syncWithModel(oldModel, this.model, this.instances);
 
-        this.model.syncConversation(this.playbackRecording.getRNG());
+        this.dismissPieMenuIfPartLeft();
+    }
+
+    private updateCarpetConversationState(): void {
         if (this.model.isConversationInitialized()) {
             this.carpetRenderer?.setConversationActive(true);
             this.carpetRenderer?.setOnRotationEnd((carpetId, stanceDelta) => {
@@ -986,8 +963,6 @@ export class CloudManager {
             this.carpetRenderer?.setConversationActive(false);
             this.carpetRenderer?.setOnRotationEnd(null);
         }
-
-        this.dismissPieMenuIfPartLeft();
     }
 
     private dismissPieMenuIfPartLeft(): void {
@@ -1022,8 +997,11 @@ export class CloudManager {
         }
         this.syncViewWithModel(oldModel);
         if (recordedAction) {
+            this.model.syncConversation(this.playbackRecording.getRNG());
+            this.model.checkAndSetVictory();
             this.playbackRecording.recordAction(recordedAction);
         }
+        this.updateCarpetConversationState();
     }
 
     private updateUIForMode(): void {
@@ -1067,22 +1045,16 @@ export class CloudManager {
             const projected = this.view.projectToScreen(instance);
             panoramaPositions.set(instance.cloud.id, projected);
         }
-        const { completedUnblendings, completedPendingBlends } = this.view.animateCloudStates(deltaTime, panoramaPositions, this.model);
+        const { completedUnblendings } = this.view.animateCloudStates(deltaTime, panoramaPositions, this.model);
         for (const cloudId of completedUnblendings) {
-            if (this.model.isBlended(cloudId)) {
+            if (this.model.isTarget(cloudId)) {
                 this.finishUnblending(cloudId);
             }
-        }
-        for (const cloudId of completedPendingBlends) {
-            this.promotePendingBlend(cloudId);
         }
 
         this.updateZoomGroup();
 
         if (mode === 'foreground') {
-            if (!this.playbackRecording.isPlaying()) {
-                this.model.expireThoughtBubbles();
-            }
             this.view.syncThoughtBubbles(this.model);
             this.view.updateSelfRayPosition();
             this.view.animateSelfRay(deltaTime);
