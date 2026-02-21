@@ -1113,6 +1113,19 @@ body.ifs-fullscreen main {
   text-overflow: ellipsis;
 }
 
+.playback-control-panel.error .playback-display {
+  align-items: flex-start;
+}
+
+.playback-control-panel.error .playback-display .action {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  max-width: min(360px, 80vw);
+}
+
 .dark .playback-display .action {
   color: #b0b0b0;
 }
@@ -1121,6 +1134,7 @@ body.ifs-fullscreen main {
 .playback-control-panel.error .playback-frame {
   border-color: #e74c3c;
   background: rgba(231, 76, 60, 0.1);
+  align-items: flex-start;
 }
 
 .dark .playback-control-panel.error .playback-frame {

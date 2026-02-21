@@ -150,7 +150,7 @@ export class AnimatedStar {
     private borderHidden: boolean = false;
     private centerX: number;
     private centerY: number;
-    private conversationState: ConversationVisualState = { active: false, clouds: null, tableCenter: null };
+    private conversationState: ConversationVisualState = { active: false, clouds: null, tableCenter: null, tableRadius: 0 };
 
     private armCount: number = 5;
     private rotation: number = 0;
@@ -646,12 +646,12 @@ export class AnimatedStar {
         this.starBorder?.setForeground(fg);
     }
 
-    setConversationState(active: boolean, clouds: ConversationCloudInfo[] | null, tableCenter: { x: number; y: number } | null): void {
+    setConversationState(active: boolean, clouds: ConversationCloudInfo[] | null, tableCenter: { x: number; y: number } | null, tableRadius: number = 0): void {
         if (!active || !clouds) {
-            this.conversationState = { active: false, clouds: null, tableCenter: null };
+            this.conversationState = { active: false, clouds: null, tableCenter: null, tableRadius: 0 };
             return;
         }
-        this.conversationState = { active: true, clouds, tableCenter };
+        this.conversationState = { active: true, clouds, tableCenter, tableRadius };
     }
 
     private updateOutlines(

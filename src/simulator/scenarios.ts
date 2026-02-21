@@ -12,18 +12,33 @@ export interface Scenario {
     recordedSessionPath?: string;
 }
 
-let recordedSessionCache: Map<string, RecordedSession> = new Map();
+export interface LoadedSession {
+    session: RecordedSession;
+    hash: string;
+}
 
-export async function loadRecordedSession(path: string): Promise<RecordedSession | null> {
+let recordedSessionCache: Map<string, LoadedSession> = new Map();
+
+async function hashText(text: string): Promise<string> {
+    const data = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function loadRecordedSession(path: string): Promise<LoadedSession | null> {
     if (recordedSessionCache.has(path)) {
         return recordedSessionCache.get(path)!;
     }
     try {
         const response = await fetch(path);
         if (!response.ok) return null;
-        const session = await response.json() as RecordedSession;
-        recordedSessionCache.set(path, session);
-        return session;
+        const text = await response.text();
+        const session = JSON.parse(text) as RecordedSession;
+        const hash = await hashText(text);
+        const loaded = { session, hash };
+        recordedSessionCache.set(path, loaded);
+        return loaded;
     } catch {
         return null;
     }

@@ -24,7 +24,7 @@ function getPageVersion(): string {
 
 const MAX_RECORDING_MS = 60 * 60 * 1000; // 1 hour
 
-function setupRecordingShortcuts(cloudManager: CloudManager): void {
+function setupRecordingShortcuts(cloudManager: CloudManager, playbackOf?: string, playbackOfHash?: string): void {
     const downloadCurrentSession = () => {
         const session = cloudManager.getRecordingSession();
         if (!session) {
@@ -37,7 +37,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager): void {
     cloudManager.setDownloadSessionHandler(downloadCurrentSession);
 
 
-    cloudManager.startRecording(getPageVersion());
+    cloudManager.startRecording(getPageVersion(), playbackOf, playbackOfHash);
 
     setTimeout(() => {
         if (cloudManager.isRecording()) {
@@ -52,13 +52,18 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     if (!cloudContainer) return;
 
     let recordedSession: RecordedSession | null = null;
+    let recordedSessionHash: string | undefined;
     if (playbackMode && scenario.recordedSessionPath) {
-        recordedSession = await loadRecordedSession(scenario.recordedSessionPath);
-        if (!recordedSession) {
+        const loaded = await loadRecordedSession(scenario.recordedSessionPath);
+        if (!loaded) {
             console.warn(`[IFS] Failed to load recorded session from ${scenario.recordedSessionPath}`);
             playbackMode = false;
-        } else if (recordedSession.codeVersion !== getPageVersion()) {
-            console.warn(`[IFS] Recording version mismatch: ${recordedSession.codeVersion} vs current ${getPageVersion()}`);
+        } else {
+            recordedSession = loaded.session;
+            recordedSessionHash = loaded.hash;
+            if (recordedSession.codeVersion !== getPageVersion()) {
+                console.warn(`[IFS] Recording version mismatch: ${recordedSession.codeVersion} vs current ${getPageVersion()}`);
+            }
         }
     }
 
@@ -92,7 +97,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
 
-    setupRecordingShortcuts(cloudManager);
+    setupRecordingShortcuts(cloudManager, playbackMode ? scenario.recordedSessionPath : undefined, recordedSessionHash);
 
     if (playbackMode && recordedSession) {
         setTimeout(() => {

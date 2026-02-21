@@ -31,7 +31,6 @@ export interface InterPartRelation {
     stance: number;
     stanceFlipOdds: number;
     stanceFlipOddsSetPoint: number;
-    noticed?: boolean;
     dialogues?: ConversationDialogues;
     rumination?: string[];
     impactRecognition?: string[];
@@ -43,7 +42,6 @@ export class PartStateManager {
     private protections: ProtectionRelation[] = [];
     private interPartRelations: Map<string, Map<string, InterPartRelation>> = new Map();
     private proxies: ProxyRelation[] = [];
-    private lastUtterance: Map<string, { text: string; timestamp: number }> = new Map();
     private beWithUsed: Set<string> = new Set();
 
     // Part state methods
@@ -268,21 +266,6 @@ export class PartStateManager {
         return this.partStates.get(cloudId)?.name ?? cloudId;
     }
 
-    setUtterance(cloudId: string, text: string, timestamp: number): void {
-        this.lastUtterance.set(cloudId, { text, timestamp });
-    }
-
-    getUtterance(cloudId: string, currentTime: number): string | null {
-        const utterance = this.lastUtterance.get(cloudId);
-        if (!utterance) return null;
-        if (currentTime - utterance.timestamp > 10) return null;
-        return utterance.text;
-    }
-
-    clearUtterance(cloudId: string): void {
-        this.lastUtterance.delete(cloudId);
-    }
-
     markBeWithUsed(cloudId: string): void {
         this.beWithUsed.add(cloudId);
     }
@@ -482,15 +465,6 @@ export class PartStateManager {
         }
     }
 
-    setNoticed(fromId: string, toId: string): void {
-        const rel = this.interPartRelations.get(fromId)?.get(toId);
-        if (rel) rel.noticed = true;
-    }
-
-    isNoticed(fromId: string, toId: string): boolean {
-        return this.interPartRelations.get(fromId)?.get(toId)?.noticed ?? false;
-    }
-
     setInterPartTrustFloor(fromId: string, toId: string, floor: number): void {
         const rel = this.interPartRelations.get(fromId)?.get(toId);
         if (rel) {
@@ -648,7 +622,6 @@ export class PartStateManager {
                     stanceFlipOddsSetPoint: rel.stanceFlipOddsSetPoint,
                     dialogues: rel.dialogues,
                     rumination: rel.rumination,
-                    noticed: rel.noticed,
                     impactRecognition: rel.impactRecognition,
                     impactRejection: rel.impactRejection,
                 });
@@ -688,7 +661,6 @@ export class PartStateManager {
                 stance: r.stance,
                 stanceFlipOdds: r.stanceFlipOdds,
                 stanceFlipOddsSetPoint: r.stanceFlipOddsSetPoint ?? r.stanceFlipOdds,
-                noticed: r.noticed,
                 dialogues: r.dialogues,
                 rumination: r.rumination,
                 impactRecognition: r.impactRecognition,
@@ -722,9 +694,6 @@ export class PartStateManager {
             cloned.interPartRelations.set(fromId, clonedFromMap);
         }
         cloned.proxies = this.proxies.map(p => ({ ...p }));
-        for (const [cloudId, utterance] of this.lastUtterance) {
-            cloned.lastUtterance.set(cloudId, { ...utterance });
-        }
         cloned.beWithUsed = new Set(this.beWithUsed);
         return cloned;
     }

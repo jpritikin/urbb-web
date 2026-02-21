@@ -1,5 +1,5 @@
 import { ThoughtBubble } from '../ifsModel.js';
-import { createGroup, createRect, createCircle, createText, setClickHandler, TextLine } from '../../utils/svgHelpers.js';
+import { createGroup, createRect, createCircle, createText, TextLine } from '../../utils/svgHelpers.js';
 import { BubbleLayout, THOUGHT_BUBBLE_CONFIG, computeBubbleLayout } from './bubblePlacement.js';
 
 interface CloudPosition { x: number; y: number; opacity?: number }
@@ -18,6 +18,7 @@ interface BubbleEntry {
     heartCreatedAt: number;
     siblingIndex: number;
     siblingCount: number;
+    lastLayout: BubbleLayout | null;
 }
 
 const config = THOUGHT_BUBBLE_CONFIG;
@@ -30,20 +31,18 @@ export class ThoughtBubbleRenderer {
     private entries: Map<number, BubbleEntry> = new Map();
     private getCloudPosition: (cloudId: string) => CloudPosition | null;
     private getDimensions: () => { width: number; height: number };
-    private onDismiss: ((id: number) => void) | null = null;
+    private getMousePos: () => { x: number; y: number } | null;
 
     constructor(
         container: SVGGElement,
         getCloudPosition: (cloudId: string) => CloudPosition | null,
-        getDimensions: () => { width: number; height: number }
+        getDimensions: () => { width: number; height: number },
+        getMousePos: () => { x: number; y: number } | null
     ) {
         this.container = container;
         this.getCloudPosition = getCloudPosition;
         this.getDimensions = getDimensions;
-    }
-
-    setOnDismiss(callback: (id: number) => void): void {
-        this.onDismiss = callback;
+        this.getMousePos = getMousePos;
     }
 
     sync(bubbles: ThoughtBubble[], now: number): void {
@@ -74,8 +73,8 @@ export class ThoughtBubbleRenderer {
                     existing.siblingIndex === siblingIndex &&
                     existing.siblingCount === siblings.length;
                 if (same) {
-                    this.updateFade(existing.group, bubble, now);
                     this.updatePosition(existing, bubble.cloudId);
+                    this.updateFade(existing.group, bubble, now, existing);
                     continue;
                 }
                 this.removeEntry(bubble.id);
@@ -86,7 +85,6 @@ export class ThoughtBubbleRenderer {
         // Remove entries no longer in the active set
         for (const id of this.entries.keys()) {
             if (!activeIds.has(id)) {
-                console.log(`[TB] removing entry id=${id} (no longer in active set of ${activeIds.size} ids)`);
                 this.removeEntry(id);
             }
         }
@@ -111,15 +109,7 @@ export class ThoughtBubbleRenderer {
 
         const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight, lines } = layout;
 
-        const group = createGroup({ class: 'thought-bubble', 'pointer-events': 'auto', cursor: 'pointer' });
-        const bubbleId = bubble.id;
-
-        const dismiss = () => {
-            this.removeEntry(bubbleId);
-            this.onDismiss?.(bubbleId);
-        };
-
-        setClickHandler(group, dismiss);
+        const group = createGroup({ class: 'thought-bubble', 'pointer-events': 'none' });
 
         const bubbleStyle = { rx: 8, fill: 'white', stroke: '#333', 'stroke-width': 1.5, opacity: 0.95 };
         const rect = createRect(bubbleX - bubbleWidth / 2, bubbleY - bubbleHeight / 2, bubbleWidth, bubbleHeight, bubbleStyle);
@@ -157,6 +147,7 @@ export class ThoughtBubbleRenderer {
             heartCreatedAt: 0,
             siblingIndex,
             siblingCount,
+            lastLayout: layout,
         };
 
         if (bubble.validated) {
@@ -166,7 +157,7 @@ export class ThoughtBubbleRenderer {
         this.container.appendChild(group);
         this.entries.set(bubble.id, entry);
 
-        this.updateFade(group, bubble, now);
+        this.updateFade(group, bubble, now, entry);
     }
 
     private removeEntry(id: number): void {
@@ -176,17 +167,27 @@ export class ThoughtBubbleRenderer {
         this.entries.delete(id);
     }
 
-    private updateFade(group: SVGGElement, bubble: ThoughtBubble, now: number): void {
+    private updateFade(group: SVGGElement, bubble: ThoughtBubble, now: number, entry?: BubbleEntry): void {
         const fadeStart = 2;
         const timeRemaining = bubble.expiresAt - now;
 
+        let baseOpacity: number;
         if (timeRemaining <= fadeStart) {
             const fadeProgress = 1 - (timeRemaining / fadeStart);
-            const opacity = 0.95 * (1 - fadeProgress);
-            group.setAttribute('opacity', String(Math.max(0, opacity)));
+            baseOpacity = Math.max(0, 0.95 * (1 - fadeProgress));
         } else {
-            group.setAttribute('opacity', '0.95');
+            baseOpacity = 0.95;
         }
+
+        const mouse = this.getMousePos();
+        if (mouse && entry?.lastLayout) {
+            const { bubbleX, bubbleY, bubbleWidth, bubbleHeight } = entry.lastLayout;
+            if (Math.abs(mouse.x - bubbleX) < bubbleWidth / 2 && Math.abs(mouse.y - bubbleY) < bubbleHeight / 2) {
+                group.setAttribute('opacity', '0.2');
+                return;
+            }
+        }
+        group.setAttribute('opacity', String(baseOpacity));
     }
 
     private heartAnchors(bubbleX: number, bubbleY: number, bubbleWidth: number, bubbleHeight: number): [number, number][] {
@@ -222,6 +223,7 @@ export class ThoughtBubbleRenderer {
             this.removeEntry(this.findEntryId(entry)!);
             return;
         }
+        entry.lastLayout = layout;
 
         const { bubbleX, bubbleY, bubbleWidth, bubbleHeight, tailDirX, tailDirY, textHeight } = layout;
 

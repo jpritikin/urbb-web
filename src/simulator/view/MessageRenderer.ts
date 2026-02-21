@@ -23,17 +23,20 @@ export class MessageRenderer {
     private getCloudPosition: (cloudId: string) => CloudPosition | null;
     private isCloudReady: (cloudId: string) => boolean;
     private getDimensions: () => { width: number; height: number };
+    private getMousePos: () => { x: number; y: number } | null;
 
     constructor(
         container: SVGGElement,
         getCloudPosition: (cloudId: string) => CloudPosition | null,
         isCloudReady: (cloudId: string) => boolean,
-        getDimensions: () => { width: number; height: number }
+        getDimensions: () => { width: number; height: number },
+        getMousePos: () => { x: number; y: number } | null
     ) {
         this.container = container;
         this.getCloudPosition = getCloudPosition;
         this.isCloudReady = isCloudReady;
         this.getDimensions = getDimensions;
+        this.getMousePos = getMousePos;
     }
 
     setOnMessageReceived(_callback: (message: PartMessage) => void): void {
@@ -65,6 +68,7 @@ export class MessageRenderer {
     animate(deltaTime: number): void {
         const toRemove: number[] = [];
         const dims = this.getDimensions();
+        const mouse = this.getMousePos();
 
         for (const [id, state] of this.messageStates) {
             if (state.phase === 'waiting') {
@@ -79,21 +83,21 @@ export class MessageRenderer {
                 continue;
             }
 
+            let bubbleX = 0, bubbleY = 0;
+
             if (state.phase === 'loitering') {
                 const senderPos = this.getCloudPosition(state.senderCloudId);
                 const targetPos = this.getCloudPosition(state.targetCloudId);
                 const targetReady = this.isCloudReady(state.targetCloudId);
                 if (senderPos) {
-                    const { x, y } = this.clampToCanvas(senderPos.x, senderPos.y, state.message.text, dims);
-                    state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                    const pos = this.clampToCanvas(senderPos.x, senderPos.y, state.message.text, dims);
+                    bubbleX = pos.x; bubbleY = pos.y;
+                    state.element.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
                 }
                 if (targetReady && targetPos) {
                     state.phase = 'traveling';
                 }
-                continue;
-            }
-
-            if (state.phase === 'traveling') {
+            } else if (state.phase === 'traveling') {
                 const travelRate = 1 / SimulatorModel.MESSAGE_TRAVEL_TIME;
                 state.cosmeticProgress = Math.min(1, state.cosmeticProgress + deltaTime * travelRate);
 
@@ -102,26 +106,36 @@ export class MessageRenderer {
                     state.phase = 'lingering';
                 }
 
-                const { x, y } = this.getMessagePosition(state, state.cosmeticProgress, dims);
-                state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                const pos = this.getMessagePosition(state, state.cosmeticProgress, dims);
+                bubbleX = pos.x; bubbleY = pos.y;
+                state.element.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
             } else if (state.phase === 'lingering') {
                 state.lingerTime += deltaTime;
-                const { x, y } = this.getLingeringPosition(state, dims);
-                state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                const pos = this.getLingeringPosition(state, dims);
+                bubbleX = pos.x; bubbleY = pos.y;
+                state.element.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
                 if (state.lingerTime >= state.lingerDuration) {
                     state.phase = 'fading';
                 }
             } else if (state.phase === 'fading') {
                 state.lingerTime += deltaTime;
-                const { x, y } = this.getLingeringPosition(state, dims);
-                state.element.setAttribute('transform', `translate(${x}, ${y})`);
+                const pos = this.getLingeringPosition(state, dims);
+                bubbleX = pos.x; bubbleY = pos.y;
+                state.element.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
                 const fadeProgress = (state.lingerTime - state.lingerDuration) / 0.5;
                 if (fadeProgress >= 1) {
                     toRemove.push(id);
-                } else {
-                    state.element.setAttribute('opacity', String(1 - fadeProgress));
+                    continue;
                 }
             }
+
+            let baseOpacity = 1;
+            if (state.phase === 'fading') {
+                const fadeProgress = (state.lingerTime - state.lingerDuration) / 0.5;
+                baseOpacity = 1 - fadeProgress;
+            }
+            const hovered = mouse && this.isMouseOverBubble(mouse, bubbleX, bubbleY, state.message.text);
+            state.element.setAttribute('opacity', String(hovered ? 0.2 : baseOpacity));
         }
 
         for (const id of toRemove) {
@@ -129,6 +143,11 @@ export class MessageRenderer {
             state?.element.remove();
             this.messageStates.delete(id);
         }
+    }
+
+    private isMouseOverBubble(mouse: { x: number; y: number }, cx: number, cy: number, text: string): boolean {
+        const size = computeBubbleSize(text, config);
+        return Math.abs(mouse.x - cx) < size.width / 2 && Math.abs(mouse.y - cy) < size.height / 2;
     }
 
     private getMessagePosition(state: MessageAnimatedState, progress: number, dims: { width: number; height: number }): { x: number; y: number } {

@@ -38,11 +38,12 @@ export interface PlaybackViewState {
     getSlicePosition: (sliceIndex: number, menuCenter: { x: number; y: number }, itemCount: number) => { x: number; y: number };
     isTransitioning: () => boolean;
     forceCompleteTransition: () => void;
-    hasPendingBlends: () => boolean;
     hasResolvingClouds: () => boolean;
     hasActiveSpiralExits: () => boolean;
     hasActiveSupportingEntries: () => boolean;
+    hasEnteringCarpets: () => boolean;
     findActionInOpenMenu: (actionId: string) => MenuSliceInfo | null;
+    getCurrentMenuItems?: () => { id: string }[];
     isMobile: () => boolean;
     getIsFullscreen: () => boolean;
     getCarpetCenter: (cloudId: string) => { x: number; y: number } | null;
@@ -50,6 +51,7 @@ export interface PlaybackViewState {
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
+    getLockedDragSign: () => number | null;
     setCarpetsInteractive: (enabled: boolean) => void;
     setStarInteractive: (enabled: boolean) => void;
     getDiagnostics: () => Record<string, unknown>;
@@ -69,14 +71,18 @@ export interface PlaybackModelAccess {
     getModelState: () => ModelState;
     getLastActionResult: () => ActionResult | null;
     clearLastActionResult: () => void;
+    getSimulationTime: () => number;
 }
 
 export interface PlaybackTimeControl {
-    pausePlayback: () => void;
-    resumePlayback: () => void;
+    pauseSimTime: () => void;
+    resumeSimTime: () => void;
     advanceIntervals: (count: number, orchState?: OrchestratorSnapshot) => void;
+    advanceOneInterval: () => void;
     executeSpontaneousBlend: (cloudId: string) => void;
     promotePendingBlend: (cloudId: string) => void;
+    enterStressPause: () => void;
+    exitStressPause: () => void;
 }
 
 export interface PlaybackLifecycle {
@@ -148,7 +154,7 @@ export class PlaybackController {
         this.state = 'waiting';
         this.waitCountdown = this.getInterActionDelay();
         this.reticle.create();
-        this.callbacks.pausePlayback();
+        this.callbacks.pauseSimTime();
         this.updateControlPanel();
     }
 
@@ -230,10 +236,12 @@ export class PlaybackController {
 
         // Handle process_intervals action - no UI, just advance simulation
         if (action.action === 'process_intervals') {
+            this.state = 'executing';
             const count = action.count ?? 0;
             if (count > 0) {
                 this.callbacks.advanceIntervals(count, action.orchState);
             }
+            if (this.state !== 'executing') return;
             if (action.rngCounts) {
                 const verifyResult = this.callbacks.onActionCompleted(action);
                 if (!verifyResult.success) {
@@ -244,6 +252,7 @@ export class PlaybackController {
             this.currentActionIndex++;
             // Don't wait between interval processing and next action
             this.waitCountdown = 0;
+            this.state = 'waiting';
             return;
         }
 
@@ -304,12 +313,67 @@ export class PlaybackController {
         }
     }
 
+    private async advanceIntervalsWithStress(count: number, action: RecordedAction): Promise<void> {
+        // Advance one interval at a time with random view-only pauses between them.
+        // This stresses the playback code by letting the animation loop run between
+        // intervals, exposing any view→model leakage or timing-dependent bugs.
+        // Pauses are view-only: sim time is paused, so no model state changes during the delay.
+        const expectedRngLog = action.rngLog ?? [];
+        let rngOffset = 0;
+        for (let i = 0; i < count; i++) {
+            if (this.state !== 'waiting' && this.state !== 'executing') return;
+            const diagBefore = this.callbacks.getDiagnostics();
+            const rngBefore = diagBefore.rngCallCount as number;
+            const rngLogBefore = (diagBefore.rngCallLog as { label: string }[])?.length ?? 0;
+            this.callbacks.advanceOneInterval();
+            const diagAfter = this.callbacks.getDiagnostics();
+            const rngAfter = diagAfter.rngCallCount as number;
+            const delta = rngAfter - rngBefore;
+            if (delta !== 0) {
+                const rngLog = diagAfter.rngCallLog as { label: string }[];
+                const actualLabels = rngLog?.slice(rngLogBefore).map(e => e.label) ?? [];
+                const expectedLabels = expectedRngLog.slice(rngOffset, rngOffset + delta).map(e => e.label);
+                const match = actualLabels.length === expectedLabels.length &&
+                    actualLabels.every((l, j) => l === expectedLabels[j]);
+                if (!match) {
+                    const conv = diagAfter.orchestratorConversation as Record<string, number>;
+                    const convState = diagAfter.conversationState as Record<string, unknown>;
+                    console.warn(`[StressIntervals] interval ${i + 1}/${count}: RNG label mismatch at offset ${rngOffset}`,
+                        `\n  expected: [${expectedLabels.join(', ')}]`,
+                        `\n  actual:   [${actualLabels.join(', ')}]`,
+                        `\n  orch: resp=${conv?.respondTimer?.toFixed(3)} reg=${conv?.regulationScore?.toFixed(3)} sustained=${conv?.sustainedRegulationTimer?.toFixed(3)}`,
+                        `\n  conv:`, convState);
+                }
+            }
+            // Check for expected RNG calls that didn't happen
+            if (i === count - 1 && rngOffset + delta < expectedRngLog.length) {
+                const missing = expectedRngLog.slice(rngOffset + delta).map(e => e.label);
+                const conv = diagAfter.orchestratorConversation as Record<string, number>;
+                const convState = diagAfter.conversationState as Record<string, unknown>;
+                console.warn(`[StressIntervals] after all ${count} intervals: ${missing.length} expected RNG calls missing`,
+                    `\n  missing: [${missing.join(', ')}]`,
+                    `\n  orch: resp=${conv?.respondTimer?.toFixed(3)} reg=${conv?.regulationScore?.toFixed(3)} sustained=${conv?.sustainedRegulationTimer?.toFixed(3)}`,
+                    `\n  conv:`, convState);
+            }
+            rngOffset += delta;
+            // Freeze model then pause to let the animation loop run.
+            // Any mutation attempted during this window throws immediately.
+            this.callbacks.enterStressPause();
+            try {
+                await this.delay(Math.floor(Math.random() * 80));
+            } finally {
+                this.callbacks.exitStressPause();
+            }
+            if (this.state !== 'waiting' && this.state !== 'executing') return;
+        }
+    }
+
     private async executeAction(action: RecordedAction): Promise<void> {
         await this.waitForCanvasOnScreen();
         await this.waitForTransition();
-        await this.waitForPendingBlends();
         await this.waitForResolvingClouds();
         await this.waitForSupportingEntries();
+        await this.waitForEnteringCarpets();
 
         switch (action.action) {
             case 'select_a_target':
@@ -396,6 +460,11 @@ export class PlaybackController {
             if (this.callbacks.getMenuCenter()) {
                 const sliceInfo = this.callbacks.findActionInOpenMenu(actionId);
                 if (sliceInfo) return sliceInfo;
+                const menuItems = this.callbacks.getCurrentMenuItems?.() ?? [];
+                console.error(`[Playback] Menu open for ${cloudId} but action '${actionId}' missing. Items: [${menuItems.map(i => i.id).join(', ')}]`, {
+                    model: this.callbacks.getModelState(),
+                    ...this.callbacks.getDiagnostics(),
+                });
                 this.handleError(`Action '${actionId}' not found in open menu`, errorContext ?? cloudId);
                 return null;
             }
@@ -484,11 +553,6 @@ export class PlaybackController {
         if (this.controlPanel) this.controlPanel.style.pointerEvents = '';
         this.reticle.spawnKisses(x, y);
 
-        if (clickResult.message === 'thought-bubble-dismissed' && retryCount < 3) {
-            await this.delay(100);
-            return this.clickAtPosition(x, y, context, expectAction, retryCount + 1);
-        }
-
         if (!clickResult.success && clickResult.error?.startsWith('No element') && retryCount < 5) {
             const rect = this.svgElement.getBoundingClientRect();
             const viewBox = this.svgElement.viewBox.baseVal;
@@ -524,12 +588,25 @@ export class PlaybackController {
 
     private handleError(error: string, context: string): void {
         this.state = 'error';
-        this.errorMessage = `${error} - ${context}`;
-        this.callbacks.resumePlayback();
+        const actionIndex = this.currentActionIndex;
+        const totalActions = this.actions.length;
+        const simTime = this.callbacks.getSimulationTime().toFixed(2);
+        const diag = this.callbacks.getDiagnostics();
+        const orchTimers = diag.orchestratorTimers as Record<string, number> | undefined;
+        const blendTimerStr = orchTimers && Object.keys(orchTimers).length
+            ? Object.entries(orchTimers).map(([id, t]) => `${this.callbacks.getPartName(id)}=${t.toFixed(2)}`).join(', ')
+            : 'none';
+        this.errorMessage = [
+            `❌ ${error}`,
+            `action ${actionIndex} of ${totalActions} | simTime ${simTime}s`,
+            `blendTimers: ${blendTimerStr}`,
+            `context: ${context}`,
+        ].join('\n');
 
-        console.error('[Playback Error]', this.errorMessage);
-        console.error('[Playback] Current action:', this.actions[this.currentActionIndex]);
-        console.error('[Playback] Action index:', this.currentActionIndex, 'of', this.actions.length);
+        console.error('[Playback Error]', error, '-', context);
+        console.error('[Playback] Action index:', actionIndex, 'of', totalActions);
+        console.error('[Playback] Sim time:', simTime);
+        console.error('[Playback] Current action:', this.actions[actionIndex]);
 
         const rect = this.svgElement.getBoundingClientRect();
         const viewBox = this.svgElement.viewBox.baseVal;
@@ -537,18 +614,15 @@ export class PlaybackController {
             canvas: {
                 boundingRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
                 viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
-                widthAttr: this.svgElement.getAttribute('width'),
-                heightAttr: this.svgElement.getAttribute('height'),
             },
             fullscreen: this.callbacks.getIsFullscreen(),
             mobile: this.callbacks.isMobile(),
             view: {
                 transitioning: this.callbacks.isTransitioning(),
-                pendingBlends: this.callbacks.hasPendingBlends(),
                 activeSpiralExits: this.callbacks.hasActiveSpiralExits(),
             },
             model: this.callbacks.getModelState(),
-            ...this.callbacks.getDiagnostics(),
+            ...diag,
         });
 
         this.callbacks.onPlaybackError();
@@ -564,8 +638,16 @@ export class PlaybackController {
 
     private async executeModeChange(action: RecordedAction): Promise<void> {
         const targetMode = action.newMode;
-        if (!targetMode || this.callbacks.getMode() === targetMode) return;
+        const currentMode = this.callbacks.getMode();
+        console.log(`[ModeChange] target=${targetMode} current=${currentMode}`);
+        if (!targetMode || currentMode === targetMode) {
+            console.log(`[ModeChange] skipped`);
+            return;
+        }
+        await this.waitForSpiralExits();
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
+        console.log(`[ModeChange] after click mode=${this.callbacks.getMode()}`);
+        await this.waitForTransition();
         await this.reticle.fadeOut();
     }
 
@@ -582,39 +664,43 @@ export class PlaybackController {
             await this.delay(50);
         }
 
-        const center = this.callbacks.getCarpetCenter(action.cloudId);
-        const visualCenter = this.callbacks.getCarpetVisualCenter(action.cloudId);
-        if (!center || !visualCenter) return;
-
-        const tiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
-        const dragRadius = 200;
-
-        // Target angle in degrees from the stance delta
-        const targetAngleDeg = (stanceDelta / REGULATION_STANCE_LIMIT) * MAX_TILT;
-        const targetAngleRad = targetAngleDeg * Math.PI / 180;
-
-        // Offset toward the side with more screen space to stay on canvas
         const canvasWidth = this.svgElement.viewBox.baseVal.width || 800;
-        const horizontalDir = center.x < canvasWidth / 2 ? 1 : -1;
+        const dragRadius = 200;
+        const targetAngleDeg = (stanceDelta / REGULATION_STANCE_LIMIT) * MAX_TILT;
 
-        // End point far from center for angle accuracy
-        // computeRotation: angleDeg = atan2(dy, |dx|) * horizontalSign * tiltSign
-        // With consistent horizontalDir, directionSign = horizontalDir * tiltSign
-        // We want: relativeAngle = targetAngleDeg (startAngle ≈ 0)
-        // So: endAngleDeg = targetAngleDeg
-        // endAngleDeg = atan2(dy, |dx|) * horizontalDir * tiltSign = targetAngleDeg
-        // atan2(dy, |dx|) = targetAngleDeg / (horizontalDir * tiltSign)
-        const effectiveAngleRad = (targetAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
-        const endX = center.x + Math.abs(Math.cos(effectiveAngleRad)) * dragRadius * horizontalDir;
-        const endY = center.y + Math.sin(effectiveAngleRad) * dragRadius;
+        // Mousedown somewhere on the carpet to start the drag. The carpet center
+        // may be occluded by the cloud sitting on it, so scan outward along the
+        // carpet until the mousedown registers (getLockedDragSign becomes non-null).
+        // tiltSign is intentionally NOT fetched yet — it may change during reticle animation.
+        const preCenter = this.callbacks.getCarpetCenter(action.cloudId);
+        if (!preCenter) return;
+        const horizontalDir = preCenter.x < canvasWidth / 2 ? 1 : -1;
 
-        // Mousedown horizontally offset from logical center so startAngle ≈ 0
-        const startX = center.x + 40 * horizontalDir;
-        const startY = center.y;
+        const startX = preCenter.x;
+        const startY = preCenter.y;
         await this.reticle.showAt(startX, startY);
         this.callbacks.simulateMouseDown(startX, startY);
+        const lockedSign = this.callbacks.getLockedDragSign();
 
-        // Animate drag outward to end position
+        // After mousedown the carpet is frozen and lockDirectionSign has run.
+        // Read the actual locked direction sign so our endpoint matches.
+        if (lockedSign === null) {
+            console.error(`[NudgeDrag] ${action.cloudId} drag failed - mousedown missed carpet at svg(${startX.toFixed(0)},${startY.toFixed(0)})`);
+            this.handleError(`nudge_stance drag missed carpet ${action.cloudId}`, `action ${this.currentActionIndex}`);
+            return;
+        }
+
+        const center = this.callbacks.getCarpetCenter(action.cloudId) ?? preCenter;
+        console.log(`[NudgeDrag] ${action.cloudId} target=${stanceDelta} center=(${center.x.toFixed(1)},${center.y.toFixed(1)}) lockedSign=${lockedSign} hDir=${horizontalDir}`);
+
+        // stanceDelta = (clamp(angleDeg, ±MAX_ROTATION_ANGLE) / MAX_TILT) * REGULATION_STANCE_LIMIT
+        // angleDeg = atan2(dy, |dx|) * lockedSign; no startAngle offset.
+        // So we want atan2(dy, |dx|) = targetAngleDeg / lockedSign.
+        const rawAngleRad = (targetAngleDeg / lockedSign) * Math.PI / 180;
+        const endX = center.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalDir;
+        const endY = center.y + Math.sin(rawAngleRad) * dragRadius;
+
+        // Animate drag outward to end position (carpet is frozen so no drift)
         const steps = 8;
         const stepDelay = 30;
         for (let i = 1; i <= steps; i++) {
@@ -626,23 +712,7 @@ export class PlaybackController {
             await this.delay(stepDelay);
         }
 
-        // Fine-tune: recompute end position using fresh center to correct for drift
-        for (let attempt = 0; attempt < 5; attempt++) {
-            const currentDelta = this.callbacks.getCurrentDragStanceDelta();
-            if (currentDelta === null) break;
-            const error = stanceDelta - currentDelta;
-            if (Math.abs(error) < 0.02) break;
-            // Recompute target from fresh center with corrected angle
-            const freshCenter = this.callbacks.getCarpetCenter(action.cloudId);
-            if (!freshCenter) break;
-            const correctedAngleDeg = targetAngleDeg + (error / REGULATION_STANCE_LIMIT) * MAX_TILT;
-            const correctedRad = (correctedAngleDeg / (horizontalDir * tiltSign)) * Math.PI / 180;
-            const nx = freshCenter.x + Math.abs(Math.cos(correctedRad)) * dragRadius * horizontalDir;
-            const ny = freshCenter.y + Math.sin(correctedRad) * dragRadius;
-            this.reticle.setTarget(nx, ny);
-            this.callbacks.simulateMouseMove(nx, ny);
-            await this.delay(10);
-        }
+        console.log(`[NudgeDrag] ${action.cloudId} target=${stanceDelta} final=${this.callbacks.getCurrentDragStanceDelta()?.toFixed(3) ?? 'null'}`);
 
         // Mouse up triggers commitRotation → onRotationEnd
         this.callbacks.simulateMouseUp();
@@ -667,20 +737,6 @@ export class PlaybackController {
             if (performance.now() - start > maxWait) {
                 console.warn(`[Playback] Timeout waiting for transition after ${maxWait}ms, forcing completion`);
                 this.callbacks.forceCompleteTransition();
-                break;
-            }
-            await this.delay(50);
-        }
-    }
-
-    private async waitForPendingBlends(): Promise<void> {
-        if (!this.callbacks.hasPendingBlends()) return;
-        const maxWait = 5000;
-        const start = performance.now();
-        while (this.callbacks.hasPendingBlends()) {
-            if (performance.now() - start > maxWait) {
-                const state = this.callbacks.getModelState();
-                console.warn(`[Playback] Timeout waiting for pending blends after ${maxWait}ms, blended: [${state.blended.join(', ')}]`);
                 break;
             }
             await this.delay(50);
@@ -720,6 +776,19 @@ export class PlaybackController {
         while (this.callbacks.hasActiveSupportingEntries()) {
             if (performance.now() - start > maxWait) {
                 console.warn(`[Playback] Timeout waiting for supporting entries after ${maxWait}ms`);
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
+    private async waitForEnteringCarpets(): Promise<void> {
+        if (!this.callbacks.hasEnteringCarpets()) return;
+        const maxWait = 5000;
+        const start = performance.now();
+        while (this.callbacks.hasEnteringCarpets()) {
+            if (performance.now() - start > maxWait) {
+                console.warn(`[Playback] Timeout waiting for entering carpets after ${maxWait}ms`);
                 break;
             }
             await this.delay(50);
@@ -889,8 +958,11 @@ export class PlaybackController {
                 this.countdownDisplay.textContent = '';
                 this.actionDisplay.textContent = 'Start playback';
             } else if (this.state === 'error') {
-                this.countdownDisplay.textContent = '❌ Error';
-                this.actionDisplay.textContent = this.errorMessage;
+                this.countdownDisplay.textContent = '';
+                this.actionDisplay.innerHTML = this.errorMessage
+                    .split('\n')
+                    .map(line => `<div>${line}</div>`)
+                    .join('');
             } else if (this.dismissConfirmMode) {
                 this.countdownDisplay.textContent = '';
                 this.actionDisplay.textContent = 'Stop playback?';
@@ -939,6 +1011,6 @@ export class PlaybackController {
             this.controlPanel = null;
         }
 
-        this.callbacks.resumePlayback();
+        this.callbacks.resumeSimTime();
     }
 }
