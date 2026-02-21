@@ -85,22 +85,35 @@ export class PartStateManager {
         return Math.max(0, Math.min(1, trust));
     }
 
+    private static readonly CONSENT_REVOCATION_THRESHOLD = 0.25;
+
+    private revokeConsentIfNeeded(cloudId: string, state: PartState): void {
+        if (state.biography.consentedToHelp &&
+            state.trust < PartStateManager.CONSENT_REVOCATION_THRESHOLD &&
+            this.getProtecting(cloudId).size > 0) {
+            state.biography.consentedToHelp = false;
+        }
+    }
+
     setTrust(cloudId: string, trust: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
         state.trust = this.clampTrust(trust);
+        this.revokeConsentIfNeeded(cloudId, state);
     }
 
     adjustTrust(cloudId: string, multiplier: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
         state.trust = this.clampTrust(state.trust * multiplier);
+        this.revokeConsentIfNeeded(cloudId, state);
     }
 
     addTrust(cloudId: string, amount: number): void {
         const state = this.partStates.get(cloudId);
         if (!state) return;
         state.trust = this.clampTrust(state.trust + amount);
+        this.revokeConsentIfNeeded(cloudId, state);
     }
 
     getNeedAttention(cloudId: string): number {
