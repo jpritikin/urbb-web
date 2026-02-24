@@ -806,16 +806,9 @@ export class SimulatorView {
 
             // Don't override state for parts in entry animation (supporting entries handle their own state)
             if (!this.transitionAnimator.isSupportingEntering(cloudId)) {
-                const oldTarget = state.positionTarget;
                 state.positionTarget = positionTarget;
-                if (cloudId === 'cloud_3' && oldTarget.type !== positionTarget.type) {
-                    console.log(`[DEBUG cloud_3] positionTarget changed: ${oldTarget.type} → ${positionTarget.type} isTarget=${isTarget} isBlended=${isBlended} isSupporting=${isSupporting} mode=${this.mode} prevFG=${this.previousForegroundIds.has(cloudId)}`);
-                }
                 // Don't override opacity for delayed arrivals - they should stay invisible until arrival time
                 if (!this.transitionAnimator.isAwaitingArrival(cloudId)) {
-                    if (cloudId === 'cloud_3' && state.targetOpacity !== targetOpacity) {
-                        console.log(`[DEBUG cloud_3] targetOpacity changed: ${state.targetOpacity} → ${targetOpacity} posTarget=${positionTarget.type}`);
-                    }
                     state.targetOpacity = targetOpacity;
                 }
             }
@@ -897,7 +890,6 @@ export class SimulatorView {
         this.animateStar(deltaTime);
     }
 
-    private _cloud3DebugLogged = false;
 
     animateCloudStates(
         deltaTime: number,
@@ -914,11 +906,6 @@ export class SimulatorView {
                 panoramaPositions,
                 model
             );
-
-            if (cloudId === 'cloud_3' && !this._cloud3DebugLogged && state.opacity < 0.15 && state.targetOpacity > 0.5) {
-                this._cloud3DebugLogged = true;
-                console.log(`[DEBUG cloud_3] opacity anomaly: opacity=${state.opacity.toFixed(3)} targetOpacity=${state.targetOpacity} smoothing.opacity=${state.smoothing.opacity} posTarget=${JSON.stringify(state.positionTarget)} resolved=(${resolved.x.toFixed(0)},${resolved.y.toFixed(0)}) state=(${state.x.toFixed(0)},${state.y.toFixed(0)}) isFlyOut=${this.transitionAnimator.isFlyOutExiting('cloud_3')} isSpiral=${this.transitionAnimator.isSpiralExiting('cloud_3')} mode=${this.mode}`);
-            }
 
             // Apply linear interpolation to position and scale
             const posDiff = Math.sqrt((resolved.x - state.x) ** 2 + (resolved.y - state.y) ** 2);

@@ -1228,9 +1228,6 @@ export class CloudManager {
         const cloud = this.getCloudById(cloudId);
         const group = cloud?.getGroupElement();
         if (!group || group.parentNode === this.zoomGroup) return;
-        if (cloudId === 'cloud_3') {
-            console.log(`[DEBUG cloud_3] moveCloudToZoomGroup called`, new Error().stack);
-        }
 
         const zoom = this.view.getPanoramaZoom();
         const cloudState = this.view.getCloudState(cloudId);

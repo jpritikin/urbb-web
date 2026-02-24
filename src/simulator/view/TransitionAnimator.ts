@@ -86,9 +86,6 @@ export class TransitionAnimator {
     // --- Spiral exit animations ---
 
     startSpiralExit(cloudId: string): void {
-        if (cloudId === 'cloud_3') {
-            console.log(`[DEBUG cloud_3] startSpiralExit called`, new Error().stack);
-        }
         const state = this.config.getCloudState(cloudId);
         if (!state) return;
 
@@ -174,9 +171,6 @@ export class TransitionAnimator {
     // --- Fly-out exit animations ---
 
     startFlyOutExit(cloudId: string): void {
-        if (cloudId === 'cloud_3') {
-            console.log(`[DEBUG cloud_3] startFlyOutExit called`, new Error().stack);
-        }
         const state = this.config.getCloudState(cloudId);
         if (!state) return;
 
