@@ -210,7 +210,6 @@ export class CarpetRenderer {
         let syntheticDrag = false;
         this.carpetGroup.addEventListener('mousedown', (e: MouseEvent) => {
             const carpetId = findCarpetId(e.target);
-            console.log(`[CarpetMousedown] target=${(e.target as Element)?.tagName} carpetId=${carpetId} isTrusted=${e.isTrusted} conversationActive=${this.conversationActive} rotationDragCarpetId=${this.rotationDragCarpetId}`);
             if (!carpetId) return;
             syntheticDrag = !e.isTrusted;
             if (this.conversationActive) {
@@ -220,7 +219,6 @@ export class CarpetRenderer {
                 const pos = toSvgCoords(e.clientX, e.clientY);
                 this.lockDirectionSign(carpetId, pos.x);
                 const center = this.getCarpetCenter(carpetId);
-                console.log(`[CarpetDragStart] ${carpetId} pos=(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) center=(${center?.x.toFixed(1)},${center?.y.toFixed(1)}) startAngle=0 lockedSign=${this.rotationLockedDirectionSign} tiltSign=${this.getTiltSign(carpetId)}`);
                 this.showRotationIndicator(carpetId);
                 this.onRotationPauseChanged?.(true);
             } else {
@@ -234,7 +232,6 @@ export class CarpetRenderer {
             if (syntheticDrag && e.isTrusted) return;
             if (this.rotationDragCarpetId) {
                 const pos = toSvgCoords(e.clientX, e.clientY);
-                console.log(`[CarpetMousemove] svg(${pos.x.toFixed(1)},${pos.y.toFixed(1)}) isTrusted=${e.isTrusted}`);
                 this.updateRotationMouseIndicator(pos.x, pos.y);
                 e.preventDefault();
                 return;
@@ -246,7 +243,6 @@ export class CarpetRenderer {
         });
 
         const onMouseEnd = (e?: Event) => {
-            console.log(`[onMouseEnd] type=${e?.type} isTrusted=${(e as MouseEvent)?.isTrusted} syntheticDrag=${syntheticDrag} rotationDragCarpetId=${this.rotationDragCarpetId}`);
             if (syntheticDrag && e?.isTrusted) return;
             syntheticDrag = false;
             if (this.rotationDragCarpetId) {
@@ -562,7 +558,6 @@ export class CarpetRenderer {
         const { angleDeg } = this.computeRotation(this.rotationDragCarpetId, x2, y2);
         const relativeAngle = Math.max(-MAX_ROTATION_ANGLE, Math.min(MAX_ROTATION_ANGLE, angleDeg));
         const stanceDelta = (relativeAngle / MAX_TILT) * REGULATION_STANCE_LIMIT;
-        console.log(`[commitRotation] ${this.rotationDragCarpetId} cursor=(${x2.toFixed(1)},${y2.toFixed(1)}) angleDeg=${angleDeg.toFixed(2)} relative=${relativeAngle.toFixed(2)} delta=${stanceDelta.toFixed(3)} lockedSign=${this.rotationLockedDirectionSign}`);
         const carpetId = this.rotationDragCarpetId;
         this.hideRotationIndicator();
         this.rotationDragCarpetId = null;

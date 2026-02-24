@@ -85,13 +85,9 @@ export class MessageOrchestrator {
             const currentTime = this.blendStartTimers.get(blendedId) ?? 0;
             const newTime = currentTime + deltaTime;
             this.blendStartTimers.set(blendedId, newTime);
-            if (currentTime === 0) {
-                console.log(`[BlendTimer] ${blendedId} timer started at simTime=${this.model.getSimulationTime().toFixed(2)}`);
-            }
         }
         for (const blendedId of this.blendStartTimers.keys()) {
             if (!blendedParts.includes(blendedId)) {
-                console.log(`[BlendTimer] ${blendedId} timer removed at ${this.blendStartTimers.get(blendedId)?.toFixed(2)}`);
                 this.blendStartTimers.delete(blendedId);
             }
         }
@@ -298,8 +294,6 @@ export class MessageOrchestrator {
             this.newCycleTimer = 0;
             return;
         }
-        console.log(`[DEBUG convDialogues] participants=${JSON.stringify(participantIds)} phases=${JSON.stringify(Object.fromEntries([...participantIds.map(id => [id, this.model.getConversationPhase(id)])]))} speaker=${this.model.getConversationSpeakerId()} reg=${this.regulationScore.toFixed(2)} newCycle=${this.newCycleTimer.toFixed(2)}`);
-
         const [partA, partB] = participantIds;
 
         this.checkListenerViolation(deltaTime, partA, partB);

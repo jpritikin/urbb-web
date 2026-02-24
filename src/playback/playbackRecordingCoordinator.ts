@@ -390,24 +390,8 @@ export class PlaybackRecordingCoordinator {
                         }
                     }
                 }
-                const rngBefore = this.rng.getCallCount();
-                const model = this.deps.getModel();
-                const speakerBefore = model.getConversationSpeakerId();
-                const participantsBefore = model.getConversationParticipantIds();
-                const modeBefore = model.getMode();
-                const orchBefore = this.deps.getMessageOrchestrator()?.getDebugState();
-                const blendsBefore = Object.entries(orchBefore?.blendTimers ?? {}).map(([id, t]) => `${id}=${t.toFixed(2)}`).join(',') || 'none';
-                const simTimeBefore = model.getSimulationTime().toFixed(2);
                 this.deps.getTimeAdvancer()?.advanceIntervals(count);
                 this.deps.checkBlendedPartsAttention();
-                const orchAfter = this.deps.getMessageOrchestrator()?.getDebugState();
-                const blendsAfter = Object.entries(orchAfter?.blendTimers ?? {}).map(([id, t]) => `${id}=${t.toFixed(2)}`).join(',') || 'none';
-                const simTimeAfter = model.getSimulationTime().toFixed(2);
-                console.log(`[AdvanceIntervals] count=${count} simTime=${simTimeBefore}->${simTimeAfter} blendTimers: ${blendsBefore} -> ${blendsAfter}`);
-                const rngAfter = this.rng.getCallCount();
-                if (rngAfter !== rngBefore) {
-                    console.log(`[AdvanceIntervals] rngDelta=${rngAfter - rngBefore} mode=${modeBefore} speaker=${speakerBefore} participants=${JSON.stringify(participantsBefore)} orchReg=${orchState?.regulationScore?.toFixed(2)} orchResp=${orchState?.respondTimer?.toFixed(2)}`);
-                }
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.deps.executeSpontaneousBlendForPlayback(cloudId);
@@ -501,10 +485,6 @@ export class PlaybackRecordingCoordinator {
                 for (const p of cloudPaths) p.setAttribute('pointer-events', 'none');
                 const element = document.elementFromPoint(clientX, clientY);
                 for (const p of cloudPaths) p.setAttribute('pointer-events', 'all');
-                const parentChain: string[] = [];
-                let el: Element | null = element;
-                for (let i = 0; i < 5 && el; i++) { parentChain.push(`${el.tagName}${el.id ? '#'+el.id : ''}.${(el as SVGElement).dataset?.carpetId ?? ''}[${el.getAttribute('class')?.slice(0,30) ?? ''}]`); el = el.parentElement; }
-                console.log(`[SimMouseDown] svg(${x.toFixed(0)},${y.toFixed(0)}) client(${clientX.toFixed(0)},${clientY.toFixed(0)}) chain=${parentChain.join(' > ')} pointerEvents=${element ? getComputedStyle(element).pointerEvents : '?'}`);
                 if (!element) return;
                 element.dispatchEvent(new MouseEvent('mousedown', {
                     clientX, clientY, bubbles: true, cancelable: true

@@ -799,7 +799,6 @@ export class SimulatorView {
             // Cancel spiral exit if cloud's target state changed (e.g. re-added as target after backlash displacement)
             if (this.transitionAnimator.isSpiralExiting(cloudId)) {
                 if (positionTarget.type !== 'panorama') {
-                    console.log(`[cancelSpiral] ${cloudId} newTarget=${positionTarget.type} isTarget=${isTarget}`);
                     this.transitionAnimator.cancelSpiralExit(cloudId);
                 }
             }

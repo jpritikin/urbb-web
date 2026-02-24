@@ -775,8 +775,6 @@ export class SimulatorModel {
         const otherId = cloudId === a ? b : a;
         const stance = this.parts.getRelationStance(cloudId, otherId);
         const current = this.conversationTherapistDelta.get(cloudId) ?? 0;
-        console.log(`[addTherapistDelta] ${cloudId} current=${current.toFixed(3)} + delta=${delta.toFixed(3)}`,
-            current !== 0 ? new Error().stack : '');
         const unclamped = current + delta;
         this.conversationTherapistDelta.set(cloudId, Math.max(-1 - stance, Math.min(1 - stance, unclamped)));
     }
@@ -838,11 +836,9 @@ export class SimulatorModel {
         const convResult = this.isConversationPossible();
         if (convResult.participantIds) {
             if (!this.isConversationInitialized()) {
-                console.log(`[DEBUG syncConv] INIT conversation ${convResult.participantIds} mode=${this.mode}`);
                 this.initConversation(convResult.participantIds, rng);
             }
         } else if (this.isConversationInitialized()) {
-            console.log(`[DEBUG syncConv] CLEAR conversation mode=${this.mode} participants=${JSON.stringify(this.conversationParticipantIds)}`);
             this.clearConversationStances();
         }
     }

@@ -54,12 +54,9 @@ export class FullscreenManager {
     }
 
     private scheduleResize(): void {
-        const isFullscreen = this.callbacks.getIsFullscreen();
         if (this.resizeDebounceTimer !== null) {
             cancelAnimationFrame(this.resizeDebounceTimer);
-            console.log('[Resize] debounce cancelled (superseded)');
         }
-        console.log(`[Resize] scheduled (fullscreen: ${isFullscreen})`);
         this.resizeDebounceTimer = requestAnimationFrame(() => {
             this.resizeDebounceTimer = requestAnimationFrame(() => {
                 this.resizeDebounceTimer = null;
@@ -135,7 +132,6 @@ export class FullscreenManager {
         this.svgElement.setAttribute('height', String(height));
         this.svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-        console.log(`[Resize] applied: ${width}x${height} (viewport)`);
         this.callbacks.onResize(width, height);
     }
 
@@ -144,7 +140,6 @@ export class FullscreenManager {
         this.svgElement.setAttribute('height', String(this.originalHeight));
         this.svgElement.setAttribute('viewBox', `0 0 ${this.originalWidth} ${this.originalHeight}`);
 
-        console.log(`[Resize] applied: ${this.originalWidth}x${this.originalHeight} (restored)`);
         this.callbacks.onResize(this.originalWidth, this.originalHeight);
     }
 }
