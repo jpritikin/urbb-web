@@ -183,7 +183,7 @@ export function replaySession(session: RecordedSession): ReplayResult {
         // Check orchState matches
         if (action.orchState) {
             const actualOrch = sim.getOrchestratorDebugState();
-            const orchMismatches = findOrchStateMismatches(actualOrch, action.orchState);
+            const orchMismatches = findOrchStateMismatches(actualOrch as unknown as Record<string, unknown>, action.orchState as unknown as Record<string, unknown>);
             for (const m of orchMismatches) {
                 differences.push(`#${i} orch: ${m}`);
             }

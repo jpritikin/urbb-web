@@ -513,7 +513,7 @@ export class MessageOrchestrator {
         this.model.setConversationPhase(speakerId, 'listen');
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number; selfLoathingCooldowns: Record<string, number>; genericDialogueCooldowns: Record<string, number> } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number; selfLoathingCooldowns: Record<string, number>; genericDialogueCooldowns: Record<string, number>; summonArrivalTimers: Record<string, number> } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
