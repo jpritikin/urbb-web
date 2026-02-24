@@ -24,7 +24,7 @@ function getPageVersion(): string {
 
 const MAX_RECORDING_MS = 60 * 60 * 1000; // 1 hour
 
-function setupRecordingShortcuts(cloudManager: CloudManager, playbackOf?: string, playbackOfHash?: string): void {
+function setupRecordingShortcuts(cloudManager: CloudManager, playbackOf?: string): void {
     const downloadCurrentSession = () => {
         const session = cloudManager.getRecordingSession();
         if (!session) {
@@ -37,7 +37,7 @@ function setupRecordingShortcuts(cloudManager: CloudManager, playbackOf?: string
     cloudManager.setDownloadSessionHandler(downloadCurrentSession);
 
 
-    cloudManager.startRecording(getPageVersion(), playbackOf, playbackOfHash);
+    cloudManager.startRecording(getPageVersion(), playbackOf);
 
     setTimeout(() => {
         if (cloudManager.isRecording()) {
@@ -51,21 +51,10 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     const cloudContainer = document.getElementById('cloud-container');
     if (!cloudContainer) return;
 
-    let recordedSession: RecordedSession | null = null;
-    let recordedSessionHash: string | undefined;
-    if (playbackMode && scenario.recordedSessionPath) {
-        const loaded = await loadRecordedSession(scenario.recordedSessionPath);
-        if (!loaded) {
-            console.warn(`[IFS] Failed to load recorded session from ${scenario.recordedSessionPath}`);
-            playbackMode = false;
-        } else {
-            recordedSession = loaded.session;
-            recordedSessionHash = loaded.hash;
-            if (recordedSession.codeVersion !== getPageVersion()) {
-                console.warn(`[IFS] Recording version mismatch: ${recordedSession.codeVersion} vs current ${getPageVersion()}`);
-            }
-        }
-    }
+    // Start session fetch in parallel with canvas init so mobile users see the canvas immediately
+    const sessionPromise = (playbackMode && scenario.recordedSessionPath)
+        ? loadRecordedSession(scenario.recordedSessionPath)
+        : Promise.resolve(null);
 
     const cloudManager = new CloudManager();
     (window as any).cloudManager = cloudManager;
@@ -84,6 +73,17 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     };
     cloudManager.init('cloud-container');
 
+    let recordedSession: RecordedSession | null = null;
+    if (playbackMode) {
+        recordedSession = await sessionPromise;
+        if (!recordedSession) {
+            console.warn(`[IFS] Failed to load recorded session from ${scenario.recordedSessionPath}`);
+            playbackMode = false;
+        } else if (recordedSession.codeVersion !== getPageVersion()) {
+            console.warn(`[IFS] Recording version mismatch: ${recordedSession.codeVersion} vs current ${getPageVersion()}`);
+        }
+    }
+
     console.log(`[IFS] Starting scenario: ${scenario.name} (${scenario.difficulty})${playbackMode ? ' [PLAYBACK]' : ''}`);
     if (playbackMode && recordedSession) {
         cloudManager.setSeed(recordedSession.modelSeed);
@@ -97,7 +97,7 @@ async function startSimulation(scenario: Scenario, playbackMode: boolean = false
     cloudManager.startAnimation();
     cloudManager.setCarpetDebug(false);
 
-    setupRecordingShortcuts(cloudManager, playbackMode ? scenario.recordedSessionPath : undefined, recordedSessionHash);
+    setupRecordingShortcuts(cloudManager, playbackMode ? scenario.recordedSessionPath : undefined);
 
     if (playbackMode && recordedSession) {
         setTimeout(() => {
