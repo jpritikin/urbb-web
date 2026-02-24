@@ -199,6 +199,8 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
             if (item) {
                 this.model.addBlendedPart(cloudId, item.reason);
             }
+            this.model.syncConversation(this.rng);
+            this.model.checkAndSetVictory();
             return { success: true, stateChanges: [`${cloudId}:promoted_to_blended`] };
         }
 

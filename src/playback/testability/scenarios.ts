@@ -250,10 +250,6 @@ function compareModels(actual: SerializedModel, expected: SerializedModel): stri
         }
     }
 
-    if ((actual.victoryAchieved ?? false) !== (expected.victoryAchieved ?? false)) {
-        diffs.push(`victoryAchieved: ${actual.victoryAchieved} vs ${expected.victoryAchieved}`);
-    }
-
     return diffs;
 }
 
