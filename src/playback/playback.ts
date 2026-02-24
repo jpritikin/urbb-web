@@ -972,7 +972,8 @@ export class PlaybackController {
                 this.actionDisplay.innerHTML = this.errorMessage
                     .split('\n')
                     .map(line => `<div>${line}</div>`)
-                    .join('');
+                    .join('') +
+                    `<button onclick="window.location.reload()" style="margin-top:8px;padding:4px 12px;cursor:pointer">Restart app</button>`;
             } else if (this.dismissConfirmMode) {
                 this.countdownDisplay.textContent = '';
                 this.actionDisplay.textContent = 'Stop playback?';
