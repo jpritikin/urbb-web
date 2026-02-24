@@ -1,6 +1,7 @@
 import { ThoughtBubble } from '../ifsModel.js';
 import { createGroup, createRect, createCircle, createText, TextLine } from '../../utils/svgHelpers.js';
 import { BubbleLayout, THOUGHT_BUBBLE_CONFIG, computeBubbleLayout } from './bubblePlacement.js';
+import { HoverFade } from './hoverFade.js';
 
 interface CloudPosition { x: number; y: number; opacity?: number }
 
@@ -19,6 +20,8 @@ interface BubbleEntry {
     siblingIndex: number;
     siblingCount: number;
     lastLayout: BubbleLayout | null;
+    hoverFade: HoverFade;
+    lastWallTime: number;
 }
 
 const config = THOUGHT_BUBBLE_CONFIG;
@@ -148,6 +151,8 @@ export class ThoughtBubbleRenderer {
             siblingIndex,
             siblingCount,
             lastLayout: layout,
+            hoverFade: new HoverFade(),
+            lastWallTime: performance.now() / 1000,
         };
 
         if (bubble.validated) {
@@ -179,15 +184,21 @@ export class ThoughtBubbleRenderer {
             baseOpacity = 0.95;
         }
 
-        const mouse = this.getMousePos();
-        if (mouse && entry?.lastLayout) {
-            const { bubbleX, bubbleY, bubbleWidth, bubbleHeight } = entry.lastLayout;
-            if (Math.abs(mouse.x - bubbleX) < bubbleWidth / 2 && Math.abs(mouse.y - bubbleY) < bubbleHeight / 2) {
-                group.setAttribute('opacity', '0.2');
-                return;
-            }
+        if (entry) {
+            const wallTime = performance.now() / 1000;
+            const deltaTime = wallTime - entry.lastWallTime;
+            entry.lastWallTime = wallTime;
+
+            const mouse = this.getMousePos();
+            const hovered = !!(mouse && entry.lastLayout && (
+                Math.abs(mouse.x - entry.lastLayout.bubbleX) < entry.lastLayout.bubbleWidth / 2 &&
+                Math.abs(mouse.y - entry.lastLayout.bubbleY) < entry.lastLayout.bubbleHeight / 2
+            ));
+            entry.hoverFade.update(hovered, deltaTime);
+            group.setAttribute('opacity', String(entry.hoverFade.apply(baseOpacity)));
+        } else {
+            group.setAttribute('opacity', String(baseOpacity));
         }
-        group.setAttribute('opacity', String(baseOpacity));
     }
 
     private heartAnchors(bubbleX: number, bubbleY: number, bubbleWidth: number, bubbleHeight: number): [number, number][] {
