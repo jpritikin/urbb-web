@@ -623,10 +623,6 @@ export class CloudManager {
     private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
         const cloudState = this.view.getCloudState(cloudId);
         if (!cloudState || cloudState.opacity < 0.1) {
-            const isTarget = this.model.isTarget(cloudId);
-            const isBlended = this.model.isBlended(cloudId);
-            const seatPos = this.view.getCloudPosition(cloudId);
-            console.log(`[getCloudVisualCenter] ${cloudId} null: state=${!!cloudState} opacity=${cloudState?.opacity?.toFixed(3)} targetOpacity=${cloudState?.targetOpacity} posTarget=${JSON.stringify(cloudState?.positionTarget)} isTarget=${isTarget} isBlended=${isBlended} seatPos=${seatPos ? `(${seatPos.x.toFixed(0)},${seatPos.y.toFixed(0)})` : 'none'} blendDeg=${cloudState?.blendingDegree?.toFixed(3)} targetBlendDeg=${cloudState?.targetBlendingDegree?.toFixed(3)}`);
             return null;
         }
         const mode = this.view.getVisualMode();
@@ -645,7 +641,6 @@ export class CloudManager {
         const margin = 50;
         if (pos.x < -margin || pos.x > this.canvasWidth + margin ||
             pos.y < -margin || pos.y > this.canvasHeight + margin) {
-            console.log(`[getCloudVisualCenter] ${cloudId} out of bounds: pos=(${pos.x.toFixed(0)},${pos.y.toFixed(0)}) canvas=${this.canvasWidth}x${this.canvasHeight} posTarget=${JSON.stringify(cloudState.positionTarget)}`);
             return null;
         }
         return pos;

@@ -107,6 +107,11 @@ export class MessageRenderer {
                 }
 
                 const pos = this.getMessagePosition(state, state.cosmeticProgress, dims);
+                if (!pos) {
+                    state.element.style.display = 'none';
+                    continue;
+                }
+                state.element.style.display = '';
                 bubbleX = pos.x; bubbleY = pos.y;
                 state.element.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
             } else if (state.phase === 'lingering') {
@@ -150,12 +155,11 @@ export class MessageRenderer {
         return Math.abs(mouse.x - cx) < size.width / 2 && Math.abs(mouse.y - cy) < size.height / 2;
     }
 
-    private getMessagePosition(state: MessageAnimatedState, progress: number, dims: { width: number; height: number }): { x: number; y: number } {
+    private getMessagePosition(state: MessageAnimatedState, progress: number, dims: { width: number; height: number }): { x: number; y: number } | null {
         const senderPos = this.getCloudPosition(state.senderCloudId);
         const targetPos = this.getCloudPosition(state.targetCloudId);
         if (!senderPos || !targetPos) {
-            console.warn(`[Message ${state.message.id}] getMessagePosition: missing position - sender=${JSON.stringify(senderPos)}, target=${JSON.stringify(targetPos)}`);
-            return { x: 0, y: 0 };
+            return null;
         }
 
         if (state.senderCloudId === state.targetCloudId) {

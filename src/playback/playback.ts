@@ -639,14 +639,11 @@ export class PlaybackController {
     private async executeModeChange(action: RecordedAction): Promise<void> {
         const targetMode = action.newMode;
         const currentMode = this.callbacks.getMode();
-        console.log(`[ModeChange] target=${targetMode} current=${currentMode}`);
         if (!targetMode || currentMode === targetMode) {
-            console.log(`[ModeChange] skipped`);
             return;
         }
         await this.waitForSpiralExits();
         await this.hoverAndClickCloud(MODE_TOGGLE_CLOUD_ID, `mode -> ${targetMode}`);
-        console.log(`[ModeChange] after click mode=${this.callbacks.getMode()}`);
         await this.waitForTransition();
         await this.reticle.fadeOut();
     }
@@ -691,7 +688,6 @@ export class PlaybackController {
         }
 
         const center = this.callbacks.getCarpetCenter(action.cloudId) ?? preCenter;
-        console.log(`[NudgeDrag] ${action.cloudId} target=${stanceDelta} center=(${center.x.toFixed(1)},${center.y.toFixed(1)}) lockedSign=${lockedSign} hDir=${horizontalDir}`);
 
         // stanceDelta = (clamp(angleDeg, ±MAX_ROTATION_ANGLE) / MAX_TILT) * REGULATION_STANCE_LIMIT
         // angleDeg = atan2(dy, |dx|) * lockedSign; no startAngle offset.
@@ -712,7 +708,6 @@ export class PlaybackController {
             await this.delay(stepDelay);
         }
 
-        console.log(`[NudgeDrag] ${action.cloudId} target=${stanceDelta} final=${this.callbacks.getCurrentDragStanceDelta()?.toFixed(3) ?? 'null'}`);
 
         // Mouse up triggers commitRotation → onRotationEnd
         this.callbacks.simulateMouseUp();
