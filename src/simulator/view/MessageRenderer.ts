@@ -1,6 +1,7 @@
 import { PartMessage, SimulatorModel } from '../ifsModel.js';
 import { createGroup, createRect, createText, TextLine } from '../../utils/svgHelpers.js';
 import { MESSAGE_BUBBLE_CONFIG, computeBubbleSize, computeBubblePlacement, wrapText } from './bubblePlacement.js';
+import { HoverFade } from './hoverFade.js';
 
 const config = MESSAGE_BUBBLE_CONFIG;
 
@@ -15,6 +16,7 @@ interface MessageAnimatedState {
     lingerTime: number;
     lingerDuration: number;
     cosmeticProgress: number;
+    hoverFade: HoverFade;
 }
 
 export class MessageRenderer {
@@ -61,6 +63,7 @@ export class MessageRenderer {
             lingerTime: 0,
             lingerDuration: 1.0 + Math.random() * 1.0,
             cosmeticProgress: 0,
+            hoverFade: new HoverFade(),
         };
         this.messageStates.set(message.id, state);
     }
@@ -139,8 +142,9 @@ export class MessageRenderer {
                 const fadeProgress = (state.lingerTime - state.lingerDuration) / 0.5;
                 baseOpacity = 1 - fadeProgress;
             }
-            const hovered = mouse && this.isMouseOverBubble(mouse, bubbleX, bubbleY, state.message.text);
-            state.element.setAttribute('opacity', String(hovered ? 0.2 : baseOpacity));
+            const hovered = !!(mouse && this.isMouseOverBubble(mouse, bubbleX, bubbleY, state.message.text));
+            state.hoverFade.update(hovered, deltaTime);
+            state.element.setAttribute('opacity', String(state.hoverFade.apply(baseOpacity)));
         }
 
         for (const id of toRemove) {
