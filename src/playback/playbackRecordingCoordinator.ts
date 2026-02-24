@@ -15,12 +15,19 @@ export interface PlaybackRecordingDependencies {
         getAllPartIds(): string[];
         getMode(): 'panorama' | 'foreground';
         setSelfRay(cloudId: string): void;
-        getConversationEffectiveStances(): Map<string, number>;
         getConversationPhases(): Map<string, string>;
         getConversationTherapistDeltas(): Map<string, number>;
+        getTherapistStanceDelta(cloudId: string): number;
         getConversationSpeakerId(): string | null;
+        getConversationParticipantIds(): [string, string] | null;
+        getConversationEffectiveStance(cloudId: string): number;
+        getConversationPhase(cloudId: string): string | undefined;
+        getSimulationTime(): number;
         getPendingAction(): { actionId: string; sourceCloudId: string } | null;
+        getPendingBlends(): { cloudId: string }[];
         getThoughtBubbles(): ThoughtBubble[];
+        freeze(): void;
+        unfreeze(): void;
         parts: {
             isAgeRevealed(cloudId: string): boolean;
             isIdentityRevealed(cloudId: string): boolean;
@@ -29,6 +36,8 @@ export interface PlaybackRecordingDependencies {
             getNeedAttention(cloudId: string): number;
             getTrust(cloudId: string): number;
             getRelationSummaries(): { fromId: string; toId: string; stance: number; trust: number }[];
+            getRelationStance(fromId: string, toId: string): number;
+            getInterPartTrust(fromId: string, toId: string): number;
         };
     };
     getCloudById: (id: string) => { text: string } | null;
@@ -36,14 +45,14 @@ export interface PlaybackRecordingDependencies {
     getView: () => {
         getVisualMode(): 'panorama' | 'foreground';
         getStarScreenPosition(): { x: number; y: number };
-        getCloudState(cloudId: string): { x: number; y: number } | undefined;
+        getCloudState(cloudId: string): { x: number; y: number; opacity: number; targetOpacity: number; positionTarget: unknown; blendingDegree: number; targetBlendingDegree: number } | undefined;
         isTransitioning(): boolean;
         forceCompleteTransition(): void;
         hasActiveSpiralExits(): boolean;
         hasActiveSupportingEntries(): boolean;
+        hasEnteringCarpets(): boolean;
         getViewSnapshot(): ViewSnapshot;
     };
-    getPendingBlendsCount: () => number;
     hasResolvingClouds: () => boolean;
     getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
     getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void } | null;
@@ -56,7 +65,7 @@ export interface PlaybackRecordingDependencies {
     simulateRayClick: () => void;
     executeSpontaneousBlendForPlayback: (cloudId: string) => void;
     promotePendingBlendForPlayback: (cloudId: string) => void;
-    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
+    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; getLockedDragSign(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
     checkBlendedPartsAttention: () => void;
     onRngChanged: (rng: RNG) => void;
     pauseAnimation: () => void;
@@ -66,12 +75,28 @@ export class PlaybackRecordingCoordinator {
     private recorder: ActionRecorder = new ActionRecorder();
     private playbackController: PlaybackController | null = null;
     private rng: RNG = createModelRNG();
-    private playing: boolean = false;
+    private simTimePaused: boolean = false;
     private lastActionResult: ActionResult | null = null;
     private downloadSessionHandler: (() => void) | null = null;
     private lastOrchestratorSnapshot: OrchestratorSnapshot | undefined;
+    private pendingOrchMismatch: string | undefined;
+    private _inStressPause: boolean = false;
 
     constructor(private deps: PlaybackRecordingDependencies) { }
+
+    isInStressPause(): boolean {
+        return this._inStressPause;
+    }
+
+    enterStressPause(): void {
+        this._inStressPause = true;
+        this.deps.getModel().freeze();
+    }
+
+    exitStressPause(): void {
+        this._inStressPause = false;
+        this.deps.getModel().unfreeze();
+    }
 
     getRNG(): RNG {
         return this.rng;
@@ -86,7 +111,7 @@ export class PlaybackRecordingCoordinator {
         this.setRNG(createModelRNG(seed));
     }
 
-    startRecording(codeVersion: string, isMobile: boolean): void {
+    startRecording(codeVersion: string, isMobile: boolean, playbackOf?: string, playbackOfHash?: string): void {
         if (!(this.rng instanceof SeededRNG)) {
             const seed = Math.floor(Math.random() * 2147483647);
             this.setRNG(createModelRNG(seed));
@@ -97,7 +122,9 @@ export class PlaybackRecordingCoordinator {
             this.deps.getModel().toJSON(),
             codeVersion,
             platform,
-            this.rng as SeededRNG
+            this.rng as SeededRNG,
+            playbackOf,
+            playbackOfHash
         );
     }
 
@@ -108,6 +135,7 @@ export class PlaybackRecordingCoordinator {
     }
 
     stopRecording(): RecordedSession | null {
+        this.recordIntervals();
         const session = this.recorder.getSession(
             this.deps.getModel().toJSON()
         );
@@ -187,15 +215,16 @@ export class PlaybackRecordingCoordinator {
         const modelState = {
             targets: [...model.getTargetCloudIds()],
             blended: model.getBlendedParts(),
+            pendingBlends: model.getPendingBlends().map(p => p.cloudId),
             selfRay: selfRay ? { targetCloudId: selfRay.targetCloudId } : null,
             pendingAction: model.getPendingAction(),
             biography,
             needAttention,
             trust,
-            conversationEffectiveStances: Object.fromEntries(model.getConversationEffectiveStances()),
             conversationPhases: Object.fromEntries(model.getConversationPhases()),
             conversationTherapistDelta: Object.fromEntries(model.getConversationTherapistDeltas()),
             conversationSpeakerId: model.getConversationSpeakerId(),
+            conversationParticipantIds: model.getConversationParticipantIds(),
             interPartRelations: model.parts.getRelationSummaries(),
             thoughtBubbles: model.getThoughtBubbles().map(b => ({ id: b.id, cloudId: b.cloudId, text: b.text, validated: b.validated, partInitiated: b.partInitiated })),
             viewState: this.deps.getView().getViewSnapshot(),
@@ -225,16 +254,16 @@ export class PlaybackRecordingCoordinator {
         return this.playbackController !== null && this.playbackController.isPlaying();
     }
 
-    isPlaying(): boolean {
-        return this.playing;
+    isSimTimeRunning(): boolean {
+        return !this.simTimePaused;
     }
 
-    pausePlayback(): void {
-        this.playing = true;
+    pauseSimTime(): void {
+        this.simTimePaused = true;
     }
 
-    resumePlayback(): void {
-        this.playing = false;
+    resumeSimTime(): void {
+        this.simTimePaused = false;
     }
 
     cancelPlayback(): void {
@@ -291,6 +320,7 @@ export class PlaybackRecordingCoordinator {
             },
             getMode: () => this.deps.getModel().getMode(),
             getPartName: (cloudId) => this.deps.getCloudById(cloudId)?.text ?? cloudId,
+            getSimulationTime: () => this.deps.getModel().getSimulationTime(),
             getLastActionResult: () => this.lastActionResult,
             clearLastActionResult: () => { this.lastActionResult = null; },
             getModelState: (): ModelState => {
@@ -302,10 +332,10 @@ export class PlaybackRecordingCoordinator {
             },
             isTransitioning: () => this.deps.getView().isTransitioning(),
             forceCompleteTransition: () => this.deps.getView().forceCompleteTransition(),
-            hasPendingBlends: () => this.deps.getPendingBlendsCount() > 0,
             hasResolvingClouds: () => this.deps.hasResolvingClouds(),
             hasActiveSpiralExits: () => this.deps.getView().hasActiveSpiralExits(),
             hasActiveSupportingEntries: () => this.deps.getView().hasActiveSupportingEntries(),
+            hasEnteringCarpets: () => this.deps.getView().hasEnteringCarpets(),
             isMobile: () => this.deps.getUIManager()?.isMobile() ?? false,
             getIsFullscreen: () => this.deps.getUIManager()?.getIsFullscreen() ?? false,
             findActionInOpenMenu: (actionId: string): MenuSliceInfo | null => {
@@ -314,24 +344,71 @@ export class PlaybackRecordingCoordinator {
                 if (sliceIndex < 0) return null;
                 return { sliceIndex, itemCount: items.length };
             },
+            getCurrentMenuItems: (): { id: string }[] => {
+                return this.deps.getPieMenuController()?.getCurrentMenuItems() ?? [];
+            },
             simulateHover: (x, y) => {
                 this.simulateHoverAtPosition(x, y);
             },
             simulateClickAtPosition: (x, y) => {
                 return this.simulateClickAtPosition(x, y);
             },
-            pausePlayback: () => {
-                this.playing = true;
+            pauseSimTime: () => {
+                this.simTimePaused = true;
             },
-            resumePlayback: () => {
-                this.playing = false;
+            resumeSimTime: () => {
+                this.simTimePaused = false;
+            },
+            advanceOneInterval: () => {
+                this.deps.getTimeAdvancer()?.advanceIntervals(1);
+                this.deps.checkBlendedPartsAttention();
             },
             advanceIntervals: (count: number, orchState?: OrchestratorSnapshot) => {
                 if (orchState) {
-                    this.deps.getMessageOrchestrator()?.restoreState(orchState);
+                    const actualOrch = this.deps.getMessageOrchestrator()?.getDebugState();
+                    if (actualOrch) {
+                        const mismatches: string[] = [];
+                        for (const [cloudId, expectedTime] of Object.entries(orchState.blendTimers)) {
+                            const actualTime = actualOrch.blendTimers[cloudId] ?? 0;
+                            if (Math.abs(expectedTime - actualTime) > 0.01) {
+                                const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+                                mismatches.push(`blendTimer ${getName(cloudId)}: expected ${expectedTime.toFixed(2)}, got ${actualTime.toFixed(2)}`);
+                            }
+                        }
+                        const orchFields: (keyof OrchestratorSnapshot)[] = [
+                            'respondTimer', 'regulationScore', 'sustainedRegulationTimer',
+                            'newCycleTimer', 'listenerViolationTimer',
+                        ];
+                        for (const field of orchFields) {
+                            const expected = orchState[field];
+                            const actual = actualOrch[field];
+                            if (typeof expected === 'number' && typeof actual === 'number' && Math.abs(expected - actual) > 0.01) {
+                                mismatches.push(`${field}: expected ${expected.toFixed(3)}, got ${actual.toFixed(3)}`);
+                            }
+                        }
+                        if (mismatches.length > 0) {
+                            this.pendingOrchMismatch = mismatches.join('; ');
+                        }
+                    }
                 }
+                const rngBefore = this.rng.getCallCount();
+                const model = this.deps.getModel();
+                const speakerBefore = model.getConversationSpeakerId();
+                const participantsBefore = model.getConversationParticipantIds();
+                const modeBefore = model.getMode();
+                const orchBefore = this.deps.getMessageOrchestrator()?.getDebugState();
+                const blendsBefore = Object.entries(orchBefore?.blendTimers ?? {}).map(([id, t]) => `${id}=${t.toFixed(2)}`).join(',') || 'none';
+                const simTimeBefore = model.getSimulationTime().toFixed(2);
                 this.deps.getTimeAdvancer()?.advanceIntervals(count);
                 this.deps.checkBlendedPartsAttention();
+                const orchAfter = this.deps.getMessageOrchestrator()?.getDebugState();
+                const blendsAfter = Object.entries(orchAfter?.blendTimers ?? {}).map(([id, t]) => `${id}=${t.toFixed(2)}`).join(',') || 'none';
+                const simTimeAfter = model.getSimulationTime().toFixed(2);
+                console.log(`[AdvanceIntervals] count=${count} simTime=${simTimeBefore}->${simTimeAfter} blendTimers: ${blendsBefore} -> ${blendsAfter}`);
+                const rngAfter = this.rng.getCallCount();
+                if (rngAfter !== rngBefore) {
+                    console.log(`[AdvanceIntervals] rngDelta=${rngAfter - rngBefore} mode=${modeBefore} speaker=${speakerBefore} participants=${JSON.stringify(participantsBefore)} orchReg=${orchState?.regulationScore?.toFixed(2)} orchResp=${orchState?.respondTimer?.toFixed(2)}`);
+                }
             },
             executeSpontaneousBlend: (cloudId: string) => {
                 this.deps.executeSpontaneousBlendForPlayback(cloudId);
@@ -339,6 +416,8 @@ export class PlaybackRecordingCoordinator {
             promotePendingBlend: (cloudId: string) => {
                 this.deps.promotePendingBlendForPlayback(cloudId);
             },
+            enterStressPause: () => this.enterStressPause(),
+            exitStressPause: () => this.exitStressPause(),
             getCarpetCenter: (cloudId: string) => {
                 return this.deps.getCarpetRenderer()?.getCarpetCenter(cloudId) ?? null;
             },
@@ -354,6 +433,9 @@ export class PlaybackRecordingCoordinator {
             getCurrentDragStanceDelta: () => {
                 return this.deps.getCarpetRenderer()?.getCurrentDragStanceDelta() ?? null;
             },
+            getLockedDragSign: () => {
+                return this.deps.getCarpetRenderer()?.getLockedDragSign() ?? null;
+            },
             setCarpetsInteractive: (enabled: boolean) => {
                 this.deps.getCarpetRenderer()?.setCarpetsInteractive(enabled);
             },
@@ -363,17 +445,67 @@ export class PlaybackRecordingCoordinator {
             getDiagnostics: () => {
                 const model = this.deps.getModel();
                 const orchState = this.deps.getMessageOrchestrator()?.getDebugState();
+                const view = this.deps.getView();
+                const cloudStates: Record<string, unknown> = {};
+                for (const id of [...model.getTargetCloudIds(), ...model.getBlendedParts()]) {
+                    const cs = view.getCloudState(id);
+                    if (cs) {
+                        cloudStates[id] = {
+                            opacity: cs.opacity.toFixed(3),
+                            targetOpacity: cs.targetOpacity,
+                            pos: `(${cs.x.toFixed(0)},${cs.y.toFixed(0)})`,
+                            posTarget: cs.positionTarget,
+                            blendDeg: cs.blendingDegree.toFixed(3),
+                            targetBlendDeg: cs.targetBlendingDegree.toFixed(3),
+                        };
+                    }
+                }
+                const participantIds = model.getConversationParticipantIds();
+                const effectiveStances: Record<string, number> = {};
+                const phases: Record<string, string> = {};
+                if (participantIds) {
+                    for (const id of participantIds) {
+                        effectiveStances[id] = model.getConversationEffectiveStance(id);
+                        phases[id] = model.getConversationPhase(id) ?? '';
+                    }
+                }
                 return {
                     mode: model.getMode(),
                     pendingAction: model.getPendingAction(),
                     rngCallCount: this.rng.getCallCount(),
+                    rngCallLog: this.rng.getCallLog(),
                     orchestratorTimers: orchState?.blendTimers ?? {},
                     orchestratorCooldowns: orchState?.cooldowns ?? {},
+                    orchestratorConversation: {
+                        respondTimer: orchState?.respondTimer ?? 0,
+                        regulationScore: orchState?.regulationScore ?? 0,
+                        sustainedRegulationTimer: orchState?.sustainedRegulationTimer ?? 0,
+                        newCycleTimer: orchState?.newCycleTimer ?? 0,
+                        listenerViolationTimer: orchState?.listenerViolationTimer ?? 0,
+                    },
+                    conversationState: {
+                        speaker: model.getConversationSpeakerId(),
+                        participants: participantIds,
+                        effectiveStances,
+                        phases,
+                    },
+                    targets: [...model.getTargetCloudIds()],
+                    blended: model.getBlendedParts(),
+                    cloudStates,
                 };
             },
             simulateMouseDown: (x: number, y: number) => {
                 const { clientX, clientY } = this.svgToScreenCoords(x, y);
+                // Temporarily disable cloud pointer events so carpet elements are hit-testable
+                const svgEl = this.deps.getSvgElement();
+                const cloudPaths = svgEl ? [...svgEl.querySelectorAll<SVGElement>('.cloud-group path')] : [];
+                for (const p of cloudPaths) p.setAttribute('pointer-events', 'none');
                 const element = document.elementFromPoint(clientX, clientY);
+                for (const p of cloudPaths) p.setAttribute('pointer-events', 'all');
+                const parentChain: string[] = [];
+                let el: Element | null = element;
+                for (let i = 0; i < 5 && el; i++) { parentChain.push(`${el.tagName}${el.id ? '#'+el.id : ''}.${(el as SVGElement).dataset?.carpetId ?? ''}[${el.getAttribute('class')?.slice(0,30) ?? ''}]`); el = el.parentElement; }
+                console.log(`[SimMouseDown] svg(${x.toFixed(0)},${y.toFixed(0)}) client(${clientX.toFixed(0)},${clientY.toFixed(0)}) chain=${parentChain.join(' > ')} pointerEvents=${element ? getComputedStyle(element).pointerEvents : '?'}`);
                 if (!element) return;
                 element.dispatchEvent(new MouseEvent('mousedown', {
                     clientX, clientY, bubbles: true, cancelable: true
@@ -468,15 +600,16 @@ export class PlaybackRecordingCoordinator {
         element.dispatchEvent(new MouseEvent('mouseup', eventOpts));
         element.dispatchEvent(new MouseEvent('click', eventOpts));
 
-        if (element.closest('.thought-bubble')) {
-            return { success: true, message: 'thought-bubble-dismissed' };
-        }
-
         return { success: true };
     }
 
     private verifyPlaybackSync(action: RecordedAction): ActionResult {
         const parts: string[] = [];
+
+        if (this.pendingOrchMismatch) {
+            parts.push(this.pendingOrchMismatch);
+            this.pendingOrchMismatch = undefined;
+        }
 
         if (action.rngCounts) {
             const actualModelCount = this.rng.getCallCount();
@@ -515,6 +648,16 @@ export class PlaybackRecordingCoordinator {
         const extraTargets = [...actualTargets].filter(t => !expectedTargets.has(t));
         const missingBlended = [...expectedBlended].filter(b => !actualBlended.has(b));
         const extraBlended = [...actualBlended].filter(b => !expectedBlended.has(b));
+
+        if (expected.pendingBlends !== undefined) {
+            const expectedPending = new Set(expected.pendingBlends);
+            const actualPending = new Set(model.getPendingBlends().map(p => p.cloudId));
+            const missingPending = [...expectedPending].filter(p => !actualPending.has(p));
+            const extraPending = [...actualPending].filter(p => !expectedPending.has(p));
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            if (missingPending.length) parts.push(`missing pending: ${missingPending.map(getName).join(', ')}`);
+            if (extraPending.length) parts.push(`extra pending: ${extraPending.map(getName).join(', ')}`);
+        }
 
         if (missingTargets.length || extraTargets.length || missingBlended.length || extraBlended.length) {
             const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
@@ -568,6 +711,51 @@ export class PlaybackRecordingCoordinator {
             const expectedName = expectedSelfRay?.targetCloudId ? getName(expectedSelfRay.targetCloudId) : 'null';
             const actualName = actualSelfRay?.targetCloudId ? getName(actualSelfRay.targetCloudId) : 'null';
             parts.push(`selfRay: expected ${expectedName}, got ${actualName}`);
+        }
+
+        if (expected.conversationTherapistDelta) {
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            for (const [cloudId, expectedDelta] of Object.entries(expected.conversationTherapistDelta)) {
+                const actualDelta = model.getTherapistStanceDelta(cloudId);
+                if (Math.abs(expectedDelta - actualDelta) > 0.001) {
+                    parts.push(`${getName(cloudId)} therapistDelta: expected ${expectedDelta.toFixed(3)}, got ${actualDelta.toFixed(3)}`);
+                }
+            }
+        }
+
+        if (expected.interPartRelations) {
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            for (const exp of expected.interPartRelations) {
+                if (exp.fromId === exp.toId) continue;
+                const actualStance = model.parts.getRelationStance(exp.fromId, exp.toId);
+                if (Math.abs(exp.stance - actualStance) > 0.001) {
+                    parts.push(`${getName(exp.fromId)}→${getName(exp.toId)} stance: expected ${exp.stance.toFixed(3)}, got ${actualStance.toFixed(3)}`);
+                }
+                const actualTrust = model.parts.getInterPartTrust(exp.fromId, exp.toId);
+                if (Math.abs(exp.trust - actualTrust) > 0.001) {
+                    parts.push(`${getName(exp.fromId)}→${getName(exp.toId)} interTrust: expected ${exp.trust.toFixed(3)}, got ${actualTrust.toFixed(3)}`);
+                }
+            }
+        }
+
+        if (expected.conversationPhases) {
+            const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+            for (const [cloudId, expectedPhase] of Object.entries(expected.conversationPhases)) {
+                const actualPhase = model.getConversationPhase(cloudId);
+                if (expectedPhase !== actualPhase) {
+                    parts.push(`${getName(cloudId)} phase: expected ${expectedPhase}, got ${actualPhase ?? 'none'}`);
+                }
+            }
+        }
+
+        if (expected.conversationSpeakerId !== undefined) {
+            const actualSpeaker = model.getConversationSpeakerId();
+            if (expected.conversationSpeakerId !== actualSpeaker) {
+                const getName = (id: string) => this.deps.getCloudById(id)?.text ?? id;
+                const exp = expected.conversationSpeakerId ? getName(expected.conversationSpeakerId) : 'none';
+                const act = actualSpeaker ? getName(actualSpeaker) : 'none';
+                parts.push(`speaker: expected ${exp}, got ${act}`);
+            }
         }
 
         const expectedOrch = action.orchState;

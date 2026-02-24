@@ -8,6 +8,8 @@ export class ActionRecorder {
     private modelSeed: number = 0;
     private codeVersion: string = '';
     private platform: 'desktop' | 'mobile' = 'desktop';
+    private playbackOf: string | undefined;
+    private playbackOfHash: string | undefined;
     private startTimestamp: number = 0;
     private sessionStartTime: number = 0;
     private lastActionTime: number = 0;
@@ -22,12 +24,16 @@ export class ActionRecorder {
         initialModel: SerializedModel,
         codeVersion: string,
         platform: 'desktop' | 'mobile',
-        rng?: SeededRNG
+        rng?: SeededRNG,
+        playbackOf?: string,
+        playbackOfHash?: string
     ): void {
         this.actions = [];
         this.initialModel = initialModel;
         this.codeVersion = codeVersion;
         this.platform = platform;
+        this.playbackOf = playbackOf;
+        this.playbackOfHash = playbackOfHash;
         this.modelSeed = rng?.getInitialSeed() ?? 0;
         this.startTimestamp = Date.now();
         this.sessionStartTime = performance.now();
@@ -121,6 +127,8 @@ export class ActionRecorder {
             platform: this.platform,
             modelSeed: this.modelSeed,
             timestamp: this.startTimestamp,
+            ...(this.playbackOf && { playbackOf: this.playbackOf }),
+            ...(this.playbackOfHash && { playbackOfHash: this.playbackOfHash }),
             initialModel: this.initialModel,
             actions: [...this.actions],
             finalModel,
@@ -136,6 +144,8 @@ export class ActionRecorder {
         this.initialModel = null;
         this.modelSeed = 0;
         this.codeVersion = '';
+        this.playbackOf = undefined;
+        this.playbackOfHash = undefined;
         this.startTimestamp = 0;
     }
 

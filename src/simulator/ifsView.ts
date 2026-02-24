@@ -5,6 +5,7 @@ import { VictoryBanner } from './view/VictoryBanner.js';
 import { HelpPanel, HelpData } from './view/HelpPanel.js';
 import { SelfRay, BiographyField, PartContext } from '../star/selfRay.js';
 import { Cloud } from '../cloud/cloudShape.js';
+import { DEFAULT_PANORAMA_INPUT_CONFIG } from '../cloud/panoramaInputHandler.js';
 import { SeatInfo, CarpetState, CARPET_OFFSCREEN_DISTANCE } from '../star/carpetRenderer.js';
 import { STAR_CLOUD_ID } from './view/SeatManager.js';
 
@@ -56,7 +57,7 @@ export class SimulatorView {
     private transitionProgress: number = 0;
     private transitionDuration: number = 1.0;
     private transitionDirection: 'forward' | 'reverse' | 'none' = 'none';
-    private panoramaZoom: number = 0.5;
+    private panoramaZoom: number = DEFAULT_PANORAMA_INPUT_CONFIG.minZoom;
     private transitionStartZoom: number = 1.0;
 
     private canvasWidth: number;
@@ -84,7 +85,6 @@ export class SimulatorView {
 
     // Thought bubbles
     private thoughtBubbleRenderer: ThoughtBubbleRenderer | null = null;
-    private onThoughtBubbleDismiss: ((id: number) => void) | null = null;
 
     // Victory banner
     private victoryBanner: VictoryBanner = new VictoryBanner();
@@ -104,8 +104,8 @@ export class SimulatorView {
     // Conversation visual state
     private conversationParticipantIds: [string, string] | null = null;
 
-    // Victory check throttle
-    private lastVictoryCheck: number = 0;
+    // Mouse position in SVG coordinates (null if mouse not over SVG)
+    private mouseSvgPos: { x: number; y: number } | null = null;
 
     constructor(canvasWidth: number, canvasHeight: number) {
         this.canvasWidth = canvasWidth;
@@ -132,6 +132,28 @@ export class SimulatorView {
     setGroups(zoomGroup: SVGGElement, uiGroup: SVGGElement): void {
         this.zoomGroup = zoomGroup;
         this.uiGroup = uiGroup;
+        this.setupMouseTracking();
+    }
+
+    private setupMouseTracking(): void {
+        const svg = this.uiGroup?.ownerSVGElement;
+        if (!svg) return;
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isMobile) return;
+        svg.addEventListener('mousemove', (e: MouseEvent) => {
+            const rect = svg.getBoundingClientRect();
+            const scaleX = svg.viewBox.baseVal.width / rect.width;
+            const scaleY = svg.viewBox.baseVal.height / rect.height;
+            this.mouseSvgPos = {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY,
+            };
+        });
+        svg.addEventListener('mouseleave', () => { this.mouseSvgPos = null; });
+    }
+
+    getMouseSvgPos(): { x: number; y: number } | null {
+        return this.mouseSvgPos;
     }
 
     createStar(onStarClick: (x: number, y: number, event: MouseEvent | TouchEvent) => void): void {
@@ -200,7 +222,8 @@ export class SimulatorView {
             container,
             getVisualCenter,
             (cloudId) => this.isCloudReadyForMessage(cloudId),
-            () => ({ width: this.canvasWidth, height: this.canvasHeight })
+            () => ({ width: this.canvasWidth, height: this.canvasHeight }),
+            () => this.mouseSvgPos
         );
     }
 
@@ -234,15 +257,9 @@ export class SimulatorView {
         this.thoughtBubbleRenderer = new ThoughtBubbleRenderer(
             container,
             (cloudId) => this.getCloudState(cloudId) ?? null,
-            () => ({ width: this.canvasWidth, height: this.canvasHeight })
+            () => ({ width: this.canvasWidth, height: this.canvasHeight }),
+            () => this.mouseSvgPos
         );
-        this.thoughtBubbleRenderer.setOnDismiss((id) => {
-            this.onThoughtBubbleDismiss?.(id);
-        });
-    }
-
-    setOnThoughtBubbleDismiss(callback: (id: number) => void): void {
-        this.onThoughtBubbleDismiss = callback;
     }
 
     syncThoughtBubbles(model: SimulatorModel): void {
@@ -306,8 +323,13 @@ export class SimulatorView {
             }
 
             // Reset opacity smoothing for all clouds to ensure consistent transition speed
-            for (const state of this.cloudStates.values()) {
+            for (const [cloudId, state] of this.cloudStates.entries()) {
                 state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+                // Non-conference clouds were faded to 0 in foreground mode; snap them back to 1
+                // immediately when returning to panorama so they're clickable without delay
+                if (mode === 'panorama' && !this.previousForegroundIds.has(cloudId)) {
+                    state.opacity = 1;
+                }
             }
 
             this.animatedStar?.setForeground(mode === 'foreground');
@@ -432,7 +454,7 @@ export class SimulatorView {
             case 'supporting': {
                 const targetPos = this.getCloudPosition(target.targetId) ?? { x: centerX, y: centerY };
                 const angle = Math.atan2(targetPos.y - centerY, targetPos.x - centerX);
-                const distance = 80 + target.index * 50;
+                const distance = 100 + target.index * 50;
                 return {
                     x: targetPos.x + Math.cos(angle) * distance,
                     y: targetPos.y + Math.sin(angle) * distance,
@@ -607,12 +629,7 @@ export class SimulatorView {
 
     checkVictoryCondition(model: SimulatorModel): void {
         if (this.victoryBanner.isShown() || !this.htmlContainer) return;
-
-        const now = Date.now();
-        if (now - this.lastVictoryCheck < 1000) return;
-        this.lastVictoryCheck = now;
-
-        if (model.checkAndSetVictory()) {
+        if (model.isVictoryAchieved()) {
             this.victoryBanner.show(this.htmlContainer);
             this.events.emit('victory-achieved', {});
         }
@@ -681,7 +698,6 @@ export class SimulatorView {
     private updateCloudStateTargets(model: SimulatorModel, instances: CloudInstance[]): void {
         const targetIds = model.getTargetCloudIds();
         const blendedParts = model.getBlendedParts();
-        const pendingBlends = model.getPendingBlends();
         const blendedDegrees = model.getBlendedPartsWithDegrees();
         const allSupporting = model.getAllSupportingParts();
 
@@ -704,9 +720,8 @@ export class SimulatorView {
 
             const isTarget = targetIds.has(cloudId);
             const isBlended = blendedParts.includes(cloudId);
-            const isPendingBlend = pendingBlends.some(p => p.cloudId === cloudId);
             const isSupporting = allSupporting.has(cloudId);
-            const isInForeground = isTarget || isBlended || isPendingBlend || isSupporting;
+            const isInForeground = isTarget || isBlended || isSupporting;
 
             const inForegroundMode = this.mode === 'foreground' ||
                 (this.transitionDirection === 'reverse' && this.transitionProgress < 1);
@@ -746,9 +761,6 @@ export class SimulatorView {
                         state.targetBlendingDegree = degree;
                     }
                     targetOpacity = BLENDED_OPACITY;
-                } else if (isPendingBlend) {
-                    positionTarget = { type: 'star' };
-                    targetOpacity = BLENDED_OPACITY;
                 } else if (isTarget) {
                     positionTarget = { type: 'seat', cloudId };
                 } else if (isSupporting) {
@@ -784,11 +796,26 @@ export class SimulatorView {
                 }
             }
 
+            // Cancel spiral exit if cloud's target state changed (e.g. re-added as target after backlash displacement)
+            if (this.transitionAnimator.isSpiralExiting(cloudId)) {
+                if (positionTarget.type !== 'panorama') {
+                    console.log(`[cancelSpiral] ${cloudId} newTarget=${positionTarget.type} isTarget=${isTarget}`);
+                    this.transitionAnimator.cancelSpiralExit(cloudId);
+                }
+            }
+
             // Don't override state for parts in entry animation (supporting entries handle their own state)
             if (!this.transitionAnimator.isSupportingEntering(cloudId)) {
+                const oldTarget = state.positionTarget;
                 state.positionTarget = positionTarget;
+                if (cloudId === 'cloud_3' && oldTarget.type !== positionTarget.type) {
+                    console.log(`[DEBUG cloud_3] positionTarget changed: ${oldTarget.type} → ${positionTarget.type} isTarget=${isTarget} isBlended=${isBlended} isSupporting=${isSupporting} mode=${this.mode} prevFG=${this.previousForegroundIds.has(cloudId)}`);
+                }
                 // Don't override opacity for delayed arrivals - they should stay invisible until arrival time
                 if (!this.transitionAnimator.isAwaitingArrival(cloudId)) {
+                    if (cloudId === 'cloud_3' && state.targetOpacity !== targetOpacity) {
+                        console.log(`[DEBUG cloud_3] targetOpacity changed: ${state.targetOpacity} → ${targetOpacity} posTarget=${positionTarget.type}`);
+                    }
                     state.targetOpacity = targetOpacity;
                 }
             }
@@ -870,15 +897,14 @@ export class SimulatorView {
         this.animateStar(deltaTime);
     }
 
+    private _cloud3DebugLogged = false;
+
     animateCloudStates(
         deltaTime: number,
         panoramaPositions: Map<string, { x: number; y: number; scale: number }>,
         model: SimulatorModel
-    ): { completedUnblendings: string[]; completedPendingBlends: string[] } {
+    ): { completedUnblendings: string[] } {
         const completedUnblendings: string[] = [];
-        const completedPendingBlends: string[] = [];
-        const pendingBlendIds = new Set(model.getPendingBlends().map(p => p.cloudId));
-        const starPos = this.getStarPosition();
 
         for (const [cloudId, state] of this.cloudStates) {
             // Resolve semantic position target to actual x/y
@@ -889,6 +915,10 @@ export class SimulatorView {
                 model
             );
 
+            if (cloudId === 'cloud_3' && !this._cloud3DebugLogged && state.opacity < 0.15 && state.targetOpacity > 0.5) {
+                this._cloud3DebugLogged = true;
+                console.log(`[DEBUG cloud_3] opacity anomaly: opacity=${state.opacity.toFixed(3)} targetOpacity=${state.targetOpacity} smoothing.opacity=${state.smoothing.opacity} posTarget=${JSON.stringify(state.positionTarget)} resolved=(${resolved.x.toFixed(0)},${resolved.y.toFixed(0)}) state=(${state.x.toFixed(0)},${state.y.toFixed(0)}) isFlyOut=${this.transitionAnimator.isFlyOutExiting('cloud_3')} isSpiral=${this.transitionAnimator.isSpiralExiting('cloud_3')} mode=${this.mode}`);
+            }
 
             // Apply linear interpolation to position and scale
             const posDiff = Math.sqrt((resolved.x - state.x) ** 2 + (resolved.y - state.y) ** 2);
@@ -946,19 +976,9 @@ export class SimulatorView {
             if (prevDegree > 0.01 && state.blendingDegree <= 0.01 && state.targetBlendingDegree <= 0.01) {
                 completedUnblendings.push(cloudId);
             }
-
-            // Detect when pending blend reaches the star
-            if (pendingBlendIds.has(cloudId)) {
-                const dx = state.x - starPos.x;
-                const dy = state.y - starPos.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < 30) {
-                    completedPendingBlends.push(cloudId);
-                }
-            }
         }
 
-        return { completedUnblendings, completedPendingBlends };
+        return { completedUnblendings };
     }
 
     getCloudState(cloudId: string): CloudAnimatedState | undefined {
@@ -1141,7 +1161,7 @@ export class SimulatorView {
                 this.animatedStar.setConversationState(true, [
                     toCloudInfo(participantIds[0], p0),
                     toCloudInfo(participantIds[1], p1),
-                ], tableCenter);
+                ], tableCenter, this.getConferenceTableRadius());
                 return;
             }
         }
@@ -1329,6 +1349,13 @@ export class SimulatorView {
 
     hasActiveSupportingEntries(): boolean {
         return this.transitionAnimator.hasActiveSupportingEntries();
+    }
+
+    hasEnteringCarpets(): boolean {
+        for (const carpet of this.seatManager.getCarpets().values()) {
+            if (carpet.entering) return true;
+        }
+        return false;
     }
 
     animateSpiralExits(): void {

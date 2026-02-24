@@ -1123,7 +1123,7 @@ export class Cloud {
         this.groupElement.addEventListener('touchstart', (e: TouchEvent) => {
             callbacks.onLongPressStart();
             callbacks.onTouchStart?.(e);
-        }, { passive: true });
+        }, { passive: false });
 
         this.groupElement.addEventListener('touchend', () => {
             callbacks.onLongPressEnd();

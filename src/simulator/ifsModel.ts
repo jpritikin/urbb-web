@@ -1,6 +1,7 @@
 import { PartStateManager, PartState, PartBiography, PartDialogues, type IfioPhase } from '../cloud/partStateManager.js';
-import type { SerializedModel } from '../playback/testability/types.js';
+import type { SerializedModel, OrchestratorSnapshot } from '../playback/testability/types.js';
 import type { RNG } from '../playback/testability/rng.js';
+import { CARPET_FLY_DURATION } from '../star/carpetRenderer.js';
 
 export type BlendReason = 'spontaneous' | 'therapist';
 export type MessageType = 'conversation';
@@ -44,7 +45,7 @@ export class SimulatorModel {
     private supportingParts: Map<string, Set<string>> = new Map();
     private selfRay: SelfRayState | null = null;
     private blendedParts: Map<string, BlendedPartState> = new Map();
-    private pendingBlends: { cloudId: string; reason: BlendReason }[] = [];
+    private pendingBlends: { cloudId: string; reason: BlendReason; timer: number }[] = [];
     readonly parts: PartStateManager = new PartStateManager();
     private displacedParts: Set<string> = new Set();
     private messages: PartMessage[] = [];
@@ -54,12 +55,22 @@ export class SimulatorModel {
     private selfAmplification: number = 1;
     private mode: SimulatorMode = 'panorama';
     private pendingAction: PendingAction | null = null;
-    private conversationEffectiveStances: Map<string, number> = new Map();
     private conversationTherapistDelta: Map<string, number> = new Map();
     private conversationParticipantIds: [string, string] | null = null;
+    private _frozen: boolean = false;
+
+    freeze(): void { this._frozen = true; }
+    unfreeze(): void { this._frozen = false; }
+
+    private assertNotFrozen(method: string): void {
+        if (this._frozen) {
+            throw new Error(`[ModelFreeze] Model mutation '${method}' called while model is frozen (view-only context)`);
+        }
+    }
     private conversationPhases: Map<string, IfioPhase> = new Map();
     private conversationSpeakerId: string | null = null;
     private simulationTime: number = 0;
+    private orchestratorState: OrchestratorSnapshot | null = null;
     private onModeChange?: (mode: SimulatorMode) => void;
 
     getSimulationTime(): number {
@@ -67,7 +78,17 @@ export class SimulatorModel {
     }
 
     advanceSimulationTime(dt: number): void {
+        this.assertNotFrozen('advanceSimulationTime');
         this.simulationTime += dt;
+    }
+
+    getOrchestratorState(): OrchestratorSnapshot | null {
+        return this.orchestratorState;
+    }
+
+    setOrchestratorState(state: OrchestratorSnapshot): void {
+        this.assertNotFrozen('setOrchestratorState');
+        this.orchestratorState = state;
     }
 
     getSelfAmplification(): number {
@@ -75,6 +96,7 @@ export class SimulatorModel {
     }
 
     setSelfAmplification(value: number): void {
+        this.assertNotFrozen('setSelfAmplification');
         this.selfAmplification = value;
     }
 
@@ -87,6 +109,7 @@ export class SimulatorModel {
     }
 
     setMode(mode: SimulatorMode): void {
+        this.assertNotFrozen('setMode');
         if (mode !== this.mode) {
             this.mode = mode;
             if (mode === 'panorama') {
@@ -103,10 +126,12 @@ export class SimulatorModel {
     }
 
     setPendingAction(action: PendingAction | null): void {
+        this.assertNotFrozen('setPendingAction');
         this.pendingAction = action;
     }
 
     changeNeedAttention(cloudId: string, delta: number): void {
+        this.assertNotFrozen('changeNeedAttention');
         const current = this.parts.getNeedAttention(cloudId);
         const amplifiedDelta = delta * this.selfAmplification;
         this.parts.setNeedAttention(cloudId, Math.max(0, current + amplifiedDelta));
@@ -121,6 +146,7 @@ export class SimulatorModel {
     }
 
     setTargetCloud(cloudId: string): void {
+        this.assertNotFrozen('setTargetCloud');
         this.blendedParts.clear();
         this.targetCloudIds.clear();
         this.targetCloudIds.add(cloudId);
@@ -130,6 +156,7 @@ export class SimulatorModel {
     }
 
     addTargetCloud(cloudId: string): void {
+        this.assertNotFrozen('addTargetCloud');
         this.blendedParts.delete(cloudId);
         this.targetCloudIds.add(cloudId);
         for (const [, supportingIds] of this.supportingParts) {
@@ -138,10 +165,12 @@ export class SimulatorModel {
     }
 
     removeTargetCloud(cloudId: string): void {
+        this.assertNotFrozen('removeTargetCloud');
         this.targetCloudIds.delete(cloudId);
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
         }
+        this.supportingParts.delete(cloudId);
     }
 
     toggleTargetCloud(cloudId: string): void {
@@ -153,15 +182,18 @@ export class SimulatorModel {
     }
 
     clearTargets(): void {
+        this.assertNotFrozen('clearTargets');
         this.targetCloudIds.clear();
         this.clearSelfRay();
     }
 
     setSupportingParts(targetId: string, supportingIds: Set<string>): void {
+        this.assertNotFrozen('setSupportingParts');
         this.supportingParts.set(targetId, new Set(supportingIds));
     }
 
     summonSupportingPart(targetId: string, supportingId: string): boolean {
+        this.assertNotFrozen('summonSupportingPart');
         if (this.isTarget(supportingId) || this.isBlended(supportingId) || this.getAllSupportingParts().has(supportingId)) {
             return false;
         }
@@ -206,46 +238,41 @@ export class SimulatorModel {
     }
 
     clearSupportingParts(): void {
+        this.assertNotFrozen('clearSupportingParts');
         this.supportingParts.clear();
     }
 
     clearConferenceTable(): void {
+        this.assertNotFrozen('clearConferenceTable');
         this.targetCloudIds.clear();
         this.clearSelfRay();
         this.blendedParts.clear();
         this.supportingParts.clear();
     }
 
-    private static readonly REACTIVITY_MULTIPLIER = 2;
-
     addBlendedPart(cloudId: string, reason: BlendReason = 'spontaneous', degree: number = 1): void {
+        this.assertNotFrozen('addBlendedPart');
         if (this.targetCloudIds.has(cloudId)) {
             this.removeTargetCloud(cloudId);
         }
         if (!this.blendedParts.has(cloudId)) {
             this.blendedParts.set(cloudId, { degree: Math.max(0.01, Math.min(1, degree)), reason });
             this.clearSelfRay();
-            this.triggerReactiveBlending(cloudId);
         }
     }
 
-    private triggerReactiveBlending(blendingCloudId: string): void {
-        const hostileSenders = this.parts.getHostileRelationSenders(blendingCloudId);
-        for (const senderId of hostileSenders) {
-            const trust = this.parts.getInterPartTrust(senderId, blendingCloudId);
-            const spike = (0.3 - trust) * SimulatorModel.REACTIVITY_MULTIPLIER;
-            this.changeNeedAttention(senderId, spike);
-        }
-    }
 
     removeBlendedPart(cloudId: string): void {
+        this.assertNotFrozen('removeBlendedPart');
         if (this.blendedParts.has(cloudId)) {
             this.blendedParts.delete(cloudId);
             this.parts.clearBeWithUsed(cloudId);
+            this.changeNeedAttention(cloudId, -0.5);
         }
     }
 
     setBlendingDegree(cloudId: string, degree: number): void {
+        this.assertNotFrozen('setBlendingDegree');
         const existing = this.blendedParts.get(cloudId);
         if (existing) {
             const clampedDegree = Math.max(0, Math.min(1, degree));
@@ -258,6 +285,7 @@ export class SimulatorModel {
     }
 
     promoteBlendedToTarget(cloudId: string): void {
+        this.assertNotFrozen('promoteBlendedToTarget');
         if (!this.blendedParts.has(cloudId)) return;
         this.blendedParts.delete(cloudId);
         this.targetCloudIds.add(cloudId);
@@ -285,6 +313,7 @@ export class SimulatorModel {
     }
 
     setBlendReason(cloudId: string, reason: BlendReason): void {
+        this.assertNotFrozen('setBlendReason');
         const existing = this.blendedParts.get(cloudId);
         if (existing && existing.reason !== reason) {
             existing.reason = reason;
@@ -308,13 +337,35 @@ export class SimulatorModel {
     }
 
     clearBlendedParts(): void {
+        this.assertNotFrozen('clearBlendedParts');
         this.blendedParts.clear();
     }
 
     enqueuePendingBlend(cloudId: string, reason: BlendReason): void {
+        this.assertNotFrozen('enqueuePendingBlend');
         if (!this.pendingBlends.some(p => p.cloudId === cloudId)) {
-            this.pendingBlends.push({ cloudId, reason });
+            this.pendingBlends.push({ cloudId, reason, timer: CARPET_FLY_DURATION });
         }
+    }
+
+    canDisplaceBlended(cloudId: string): boolean {
+        const demandingNeed = this.parts.getNeedAttention(cloudId);
+        for (const blendedId of this.blendedParts.keys()) {
+            if (demandingNeed <= this.parts.getNeedAttention(blendedId) + 1) return false;
+        }
+        return true;
+    }
+
+    tickPendingBlendTimers(dt: number): string[] {
+        this.assertNotFrozen('tickPendingBlendTimers');
+        if (this.pendingBlends.length === 0) return [];
+        const front = this.pendingBlends[0];
+        if (this.blendedParts.size > 0 && !this.canDisplaceBlended(front.cloudId)) return [];
+        // If already in conference, no exit animation to wait for
+        if (this.getConferenceCloudIds().has(front.cloudId)) return [front.cloudId];
+        front.timer -= dt;
+        if (front.timer <= 0) return [front.cloudId];
+        return [];
     }
 
     dequeuePendingBlend(): { cloudId: string; reason: BlendReason } | null {
@@ -333,15 +384,23 @@ export class SimulatorModel {
         return this.pendingBlends.some(p => p.cloudId === cloudId);
     }
 
+    removePendingBlend(cloudId: string): void {
+        this.assertNotFrozen('removePendingBlend');
+        this.pendingBlends = this.pendingBlends.filter(p => p.cloudId !== cloudId);
+    }
+
     clearPendingBlends(): void {
+        this.assertNotFrozen('clearPendingBlends');
         this.pendingBlends = [];
     }
 
     setSelfRay(targetCloudId: string): void {
+        this.assertNotFrozen('setSelfRay');
         this.selfRay = { targetCloudId };
     }
 
     clearSelfRay(): void {
+        this.assertNotFrozen('clearSelfRay');
         this.selfRay = null;
     }
 
@@ -353,7 +412,8 @@ export class SimulatorModel {
         return this.selfRay !== null;
     }
 
-    stepBackPart(cloudId: string): void {
+    removeFromConference(cloudId: string): void {
+        this.assertNotFrozen('removeFromConference');
         this.targetCloudIds.delete(cloudId);
         if (this.selfRay?.targetCloudId === cloudId) {
             this.clearSelfRay();
@@ -374,13 +434,22 @@ export class SimulatorModel {
     }
 
     partDemandsAttention(demandingCloudId: string): void {
+        this.assertNotFrozen('partDemandsAttention');
         if (this.isBlended(demandingCloudId)) {
             return;
         }
+        this.removePendingBlend(demandingCloudId);
 
         if (this.isTarget(demandingCloudId)) {
-            this.removeTargetCloud(demandingCloudId);
-            this.addBlendedPart(demandingCloudId, 'spontaneous');
+            if (this.canDisplaceBlended(demandingCloudId)) {
+                for (const blendedId of this.getBlendedParts()) {
+                    this.promoteBlendedToTarget(blendedId);
+                }
+                this.removeTargetCloud(demandingCloudId);
+                this.addBlendedPart(demandingCloudId, 'spontaneous');
+            } else {
+                this.enqueuePendingBlend(demandingCloudId, 'spontaneous');
+            }
             return;
         }
 
@@ -393,12 +462,12 @@ export class SimulatorModel {
 
         for (const targetId of currentTargets) {
             this.displacedParts.add(targetId);
-            this.stepBackPart(targetId);
+            this.removeFromConference(targetId);
         }
         for (const blendedId of currentBlended) {
             if (!currentTargets.includes(blendedId)) {
                 this.displacedParts.add(blendedId);
-                this.stepBackPart(blendedId);
+                this.removeFromConference(blendedId);
             }
         }
 
@@ -412,6 +481,7 @@ export class SimulatorModel {
     }
 
     clearDisplacedPart(cloudId: string): void {
+        this.assertNotFrozen('clearDisplacedPart');
         this.displacedParts.delete(cloudId);
     }
 
@@ -457,9 +527,9 @@ export class SimulatorModel {
         cloned.selfAmplification = this.selfAmplification;
         cloned.mode = this.mode;
         cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
-        cloned.conversationEffectiveStances = new Map(this.conversationEffectiveStances);
         cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
         cloned.simulationTime = this.simulationTime;
+        cloned.orchestratorState = this.orchestratorState ? { ...this.orchestratorState } : null;
         return cloned;
     }
 
@@ -503,6 +573,7 @@ export class SimulatorModel {
     }
 
     increaseNeedAttention(deltaTime: number, inConference: boolean): void {
+        this.assertNotFrozen('increaseNeedAttention');
         const allParts = this.parts.getAllPartStates();
         for (const [cloudId] of allParts) {
             if (this.isBlended(cloudId)) {
@@ -529,6 +600,7 @@ export class SimulatorModel {
     static readonly MESSAGE_TRAVEL_TIME = 3.0;
 
     sendMessage(senderId: string, targetId: string, text: string, type: MessageType): PartMessage {
+        this.assertNotFrozen('sendMessage');
         const message: PartMessage = {
             id: this.messageIdCounter++,
             type,
@@ -542,6 +614,7 @@ export class SimulatorModel {
     }
 
     advanceMessages(deltaTime: number): PartMessage[] {
+        this.assertNotFrozen('advanceMessages');
         const arrived: PartMessage[] = [];
         for (const message of this.messages) {
             if (message.travelTimeRemaining > 0) {
@@ -560,6 +633,7 @@ export class SimulatorModel {
     }
 
     removeMessage(id: number): void {
+        this.assertNotFrozen('removeMessage');
         const idx = this.messages.findIndex(m => m.id === id);
         if (idx !== -1) {
             this.messages.splice(idx, 1);
@@ -567,18 +641,21 @@ export class SimulatorModel {
     }
 
     clearMessages(): void {
+        this.assertNotFrozen('clearMessages');
         this.messages = [];
     }
 
     static readonly THOUGHT_BUBBLE_DURATION = 10;
 
     addThoughtBubble(text: string, cloudId: string, partInitiated: boolean = false): void {
+        this.assertNotFrozen('addThoughtBubble');
         const expiresAt = this.simulationTime + SimulatorModel.THOUGHT_BUBBLE_DURATION;
         const id = ++this.messageIdCounter;
         this.thoughtBubbles.push({ id, text, cloudId, expiresAt, partInitiated });
     }
 
     removeThoughtBubble(id: number): void {
+        this.assertNotFrozen('removeThoughtBubble');
         const idx = this.thoughtBubbles.findIndex(b => b.id === id);
         if (idx !== -1) {
             this.thoughtBubbles.splice(idx, 1);
@@ -590,14 +667,17 @@ export class SimulatorModel {
     }
 
     expireThoughtBubbles(): void {
+        this.assertNotFrozen('expireThoughtBubbles');
         this.thoughtBubbles = this.thoughtBubbles.filter(b => b.expiresAt > this.simulationTime);
     }
 
     clearThoughtBubbles(): void {
+        this.assertNotFrozen('clearThoughtBubbles');
         this.thoughtBubbles = [];
     }
 
     validateThoughtBubble(bubbleId: number, extendSeconds: number): boolean {
+        this.assertNotFrozen('validateThoughtBubble');
         const bubble = this.thoughtBubbles.find(b => b.id === bubbleId);
         if (!bubble) return false;
         bubble.validated = true;
@@ -606,10 +686,12 @@ export class SimulatorModel {
     }
 
     removeThoughtBubblesForCloud(cloudId: string): void {
+        this.assertNotFrozen('removeThoughtBubblesForCloud');
         this.thoughtBubbles = this.thoughtBubbles.filter(b => b.cloudId !== cloudId);
     }
 
     checkAndSetVictory(): boolean {
+        this.assertNotFrozen('checkAndSetVictory');
         if (this.victoryAchieved) return false;
 
         const allParts = this.getAllPartStates();
@@ -629,6 +711,7 @@ export class SimulatorModel {
     }
 
     initConversation(participantIds: [string, string], rng: RNG): void {
+        this.assertNotFrozen('initConversation');
         const [a, b] = participantIds;
         this.conversationParticipantIds = participantIds;
         this.parts.applyStanceFlip(a, b, () => rng.random('conv_stance'));
@@ -656,6 +739,7 @@ export class SimulatorModel {
     }
 
     setConversationPhase(cloudId: string, phase: IfioPhase): void {
+        this.assertNotFrozen('setConversationPhase');
         this.conversationPhases.set(cloudId, phase);
     }
 
@@ -668,11 +752,12 @@ export class SimulatorModel {
     }
 
     setConversationSpeakerId(id: string): void {
+        this.assertNotFrozen('setConversationSpeakerId');
         this.conversationSpeakerId = id;
     }
 
     clearConversationStances(): void {
-        this.conversationEffectiveStances.clear();
+        this.assertNotFrozen('clearConversationStances');
         this.conversationTherapistDelta.clear();
         this.conversationParticipantIds = null;
         this.conversationPhases.clear();
@@ -684,11 +769,14 @@ export class SimulatorModel {
     }
 
     addTherapistStanceDelta(cloudId: string, delta: number): void {
+        this.assertNotFrozen('addTherapistStanceDelta');
         if (!this.conversationParticipantIds) return;
         const [a, b] = this.conversationParticipantIds;
         const otherId = cloudId === a ? b : a;
         const stance = this.parts.getRelationStance(cloudId, otherId);
         const current = this.conversationTherapistDelta.get(cloudId) ?? 0;
+        console.log(`[addTherapistDelta] ${cloudId} current=${current.toFixed(3)} + delta=${delta.toFixed(3)}`,
+            current !== 0 ? new Error().stack : '');
         const unclamped = current + delta;
         this.conversationTherapistDelta.set(cloudId, Math.max(-1 - stance, Math.min(1 - stance, unclamped)));
     }
@@ -698,6 +786,7 @@ export class SimulatorModel {
     }
 
     decayTherapistStanceDeltas(dt: number): void {
+        this.assertNotFrozen('decayTherapistStanceDeltas');
         const decay = Math.exp(-0.08 * dt);
         for (const [id, delta] of this.conversationTherapistDelta) {
             const newDelta = delta * decay;
@@ -722,18 +811,13 @@ export class SimulatorModel {
         return Math.max(-1, Math.min(1, stance + delta));
     }
 
-    updateConversationEffectiveStancesCache(): void {
-        if (!this.conversationParticipantIds) {
-            this.conversationEffectiveStances.clear();
-            return;
-        }
-        for (const id of this.conversationParticipantIds) {
-            this.conversationEffectiveStances.set(id, this.getConversationEffectiveStance(id));
-        }
-    }
-
     getConversationEffectiveStances(): Map<string, number> {
-        return this.conversationEffectiveStances;
+        const result = new Map<string, number>();
+        if (!this.conversationParticipantIds) return result;
+        for (const id of this.conversationParticipantIds) {
+            result.set(id, this.getConversationEffectiveStance(id));
+        }
+        return result;
     }
 
     isConversationPossible(): { possible: boolean; participantIds: [string, string] | null } {
@@ -750,12 +834,15 @@ export class SimulatorModel {
     }
 
     syncConversation(rng: RNG): void {
+        this.assertNotFrozen('syncConversation');
         const convResult = this.isConversationPossible();
         if (convResult.participantIds) {
             if (!this.isConversationInitialized()) {
+                console.log(`[DEBUG syncConv] INIT conversation ${convResult.participantIds} mode=${this.mode}`);
                 this.initConversation(convResult.participantIds, rng);
             }
         } else if (this.isConversationInitialized()) {
+            console.log(`[DEBUG syncConv] CLEAR conversation mode=${this.mode} participants=${JSON.stringify(this.conversationParticipantIds)}`);
             this.clearConversationStances();
         }
     }
@@ -785,12 +872,13 @@ export class SimulatorModel {
             selfAmplification: this.selfAmplification,
             mode: this.mode,
             pendingAction: this.pendingAction ? { ...this.pendingAction } : null,
-            conversationEffectiveStances: Object.fromEntries(this.conversationEffectiveStances),
+            conversationEffectiveStances: Object.fromEntries(this.getConversationEffectiveStances()),
             conversationTherapistDelta: Object.fromEntries(this.conversationTherapistDelta),
             conversationParticipantIds: this.conversationParticipantIds,
             conversationPhases: Object.fromEntries(this.conversationPhases),
             conversationSpeakerId: this.conversationSpeakerId,
             simulationTime: this.simulationTime,
+            orchestratorState: this.orchestratorState ?? undefined,
         };
     }
 
@@ -803,7 +891,10 @@ export class SimulatorModel {
         for (const [k, v] of Object.entries(json.blendedParts)) {
             model.blendedParts.set(k, { ...v });
         }
-        model.pendingBlends = json.pendingBlends.map(p => ({ ...p }));
+        model.pendingBlends = json.pendingBlends.map(p => ({
+            ...p,
+            timer: (p as { timer?: number }).timer ?? CARPET_FLY_DURATION
+        }));
         model.selfRay = json.selfRay ? { ...json.selfRay } : null;
         model.displacedParts = new Set(json.displacedParts);
         model.messages = json.messages.map(m => ({ ...m }));
@@ -817,11 +908,6 @@ export class SimulatorModel {
         model.selfAmplification = json.selfAmplification ?? 1;
         model.mode = json.mode ?? 'panorama';
         model.pendingAction = json.pendingAction ?? null;
-        if (json.conversationEffectiveStances) {
-            for (const [k, v] of Object.entries(json.conversationEffectiveStances)) {
-                model.conversationEffectiveStances.set(k, v);
-            }
-        }
         if (json.conversationTherapistDelta) {
             for (const [k, v] of Object.entries(json.conversationTherapistDelta)) {
                 model.conversationTherapistDelta.set(k, v);
@@ -835,6 +921,7 @@ export class SimulatorModel {
         }
         model.conversationSpeakerId = json.conversationSpeakerId ?? null;
         model.simulationTime = json.simulationTime ?? 0;
+        model.orchestratorState = json.orchestratorState ?? null;
         return model;
     }
 }

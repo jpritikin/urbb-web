@@ -86,10 +86,6 @@ export class UIManager {
             modeToggleFo.setAttribute('x', String(this.config.canvasWidth - 42));
         }
 
-        const fullscreenFo = this.uiGroup.querySelector('.fullscreen-toggle-fo');
-        if (fullscreenFo) {
-            fullscreenFo.setAttribute('x', String(this.config.canvasWidth - 84));
-        }
     }
 
     // Fullscreen
@@ -100,7 +96,7 @@ export class UIManager {
     }
 
     private createFullscreenToggleButton(): void {
-        const foreignObject = createForeignObject(this.config.canvasWidth - 84, 10, 32, 32);
+        const foreignObject = createForeignObject(10, 10, 32, 32);
         foreignObject.classList.add('fullscreen-toggle-fo');
 
         const btn = document.createElement('button');

@@ -86,6 +86,9 @@ export class TransitionAnimator {
     // --- Spiral exit animations ---
 
     startSpiralExit(cloudId: string): void {
+        if (cloudId === 'cloud_3') {
+            console.log(`[DEBUG cloud_3] startSpiralExit called`, new Error().stack);
+        }
         const state = this.config.getCloudState(cloudId);
         if (!state) return;
 
@@ -108,6 +111,14 @@ export class TransitionAnimator {
 
         state.targetOpacity = 0;
         state.smoothing.opacity = 0;
+    }
+
+    cancelSpiralExit(cloudId: string): void {
+        const state = this.config.getCloudState(cloudId);
+        if (state) {
+            state.smoothing.opacity = DEFAULT_SMOOTHING.opacity;
+        }
+        this.spiralExits.delete(cloudId);
     }
 
     isSpiralExiting(cloudId: string): boolean {
@@ -163,6 +174,9 @@ export class TransitionAnimator {
     // --- Fly-out exit animations ---
 
     startFlyOutExit(cloudId: string): void {
+        if (cloudId === 'cloud_3') {
+            console.log(`[DEBUG cloud_3] startFlyOutExit called`, new Error().stack);
+        }
         const state = this.config.getCloudState(cloudId);
         if (!state) return;
 

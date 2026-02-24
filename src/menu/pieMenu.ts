@@ -212,9 +212,7 @@ export class PieMenu {
         });
         centerCircle.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (this.touchMode === 'tap') {
-                this.hide();
-            }
+            this.hide();
         }, { passive: false });
         this.group.appendChild(centerCircle);
 

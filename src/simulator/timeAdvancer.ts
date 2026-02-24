@@ -12,6 +12,7 @@ export interface SpontaneousBlendEvent {
 export interface TimeAdvancerCallbacks {
     getMode: () => 'panorama' | 'foreground';
     onSpontaneousBlend: (event: SpontaneousBlendEvent, accumulatedTime: number) => void;
+    onPendingBlendReady: (cloudId: string) => void;
 }
 
 export interface AttentionDemandEntry {
@@ -31,7 +32,6 @@ export interface TimeAdvancerOptions {
 export class TimeAdvancer {
     private accumulatedTime = 0;
     private intervalCount = 0;
-    private cumulativeTime = 0;
     private getModel: () => SimulatorModel;
     private skipAttentionChecks: boolean;
     private attentionDemandLog: AttentionDemandEntry[] = [];
@@ -57,8 +57,8 @@ export class TimeAdvancer {
 
     advance(deltaTime: number): void {
         this.accumulatedTime += deltaTime;
-        this.cumulativeTime += deltaTime;
         this.model.advanceSimulationTime(deltaTime);
+        this.model.expireThoughtBubbles();
         while (this.accumulatedTime >= ATTENTION_CHECK_INTERVAL) {
             this.accumulatedTime -= ATTENTION_CHECK_INTERVAL;
             this.intervalCount++;
@@ -67,10 +67,6 @@ export class TimeAdvancer {
                 this.checkAttentionDemands();
             }
         }
-    }
-
-    getTime(): number {
-        return this.cumulativeTime;
     }
 
     advanceIntervals(count: number): void {
@@ -106,6 +102,9 @@ export class TimeAdvancer {
         this.orchestrator?.checkAndShowSelfLoathing(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkJealousy(ATTENTION_CHECK_INTERVAL);
         this.orchestrator?.checkAndShowConversationDialogues(ATTENTION_CHECK_INTERVAL);
+        for (const cloudId of this.model.tickPendingBlendTimers(ATTENTION_CHECK_INTERVAL)) {
+            this.callbacks.onPendingBlendReady(cloudId);
+        }
     }
 
     private checkAttentionDemands(): void {
