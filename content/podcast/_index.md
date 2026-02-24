@@ -15,9 +15,17 @@ Are you a skeptic, practitioner, academic, or curious troublemaker? Maybe you wa
 
 ### 🔬 I have cleared the way for scientific religion
 
-Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal growth becomes the predictable outcome of a reproducible process — one you can actually test. 📊
+Not Scientology. Not "religion that doesn't conflict with science" but actual *scientific religion.* Personal growth becomes the predictable outcome of a reproducible process—one you can actually test. 📊
 
 *Think this is category error? That the ineffable can't be operationalized? That I'm committing scientism while claiming to transcend it? I'd love to hear why.*
+
+### 🤲 My book advocates for zero metaphysical beliefs
+
+Most spiritual books ask you to believe something: that consciousness survives death, that spirits are real, or that the universe is conscious. My book takes a different approach—it develops a complete framework for personal transformation. And the practices work whether or not any of those claims are true.
+
+Consider the relationship between physics and cosmology. Physicists run experiments, build models, and make predictions without needing to settle whether the universe is infinite, what (if anything) preceded the Big Bang, or whether other universes exist. The practice of physics doesn't wait for cosmology to resolve its deepest questions. This book takes the same approach to spiritual practice: the process doesn't depend on resolving the content.
+
+*Think this is impossible—that you can't have genuine spirituality or religion without belief? Pragmatic agnosticism is just cowardly fence-sitting? Some metaphysical commitments are unavoidable? Make the case.*
 
 ### 📖 My book represents the first User's Guide to Consciousness
 
