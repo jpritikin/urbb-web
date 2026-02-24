@@ -124,7 +124,6 @@ export interface RecordedSession {
     modelSeed: number;
     timestamp: number;
     playbackOf?: string;
-    playbackOfHash?: string;
     initialModel: SerializedModel;
     actions: RecordedAction[];
     finalModel?: SerializedModel;

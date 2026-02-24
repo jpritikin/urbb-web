@@ -209,8 +209,8 @@ export class CloudManager {
         cloud.updateSVGElements(this.debug, state, false);
     }
 
-    startRecording(codeVersion: string, playbackOf?: string, playbackOfHash?: string): void {
-        this.playbackRecording.startRecording(codeVersion, this.uiManager?.isMobile() ?? false, playbackOf, playbackOfHash);
+    startRecording(codeVersion: string, playbackOf?: string): void {
+        this.playbackRecording.startRecording(codeVersion, this.uiManager?.isMobile() ?? false, playbackOf);
     }
 
     getRecordingSession(): RecordedSession | null {

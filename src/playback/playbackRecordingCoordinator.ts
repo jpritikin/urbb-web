@@ -111,7 +111,7 @@ export class PlaybackRecordingCoordinator {
         this.setRNG(createModelRNG(seed));
     }
 
-    startRecording(codeVersion: string, isMobile: boolean, playbackOf?: string, playbackOfHash?: string): void {
+    startRecording(codeVersion: string, isMobile: boolean, playbackOf?: string): void {
         if (!(this.rng instanceof SeededRNG)) {
             const seed = Math.floor(Math.random() * 2147483647);
             this.setRNG(createModelRNG(seed));
@@ -123,8 +123,7 @@ export class PlaybackRecordingCoordinator {
             codeVersion,
             platform,
             this.rng as SeededRNG,
-            playbackOf,
-            playbackOfHash
+            playbackOf
         );
     }
 
