@@ -425,6 +425,10 @@ export class PlaybackRecordingCoordinator {
             setStarInteractive: (enabled: boolean) => {
                 this.deps.getAnimatedStar()?.setPointerEventsEnabled(enabled);
             },
+            isStarInteractive: () => {
+                const canvas = this.deps.getAnimatedStar()?.getElement()?.querySelector('canvas') as HTMLElement | null;
+                return canvas?.style.pointerEvents === 'auto';
+            },
             getDiagnostics: () => {
                 const model = this.deps.getModel();
                 const orchState = this.deps.getMessageOrchestrator()?.getDebugState();

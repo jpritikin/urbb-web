@@ -54,6 +54,7 @@ export interface PlaybackViewState {
     getLockedDragSign: () => number | null;
     setCarpetsInteractive: (enabled: boolean) => void;
     setStarInteractive: (enabled: boolean) => void;
+    isStarInteractive: () => boolean;
     getDiagnostics: () => Record<string, unknown>;
 }
 
@@ -448,10 +449,24 @@ export class PlaybackController {
         await this.executeSliceSelection(STAR_CLOUD_ID, result.sliceIndex, result.itemCount);
     }
 
+    private async waitForStarInteractive(): Promise<void> {
+        if (this.callbacks.isStarInteractive()) return;
+        const maxWait = 5000;
+        const start = performance.now();
+        while (!this.callbacks.isStarInteractive()) {
+            if (performance.now() - start > maxWait) {
+                console.warn('[Playback] Timeout waiting for star to become interactive');
+                break;
+            }
+            await this.delay(50);
+        }
+    }
+
     private async openMenuWithRetry(cloudId: string, actionId: string, errorContext?: string): Promise<MenuSliceInfo | null> {
         const maxRetries = 5;
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             if (cloudId === STAR_CLOUD_ID) {
+                await this.waitForStarInteractive();
                 this.callbacks.setStarInteractive(true);
             }
             const openSuccess = await this.hoverAndClickCloud(cloudId, `opening menu for ${cloudId}`);
