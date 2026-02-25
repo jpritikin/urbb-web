@@ -5,7 +5,9 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
 ## Landing page - Image Slider
 
 **L7K** Load the homepage
-   - Page shows two overlapping images (front covers: ordinary and cathedral) with a slider between them
+   - A dark purple curtain with animated spinning glyph (✦) covers the image while it loads
+   - After at least 2 seconds and both images have loaded, the curtain splits apart and slides away
+   - Page reveals two overlapping images (front covers: ordinary and cathedral) with a slider between them
    - Usually slider is horizontal, but occasionally (10% chance) starts in vertical mode
    - Which image is base vs overlay varies randomly (25% chance the base clips instead of overlay)
    - No "Enter Site" button is visible yet
@@ -51,6 +53,7 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Animation varies: random intensity, speed, color shifts, direction, and wobbliness
    - After animation, images switch from front covers to back covers (or vice versa)
    - Slider resets to center position
+   - Audio volume resets to 50% (mid-slider position)
 
 ## Gallery Page
 
@@ -82,6 +85,15 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
 **C4P** Tap on the "broken link" image
    - Nothing happens (image is non-interactive)
 
+**A2M** Scroll past the book page gallery to the "Yoga with Joshua" section
+   - Section shows a logo and four yoga pose images with captions
+   - Also shows a humorous self-deprecating essay below the photos
+
+**E5R** Tap on a yoga photo
+   - Image opens in a full-screen popup/modal
+   - No rotation glitch (yoga photos always display upright)
+   - Close button (×) appears in the corner; tap it or tap outside to close
+
 ## Online Supplement Page
 
 **Z1X** Click "Online Supplement" in the navigation menu
@@ -94,7 +106,7 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Tail moves occasionally (every few seconds) to different positions
    - Mouth is closed when not playing
 
-**G8V** Click on an unlocked hymn (e.g., "Examine A Consciência")
+**G8V** Click on an unlocked hymn (e.g., "Examine A Consciência") — unlocked hymns appear first in the list
    - Cassette flies from hymn item to salmon's mouth
    - Salmon's mouth opens wide during cassette insertion
    - After cassette arrives, mouth closes
@@ -113,9 +125,11 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Mouth opens/closes for ejection and insertion
    - New hymn starts playing
 
-**U9R** Click the loop button (🔁)
-   - Button becomes inactive/dimmed (loop disabled)
-   - Click again to re-enable (button lights up with blue glow)
+**U9R** Observe the playback mode buttons (🔁 loop and ⏭️ play-next)
+   - By default, play-next (⏭️) is active (lit up with blue glow) and loop (🔁) is inactive
+   - When a hymn finishes in play-next mode, the next unlocked hymn starts automatically
+   - Click 🔁 to switch to loop mode: loop button lights up, play-next dims; current hymn repeats
+   - Click ⏭️ again to switch back to play-next mode
 
 **S2J** Click on a locked hymn (with 🔒 icon)
    - Hymn shakes/vibrates briefly
@@ -217,6 +231,6 @@ You're done testing! Thank you for your time.
 
 * Each markdown page has a version number to help know when testing procedures need updating. This testing guide was built assuming the following versions:
 
-- Homepage: v1.7.0
-- Gallery: v1.0.0
-- Online Supplement: v1.3.7
+- Homepage: v1.7.2
+- Gallery: v1.1.0
+- Online Supplement: v1.4.7
