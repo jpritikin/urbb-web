@@ -339,10 +339,10 @@ class ImageSlider {
         this.flipButtonRevealed = true;
         flipButton.classList.add('visible');
 
-        flipButton.addEventListener('click', () => this.flipCover());
+        flipButton.addEventListener('click', (e) => { e.stopPropagation(); this.flipCover(); });
     }
 
-    private flipCover(): void {
+    flipCover(): void {
         const container = this.container;
         const baseImg = this.baseImg;
         const overlayImg = this.overlayImg;
@@ -397,6 +397,7 @@ class ImageSlider {
             this.overlayImg.style.clipPath = this.clipBase ? 'inset(50% 0 0 0)' : 'inset(0 0 50% 0)';
             this.slider.style.top = '50%';
         }
+        this.updateAudioVolume(50);
     }
 }
 

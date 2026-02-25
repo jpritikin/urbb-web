@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const imageComparison = document.querySelector('.image-comparison');
   if (imageComparison) {
     const buttonManager = new ButtonVisibilityManager();
-    new ImageSlider('.image-comparison', () => buttonManager.onSliderManipulated());
+    const slider = new ImageSlider('.image-comparison', () => buttonManager.onSliderManipulated());
+    (window as any).flipBookCover = () => slider.flipCover();
   }
 
   // Initialize book navigation
