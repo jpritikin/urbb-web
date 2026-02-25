@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="facebook-domain-verification" content="ewxj0ivfm7yxsfahjl2s6pjl8m2dce" />
-    <meta name="page-version" content="v1.7.1">
+    <meta name="page-version" content="v1.7.2">
     <title>{{ .Site.Title }}</title>
     {{ partial "favicon.html" . }}
     {{ partial "meta-pixel.html" . }}
@@ -147,6 +147,78 @@
             .mobile-button.visible {
                 display: flex;
             }
+        }
+        .image-curtain {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .image-curtain-half {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg,
+                rgba(30, 15, 50, 0.97) 0%,
+                rgba(60, 20, 80, 0.97) 40%,
+                rgba(20, 10, 40, 0.97) 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: clip-path 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .curtain-shimmer {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 8px,
+                rgba(180, 120, 255, 0.06) 8px,
+                rgba(180, 120, 255, 0.06) 9px
+            );
+            animation: shimmerMove 3s linear infinite;
+        }
+        @keyframes shimmerMove {
+            from { background-position: 0 0; }
+            to { background-position: 40px 40px; }
+        }
+        .curtain-glyph {
+            position: relative;
+            z-index: 1;
+            width: 4rem;
+            height: 4rem;
+            border: 2px solid rgba(180, 120, 255, 0.6);
+            border-radius: 50%;
+            animation: glyphSpin 2s linear infinite;
+        }
+        .curtain-glyph::before {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            border: 1px solid rgba(255, 180, 100, 0.5);
+            border-radius: 50%;
+            animation: glyphSpin 1.3s linear infinite reverse;
+        }
+        .curtain-glyph::after {
+            content: '✦';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: rgba(255, 200, 150, 0.8);
+            animation: glyphPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes glyphSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes glyphPulse {
+            0%, 100% { opacity: 0.6; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
         }
         #flip-button {
             position: absolute;
@@ -353,6 +425,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
                 </button>
+                <div class="image-curtain" id="image-curtain">
+                    <div class="image-curtain-half" id="curtain-half-a">
+                        <div class="curtain-shimmer"></div>
+                        <div class="curtain-glyph"></div>
+                    </div>
+                    <div class="image-curtain-half" id="curtain-half-b">
+                        <div class="curtain-shimmer"></div>
+                    </div>
+                </div>
                 <img src="/front-ordinary.webp" alt="Ordinary" class="image-base">
                 <img src="/front-cathedral.webp" alt="Cathedral" class="image-overlay-img">
                 <audio id="cathedral-audio" loop preload="auto">
@@ -375,6 +456,42 @@
             <a href="/book/" class="inline-block px-12 md:px-16 py-5 md:py-6 text-xl md:text-3xl font-semibold text-zinc-900 bg-gray-100 no-underline rounded-xl transition-all duration-300 shadow-lg hover:bg-white hover:-translate-y-1 hover:shadow-2xl active:-translate-y-0.5 uppercase tracking-wider">Enter Site</a>
         </div>
     </div>
+    <script>
+        (function() {
+            const curtain = document.getElementById('image-curtain');
+            const imgs = document.querySelectorAll('.image-base, .image-overlay-img');
+            const minDelay = new Promise(r => setTimeout(r, 2000));
+            const loadPromises = Array.from(imgs).map(img => new Promise(r => {
+                if (img.complete) r();
+                else { img.addEventListener('load', r); img.addEventListener('error', r); }
+            }));
+            Promise.all([minDelay, ...loadPromises]).then(() => {
+                const slider = document.querySelector('.slider');
+                const isVertical = slider && slider.style.top && !slider.style.left;
+                const halfA = document.getElementById('curtain-half-a');
+                const halfB = document.getElementById('curtain-half-b');
+
+                if (isVertical) {
+                    halfA.style.clipPath = 'inset(0 0 50% 0)';
+                    halfB.style.clipPath = 'inset(50% 0 0 0)';
+                } else {
+                    halfA.style.clipPath = 'inset(0 50% 0 0)';
+                    halfB.style.clipPath = 'inset(0 0 0 50%)';
+                }
+
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    if (isVertical) {
+                        halfA.style.clipPath = 'inset(0 0 100% 0)';
+                        halfB.style.clipPath = 'inset(100% 0 0 0)';
+                    } else {
+                        halfA.style.clipPath = 'inset(0 100% 0 0)';
+                        halfB.style.clipPath = 'inset(0 0 0 100%)';
+                    }
+                    halfB.addEventListener('transitionend', () => curtain.remove(), { once: true });
+                }));
+            });
+        })();
+    </script>
     <script type="module" src="/js/main.js"></script>
 </body>
 </html>
