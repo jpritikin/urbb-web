@@ -361,12 +361,13 @@ class ImageSlider {
         const direction = Math.random() > 0.5 ? 1 : -1;
         const wobbliness = 0.7 + Math.random() * 0.6;
 
+        container.classList.remove('flip-animation');
         container.style.setProperty('--flip-intensity', intensity.toString());
         container.style.setProperty('--flip-speed', `${speed}s`);
         container.style.setProperty('--flip-color', colorChaos ? '1' : '0');
         container.style.setProperty('--flip-direction', direction.toString());
         container.style.setProperty('--flip-wobble', wobbliness.toString());
-
+        void container.offsetWidth; // force reflow so the browser sees class removal before re-add
         container.classList.add('flip-animation');
 
         setTimeout(() => {
