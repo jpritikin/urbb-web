@@ -1,8 +1,14 @@
 import ImageSlider from './pages/imageSlider.js';
 import ButtonVisibilityManager from './pages/buttonVisibility.js';
 import { initBookNav } from './pages/bookNav.js';
+import { initCurtainStars } from './pages/curtainStars.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize curtain stars on homepage
+  if (document.getElementById('image-curtain')) {
+    initCurtainStars();
+  }
+
   // Initialize image slider on homepage
   const imageComparison = document.querySelector('.image-comparison');
   if (imageComparison) {

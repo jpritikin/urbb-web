@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="facebook-domain-verification" content="ewxj0ivfm7yxsfahjl2s6pjl8m2dce" />
-    <meta name="page-version" content="v1.7.2">
+    <meta name="page-version" content="v1.7.3">
     <title>{{ .Site.Title }}</title>
     {{ partial "favicon.html" . }}
     {{ partial "meta-pixel.html" . }}
@@ -184,41 +184,10 @@
             from { background-position: 0 0; }
             to { background-position: 40px 40px; }
         }
-        .curtain-glyph {
+        #curtain-glyph {
             position: relative;
             z-index: 1;
-            width: 4rem;
-            height: 4rem;
-            border: 2px solid rgba(180, 120, 255, 0.6);
-            border-radius: 50%;
-            animation: glyphSpin 2s linear infinite;
-        }
-        .curtain-glyph::before {
-            content: '';
-            position: absolute;
-            inset: 6px;
-            border: 1px solid rgba(255, 180, 100, 0.5);
-            border-radius: 50%;
-            animation: glyphSpin 1.3s linear infinite reverse;
-        }
-        .curtain-glyph::after {
-            content: '✦';
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            color: rgba(255, 200, 150, 0.8);
-            animation: glyphPulse 1.5s ease-in-out infinite;
-        }
-        @keyframes glyphSpin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        @keyframes glyphPulse {
-            0%, 100% { opacity: 0.6; transform: scale(0.9); }
-            50% { opacity: 1; transform: scale(1.1); }
+            display: block;
         }
         #flip-button {
             position: absolute;
@@ -425,10 +394,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
                 </button>
-                <div class="image-curtain" id="image-curtain">
+                <div class="image-curtain" id="image-curtain" data-min-delay="4000">
                     <div class="image-curtain-half" id="curtain-half-a">
                         <div class="curtain-shimmer"></div>
-                        <div class="curtain-glyph"></div>
+                        <canvas id="curtain-glyph"></canvas>
                     </div>
                     <div class="image-curtain-half" id="curtain-half-b">
                         <div class="curtain-shimmer"></div>
@@ -460,7 +429,8 @@
         (function() {
             const curtain = document.getElementById('image-curtain');
             const imgs = document.querySelectorAll('.image-base, .image-overlay-img');
-            const minDelay = new Promise(r => setTimeout(r, 2000));
+            const minMs = parseInt(curtain.dataset.minDelay || '4000', 10);
+            const minDelay = new Promise(r => setTimeout(r, minMs));
             const loadPromises = Array.from(imgs).map(img => new Promise(r => {
                 if (img.complete) r();
                 else { img.addEventListener('load', r); img.addEventListener('error', r); }
