@@ -235,3 +235,7 @@ James has this quality where the question sounds casual but isn't. I have notice
 He waited exactly one beat. "Great," he said. "Keep doing what you're doing."
 
 The antidote to meaninglessness is presence. I dropped the check off that afternoon.
+
+### A Note on Production
+
+The yoga photographs featured in this section were performed by a professional stunt double engaged to portray the author. All sessions were conducted under the supervision of a licensed intimacy coordinator. The double was fairly and generously compensated, and has since expressed no (serious) regrets.
