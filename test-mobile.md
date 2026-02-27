@@ -58,7 +58,7 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
 ## Gallery Page
 
 **H9T** Click "Gallery" in the navigation menu
-   - Page loads showing a grid of book page images in webp format
+   - Page loads showing a grid of obviously forged photographs of the author with famous people
    - Images appear in random order (changes on each page load)
 
 **D3W** Scroll through all images
