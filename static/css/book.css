@@ -1,5 +1,19 @@
 /* Book Page Specific Styles */
 
+.preorder-banner {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    text-align: center;
+    padding: 0.85rem 1.5rem;
+    font-size: 1rem;
+    border-bottom: 2px dotted rgba(255,255,255,0.3);
+    margin-bottom: 2rem;
+}
+
+.dark .preorder-banner {
+    background: linear-gradient(135deg, #5b21b6, #3730a3);
+}
+
 /* Blurbs Grid Layout */
 .book-page .prose .blurbs-grid {
     display: grid;
@@ -96,6 +110,22 @@
 .book-page .prose .order-button:hover {
     background-color: #9fc5e5;
     transform: translateY(-2px);
+}
+
+.book-page .prose .format-card--disabled {
+    opacity: 0.5;
+    filter: grayscale(0.4);
+}
+
+.book-page .prose .order-button--disabled {
+    background-color: #555;
+    color: #aaa !important;
+    cursor: not-allowed;
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 /* Book Page Layout */

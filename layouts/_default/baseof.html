@@ -10,6 +10,7 @@
     {{ partial "google-analytics.html" . }}
     <link rel="stylesheet" href="/css/output.css">
     <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/shop.css">
     {{ block "head-extra" . }}{{ end }}
 </head>
 <body class="min-h-screen flex flex-col overflow-auto bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
@@ -29,6 +30,12 @@
                 <li><a href="/contact/" class="text-gray-100 dark:text-gray-100 no-underline font-medium transition-colors hover:text-white">Contact</a></li>
                 <li><a href="/gallery/" class="text-gray-100 dark:text-gray-100 no-underline font-medium transition-colors hover:text-white">Gallery</a></li>
             </ul>
+            <button class="cart-icon-btn relative p-2 rounded-lg bg-green-800 hover:bg-green-700 transition-colors" aria-label="Open cart">
+                <svg class="w-6 h-6 text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <span class="cart-badge" style="display:none"></span>
+            </button>
             <button id="theme-toggle" class="p-2 rounded-lg bg-green-800 hover:bg-green-700 transition-colors" aria-label="Toggle theme">
                 <svg class="w-6 h-6 text-gray-100 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -62,5 +69,9 @@
     </footer>
 
     <script type="module" src="/js/main.js"></script>
+    <script>
+        window.__SHOPIFY_DOMAIN__ = 'unburdened-4154.myshopify.com';
+        window.__SHOPIFY_STOREFRONT_TOKEN__ = '301f2a838099b4352bb12465b315f068';
+    </script>
 </body>
 </html>
