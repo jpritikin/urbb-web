@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.0.1"
+version: "v1.2.0"
 ---
 
 ## Acclaim
@@ -37,7 +37,7 @@ version: "v1.0.1"
 
 ## Introduction
 
-What if belief and religion point in opposite directions? We often assume that religions are built on beliefs about gods, the afterlife, and the nature of reality. But what if belief hinders genuine religious experience? This book pursues a radical idea: The less we believe, the closer we get to religion.
+What if belief and religion point in opposite directions? We often assume religions are built on beliefs about gods, the afterlife, and the nature of reality. But what if belief hinders genuine religious experience? This book pursues a radical idea: The less we believe, the closer we get to religion.
 
 This may seem counterintuitive since religions are usually defined by their belief systems. Christianity has its creeds, Buddhism its doctrines, and Islam its articles of faith. Yet, direct religious experience often involves setting aside beliefs. Mystics empty the mind, surrender certainty, and embrace mystery. Rather than adding new beliefs to your existing collection, we'll work on identifying and releasing limiting beliefs.
 
@@ -47,35 +47,44 @@ Examining your beliefs—especially cherished religious ones—requires courage 
 
 ## Order Your Copy
 
+<div class="preorder-banner">
+    🚀 <strong>Available June 12, 2026</strong> — Orders placed now are <strong>preorders</strong> and will ship on release day. 📦
+</div>
+
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
     <p>Cloth-bound with dust jacket. ✨ Features a mesmerizing flip-book animation in the
-  margins, an index of terms, and hidden epigraphs waiting to be discovered. 🔍</p>
-    <a href="https://amazon.com" class="order-button">Order Hardcover</a>
+  margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️</p>
+    <p class="shop-item-price">$47.00</p>
+    <button class="order-button"
+        data-variant-id="gid://shopify/ProductVariant/48590233764083"
+        data-title="Religion Unburdened by Belief — Hardcover Collector's Edition"
+        data-price="0">
+        Add to Cart
+    </button>
   </div>
   <div class="format-card">
+    <h3>📄 Paperback Collector's Edition</h3>
+    <p>The complete text in a lightweight format. ✨ Features the same
+  flip-book margin animation and index as the hardcover. Perfect for underlining, marginalia, and lending to friends who need unburdening. 📝</p>
+    <p class="shop-item-price">$28.00</p>
+    <button class="order-button"
+        data-variant-id="gid://shopify/ProductVariant/48590238417139"
+        data-title="Religion Unburdened by Belief — Paperback Collector's Edition"
+        data-price="0">
+        Add to Cart
+    </button>
+  </div>
+  <div class="format-card format-card--disabled">
     <h3>🎧 Audiobook</h3>
     <p>Experience the full text read by the author—including hymns sung as intended. 🎵
   Sidebars and footnotes excluded to preserve the listening journey.</p>
-    <a href="https://audible.com" class="order-button">Order Audiobook</a>
+    <span class="order-button order-button--disabled">Coming Soon</span>
   </div>
-  <div class="format-card">
+  <div class="format-card format-card--disabled">
     <h3>📱 Ebook</h3>
     <p>Instant delivery. ⚡ Includes full-color illustrations throughout. 🎨</p>
-    <a href="https://amazon.com" class="order-button">Order Ebook</a>
+    <span class="order-button order-button--disabled">Coming Soon</span>
   </div>
 </div>
-
-## Bonus Material: The Way of Open Inquiry
-
-_The Way of Open Inquiry_ is a thought experiment—a sketch of what religion might look like if it fully embraced mystery. 🌌
-
-Instead of being built around fixed beliefs about God, the afterlife, or cosmic truth, this hypothetical religion centers on the practice of questioning itself. Members gather not to affirm shared doctrines, but to explore unanswerable questions together: What is consciousness? What lies beyond death? ☠️ How should we live? 🌱
-
-This isn't presented as a fully-formed tradition ready for adoption. Rather, it's a thought experiment designed to support access to transformative experience.
-
-**Complete this short interest form and receive a PDF download of this thought experiment.**
-
-<div data-tf-live="01JTED9XC8FEK8E778MAH3E8TJ"></div>
-<script src="//embed.typeform.com/next/embed.js"></script>

@@ -1,10 +1,5 @@
 {{ define "head-extra" }}
 <script type="module" src="/js/pages/shop.js"></script>
-<link rel="stylesheet" href="/css/shop.css" />
-<!-- Snipcart -->
-<link rel="preconnect" href="https://app.snipcart.com">
-<link rel="preconnect" href="https://cdn.snipcart.com">
-<link rel="stylesheet" href="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.css" />
 {{ end }}
 
 {{ define "main" }}
@@ -27,9 +22,4 @@
         {{ .Content }}
     </div>
 </article>
-
-<!-- Snipcart -->
-<script async src="https://cdn.snipcart.com/themes/v3.3.0/default/snipcart.js"></script>
-{{- $snipcartKey := cond (eq (getenv "ENVIRONMENT") "production") "MjI5MzM0N2UtYjY2Ni00NjQ4LWJlZDEtNDA1NmUyZGRmNjVhNjM5MDQ1MjkxOTM3NTI0NDMx" "ZmYwOGJiNWQtNzliNi00Yzk2LTlmNmUtY2MwNzY5Njg2NWY0NjM5MDQ1MjkxOTM3NTI0NDMx" -}}
-<div hidden id="snipcart" data-api-key="{{ $snipcartKey }}"></div>
 {{ end }}

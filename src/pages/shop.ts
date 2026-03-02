@@ -1,4 +1,5 @@
 import { initMetaPixelTracking } from '../tracking/metaPixel.js';
+import { initAddToCartButtons } from '../shop/addToCart.js';
 
 interface Ghost {
     element: HTMLSpanElement;
@@ -38,7 +39,6 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
             const t = Math.min(elapsed / DURATION, 1);
             const eased = easeOut(t);
 
-            // Scale: 0.3 -> 1 (at 10%) -> 1.7 (at 100%)
             let scale: number;
             if (t < 0.1) {
                 scale = 0.3 + (0.7 * (t / 0.1));
@@ -46,13 +46,11 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
                 scale = 1 + (0.7 * ((t - 0.1) / 0.9));
             }
 
-            // Wobble factor oscillates and diminishes over time
             const wobbleFactor = Math.sin(t * Math.PI * 3);
 
             const x = ghost.startX + ghost.driftX * eased + ghost.wobbleX * wobbleFactor;
             const y = ghost.startY + ghost.driftY * eased + ghost.wobbleY * wobbleFactor;
 
-            // Opacity: 0.5 until 30%, then fade to 0
             let opacity: number;
             if (t < 0.3) {
                 opacity = 0.5;
@@ -63,9 +61,7 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
             ghost.element.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
             ghost.element.style.opacity = `${opacity}`;
 
-            if (t < 1) {
-                allDone = false;
-            }
+            if (t < 1) allDone = false;
         }
 
         if (!allDone) {
@@ -76,12 +72,12 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
     }
 
     animationId = requestAnimationFrame(update);
-
     return () => cancelAnimationFrame(animationId);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initMetaPixelTracking();
+    initAddToCartButtons();
 
     const spiritGuideBtn = document.querySelector('.spirit-guide-btn');
     const spiritGuideMessage = document.querySelector('.spirit-guide-message');

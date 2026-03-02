@@ -218,7 +218,7 @@
     @apply text-2xl font-bold text-sky-600 dark:text-sky-400 my-4;
   }
 
-  .snipcart-add-item {
+  .add-to-cart-btn {
     @apply bg-sky-400 text-zinc-900 px-6 py-3 border-0 rounded-md text-base font-semibold cursor-pointer transition-all inline-block no-underline hover:bg-sky-300 hover:-translate-y-0.5;
   }
 }

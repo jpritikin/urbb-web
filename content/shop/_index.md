@@ -1,7 +1,7 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.2.0"
+version: "v1.3.0"
 ---
 
 ## Welcome to the Unburdened Shop
@@ -16,63 +16,69 @@ Explore our carefully curated collection of items to support your Open Inquiry p
 
 Each chapter of *Unburdened* begins with an epigraph hidden in simple substitution ciphers. 🔐 Purchase a lottery ticket for a chance to win the keys to all the ciphers! 🗝️ **Winner selected weekly! You are likely to win!** 📅
 
-<p class="shop-item-price">$10.00</p>
+<p class="shop-item-price">…</p>
 
-<button class="snipcart-add-item"
-    data-item-id="cipher-lottery-ticket"
-    data-item-price="10.00"
-    data-item-url="/shop/"
-    data-item-description="Cipher lottery ticket - chance to win decryption keys"
-    data-item-name="Cipher Lottery Ticket"
-    data-item-max-quantity="1">
+<button class="add-to-cart-btn"
+    data-variant-id="gid://shopify/ProductVariant/48590214201587"
+    data-title="Cipher Lottery Ticket"
+    data-price="0">
     Add to Cart
 </button>
 
 </div>
 
-<div class="shop-item has-sale">
+<div class="shop-item">
 
-### 📓 Official Way of Open Inquiry Journals
+### 📓 Official Way of Open Inquiry Journal
 
-Notebooks featuring the Sacred Question Mark symbol (?) on the cover. Perfect for your inquiry practice, parts dialogues, or daily reflections. 📝
+Notebook featuring the Sacred Question Mark symbol (?) on the cover. Perfect for your inquiry practice, parts dialogues, or daily reflections. 📝
 
-High-quality paper, durable binding, 140 pages. ✍️
+High-quality paper, durable binding, 140 dotted pages. ✍️
 
-<p class="shop-item-price">$23.00</p>
+<p class="shop-item-price">…</p>
 
-<button class="snipcart-add-item sale-hint"
-    data-item-id="inquiry-journal"
-    data-item-price="23.00"
-    data-item-url="/shop/"
-    data-item-description="Official Way of Open Inquiry Journal"
-    data-item-name="Official Way of Open Inquiry Journal"
-    data-item-shippable="true"
-    data-item-weight="400">
+<button class="add-to-cart-btn"
+    data-variant-id="gid://shopify/ProductVariant/48590210138355"
+    data-title="Official Way of Open Inquiry Journal"
+    data-price="0">
     Add to Cart
 </button>
 
 </div>
 
-<div class="shop-item has-sale">
+<div class="shop-item">
 
-### 💧 Ceremonial Water Bottles
+### 💧 17oz Ceremonial Water Bottle
 
-Stay hydrated during your practice with these premium insulated water bottles. 💧 Featuring subtle Open Inquiry branding for mindful fluid integration. 🧘
+Stay hydrated during your practice with this premium insulated water bottle. 💧 Featuring subtle Open Inquiry branding for mindful fluid integration. 🧘
 
-Choose either 17 or 32oz size. Keeps drinks cold for 24 hours ❄️ or hot for 12 hours. 🔥
+17oz bowling-pin shape. Keeps drinks cold or hot for 6 hours. 🔥❄️
 
-<p class="shop-item-price">$47.00</p>
+<p class="shop-item-price">…</p>
 
-<button class="snipcart-add-item sale-hint"
-    data-item-id="ceremonial-water-bottle"
-    data-item-price="47.00"
-    data-item-url="/shop/"
-    data-item-description="Ceremonial Water Bottle for mindful fluid integration"
-    data-item-name="Ceremonial Water Bottle"
-    data-item-shippable="true"
-    data-item-weight="500"
-    data-item-custom1-name="Size"
-    data-item-custom1-options="32oz|17oz">
+<button class="add-to-cart-btn"
+    data-variant-id="gid://shopify/ProductVariant/48590211318003"
+    data-title="Ceremonial Water Bottle 17oz"
+    data-price="0">
+    Add to Cart
+</button>
+
+</div>
+
+<div class="shop-item">
+
+### 💧 32oz Ceremonial Water Bottle
+
+The full ceremony experience. 💧 Wide-mouth foldable straw, rotating handle, perfect for long retreats and active lifestyles. 🧘
+
+32oz. Keeps drinks cold for 24 hours ❄️ or hot for 12 hours. 🔥
+
+<p class="shop-item-price">…</p>
+
+<button class="add-to-cart-btn"
+    data-variant-id="gid://shopify/ProductVariant/48590212006131"
+    data-title="Ceremonial Water Bottle 32oz"
+    data-price="0">
     Add to Cart
 </button>
 
@@ -84,18 +90,14 @@ Choose either 17 or 32oz size. Keeps drinks cold for 24 hours ❄️ or hot for 
 
 Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to the Way of Open Inquiry. ✨
 
-Printed on archival-quality paper. ✨ Personalize with your name. 🏷️
+Printed on archival-quality paper. ✨
 
-<p class="shop-item-price">$250.00</p>
+<p class="shop-item-price">…</p>
 
-<button class="snipcart-add-item sale-hint"
-    data-item-id="membership-certificate"
-    data-item-price="250.00"
-    data-item-url="/shop/"
-    data-item-description="Lifetime Membership Certificate"
-    data-item-name="Lifetime Membership Certificate"
-    data-item-shippable="true"
-    data-item-weight="100">
+<button class="add-to-cart-btn sale-hint"
+    data-variant-id="gid://shopify/ProductVariant/48590210433267"
+    data-title="Lifetime Membership Certificate"
+    data-price="0">
     Add to Cart
 </button>
 
@@ -111,7 +113,7 @@ Includes recorded session 🎥 and personalized guide profile document. 📋✨
 
 <p class="shop-item-price">$500.00</p>
 
-<button class="snipcart-add-item spirit-guide-btn">
+<button class="add-to-cart-btn spirit-guide-btn">
     Add to Cart
 </button>
 <div class="spirit-guide-message" style="display: none;">
@@ -136,17 +138,12 @@ Weather-resistant, perfect for cars, fridges, or filing cabinets. 🚙🧲
 
 **Free with any order.** 🎁
 
-<p class="shop-item-price">$5.00</p>
+<p class="shop-item-price">…</p>
 
-<button class="snipcart-add-item"
-    data-item-id="conviction-minimization-magnet"
-    data-item-price="5.00"
-    data-item-url="/shop/"
-    data-item-description="Conviction Minimization Car Magnet"
-    data-item-name="Conviction Minimization Car Magnet"
-    data-item-shippable="true"
-    data-item-weight="50"
-    data-item-max-quantity="10">
+<button class="add-to-cart-btn"
+    data-variant-id="gid://shopify/ProductVariant/48590209286387"
+    data-title="Conviction Minimization Car Magnet"
+    data-price="0">
     Add to Cart
 </button>
 
