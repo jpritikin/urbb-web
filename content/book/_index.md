@@ -19,10 +19,12 @@ version: "v1.3.0"
 </div>
 
 <div id="blurb-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
+<div class="blurb-modal-inner">
+<button class="blurb-modal-close" aria-label="Close">✕</button>
 <div class="blurb-modal-content">
 <p class="blurb-modal-text"></p>
 <p class="blurb-modal-attr"></p>
-<button class="blurb-modal-close" aria-label="Close">✕</button>
+</div>
 </div>
 </div>
 

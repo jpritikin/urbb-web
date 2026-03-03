@@ -93,15 +93,28 @@
     display: flex;
 }
 
+.blurb-modal-inner {
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    max-height: calc(100vh - 3rem);
+    width: 100%;
+}
+
 .blurb-modal-content {
-    position: relative;
     background: #1e1e1e;
     border: 2px solid #7fb3d5;
     border-radius: 12px;
     padding: 2.5rem 3rem;
-    max-width: 720px;
+    overflow-y: auto;
     width: 100%;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(127, 179, 213, 0.15);
+}
+
+@media (max-width: 640px) {
+    .blurb-modal-content {
+        padding: 2rem 1.5rem;
+    }
 }
 
 .blurb-modal-text {
@@ -119,9 +132,8 @@
 }
 
 .blurb-modal-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
+    align-self: flex-end;
+    flex-shrink: 0;
     background: none;
     border: none;
     color: #7fb3d5;
@@ -129,6 +141,7 @@
     cursor: pointer;
     line-height: 1;
     padding: 0.25rem 0.5rem;
+    margin-bottom: 0.5rem;
     border-radius: 4px;
     transition: color 0.2s, background-color 0.2s;
 }
