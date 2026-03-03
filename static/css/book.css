@@ -37,6 +37,107 @@
     margin: 0 !important;
 }
 
+/* Blurb Tiles */
+.book-page .prose .blurb-tile {
+    background-color: rgba(14, 165, 233, 0.1);
+    border-left: 4px solid #7fb3d5;
+    border-radius: 0 8px 8px 0;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    margin: 0 !important;
+}
+
+.book-page .prose .blurb-tile:hover {
+    background-color: rgba(14, 165, 233, 0.18);
+    transform: translateY(-2px);
+}
+
+.dark .book-page .prose .blurb-tile {
+    background-color: rgba(51, 51, 51, 0.5);
+}
+
+.dark .book-page .prose .blurb-tile:hover {
+    background-color: rgba(80, 80, 80, 0.6);
+}
+
+.book-page .prose .blurb-tile .blurb-preview {
+    margin: 0 0 0.5rem !important;
+}
+
+.book-page .prose .blurb-tile .blurb-attr {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #0c7fb3;
+    margin: 0 !important;
+}
+
+.dark .book-page .prose .blurb-tile .blurb-attr {
+    color: #7fb3d5;
+}
+
+/* Blurb Modal */
+.blurb-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.blurb-modal.is-open {
+    display: flex;
+}
+
+.blurb-modal-content {
+    position: relative;
+    background: #1e1e1e;
+    border: 2px solid #7fb3d5;
+    border-radius: 12px;
+    padding: 2.5rem 3rem;
+    max-width: 720px;
+    width: 100%;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(127, 179, 213, 0.15);
+}
+
+.blurb-modal-text {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin: 0 0 1.25rem !important;
+    color: #e5e5e5;
+}
+
+.blurb-modal-attr {
+    font-style: italic;
+    font-size: 0.95rem;
+    color: #7fb3d5;
+    margin: 0 !important;
+}
+
+.blurb-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: #7fb3d5;
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.blurb-modal-close:hover {
+    color: #fff;
+    background-color: rgba(127, 179, 213, 0.2);
+}
+
 /* Blockquotes */
 .book-page .prose blockquote {
     background-color: rgba(14, 165, 233, 0.1);

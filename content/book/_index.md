@@ -2,38 +2,57 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.2.0"
+version: "v1.3.0"
 ---
 
 ## Acclaim
 
 <div class="blurbs-grid">
-
-> "This book changed my life! 🌟 I used to be burdened, but now I'm completely unburdened. It's like magic, but better! ✨"
->
-> — **Dr. Firstname Lastname**, Professor of Obviousness Studies at Generic University
-
-> "I've read every book ever written, and this is definitely one of them. 📚 Possibly even the best one I've read this week! 🏆"
->
-> — **Definitely Real Person**, Totally Legitimate Book Reviewer
-
-> "Before reading this book, I was carrying around seventeen metaphorical burdens. Now I only have three! 🎒➡️🎈 That's a reduction of 82.35%! 📊"
->
-> — **Count VonNumbers McStatistics**, Chief Mathematician at Made-Up Institute
-
-> "As a famous celebrity who definitely exists, I can say this book is absolutely tremendous. 💯 Believe me, nobody knows books like I do. 😎"
->
-> — **Celebrity Name**, Award-Winning Actor/Actress/Astronaut
-
-> "I haven't actually read the book yet, but the cover is very shiny ✨ and I assume the contents are equally reflective. 🤔"
->
-> — **Professor Hasty McReview**, Distinguished Chair of Premature Conclusions
-
-> "This book cured my existential dread, fixed my Wi-Fi connection 📶, and taught my cat to play the piano. 🐱🎹 Results may vary."
->
-> — **Anonymous T. Internet**, Verified Purchase (Trust Me)
-
+<div class="blurb-tile" data-full="Pritikin takes us through mazes of psychedelic and religious experiences with the helpful lens of Internal Family Systems (IFS) that give us tools for assessing various epistemic views of the experiences and qualifying lens to assess the origins, certainty, and justifications for these special forms of knowledge. IFS provides the psychonaut with tools for assessing process, moral and content beliefs; the diverse entities of religious and psychedelic experiences; and the diverse aspects of ourselves that emerge under these revealing circumstances. Pritikin offer guidance for mental steering, addressing the vulnerable states as inner seekers, and warnings about the risks of victimization. An easy and informative read." data-attr="Dr. Michael J. Winkelman, Editor of The Handbook of Entheogenic Healing">
+<p class="blurb-preview">Pritikin takes us through mazes of psychedelic and religious experiences with the helpful lens of Internal Family Systems (IFS)…</p>
+<p class="blurb-attr">— <strong>Dr. Michael J. Winkelman</strong>, Editor of <em>The Handbook of Entheogenic Healing</em></p>
 </div>
+<div class="blurb-tile" data-full="Joshua Pritikin&apos;s &ldquo;Religion Unburdened by Belief&rdquo; reflects a flowering of insight in recent religious philosophy — a recognition of the difference between religious practice and religious dogma. The deep-diving text usefully explores sincere religious practice that may be at once tempered and liberated by epistemic humility, while emphasizing openness to direct religious experience. Personally inspiring, the core theme reflects the &ldquo;Least Dogma&rdquo; theology of my church. I hold the process belief that this new emphasis on less dogma, more practice and direct experience will accelerate growth in religious insight. Further, this direction promises to ameliorate deep alienations and divisions that often emerge when religious dogmas become disconnected from loving relational presence and direct experience of the Sacred, the Divine Mystery." data-attr="Pastor Bob Stanley, Sacred Garden Community Church">
+<p class="blurb-preview">Pritikin's book reflects a flowering of insight in recent religious philosophy — a recognition of the difference between religious practice and religious dogma…</p>
+<p class="blurb-attr">— <strong>Pastor Bob Stanley</strong>, Sacred Garden Community Church</p>
+</div>
+</div>
+
+<div id="blurb-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
+<div class="blurb-modal-content">
+<p class="blurb-modal-text"></p>
+<p class="blurb-modal-attr"></p>
+<button class="blurb-modal-close" aria-label="Close">✕</button>
+</div>
+</div>
+
+<script>
+(function() {
+  const modal = document.getElementById('blurb-modal');
+  const modalText = modal.querySelector('.blurb-modal-text');
+  const modalAttr = modal.querySelector('.blurb-modal-attr');
+
+  function openModal(tile) {
+    modalText.textContent = tile.dataset.full;
+    modalAttr.textContent = '— ' + tile.dataset.attr;
+    modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('is-open');
+  }
+
+  function closeModal() {
+    modal.setAttribute('aria-hidden', 'true');
+    modal.classList.remove('is-open');
+  }
+
+  document.querySelectorAll('.blurb-tile').forEach(function(tile) {
+    tile.addEventListener('click', function() { openModal(tile); });
+  });
+
+  modal.querySelector('.blurb-modal-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+})();
+</script>
 
 ## Introduction
 
