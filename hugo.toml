@@ -1,6 +1,23 @@
 baseURL = 'https://unburdened.biz/'
 languageCode = 'en-us'
 title = 'Unburdened'
+buildFuture = true
+
+[outputFormats.Atom]
+mediaType = "application/atom+xml"
+baseName = "atom"
+rel = "alternate"
+isPlainText = true
+notAlternative = false
+
+[outputFormats.RSS]
+isPlainText = true
+
+[outputs]
+home = ["HTML"]
+
+[mediaTypes."application/atom+xml"]
+suffixes = ["xml"]
 
 [security]
   [security.funcs]

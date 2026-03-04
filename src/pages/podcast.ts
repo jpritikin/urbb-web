@@ -1,3 +1,5 @@
+export {};
+
 const VOTED_KEY = 'podcast-interest-voted';
 
 function init(): void {

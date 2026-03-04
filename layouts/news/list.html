@@ -1,0 +1,216 @@
+{{ define "head-extra" }}
+<link rel="alternate" type="application/rss+xml" title="{{ .Site.Title }} News (RSS)" href="{{ .Permalink }}index.xml">
+<link rel="alternate" type="application/atom+xml" title="{{ .Site.Title }} News (Atom)" href="{{ .Permalink }}atom.xml">
+<script type="module" src="/js/pages/news.js"></script>
+<style>
+#news-calendar {
+  margin-bottom: 1rem;
+  display: inline-block;
+  border: 1px dashed rgba(134, 239, 172, 0.4);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.05), rgba(21, 128, 61, 0.03));
+}
+.dark #news-calendar {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.2), rgba(21, 128, 61, 0.1));
+  border-color: rgba(134, 239, 172, 0.2);
+}
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+.cal-month-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #14532d;
+  min-width: 9rem;
+  text-align: center;
+}
+.dark .cal-month-label { color: #86efac; }
+.cal-nav {
+  background: none;
+  border: 1px solid rgba(134, 239, 172, 0.4);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  color: #14532d;
+  padding: 0.15rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  transition: background 0.15s;
+}
+.cal-nav:hover { background: rgba(134, 239, 172, 0.15); }
+.dark .cal-nav { color: #86efac; border-color: rgba(134, 239, 172, 0.25); }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 2.2rem);
+  gap: 0.15rem;
+  text-align: center;
+}
+.cal-day-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 0.15rem 0;
+  text-transform: uppercase;
+}
+.dark .cal-day-name { color: #9ca3af; }
+.cal-cell {
+  position: relative;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  border-radius: 50%;
+  cursor: default;
+  color: #374151;
+  transition: background 0.15s;
+}
+.dark .cal-cell { color: #d1d5db; }
+.cal-cell.has-news {
+  cursor: pointer;
+  font-weight: 600;
+  color: #14532d;
+}
+.dark .cal-cell.has-news { color: #86efac; }
+.cal-cell.has-news:hover { background: rgba(134, 239, 172, 0.2); }
+.cal-cell.active {
+  background: #15803d !important;
+  color: white !important;
+}
+.dark .cal-cell.active { background: #166534 !important; }
+.cal-dot {
+  position: absolute;
+  bottom: 0.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: #15803d;
+}
+.dark .cal-dot { background: #86efac; }
+.cal-cell.active .cal-dot { background: rgba(255,255,255,0.7); }
+.cal-reset {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: #6b7280;
+  text-align: center;
+  display: none;
+}
+.cal-reset:hover { text-decoration: underline; }
+.dark .cal-reset { color: #9ca3af; }
+
+.news-item {
+  border-left: 3px solid rgba(134, 239, 172, 0.4);
+  padding-left: 1rem;
+  margin-bottom: 2rem;
+}
+.dark .news-item { border-color: rgba(134, 239, 172, 0.25); }
+.news-item.hidden { display: none; }
+.news-date {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  font-family: monospace;
+}
+.dark .news-date { color: #9ca3af; }
+.news-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #14532d;
+  margin-bottom: 0.4rem;
+}
+.dark .news-title { color: #86efac; }
+#news-empty {
+  display: none;
+  color: #6b7280;
+  font-style: italic;
+}
+.dark #news-empty { color: #9ca3af; }
+
+.news-item.future { display: none; }
+.news-item.future.future-visible { display: block; }
+.news-item.future .news-date::after {
+  content: ' 🔮';
+}
+#future-toggle {
+  display: block;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  color: #581c87;
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.06), rgba(124, 58, 237, 0.06));
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1.25rem;
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.15), inset 0 0 12px rgba(124, 58, 237, 0.05);
+  transition: all 0.2s;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+}
+#future-toggle:hover {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.12), rgba(124, 58, 237, 0.12));
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.3), inset 0 0 12px rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.6);
+}
+.dark #future-toggle {
+  color: #c4b5fd;
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.2), rgba(124, 58, 237, 0.15));
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.2), inset 0 0 12px rgba(124, 58, 237, 0.1);
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.6);
+}
+.dark #future-toggle:hover {
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.4), inset 0 0 16px rgba(124, 58, 237, 0.15);
+  border-color: rgba(167, 139, 250, 0.6);
+}
+</style>
+{{ end }}
+
+{{ define "main" }}
+<article>
+  <header class="mb-6">
+    <h1 class="text-4xl mb-2 text-zinc-900 dark:text-gray-100">{{ .Title }}</h1>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+      Subscribe:
+      <a href="{{ .Permalink }}index.xml" class="text-orange-500 dark:text-orange-400 no-underline hover:underline">RSS</a>
+      &middot;
+      <a href="{{ .Permalink }}atom.xml" class="text-orange-500 dark:text-orange-400 no-underline hover:underline">Atom</a>
+    </p>
+  </header>
+
+  <div id="news-calendar">
+    <div class="cal-header">
+      <button class="cal-nav" id="cal-prev">&#8249;</button>
+      <span class="cal-month-label" id="cal-month-label"></span>
+      <button class="cal-nav" id="cal-next">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-reset" id="cal-reset">✕ show all</div>
+  </div>
+  <button id="future-toggle">🔮 Pierce the Veil of Time</button>
+
+  <div id="news-list">
+    {{ range sort (where .Site.RegularPages "Section" "news") "Date" "desc" }}
+    <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}">
+      <div class="news-date">{{ .Date.Format "2 January 2006" }}</div>
+      <div class="news-title">{{ .Title }}</div>
+      <div class="prose dark:prose-invert prose-sm max-w-none
+        prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-2
+        prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline">
+        {{ .Content }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  <p id="news-empty">No news items for this date.</p>
+</article>
+{{ end }}
