@@ -58,7 +58,7 @@ export interface PlaybackRecordingDependencies {
     getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
     getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null; setPointerEventsEnabled(enabled: boolean): void } | null;
-    getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void } | null;
+    getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void; setCommLogPointerEventsEnabled(enabled: boolean): void } | null;
     getContainer: () => HTMLElement | null;
     getSvgElement: () => SVGSVGElement | null;
     getCanvasDimensions: () => { width: number; height: number };
@@ -564,7 +564,9 @@ export class PlaybackRecordingCoordinator {
 
     private simulateClickAtPosition(x: number, y: number, retryCount: number = 0): ActionResult {
         const { clientX, clientY } = this.svgToScreenCoords(x, y);
+        this.deps.getUIManager()?.setCommLogPointerEventsEnabled(false);
         const element = document.elementFromPoint(clientX, clientY);
+        this.deps.getUIManager()?.setCommLogPointerEventsEnabled(true);
         if (!element) {
             const svgElement = this.deps.getSvgElement();
             const rect = svgElement?.getBoundingClientRect();

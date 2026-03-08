@@ -4,11 +4,6 @@ import { RNG, pickRandom } from '../playback/testability/rng.js';
 
 export const REGULATION_STANCE_LIMIT = 0.3;
 
-export interface MessageOrchestratorView {
-    getCloudState(cloudId: string): unknown | null;
-    startMessage(message: PartMessage, senderId: string, targetId: string): void;
-}
-
 export interface MessageOrchestratorCallbacks {
     act: (label: string, fn: () => void) => void;
     showThoughtBubble: (text: string, cloudId: string, partInitiated?: boolean) => void;
@@ -17,7 +12,6 @@ export interface MessageOrchestratorCallbacks {
 
 export class MessageOrchestrator {
     private getModel: () => SimulatorModel;
-    private view: MessageOrchestratorView;
     private getRelationships: () => PartStateManager;
     private rng: RNG;
     private callbacks: MessageOrchestratorCallbacks;
@@ -48,13 +42,11 @@ export class MessageOrchestrator {
 
     constructor(
         getModel: () => SimulatorModel,
-        view: MessageOrchestratorView,
         getRelationships: () => PartStateManager,
         rng: RNG,
         callbacks: MessageOrchestratorCallbacks
     ) {
         this.getModel = getModel;
-        this.view = view;
         this.getRelationships = getRelationships;
         this.rng = rng;
         this.callbacks = callbacks;
@@ -410,17 +402,9 @@ export class MessageOrchestrator {
     private sendConversationMessage(senderId: string, targetId: string, text: string): void {
         const senderName = this.model.parts.getPartName(senderId);
         const targetName = this.model.parts.getPartName(targetId);
-        let message: PartMessage | null = null;
         this.callbacks.act(`${senderName} speaks to ${targetName}`, () => {
-            message = this.model.sendMessage(senderId, targetId, text, 'conversation');
+            this.model.sendMessage(senderId, targetId, text, 'conversation');
         });
-        if (message) {
-            const senderState = this.view.getCloudState(senderId);
-            const targetState = this.view.getCloudState(targetId);
-            if (senderState && targetState) {
-                this.view.startMessage(message, senderId, targetId);
-            }
-        }
     }
 
     private applyStanceShock(speakerId: string, receiverId: string, speakerStance: number): void {
@@ -552,17 +536,8 @@ export class MessageOrchestrator {
     private sendMessage(senderId: string, targetId: string, text: string): void {
         const senderName = this.model.parts.getPartName(senderId);
         const targetName = this.model.parts.getPartName(targetId);
-        const actionLabel = `${senderName} speaks to ${targetName}`;
-        let message: PartMessage | null = null;
-        this.callbacks.act(actionLabel, () => {
-            message = this.model.sendMessage(senderId, targetId, text, 'conversation');
+        this.callbacks.act(`${senderName} speaks to ${targetName}`, () => {
+            this.model.sendMessage(senderId, targetId, text, 'conversation');
         });
-        if (message) {
-            const senderState = this.view.getCloudState(senderId);
-            const targetState = this.view.getCloudState(targetId);
-            if (senderState && targetState) {
-                this.view.startMessage(message, senderId, targetId);
-            }
-        }
     }
 }

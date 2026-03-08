@@ -57,6 +57,7 @@ export class SimulatorModel {
     private pendingAction: PendingAction | null = null;
     private conversationTherapistDelta: Map<string, number> = new Map();
     private conversationParticipantIds: [string, string] | null = null;
+    private activeConversationKey: string | null = null;
     private _frozen: boolean = false;
 
     freeze(): void { this._frozen = true; }
@@ -528,6 +529,10 @@ export class SimulatorModel {
         cloned.mode = this.mode;
         cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
         cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
+        cloned.conversationParticipantIds = this.conversationParticipantIds ? [...this.conversationParticipantIds] as [string, string] : null;
+        cloned.conversationPhases = new Map(this.conversationPhases);
+        cloned.conversationSpeakerId = this.conversationSpeakerId;
+        cloned.activeConversationKey = this.activeConversationKey;
         cloned.simulationTime = this.simulationTime;
         cloned.orchestratorState = this.orchestratorState ? { ...this.orchestratorState } : null;
         return cloned;
@@ -714,6 +719,10 @@ export class SimulatorModel {
         this.assertNotFrozen('initConversation');
         const [a, b] = participantIds;
         this.conversationParticipantIds = participantIds;
+        const key = [a, b].sort().join('|');
+        if (this.activeConversationKey !== key) {
+            this.activeConversationKey = key;
+        }
         this.parts.applyStanceFlip(a, b, () => rng.random('conv_stance'));
         this.parts.applyStanceFlip(b, a, () => rng.random('conv_stance'));
 
@@ -762,6 +771,11 @@ export class SimulatorModel {
         this.conversationParticipantIds = null;
         this.conversationPhases.clear();
         this.conversationSpeakerId = null;
+        this.activeConversationKey = null;
+    }
+
+    getActiveConversationKey(): string | null {
+        return this.activeConversationKey;
     }
 
     getTherapistStanceDelta(cloudId: string): number {
