@@ -71,6 +71,16 @@ We'll examine how techniques like careful psychological work, meditation, and ps
 
 Examining your beliefs—especially cherished religious ones—requires courage and may be uncomfortable. You may discover that ideas you thought were helping your inner growth have actually been holding you back. If you're ready to subtract, let's begin.
 
+## Way of Open Inquiry
+
+*Religion Unburdened by Belief* poses the question: what would religion without belief actually look like? If you stripped away the creeds, the doctrines, the articles of faith—what’s left? Is there anything left?
+
+The book takes up this question with the *Way of Open Inquiry*, a thought experiment. It’s an attempt to design religion from a blank slate. At stake is how you live, what you're willing to give up, and who you'll be on the other side. What would religion look like if you built it from the essentials?
+
+Where do you even start? What do humanity’s oldest religious practices—trance, ritual, spirit-work—still have to teach us? Is there a role for altered states—meditation, say—and if so, what is it? Should psychedelics play a role, and how? How do you design something that’s both safe enough to practice and transformative enough to matter? How do you build community around lived experience rather than shared doctrine? What would it mean to design a religion that resists its own codification?
+
+Consider this an invitation. Faith optional. Courage required.
+
 ## Order Your Copy
 
 <div class="preorder-banner">
