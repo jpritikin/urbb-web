@@ -96,9 +96,13 @@ src/cloud/partStateManager.ts    - PartState (individual part data), PartBiograp
                                    recognition), impactRecognition/impactRejection dialogue
                                    arrays. Trust overflow below trustFloor feeds into
                                    stanceFlipOdds and stance extremity.
-                                   Conversational dialogue sets with phases
-                                   (speak, listen, mirror, validate, empathize).
-                                   Fallback dialogues for dominating/withdrawing stances.
+                                   Conversational dialogue sets with 4-step or 6-step tuples
+                                   (speak, mirror, [clarify, mirror_again,] validate, empathize).
+                                   pickTupleIndex() selects a tuple at cycle start;
+                                   getTupleDialogue(speakerId, listenerId, tupleIndex, phase)
+                                   retrieves a line — always from the speaker's relation, for
+                                   both speaker and listener phases. getTupleLength() returns
+                                   4 or 6 from a pre-picked index.
                                    getRelation(), getRelationStance(), applyStanceFlip(),
                                    getRelationSummaries(), setInterPartTrustFloor() for
                                    conversation introspection.
@@ -240,6 +244,8 @@ supporting parts. All are visible in foreground mode.
 
 Conversation System
 -------------------
+Authoritative spec: ~/coach/content/docs/ifs/conversation/_index.md and ~/coach/docs/conversation.txt
+
 model.isConversationPossible() checks if two parts can have a directed dialogue.
 model.initConversation() applies stance flips, picks initial speaker (highest stance),
 sets phases (speaker→speak, listener→listen). Conversation state: participantIds,
@@ -248,17 +254,25 @@ speakerId, phases map, effectiveStances cache, therapistDelta map.
 Effective stance = relation stance + therapist delta (clamped to [-1,1]).
 Therapist deltas decay exponentially. Carpets can be drag-rotated to nudge deltas.
 
-IFIO phase cycle (per speaker): speak/listen → listen/mirror → validate/listen →
-listen/empathize → listen/listen (complete). Phases advance when both stances stay
-within REGULATION_STANCE_LIMIT (±0.3) long enough for regulationScore > 0.5, and a
-phase message was sent. On completion, large trust bonus. Sustained regulation also
-grants periodic small trust gains.
+IFIO phase cycle: 4-step (speak/listen → listen/mirror → validate/listen →
+listen/empathize) or 6-step (adds clarify/listen → listen/mirror_again between mirror
+and validate). Cycle length determined by tuple length, picked once at cycle start via
+pickTupleIndex(). All lines — both speaker and listener — come from the speaker's tuple
+(speaker→listener relation). Phases advance when regulationScore > 0.5 and respond
+timer elapses. Dysregulated speakers may nag (probabilistic speak with no phase advance).
+On empathize completion: large trust bonus to both, former speaker's stance softened.
+Sustained regulation grants periodic small trust gains.
 
-Listener violation: if the listening part's stance exceeds REGULATION_STANCE_LIMIT,
-the conversation resets with that part as the new speaker.
+Listener violation: if the passive listener's stance exceeds REGULATION_STANCE_LIMIT
+for >1s, conversation resets with that part as the new speaker (new tuple drawn).
 
 When both parts are in listen/listen after empathize completes, after NEW_CYCLE_DELAY
 the part with highest stance becomes the new speaker and a fresh cycle begins.
+
+Stance shock: positive speaker pushes receiver negative (opposite polarity); negative
+speaker pulls receiver positive. With probability stanceFlipOdds the direction reverses
+(receiver mirrors speaker's polarity). Shock magnitude scaled by speaker stance,
+attenuated by selfTrust and interPartTrust, amplified by dysregulated-streak multiplier.
 
 Backlash
 --------
@@ -267,9 +281,7 @@ reducing each protector's trust by trustGain/2 and probabilistically
 triggering backlash (newTrust < rng). All protectors are checked (not
 short-circuited); if multiple trigger, one is picked randomly.
 
-Stance shock: when a part speaks, the receiver's stance shifts proportional to
-speaker stance magnitude, modulated by self-trust and inter-part trust. Also damages
-inter-part trust; overflow beyond zero trust increases needAttention.
+Stance shock: see Conversation System above for full shock mechanics.
 
 MessageType: 'conversation'. Messages travel between parts as PartMessages
 rendered by MessageRenderer. Blended parts send dysregulated utterances using

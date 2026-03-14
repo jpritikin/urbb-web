@@ -743,8 +743,11 @@ export class CarpetRenderer {
         'speak': 'Speaking',
         'listen': 'Listening',
         'mirror': 'Mirroring',
+        'mirror_again': 'Mirror Again',
+        'clarify': 'Clarifying',
         'validate': 'Validating',
         'empathize': 'Empathizing',
+        'waiting': 'Waiting',
     };
 
     private updateCarpetPath(group: SVGGElement, vertices: Array<{ x: number; y: number }>, landingProgress: number = 0, effectiveStance: number = 0, carpetId: string = '', tiltAngle: number = 0): void {

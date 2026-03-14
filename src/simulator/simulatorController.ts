@@ -567,7 +567,8 @@ export class SimulatorController {
 
         for (const blendedId of blendedParts) {
             if (this.relationships.hasHostileRelation(blendedId, cloudId)) {
-                const dialogue = this.relationships.getInterPartDialogue(blendedId, cloudId, 'speak', () => this.rng.random('dialogue_pick'));
+                const tupleIdx = this.relationships.pickTupleIndex(blendedId, cloudId, () => this.rng.random('dialogue_pick'));
+                const dialogue = this.relationships.getTupleDialogue(blendedId, cloudId, tupleIdx, 'speak');
                 if (dialogue) {
                     blendedResponses.push({ cloudId: blendedId, response: dialogue });
                 }

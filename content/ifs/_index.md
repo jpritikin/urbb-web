@@ -31,6 +31,10 @@ version: "v3.69.0"
    - 🙏 Gratitude, Compassion — help parts develop trust
    - 💬 "What do you need to know?" — build trust with exiles
 
+**Conversations:**
+
+When two parts are in conference together, you can start an IFIO-style directed dialogue between them. This is a mini-game with its own mechanics—see the [Conversation guide](https://estrelacounseling.com/docs/ifs/conversation/) for details.
+
 **Hints:**
 - Fully resolve protector/exile relationships
 - Some menu items only appear in special circumstances

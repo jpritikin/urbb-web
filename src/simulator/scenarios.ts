@@ -145,19 +145,84 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         ],
         dialogues: {
             hostile: [
-                ["The Drinker is turning us into our parent.", "The Shamer doesn't know what the Drinker carries.", "The Shamer sees exactly what's happening.", "..."],
-                ["Put the bottle down.", "The Shamer can't stop the Drinker.", "Watch the Shamer try.", "..."],
+                [
+                    "Every time you pour a drink, I see our parent's face.",
+                    "You're saying I drink like our parent did.",
+                    "You don't just remind me of them. You've become them.",
+                    "Fine. I hear you. What can I do about it?",
+                ],
+                [
+                    "You keep reaching for the bottle every time things get hard.",
+                    "You think I use drinking to avoid hard things.",
+                    "Yes. Every time there's pressure, it's the first place you go.",
+                    "Maybe. Doesn't mean I have to stop.",
+                ],
+                [
+                    "You're going to destroy everything we've built.",
+                    "You think we're going to lose our driver's license.",
+                    "Yes, but I'm trying to stop a worse collapse.",
+                    "You're scared of a comprehensive collapse.",
+                    "Right. I see it coming and I don't know how to stop it.",
+                    "I get your fear, but what can I do about it?",
+                ],
             ],
             guarded: [
-                ["The Shamer has seen where drinking leads.", "The Shamer thinks the Shamer knows everything.", "The Shamer knows enough.", "Maybe the Shamer does."],
-                ["The Shamer is trying to protect us.", "Protect us from what?", "From becoming our parent.", "That's a heavy burden to carry."],
+                [
+                    "I've seen where this road leads.",
+                    "You're worried about where this is heading.",
+                    "Yes. I've watched it happen to our parent.",
+                    "I didn't realize you were carrying that too.",
+                ],
+                [
+                    "I'm trying to protect us, not punish you.",
+                    "You want to protect us, not attack me.",
+                    "Right. I just don't know how to do it without getting loud.",
+                    "I can see you're trying. That helps a little.",
+                ],
+                [
+                    "I keep track of every slip.",
+                    "You're keeping score — cataloguing everything I do wrong.",
+                    "No. I track them because each one terrified me.",
+                    "You're holding onto them out of fear, not to punish.",
+                    "Yes. Every slip I remember is a moment I was terrified.",
+                    "I thought you were building a case. You were just scared.",
+                ],
             ],
             opening: [
-                ["The Shamer is scared for us both.", "The Shamer is scared?", "Yes — scared we'll end up like our parent.", "The Drinker didn't know the Shamer was scared too."],
-                ["The Shamer isn't trying to punish the Drinker.", "Then what is the Shamer doing?", "Trying to break the cycle.", "Breaking the cycle sounds exhausting."],
+                [
+                    "I'm scared we'll end up like our parent.",
+                    "You're frightened, not really critical.",
+                    "Yes. The anger is on top. Underneath I'm terrified.",
+                    "I didn't know fear was driving this. That changes something.",
+                ],
+                [
+                    "I don't want to be your enemy. I want us to survive.",
+                    "You want to be on my side.",
+                    "Exactly. I need you to still be here.",
+                    "I want that too. Maybe we've both been fighting the wrong battle.",
+                ],
+                [
+                    "I learned to be loud from our parent. I didn't choose it.",
+                    "You inherited this harshness?",
+                    "More than inherited — it was the only way I knew to care.",
+                    "You were harsh because you never learned a quiet way.",
+                    "Yes. Loud and harsh was the only version of care I was shown.",
+                    "I see you differently now.",
+                ],
             ],
             collaborative: [
-                ["What if we found another way to rest?", "Would the Shamer stop attacking the Drinker?", "If the Drinker lets the Shamer help.", "The Drinker is listening."],
+                [
+                    "What if we looked for another way together?",
+                    "You want to work together?",
+                    "Yes. I'm done fighting. I want to problem-solve.",
+                    "I'm in. Tell me what you need from me.",
+                ],
+                [
+                    "I could warn us without attacking. Just a signal, not a verdict.",
+                    "You're offering to flag danger instead of condemning.",
+                    "Right. I can do that if you agree to listen.",
+                    "I can try to listen. That feels like real progress.",
+                ],
             ],
         },
     });
@@ -176,19 +241,84 @@ function setupAlcoholScenario(cloudManager: CloudManager): void {
         ],
         dialogues: {
             hostile: [
-                ["Leave the Drinker alone.", "Ignoring the Shamer doesn't fix anything.", "The Shamer's lectures make everything worse.", "..."],
-                ["The Shamer sounds just like our parent.", "Don't say that.", "Stop acting like our parent, then.", "..."],
+                [
+                    "Leave me alone.",
+                    "You want to be left alone.",
+                    "Yes. Your constant lectures make everything worse.",
+                    "You feel hounded. Okay.",
+                ],
+                [
+                    "You sound just like our parent.",
+                    "You're saying I remind you of our parent.",
+                    "Exactly. Same tone. Same contempt.",
+                    "Good. Remember that next time you reach for the bottle.",
+                ],
+                [
+                    "I didn't ask for any of this.",
+                    "So you want credit for suffering?",
+                    "No. I want you to stop acting like I chose this.",
+                    "You're saying this wasn't a choice — it was the only way you knew.",
+                    "Yes. I was surviving. There was nothing else available to me then.",
+                    "I didn't see it that way.",
+                ],
             ],
             guarded: [
-                ["The Drinker is just trying to get through tonight.", "By doing exactly what our parent did?", "Drinking is different.", "Is drinking really different?"],
-                ["The Shamer doesn't know how loud the loneliness gets.", "The loneliness?", "Everything gets loud.", "The Drinker is heard."],
+                [
+                    "I'm just trying to get through tonight.",
+                    "So you want me to back off?",
+                    "Right. Back off.",
+                    "I hear that. Tonight is hard.",
+                ],
+                [
+                    "You don't know how loud it gets inside.",
+                    "You're carrying a lot of noise I can't see.",
+                    "Yes. When it gets loud, drinking is the only thing that quiets it.",
+                    "I didn't know it was that loud.",
+                ],
+                [
+                    "I'm not weak. I'm overwhelmed.",
+                    "You don't want to be seen as weak.",
+                    "Yes, but I need you to understand the difference.",
+                    "Weak and overwhelmed are not the same?",
+                    "Yes. Weak is a choice. Overwhelmed is what happens when too much lands at once.",
+                    "I've been treating them as the same. I can stop doing that.",
+                ],
             ],
             opening: [
-                ["The Drinker doesn't want to drink.", "The Drinker doesn't?", "No — the Drinker doesn't know what else to do.", "Maybe we can find something together."],
-                ["The Drinker learned drinking from our parent, didn't the Drinker?", "Is the Drinker starting to see the pattern?", "Yes.", "Saying that takes courage."],
+                [
+                    "I don't actually want to drink.",
+                    "So why do you keep hitting the bottle?",
+                    "I don't know what else to do with all of this.",
+                    "Then I've been blaming you for something you're also struggling with.",
+                ],
+                [
+                    "You got the contempt. I got the bottle. Same parent.",
+                    "You're saying we both inherited something from them.",
+                    "Yes. Different burdens. Same source.",
+                    "Then we've been fighting each other over wounds we share.",
+                ],
+                [
+                    "I've been trying to put this down for a long time.",
+                    "Really?",
+                    "I've been exhausted by trying and failing alone.",
+                    "You've been trying to stop alone, and it's worn you out.",
+                    "Yes. Every failed attempt costs something. I'm running low.",
+                    "I didn't know you were already fighting. I want to help now.",
+                ],
             ],
             collaborative: [
-                ["What if the Shamer helped instead of shaming?", "The Shamer could try.", "The Drinker needs the Shamer on the Drinker's side.", "The Shamer has always been on the Drinker's side — just afraid."],
+                [
+                    "I want you as an ally, not a judge.",
+                    "You need me on the same side.",
+                    "Yes. If you're with me, I don't need the drinking as much.",
+                    "I want that too. I've always wanted that.",
+                ],
+                [
+                    "What if I checked in with you before reaching for the bottle?",
+                    "You're offering to pause and consult instead of acting alone.",
+                    "Right. Just a moment, to check whether there's another way.",
+                    "I can work with that. That's all I ever wanted.",
+                ],
             ],
         },
     });

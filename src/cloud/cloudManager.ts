@@ -982,7 +982,8 @@ export class CloudManager {
         const oldMessageIds = new Set(oldModel.getMessages().map(m => m.id));
         for (const msg of this.model.getMessages()) {
             if (!oldMessageIds.has(msg.id)) {
-                log(`💬 ${this.model.parts.getPartName(msg.senderId)} → ${this.model.parts.getPartName(msg.targetId)}: ${msg.text}`);
+                const label = msg.conversationPhaseLabel ? ` [${msg.conversationPhaseLabel}]` : '';
+                log(`💬 ${this.model.parts.getPartName(msg.senderId)} → ${this.model.parts.getPartName(msg.targetId)}${label}: ${msg.text}`);
             }
         }
     }
@@ -1123,7 +1124,18 @@ export class CloudManager {
                 const rawStances = this.model.getConversationEffectiveStances();
                 const effectiveStances: Map<string, number> | null = rawStances.size > 0 ? rawStances : null;
                 const phases = this.model.getConversationPhases();
-                this.carpetRenderer.setConversationPhases(phases.size > 0 ? phases : null);
+                let displayPhases: Map<string, string> = phases;
+                if (phases.size === 2) {
+                    const ids = [...phases.keys()];
+                    const [a, b] = ids;
+                    if (phases.get(a) === 'listen' && phases.get(b) === 'listen') {
+                        const stances = this.model.getConversationEffectiveStances();
+                        if ((stances.get(a) ?? 0) < 0 && (stances.get(b) ?? 0) < 0) {
+                            displayPhases = new Map([[a, 'waiting'], [b, 'waiting']]);
+                        }
+                    }
+                }
+                this.carpetRenderer.setConversationPhases(displayPhases.size > 0 ? displayPhases : null);
                 this.carpetRenderer.update(carpetStates, seats, deltaTime, conversationParticipantSet, effectiveStances);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);
