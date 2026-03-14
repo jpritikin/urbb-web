@@ -117,15 +117,13 @@ body.ifs-fullscreen main {
 
 .mobile-fullscreen-banner {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  transform: none;
   z-index: 100;
-  padding: 0.5rem;
   pointer-events: none;
-  will-change: top, left;
-  max-width: min(90vw, 90vh);
   width: max-content;
+  max-width: 320px;
 }
 
 .banner-content {

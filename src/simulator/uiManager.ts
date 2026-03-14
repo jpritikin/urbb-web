@@ -17,6 +17,7 @@ export class UIManager {
 
     private modeToggleContainer: HTMLElement | null = null;
     private mobileBanner: HTMLElement | null = null;
+    private mobileBannerSize: { w: number; h: number } | null = null;
     private commLogPanel: HTMLElement | null = null;
     private commLogVisible: boolean = false;
     private commLogEntries: string[] = [];
@@ -133,6 +134,9 @@ export class UIManager {
         const enterBtn = this.mobileBanner.querySelector('.enter-fullscreen-btn');
         enterBtn?.addEventListener('click', () => this.config.onFullscreenToggle());
 
+        this.mobileBanner.style.maxWidth = '320px';
+        this.mobileBanner.style.width = 'max-content';
+        this.mobileBanner.style.height = 'fit-content';
         document.body.appendChild(this.mobileBanner);
         this.updateOrientationIndicator();
         this.updateBannerPosition();
@@ -175,13 +179,19 @@ export class UIManager {
     private updateBannerPosition(): void {
         if (!this.mobileBanner) return;
         const vv = window.visualViewport;
-        const left = vv ? vv.offsetLeft + vv.width / 2 : window.innerWidth / 2;
-        const top = vv ? vv.offsetTop + vv.height / 2 : window.innerHeight / 2;
-        this.mobileBanner.style.left = `${left}px`;
-        this.mobileBanner.style.top = `${top}px`;
+        if (!vv) return;
+        // position:fixed uses visual px. Center banner on the visual viewport center.
+        const cx = vv.offsetLeft + vv.width / 2;
+        const cy = vv.offsetTop + vv.height / 2;
+        if (!this.mobileBannerSize) {
+            this.mobileBannerSize = { w: this.mobileBanner.offsetWidth, h: this.mobileBanner.offsetHeight };
+        }
+        const { w, h } = this.mobileBannerSize;
+        this.mobileBanner.style.left = `${cx - w / 2}px`;
+        this.mobileBanner.style.top = `${cy - h / 2}px`;
     }
 
-    setFullscreen(isFullscreen: boolean): void {
+setFullscreen(isFullscreen: boolean): void {
         this.isFullscreen = isFullscreen;
 
         if (isFullscreen) {
