@@ -22,6 +22,7 @@ export interface PartMessage {
     targetId: string;
     text: string;
     travelTimeRemaining: number;
+    conversationPhaseLabel?: string;
 }
 
 export interface ThoughtBubble {
@@ -56,7 +57,9 @@ export class SimulatorModel {
     private mode: SimulatorMode = 'panorama';
     private pendingAction: PendingAction | null = null;
     private conversationTherapistDelta: Map<string, number> = new Map();
+    private conversationShockDelta: Map<string, number> = new Map();
     private conversationParticipantIds: [string, string] | null = null;
+    private activeConversationKey: string | null = null;
     private _frozen: boolean = false;
 
     freeze(): void { this._frozen = true; }
@@ -528,6 +531,11 @@ export class SimulatorModel {
         cloned.mode = this.mode;
         cloned.pendingAction = this.pendingAction ? { ...this.pendingAction } : null;
         cloned.conversationTherapistDelta = new Map(this.conversationTherapistDelta);
+        cloned.conversationShockDelta = new Map(this.conversationShockDelta);
+        cloned.conversationParticipantIds = this.conversationParticipantIds ? [...this.conversationParticipantIds] as [string, string] : null;
+        cloned.conversationPhases = new Map(this.conversationPhases);
+        cloned.conversationSpeakerId = this.conversationSpeakerId;
+        cloned.activeConversationKey = this.activeConversationKey;
         cloned.simulationTime = this.simulationTime;
         cloned.orchestratorState = this.orchestratorState ? { ...this.orchestratorState } : null;
         return cloned;
@@ -599,7 +607,7 @@ export class SimulatorModel {
 
     static readonly MESSAGE_TRAVEL_TIME = 3.0;
 
-    sendMessage(senderId: string, targetId: string, text: string, type: MessageType): PartMessage {
+    sendMessage(senderId: string, targetId: string, text: string, type: MessageType, conversationPhaseLabel?: string): PartMessage {
         this.assertNotFrozen('sendMessage');
         const message: PartMessage = {
             id: this.messageIdCounter++,
@@ -608,6 +616,7 @@ export class SimulatorModel {
             targetId,
             text,
             travelTimeRemaining: SimulatorModel.MESSAGE_TRAVEL_TIME,
+            conversationPhaseLabel,
         };
         this.messages.push(message);
         return message;
@@ -714,6 +723,10 @@ export class SimulatorModel {
         this.assertNotFrozen('initConversation');
         const [a, b] = participantIds;
         this.conversationParticipantIds = participantIds;
+        const key = [a, b].sort().join('|');
+        if (this.activeConversationKey !== key) {
+            this.activeConversationKey = key;
+        }
         this.parts.applyStanceFlip(a, b, () => rng.random('conv_stance'));
         this.parts.applyStanceFlip(b, a, () => rng.random('conv_stance'));
 
@@ -759,9 +772,15 @@ export class SimulatorModel {
     clearConversationStances(): void {
         this.assertNotFrozen('clearConversationStances');
         this.conversationTherapistDelta.clear();
+        this.conversationShockDelta.clear();
         this.conversationParticipantIds = null;
         this.conversationPhases.clear();
         this.conversationSpeakerId = null;
+        this.activeConversationKey = null;
+    }
+
+    getActiveConversationKey(): string | null {
+        return this.activeConversationKey;
     }
 
     getTherapistStanceDelta(cloudId: string): number {
@@ -794,6 +813,24 @@ export class SimulatorModel {
                 this.conversationTherapistDelta.set(id, newDelta);
             }
         }
+        for (const [id, delta] of this.conversationShockDelta) {
+            const newDelta = delta * decay;
+            if (Math.abs(newDelta) < 0.001) {
+                this.conversationShockDelta.delete(id);
+            } else {
+                this.conversationShockDelta.set(id, newDelta);
+            }
+        }
+    }
+
+    getConversationShockDelta(cloudId: string): number {
+        return this.conversationShockDelta.get(cloudId) ?? 0;
+    }
+
+    addConversationShockDelta(cloudId: string, delta: number): void {
+        this.assertNotFrozen('addConversationShockDelta');
+        const current = this.conversationShockDelta.get(cloudId) ?? 0;
+        this.conversationShockDelta.set(cloudId, current + delta);
     }
 
     getSelfTrust(cloudId: string): number {
@@ -805,8 +842,9 @@ export class SimulatorModel {
         const [a, b] = this.conversationParticipantIds;
         const otherId = cloudId === a ? b : a;
         const stance = this.parts.getRelationStance(cloudId, otherId);
-        const delta = this.conversationTherapistDelta.get(cloudId) ?? 0;
-        return Math.max(-1, Math.min(1, stance + delta));
+        const therapistDelta = this.conversationTherapistDelta.get(cloudId) ?? 0;
+        const shockDelta = this.conversationShockDelta.get(cloudId) ?? 0;
+        return Math.max(-1, Math.min(1, stance + therapistDelta + shockDelta));
     }
 
     getConversationEffectiveStances(): Map<string, number> {
@@ -870,6 +908,7 @@ export class SimulatorModel {
             pendingAction: this.pendingAction ? { ...this.pendingAction } : null,
             conversationEffectiveStances: Object.fromEntries(this.getConversationEffectiveStances()),
             conversationTherapistDelta: Object.fromEntries(this.conversationTherapistDelta),
+            conversationShockDelta: Object.fromEntries(this.conversationShockDelta),
             conversationParticipantIds: this.conversationParticipantIds,
             conversationPhases: Object.fromEntries(this.conversationPhases),
             conversationSpeakerId: this.conversationSpeakerId,
@@ -907,6 +946,11 @@ export class SimulatorModel {
         if (json.conversationTherapistDelta) {
             for (const [k, v] of Object.entries(json.conversationTherapistDelta)) {
                 model.conversationTherapistDelta.set(k, v);
+            }
+        }
+        if (json.conversationShockDelta) {
+            for (const [k, v] of Object.entries(json.conversationShockDelta)) {
+                model.conversationShockDelta.set(k, v);
             }
         }
         model.conversationParticipantIds = json.conversationParticipantIds ?? null;

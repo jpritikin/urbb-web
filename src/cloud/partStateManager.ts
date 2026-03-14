@@ -11,7 +11,10 @@ interface ProxyRelation {
     proxyId: string;
 }
 
-export const PHASE_INDEX = { speak: 0, mirror: 1, validate: 2, empathize: 3 } as const;
+// 4-line tuple: [speak, mirror, validate, empathize]
+// 6-line tuple: [speak, mirror, clarify, mirror_again, validate, empathize]
+export const PHASE_INDEX_4 = { speak: 0, mirror: 1, validate: 2, empathize: 3 } as const;
+export const PHASE_INDEX_6 = { speak: 0, mirror: 1, clarify: 2, mirror_again: 3, validate: 4, empathize: 5 } as const;
 
 export interface ConversationDialogues {
     hostile?: string[][];
@@ -21,7 +24,7 @@ export interface ConversationDialogues {
 }
 
 export type TrustBand = 'hostile' | 'guarded' | 'opening' | 'collaborative';
-export type IfioPhase = 'speak' | 'listen' | 'mirror' | 'validate' | 'empathize';
+export type IfioPhase = 'speak' | 'listen' | 'mirror' | 'clarify' | 'mirror_again' | 'validate' | 'empathize';
 
 export interface InterPartRelation {
     fromId: string;
@@ -509,14 +512,43 @@ export class PartStateManager {
         ["...", "Something was said.", "Maybe.", "I guess."],
     ];
 
-    getInterPartDialogue(fromId: string, toId: string, phase: IfioPhase, rng: () => number): string | null {
+    pickTupleIndex(speakerId: string, listenerId: string, rng: () => number): number {
+        const rel = this.interPartRelations.get(speakerId)?.get(listenerId);
+        const pool = rel?.dialogues?.[PartStateManager.getTrustBand(rel?.trust ?? 0)]
+            ?? PartStateManager.FALLBACK_CONVERSATIONS;
+        return Math.floor(rng() * pool.length);
+    }
+
+    getTupleDialogue(speakerId: string, listenerId: string, tupleIndex: number, phase: IfioPhase): string | null {
         if (phase === 'listen') return null;
-        const rel = this.interPartRelations.get(fromId)?.get(toId);
-        const conversations = rel?.dialogues?.[PartStateManager.getTrustBand(rel.trust)];
-        const pool = conversations ?? PartStateManager.FALLBACK_CONVERSATIONS;
+        const rel = this.interPartRelations.get(speakerId)?.get(listenerId);
+        const pool = rel?.dialogues?.[PartStateManager.getTrustBand(rel?.trust ?? 0)]
+            ?? PartStateManager.FALLBACK_CONVERSATIONS;
         if (pool.length === 0) return null;
-        const conv = pool[Math.floor(rng() * pool.length)];
-        return conv[PHASE_INDEX[phase]] ?? null;
+        const conv = pool[Math.min(tupleIndex, pool.length - 1)];
+        if (conv.length >= 6) {
+            return conv[PHASE_INDEX_6[phase as keyof typeof PHASE_INDEX_6]] ?? null;
+        }
+        return conv[PHASE_INDEX_4[phase as keyof typeof PHASE_INDEX_4]] ?? null;
+    }
+
+    getTupleLength(speakerId: string, listenerId: string, tupleIndex: number): 4 | 6 {
+        const rel = this.interPartRelations.get(speakerId)?.get(listenerId);
+        const pool = rel?.dialogues?.[PartStateManager.getTrustBand(rel?.trust ?? 0)]
+            ?? PartStateManager.FALLBACK_CONVERSATIONS;
+        if (pool.length === 0) return 4;
+        const conv = pool[Math.min(tupleIndex, pool.length - 1)];
+        return conv.length >= 6 ? 6 : 4;
+    }
+
+    static drawInitialStance(magnitude: number, selfTrust: number, rng: () => number): number {
+        const stddev = (1 - selfTrust) / 4;
+        const shift  = 0.5 * (1 - selfTrust);
+        const u = Math.max(1e-10, 1 - rng());
+        const v = rng();
+        const normal = 0.5 + stddev * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        const sample = Math.max(0, Math.min(1, normal));
+        return Math.min(1, Math.abs(magnitude) * (sample + shift));
     }
 
     getRumination(cloudId: string, rng: () => number): string | null {

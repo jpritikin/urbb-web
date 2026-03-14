@@ -38,6 +38,7 @@ export interface SerializedModel {
     pendingAction?: { actionId: string; sourceCloudId: string } | null;
     conversationEffectiveStances?: Record<string, number>;
     conversationTherapistDelta?: Record<string, number>;
+    conversationShockDelta?: Record<string, number>;
     conversationParticipantIds?: [string, string] | null;
     conversationPhases?: Record<string, string>;
     conversationSpeakerId?: string | null;
@@ -57,6 +58,8 @@ export interface OrchestratorSnapshot {
     selfLoathingCooldowns?: Record<string, number>;
     genericDialogueCooldowns?: Record<string, number>;
     summonArrivalTimers?: Record<string, number>;
+    dysregulatedStreaks?: Record<string, number>;
+    currentCycleLength?: number;
 }
 
 export interface BiographySnapshot {

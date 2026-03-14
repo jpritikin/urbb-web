@@ -275,7 +275,6 @@ export class CloudManager {
 
         this.messageOrchestrator = new MessageOrchestrator(
             () => this.model,
-            this.view,
             () => this.model.parts,
             this.playbackRecording.getRNG(),
             {
@@ -550,7 +549,10 @@ export class CloudManager {
     }
 
     private showThoughtBubble(text: string, cloudId: string, partInitiated: boolean = true): void {
-        this.model.addThoughtBubble(text, cloudId, partInitiated);
+        const name = this.model.parts.getPartName(cloudId);
+        this.act(`${name} thought bubble`, () => {
+            this.model.addThoughtBubble(text, cloudId, partInitiated);
+        });
     }
 
     private hideThoughtBubble(): void {
@@ -949,6 +951,43 @@ export class CloudManager {
         this.dismissPieMenuIfPartLeft();
     }
 
+    private syncCommLog(oldModel: SimulatorModel): void {
+        if (!this.uiManager) return;
+
+        const secs = this.model.getSimulationTime();
+        const mm = Math.floor(secs / 60).toString().padStart(2, '0');
+        const ss = Math.floor(secs % 60).toString().padStart(2, '0');
+        const log = (entry: string) => this.uiManager!.appendCommLog(`[${mm}:${ss}] ${entry}`);
+
+        const oldKey = oldModel.getActiveConversationKey();
+        const newKey = this.model.getActiveConversationKey();
+        if (oldKey !== newKey) {
+            if (oldKey) {
+                const [id0, id1] = oldKey.split('|');
+                log(`🤝 ${this.model.parts.getPartName(id0)} and ${this.model.parts.getPartName(id1)} end conversation`);
+            }
+            if (newKey) {
+                const [id0, id1] = newKey.split('|');
+                log(`🗣️ ${this.model.parts.getPartName(id0)} and ${this.model.parts.getPartName(id1)} begin conversation`);
+            }
+        }
+
+        const oldBubbleIds = new Set(oldModel.getThoughtBubbles().map(b => b.id));
+        for (const bubble of this.model.getThoughtBubbles()) {
+            if (!oldBubbleIds.has(bubble.id)) {
+                log(`💭 ${this.model.parts.getPartName(bubble.cloudId)}: ${bubble.text}`);
+            }
+        }
+
+        const oldMessageIds = new Set(oldModel.getMessages().map(m => m.id));
+        for (const msg of this.model.getMessages()) {
+            if (!oldMessageIds.has(msg.id)) {
+                const label = msg.conversationPhaseLabel ? ` [${msg.conversationPhaseLabel}]` : '';
+                log(`💬 ${this.model.parts.getPartName(msg.senderId)} → ${this.model.parts.getPartName(msg.targetId)}${label}: ${msg.text}`);
+            }
+        }
+    }
+
     private updateCarpetConversationState(): void {
         if (this.model.isConversationInitialized()) {
             this.carpetRenderer?.setConversationActive(true);
@@ -1005,6 +1044,7 @@ export class CloudManager {
         }
         this.syncViewWithModel(oldModel);
         this.model.syncConversation(this.playbackRecording.getRNG());
+        this.syncCommLog(oldModel);
         this.model.checkAndSetVictory();
         if (recordedAction) {
             this.playbackRecording.recordAction(recordedAction);
@@ -1084,7 +1124,18 @@ export class CloudManager {
                 const rawStances = this.model.getConversationEffectiveStances();
                 const effectiveStances: Map<string, number> | null = rawStances.size > 0 ? rawStances : null;
                 const phases = this.model.getConversationPhases();
-                this.carpetRenderer.setConversationPhases(phases.size > 0 ? phases : null);
+                let displayPhases: Map<string, string> = phases;
+                if (phases.size === 2) {
+                    const ids = [...phases.keys()];
+                    const [a, b] = ids;
+                    if (phases.get(a) === 'listen' && phases.get(b) === 'listen') {
+                        const stances = this.model.getConversationEffectiveStances();
+                        if ((stances.get(a) ?? 0) < 0 && (stances.get(b) ?? 0) < 0) {
+                            displayPhases = new Map([[a, 'waiting'], [b, 'waiting']]);
+                        }
+                    }
+                }
+                this.carpetRenderer.setConversationPhases(displayPhases.size > 0 ? displayPhases : null);
                 this.carpetRenderer.update(carpetStates, seats, deltaTime, conversationParticipantSet, effectiveStances);
                 this.carpetRenderer.render(carpetStates);
                 this.carpetRenderer.renderDebugWaveField(carpetStates);

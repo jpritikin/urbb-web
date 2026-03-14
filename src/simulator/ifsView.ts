@@ -572,9 +572,24 @@ export class SimulatorView {
         const hasPendingNotice = newModel.getPendingAction()?.actionId === 'notice_part';
         this.animatedStar?.setPointerEventsEnabled(inForeground && (noBlendedParts || hasPendingNotice));
 
+        this.syncMessages(oldModel, newModel);
         this.syncConversation(newModel);
 
         this.checkVictoryCondition(newModel);
+    }
+
+    private syncMessages(oldModel: SimulatorModel | null, newModel: SimulatorModel): void {
+        if (!oldModel) return;
+        const oldIds = new Set(oldModel.getMessages().map(m => m.id));
+        for (const msg of newModel.getMessages()) {
+            if (!oldIds.has(msg.id)) {
+                const senderState = this.getCloudState(msg.senderId);
+                const targetState = this.getCloudState(msg.targetId);
+                if (senderState && targetState) {
+                    this.startMessage(msg, msg.senderId, msg.targetId);
+                }
+            }
+        }
     }
 
     private syncConversation(model: SimulatorModel): void {

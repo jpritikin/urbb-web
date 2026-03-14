@@ -1,6 +1,6 @@
 ---
 title: "IFS Simulator"
-version: "v3.69.0"
+version: "v3.69.1"
 ---
 
 <link rel="stylesheet" href="/css/animations.css">
@@ -30,6 +30,10 @@ version: "v3.69.0"
    - 💼 Job Appraisal/Impact — get to know protectors
    - 🙏 Gratitude, Compassion — help parts develop trust
    - 💬 "What do you need to know?" — build trust with exiles
+
+**Conversations:**
+
+When two parts are in conference together, you can start an IFIO-style directed dialogue between them. This is a mini-game with its own mechanics—see the [Conversation guide](https://estrelacounseling.com/docs/ifs/conversation/) for details.
 
 **Hints:**
 - Fully resolve protector/exile relationships

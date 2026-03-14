@@ -17,6 +17,9 @@ export class UIManager {
 
     private modeToggleContainer: HTMLElement | null = null;
     private mobileBanner: HTMLElement | null = null;
+    private commLogPanel: HTMLElement | null = null;
+    private commLogVisible: boolean = false;
+    private commLogEntries: string[] = [];
     private debugPauseButton: HTMLButtonElement | null = null;
     private recordingOverlay: SVGGElement | null = null;
     private isFullscreen: boolean = false;
@@ -37,6 +40,8 @@ export class UIManager {
     createAllUI(): void {
         this.createModeToggle();
         this.createFullscreenButton();
+        this.createCommLogButton();
+        this.createCommLogPanel();
         this.createDebugPauseButton();
     }
 
@@ -128,16 +133,20 @@ export class UIManager {
         const enterBtn = this.mobileBanner.querySelector('.enter-fullscreen-btn');
         enterBtn?.addEventListener('click', () => this.config.onFullscreenToggle());
 
-        this.container.appendChild(this.mobileBanner);
+        document.body.appendChild(this.mobileBanner);
         this.updateOrientationIndicator();
+        this.updateBannerPosition();
 
-        window.addEventListener('orientationchange', () => this.updateOrientationIndicator());
-        window.addEventListener('resize', () => this.updateOrientationIndicator());
+        const onUpdate = () => { this.updateOrientationIndicator(); this.updateBannerPosition(); };
+        window.addEventListener('orientationchange', onUpdate);
+        window.addEventListener('resize', onUpdate);
+        window.visualViewport?.addEventListener('resize', onUpdate);
+        window.visualViewport?.addEventListener('scroll', onUpdate);
     }
 
     private isMobileDevice(): boolean {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || (window.innerWidth <= 800 && 'ontouchstart' in window);
+            || ('ontouchstart' in window);
     }
 
     private updateOrientationIndicator(): void {
@@ -161,6 +170,15 @@ export class UIManager {
         if (btn) {
             btn.disabled = !isLandscape;
         }
+    }
+
+    private updateBannerPosition(): void {
+        if (!this.mobileBanner) return;
+        const vv = window.visualViewport;
+        const left = vv ? vv.offsetLeft + vv.width / 2 : window.innerWidth / 2;
+        const top = vv ? vv.offsetTop + vv.height / 2 : window.innerHeight / 2;
+        this.mobileBanner.style.left = `${left}px`;
+        this.mobileBanner.style.top = `${top}px`;
     }
 
     setFullscreen(isFullscreen: boolean): void {
@@ -191,6 +209,79 @@ export class UIManager {
 
     isLandscape(): boolean {
         return window.innerWidth > window.innerHeight;
+    }
+
+    // Communication log
+
+    private createCommLogButton(): void {
+        const foreignObject = createForeignObject(52, 10, 64, 32);
+        foreignObject.classList.add('comm-log-toggle-fo');
+
+        const btn = document.createElement('button');
+        btn.className = 'zoom-toggle-btn';
+        btn.textContent = '📜';
+        btn.title = 'Show communication log';
+        btn.addEventListener('click', () => this.toggleCommLog());
+
+        foreignObject.appendChild(btn);
+        this.uiGroup.appendChild(foreignObject);
+    }
+
+    private createCommLogPanel(): void {
+        this.commLogPanel = document.createElement('div');
+        this.commLogPanel.className = 'comm-log-panel';
+        this.commLogPanel.style.display = 'none';
+
+        const header = document.createElement('div');
+        header.className = 'comm-log-header';
+        header.textContent = 'Communication Log';
+        this.commLogPanel.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'comm-log-content';
+        this.commLogPanel.appendChild(content);
+
+        this.container.appendChild(this.commLogPanel);
+    }
+
+    private toggleCommLog(): void {
+        this.commLogVisible = !this.commLogVisible;
+        if (this.commLogPanel) {
+            this.commLogPanel.style.display = this.commLogVisible ? 'block' : 'none';
+            if (this.commLogVisible) {
+                this.renderCommLog();
+            }
+        }
+    }
+
+    private renderCommLog(): void {
+        if (!this.commLogPanel) return;
+        const content = this.commLogPanel.querySelector('.comm-log-content')!;
+        content.innerHTML = '';
+        for (const entry of this.commLogEntries) {
+            const line = document.createElement('div');
+            line.className = 'comm-log-entry';
+            line.textContent = entry;
+            content.appendChild(line);
+        }
+        content.scrollTop = content.scrollHeight;
+    }
+
+    appendCommLog(entry: string): void {
+        this.commLogEntries.push(entry);
+        if (!this.commLogVisible || !this.commLogPanel) return;
+        const content = this.commLogPanel.querySelector('.comm-log-content')!;
+        const line = document.createElement('div');
+        line.className = 'comm-log-entry';
+        line.textContent = entry;
+        content.appendChild(line);
+        content.scrollTop = content.scrollHeight;
+    }
+
+    setCommLogPointerEventsEnabled(enabled: boolean): void {
+        if (this.commLogPanel) {
+            this.commLogPanel.style.pointerEvents = enabled ? '' : 'none';
+        }
     }
 
     // Debug pause button

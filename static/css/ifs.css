@@ -117,16 +117,15 @@ body.ifs-fullscreen main {
 
 .mobile-fullscreen-banner {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 100;
   padding: 0.5rem;
   pointer-events: none;
+  will-change: top, left;
+  max-width: min(90vw, 90vh);
+  width: max-content;
 }
 
 .banner-content {
@@ -135,7 +134,9 @@ body.ifs-fullscreen main {
   border-radius: 12px;
   padding: 0.75rem 1.5rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   box-shadow: 0 4px 16px rgba(155, 89, 182, 0.25);
   pointer-events: auto;
@@ -1252,4 +1253,64 @@ svg.master-paused {
 
 svg:not(.master-paused) {
   transition: filter 0.3s ease;
+}
+
+.comm-log-panel {
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  width: 320px;
+  max-height: 400px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px dotted #7b68ee;
+  border-radius: 8px;
+  z-index: 40;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .comm-log-panel {
+  background: rgba(35, 35, 50, 0.95);
+  border-color: #9b7eff;
+}
+
+.comm-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #7b68ee 0%, #9b59b6 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+
+.comm-log-content {
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-height: 340px;
+  overflow-y: auto;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dark .comm-log-content {
+  color: #d0d0d0;
+}
+
+.comm-log-entry {
+  word-break: break-word;
+}
+
+@media (max-height: 600px) {
+  .comm-log-panel {
+    max-height: 50vh;
+  }
+  .comm-log-content {
+    max-height: calc(50vh - 3rem);
+  }
 }

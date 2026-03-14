@@ -1,9 +1,9 @@
-import { SimulatorModel, PartMessage } from '../../simulator/ifsModel.js';
+import { SimulatorModel } from '../../simulator/ifsModel.js';
 import { PartStateManager } from '../../cloud/partStateManager.js';
 import { SeededRNG, RNG, createModelRNG, RngLogEntry } from './rng.js';
 import { SimulatorController } from '../../simulator/simulatorController.js';
 import { ActionEffectApplicator } from '../../simulator/actionEffectApplicator.js';
-import { MessageOrchestrator, MessageOrchestratorView } from '../../simulator/messageOrchestrator.js';
+import { MessageOrchestrator } from '../../simulator/messageOrchestrator.js';
 import { TimeAdvancer } from '../../simulator/timeAdvancer.js';
 import type {
     PartConfig, RelationshipConfig, Scenario, ActionResult,
@@ -25,29 +25,6 @@ export interface SimulatorDiagnostics {
     getOrchestratorDebugState(): OrchestratorSnapshot;
 }
 
-class HeadlessView implements MessageOrchestratorView {
-    private model: SimulatorModel | null = null;
-    private onMessageReceived: ((message: PartMessage) => void) | null = null;
-
-    setModel(model: SimulatorModel): void {
-        this.model = model;
-    }
-
-    setOnMessageReceived(callback: (message: PartMessage) => void): void {
-        this.onMessageReceived = callback;
-    }
-
-    getCloudState(cloudId: string): unknown | null {
-        if (!this.model) return null;
-        // Return a truthy object if the part is in the conference (targeted or blended)
-        const isTarget = this.model.getTargetCloudIds().has(cloudId);
-        const isBlended = this.model.getBlendedParts().includes(cloudId);
-        return (isTarget || isBlended) ? {} : null;
-    }
-    startMessage(_message: PartMessage, _senderId: string, _targetId: string): void {
-        // Message delivery is now handled by model.advanceMessages() called from orchestrator.updateTimers()
-    }
-}
 
 export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostics {
     private model: SimulatorModel;
@@ -55,7 +32,6 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
     private controller: SimulatorController;
     private effectApplicator: ActionEffectApplicator;
     private orchestrator: MessageOrchestrator;
-    private headlessView: HeadlessView;
     private timeAdvancer: TimeAdvancer;
 
     constructor(config?: { seed?: number }) {
@@ -63,8 +39,6 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         this.rng = createModelRNG(config?.seed);
         this.controller = this.createController();
         this.effectApplicator = new ActionEffectApplicator(() => this.model);
-        this.headlessView = new HeadlessView();
-        this.headlessView.setModel(this.model);
         this.orchestrator = this.createOrchestrator();
         this.timeAdvancer = this.createTimeAdvancer();
     }
@@ -79,21 +53,18 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
     }
 
     private createOrchestrator(): MessageOrchestrator {
-        const orchestrator = new MessageOrchestrator(
+        return new MessageOrchestrator(
             () => this.model,
-            this.headlessView,
             () => this.model.parts,
             this.rng,
             {
-                act: (_label, fn) => fn(),
-                showThoughtBubble: (text, cloudId) => {
+                act: (_label: string, fn: () => void) => fn(),
+                showThoughtBubble: (text: string, cloudId: string) => {
                     this.model.addThoughtBubble(text, cloudId, true);
                 },
-                getCloudById: (id) => this.model.getPartState(id) ? { id } : null,
+                getCloudById: (id: string) => this.model.getPartState(id) ? { id } : null,
             }
         );
-        this.headlessView.setOnMessageReceived((message) => orchestrator.onMessageReceived(message));
-        return orchestrator;
     }
 
     private createTimeAdvancer(): TimeAdvancer {
@@ -130,7 +101,6 @@ export class HeadlessSimulator implements TestableSimulator, SimulatorDiagnostic
         sim.model = SimulatorModel.fromJSON(initialModel);
         sim.controller = sim.createController();
         sim.effectApplicator = new ActionEffectApplicator(() => sim.model);
-        sim.headlessView.setModel(sim.model);
         sim.orchestrator = sim.createOrchestrator();
         sim.timeAdvancer = sim.createTimeAdvancer();
         return sim;
