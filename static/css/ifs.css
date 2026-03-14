@@ -117,16 +117,15 @@ body.ifs-fullscreen main {
 
 .mobile-fullscreen-banner {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 100;
   padding: 0.5rem;
   pointer-events: none;
+  will-change: top, left;
+  max-width: min(90vw, 90vh);
+  width: max-content;
 }
 
 .banner-content {
@@ -135,7 +134,9 @@ body.ifs-fullscreen main {
   border-radius: 12px;
   padding: 0.75rem 1.5rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   box-shadow: 0 4px 16px rgba(155, 89, 182, 0.25);
   pointer-events: auto;

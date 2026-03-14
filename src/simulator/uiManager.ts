@@ -133,16 +133,20 @@ export class UIManager {
         const enterBtn = this.mobileBanner.querySelector('.enter-fullscreen-btn');
         enterBtn?.addEventListener('click', () => this.config.onFullscreenToggle());
 
-        this.container.appendChild(this.mobileBanner);
+        document.body.appendChild(this.mobileBanner);
         this.updateOrientationIndicator();
+        this.updateBannerPosition();
 
-        window.addEventListener('orientationchange', () => this.updateOrientationIndicator());
-        window.addEventListener('resize', () => this.updateOrientationIndicator());
+        const onUpdate = () => { this.updateOrientationIndicator(); this.updateBannerPosition(); };
+        window.addEventListener('orientationchange', onUpdate);
+        window.addEventListener('resize', onUpdate);
+        window.visualViewport?.addEventListener('resize', onUpdate);
+        window.visualViewport?.addEventListener('scroll', onUpdate);
     }
 
     private isMobileDevice(): boolean {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || (window.innerWidth <= 800 && 'ontouchstart' in window);
+            || ('ontouchstart' in window);
     }
 
     private updateOrientationIndicator(): void {
@@ -166,6 +170,15 @@ export class UIManager {
         if (btn) {
             btn.disabled = !isLandscape;
         }
+    }
+
+    private updateBannerPosition(): void {
+        if (!this.mobileBanner) return;
+        const vv = window.visualViewport;
+        const left = vv ? vv.offsetLeft + vv.width / 2 : window.innerWidth / 2;
+        const top = vv ? vv.offsetTop + vv.height / 2 : window.innerHeight / 2;
+        this.mobileBanner.style.left = `${left}px`;
+        this.mobileBanner.style.top = `${top}px`;
     }
 
     setFullscreen(isFullscreen: boolean): void {
