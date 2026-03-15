@@ -708,45 +708,6 @@ class CassettePlayer {
     }
 }
 
-// Convert AsciiDoc formatting to HTML
-function formatAsciidoc(text: string): string {
-    return text
-        // Convert _italic_ to <em>
-        .replace(/_([^_]+)_/g, '<em>$1</em>')
-        // Remove [.nocase]# markers but keep the text
-        .replace(/\[\.nocase\]#([^#]+)#/g, '$1')
-        // Convert ++[++ and ++]++ to literal brackets
-        .replace(/\+\+\[\+\+/g, '[')
-        .replace(/\+\+\]\+\+/g, ']')
-        // Make URLs clickable
-        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-}
-
-// Load bibliography data
-async function loadBibliography(): Promise<void> {
-    try {
-        const response = await fetch('/data/bibliography.json');
-        const entries = await response.json();
-
-        const container = document.getElementById('bibliography-container');
-        if (!container) return;
-
-        container.innerHTML = entries
-            .map((entry: { id: string; citation: string }) => {
-                const formattedCitation = formatAsciidoc(entry.citation);
-                return `<div class="bib-entry" id="bib-${entry.id}">
-          <div class="bib-citation">${formattedCitation}</div>
-        </div>`;
-            })
-            .join('');
-    } catch (error) {
-        console.error('Failed to load bibliography:', error);
-        const container = document.getElementById('bibliography-container');
-        if (container) {
-            container.innerHTML = '<p style="color: red;">Failed to load bibliography data.</p>';
-        }
-    }
-}
 
 // Global cassette overlay
 class CassetteOverlay {
@@ -871,7 +832,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const salmon = new AnimatronicSalmon('salmon-canvas');
         overlay.setSalmon(salmon);
         const player = new CassettePlayer(salmon);
-        loadBibliography();
         addDevUnlockButton();
     } catch (error) {
         console.error('Failed to initialize:', error);

@@ -123,7 +123,7 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
       </div>
     </div>
     <p style="margin-top: 1rem; font-size: 0.9rem; color: #888; font-style: italic;">
-      <strong>About locked hymns:</strong> The 🔒 locked recordings are only available as part of the audiobook. If you'd like access to the full collection, consider purchasing the audio edition.
+      <strong>About locked hymns:</strong> The 🔒 locked recordings are only available as part of the audiobook. If you'd like access to the full collection, consider purchasing the audiobook.
     </p>
   </div>
 </div>
@@ -134,14 +134,14 @@ You know those spiritual bestsellers that open each chapter with a quote from th
 
 Here, every claim (where possible) connects to peer-reviewed research across multiple disciplines:
 
-- **Psychology & Psychotherapy**: Clinical psychology, developmental psychology, Internal Family Systems, attachment theory, trauma treatment
-- **Psychopharmacology**: Psychedelic research, cannabinoid science, neurochemistry, pharmacokinetics
-- **Neuroscience & Consciousness Studies**: Cognitive neuroscience, neurophenomenology, phenomenology of consciousness, altered states research
-- **Contemplative Science**: Meditation research, mindfulness studies, mystical experience measurement
-- **Anthropology & Ethnography**: Religious anthropology, ayahuasca traditions, cross-cultural ritual practices, Santo Daime ethnography
-- **Religious Studies & Philosophy**: Philosophy of religion, comparative religion, epistemology, phenomenology
-- **Archaeology & Prehistory**: Paleolithic cave art, prehistoric ritual use of psychoactive substances, evolution of religious behavior
-- **Social Psychology**: Group dynamics, collective effervescence, prosocial behavior, empathy research
+- <span class="bib-filter-label" data-filter="psychology">**Psychology & Psychotherapy**</span>: <span class="bib-filter" data-filter="psychology">Clinical psychology</span>, <span class="bib-filter" data-filter="psychology">developmental psychology</span>, <span class="bib-filter" data-filter="psychology">Internal Family Systems</span>, <span class="bib-filter" data-filter="psychology">attachment theory</span>, <span class="bib-filter" data-filter="psychology">trauma treatment</span>
+- <span class="bib-filter-label" data-filter="psychopharmacology">**Psychopharmacology**</span>: <span class="bib-filter" data-filter="psychopharmacology">Psychedelic research</span>, <span class="bib-filter" data-filter="psychopharmacology">cannabinoid science</span>, <span class="bib-filter" data-filter="psychopharmacology">neurochemistry</span>, <span class="bib-filter" data-filter="psychopharmacology">pharmacokinetics</span>
+- <span class="bib-filter-label" data-filter="neuroscience">**Neuroscience & Consciousness Studies**</span>: <span class="bib-filter" data-filter="neuroscience">Cognitive neuroscience</span>, <span class="bib-filter" data-filter="neuroscience">neurophenomenology</span>, <span class="bib-filter" data-filter="neuroscience">phenomenology of consciousness</span>, <span class="bib-filter" data-filter="neuroscience">altered states research</span>
+- <span class="bib-filter-label" data-filter="contemplative">**Contemplative Science**</span>: <span class="bib-filter" data-filter="contemplative">Meditation research</span>, <span class="bib-filter" data-filter="contemplative">mindfulness studies</span>, <span class="bib-filter" data-filter="contemplative">mystical experience measurement</span>
+- <span class="bib-filter-label" data-filter="anthropology">**Anthropology & Ethnography**</span>: <span class="bib-filter" data-filter="anthropology">Religious anthropology</span>, <span class="bib-filter" data-filter="anthropology">ayahuasca traditions</span>, <span class="bib-filter" data-filter="anthropology">cross-cultural ritual practices</span>, <span class="bib-filter" data-filter="anthropology">Santo Daime ethnography</span>
+- <span class="bib-filter-label" data-filter="religious-studies">**Religious Studies & Philosophy**</span>: <span class="bib-filter" data-filter="religious-studies">Philosophy of religion</span>, <span class="bib-filter" data-filter="religious-studies">comparative religion</span>, <span class="bib-filter" data-filter="religious-studies">epistemology</span>, <span class="bib-filter" data-filter="religious-studies">phenomenology</span>
+- <span class="bib-filter-label" data-filter="archaeology">**Archaeology & Prehistory**</span>: <span class="bib-filter" data-filter="archaeology">Paleolithic cave art</span>, <span class="bib-filter" data-filter="archaeology">prehistoric ritual use of psychoactive substances</span>, <span class="bib-filter" data-filter="archaeology">evolution of religious behavior</span>
+- <span class="bib-filter-label" data-filter="social-psychology">**Social Psychology**</span>: <span class="bib-filter" data-filter="social-psychology">Group dynamics</span>, <span class="bib-filter" data-filter="social-psychology">collective effervescence</span>, <span class="bib-filter" data-filter="social-psychology">prosocial behavior</span>, <span class="bib-filter" data-filter="social-psychology">empathy research</span>
 
 We've done the work. We've tracked down the actual papers. We dare you to click any citation and see for yourself.
 
