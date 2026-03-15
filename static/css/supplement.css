@@ -246,9 +246,218 @@
   }
 }
 
-#bibliography-container {
-  margin-top: 3rem;
+/* Stealth filter links — no visual affordance */
+.bib-filter,
+.bib-filter-label {
+  cursor: default;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Bibliography sort theater */
+#bib-terminal {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #00ff00;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  white-space: pre-line;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 0 6px rgba(0, 255, 0, 0.5);
+  line-height: 1.5;
+}
+
+#bib-progress-wrap {
+  font-family: monospace;
+  font-size: 1.1rem;
+  white-space: pre;
+  color: var(--daime-purple);
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+#bib-cursor-banner {
+  background: rgba(255, 107, 107, 0.15);
+  border: 1px dashed #ff6b6b;
+  border-radius: 4px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: #ff6b6b;
+  margin-bottom: 0.75rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* Scrollable table + A-Z nav layout */
+#bib-table-wrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+#bib-scroll {
+  flex: 1;
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid rgba(147, 112, 219, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  scroll-behavior: smooth;
+}
+
+#bib-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+#bib-scroll::-webkit-scrollbar-track {
+  background: rgba(147, 112, 219, 0.08);
+  border-radius: 4px;
+}
+
+#bib-scroll::-webkit-scrollbar-thumb {
+  background: var(--daime-purple);
+  border-radius: 4px;
+}
+
+#bib-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A-Z navigation strip */
+#bib-az-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0.25rem 0;
+  flex-shrink: 0;
+  width: 1.4rem;
+}
+
+.bib-az-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--daime-purple);
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bib-az-btn:hover {
+  background: rgba(147, 112, 219, 0.2);
+  color: var(--daime-gold);
+}
+
+.bib-az-btn.bib-az-empty {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.bib-az-btn.bib-az-shrug {
+  animation: az-shrug 0.5s ease;
+}
+
+@keyframes az-shrug {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px) rotate(-5deg); }
+  75% { transform: translateX(3px) rotate(5deg); }
+}
+
+@media (max-width: 480px) {
+  #bib-az-nav {
+    width: 1.1rem;
+  }
+  .bib-az-btn {
+    width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.55rem;
+  }
+}
+
+.bib-entry.bib-hidden {
+  display: none;
+}
+
+/* Swap overlay — clones are positioned absolutely by JS */
+#bib-swap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* Nausea modal */
+#bib-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+#bib-modal {
+  background: #1a1a2e;
+  border: 2px solid var(--daime-purple);
+  border-radius: 10px;
   padding: 2rem;
+  max-width: 28rem;
+  width: 90%;
+  box-shadow: 0 0 40px rgba(147, 112, 219, 0.4);
+  font-family: 'Courier New', monospace;
+}
+
+#bib-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ff6b6b;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+
+#bib-modal-body {
+  font-size: 0.85rem;
+  color: #ccc;
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+#bib-modal-ok {
+  background: var(--daime-purple);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#bib-modal-ok:hover {
+  background: var(--daime-gold);
+  color: #111;
+}
+
+#bibliography-container {
+  margin-top: 1rem;
+  padding: 1rem;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 12px;
   border: 1px solid rgba(147, 112, 219, 0.2);
@@ -459,6 +668,9 @@ article li {
 
 .bib-entry {
   cursor: pointer;
+}
+
+#bib-list.sorting .bib-entry {
   user-select: none;
 }
 
