@@ -255,6 +255,7 @@ class BibliographyFilter {
         this.buildUI(container);
         this.renderAll();
         this.setupFilterLinks();
+        this.setupExternalLinkConfirm(container);
         if (!('ontouchstart' in window)) {
             document.addEventListener('mousemove', e => {
                 this.mouseX = e.clientX;
@@ -389,6 +390,43 @@ class BibliographyFilter {
         document.dispatchEvent(new CustomEvent('bibliography-rendered'));
     }
 
+    private setupExternalLinkConfirm(container: HTMLElement): void {
+        container.addEventListener('click', (e) => {
+            const target = (e.target as HTMLElement).closest('a');
+            if (!target || !target.href.startsWith('http')) return;
+            e.preventDefault();
+            const url = target.href;
+            this.confirmExternalLink(url);
+        });
+    }
+
+    private confirmExternalLink(url: string): void {
+        const backdrop = document.createElement('div');
+        backdrop.id = 'bib-modal-backdrop';
+
+        const modal = document.createElement('div');
+        modal.id = 'bib-modal';
+        modal.innerHTML = `
+            <div id="bib-modal-title">Opening External Link</div>
+            <div id="bib-modal-body">Opening external link, continue?</div>
+            <button id="bib-modal-ok">Yes</button>
+            <button id="bib-modal-cancel">Cancel</button>
+        `;
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) backdrop.remove();
+        });
+        modal.querySelector('#bib-modal-ok')!.addEventListener('click', () => {
+            backdrop.remove();
+            window.open(url, '_blank', 'noopener');
+        });
+        modal.querySelector('#bib-modal-cancel')!.addEventListener('click', () => {
+            backdrop.remove();
+        });
+    }
+
     private setupFilterLinks(): void {
         document.querySelectorAll<HTMLElement>('.bib-filter, .bib-filter-label').forEach(el => {
             el.addEventListener('click', () => this.requestFilter(el.dataset.filter!));
@@ -408,7 +446,7 @@ class BibliographyFilter {
         this.startFilter(filter);
     }
 
-    private showNauseaModal(title: string, body: string, onOk: () => void): void {
+    private showNauseaModal(title: string, body: string, onOk: () => void, okLabel = 'OK. I accept responsibility.'): void {
         const backdrop = document.createElement('div');
         backdrop.id = 'bib-modal-backdrop';
 
@@ -417,7 +455,7 @@ class BibliographyFilter {
         modal.innerHTML = `
             <div id="bib-modal-title">${title}</div>
             <div id="bib-modal-body">${body.replace(/\n/g, '<br>')}</div>
-            <button id="bib-modal-ok">OK. I accept responsibility.</button>
+            <button id="bib-modal-ok">${okLabel}</button>
         `;
         backdrop.appendChild(modal);
         document.body.appendChild(backdrop);

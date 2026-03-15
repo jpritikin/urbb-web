@@ -455,6 +455,24 @@
   color: #111;
 }
 
+#bib-modal-cancel {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+#bib-modal-cancel:hover {
+  border-color: #aaa;
+  color: white;
+}
+
 #bibliography-container {
   margin-top: 1rem;
   padding: 1rem;
