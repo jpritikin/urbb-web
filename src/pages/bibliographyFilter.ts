@@ -375,9 +375,15 @@ class BibliographyFilter {
     private renderAll(): void {
         if (!this.listEl) return;
         this.listEl.innerHTML = this.allEntries
-            .map(e => `<div class="bib-entry" id="bib-${e.id}" data-categories="${e.categories.join(' ')}">
+            .map(e => {
+                if (!Array.isArray(e.categories)) {
+                    console.error('bib entry missing categories:', e.id, e);
+                    e.categories = [];
+                }
+                return `<div class="bib-entry" id="bib-${e.id}" data-categories="${e.categories.join(' ')}">
   <div class="bib-citation">${formatAsciidoc(e.citation)}</div>
-</div>`)
+</div>`;
+            })
             .join('');
         this.buildAzNav();
         document.dispatchEvent(new CustomEvent('bibliography-rendered'));
