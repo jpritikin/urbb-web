@@ -62,11 +62,11 @@ class BibliographyEffects {
             this.entries.set(entry.id, state);
 
             const rand = Math.random();
-            if (rand < 0.15) {
+            if (rand < 0.04) {
                 this.applyRandomError(entry as HTMLElement, state, index);
-            } else if (rand < 0.30) {
+            } else if (rand < 0.08) {
                 this.applyFadeEffect(entry as HTMLElement, state);
-            } else if (rand < 0.45) {
+            } else if (rand < 0.12) {
                 this.applyRedactedEffect(entry as HTMLElement, state);
             }
 
@@ -93,7 +93,7 @@ class BibliographyEffects {
             pressStartTime = Date.now();
 
             // Record starting position
-            if (e instanceof TouchEvent && e.touches.length > 0) {
+            if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches.length > 0) {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
             } else if (e instanceof MouseEvent) {
