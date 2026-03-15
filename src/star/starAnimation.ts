@@ -228,8 +228,8 @@ export class AnimatedStar {
         this.foreignObject.setAttribute('width', String(fieldSize));
         this.foreignObject.setAttribute('height', String(fieldSize));
         const canvas = this.fillField.getCanvas();
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
+        canvas.style.width = `${fieldSize}px`;
+        canvas.style.height = `${fieldSize}px`;
         canvas.style.display = 'block';
         canvas.style.cursor = 'pointer';
         canvas.style.pointerEvents = 'none';
@@ -288,8 +288,9 @@ export class AnimatedStar {
         this.fillField = new StarFillField(this.fillHue, this.fillSaturation, this.fillLightness);
         if (this.foreignObject) {
             const canvas = this.fillField.getCanvas();
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
+            const fieldSize = this.fillField.getSize();
+            canvas.style.width = `${fieldSize}px`;
+            canvas.style.height = `${fieldSize}px`;
             canvas.style.display = 'block';
             this.foreignObject.replaceChildren(canvas);
         }
