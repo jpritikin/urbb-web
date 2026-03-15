@@ -26,6 +26,7 @@ class BibliographyEffects {
     private debugPanel: HTMLElement | null = null;
     private targetHymnElement: HTMLElement | null = null;
     private lockPopupTimeout: number | null = null;
+    private lockPopupScrollListener: (() => void) | null = null;
     private lastReplacedSlot: number = 2;
     private battlesWithoutMutualRegard: number = 0;
 
@@ -527,9 +528,9 @@ class BibliographyEffects {
         this.battleButton.textContent = '⚔️ Battle';
         this.battleButton.style.cssText = `
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            transform: translate(calc(${window.innerWidth / 2}px - 50%), calc(${window.innerHeight / 2}px - 50%));
             padding: 1rem 2rem;
             background: var(--daime-gold);
             border: 3px solid var(--daime-purple);
@@ -642,10 +643,7 @@ class BibliographyEffects {
         const randomX = margin + Math.random() * (viewportWidth - 2 * margin);
         const randomY = margin + Math.random() * (viewportHeight - 2 * margin);
 
-        const offsetX = randomX - viewportWidth / 2;
-        const offsetY = randomY - viewportHeight / 2;
-
-        this.battleButton.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+        this.battleButton.style.transform = `translate(calc(${randomX}px - 50%), calc(${randomY}px - 50%))`;
         this.battleButton.style.transition = 'transform 0.2s ease-out';
 
         setTimeout(() => {
@@ -704,7 +702,7 @@ class BibliographyEffects {
 
         if (this.battleButton) {
             this.battleButton.style.display = 'none';
-            this.battleButton.style.transform = 'translate(-50%, -50%)';
+            this.battleButton.style.transform = `translate(calc(${window.innerWidth / 2}px - 50%), calc(${window.innerHeight / 2}px - 50%))`;
         }
 
         const title1 = this.getBibTitle(fighter1);
@@ -841,9 +839,9 @@ class BibliographyEffects {
         arena.id = 'battle-arena';
         arena.style.cssText = `
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            transform: translate(calc(${window.innerWidth / 2}px - 50%), calc(${window.innerHeight / 2}px - 50%));
             width: 90%;
             max-width: 600px;
             max-height: 85vh;
@@ -1081,19 +1079,21 @@ class BibliographyEffects {
         `;
 
         const style = document.createElement('style');
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
         style.textContent = `
             @keyframes battle-shake {
-                0% { transform: translate(-50%, -50%); }
-                10% { transform: translate(calc(-50% - 8px), calc(-50% + 6px)); }
-                20% { transform: translate(calc(-50% + 7px), calc(-50% - 8px)); }
-                30% { transform: translate(calc(-50% - 6px), calc(-50% + 7px)); }
-                40% { transform: translate(calc(-50% + 8px), calc(-50% - 5px)); }
-                50% { transform: translate(calc(-50% - 7px), calc(-50% + 8px)); }
-                60% { transform: translate(calc(-50% + 6px), calc(-50% - 7px)); }
-                70% { transform: translate(calc(-50% - 8px), calc(-50% + 5px)); }
-                80% { transform: translate(calc(-50% + 7px), calc(-50% - 6px)); }
-                90% { transform: translate(calc(-50% - 5px), calc(-50% + 8px)); }
-                100% { transform: translate(-50%, -50%); }
+                0% { transform: translate(calc(${cx}px - 50%), calc(${cy}px - 50%)); }
+                10% { transform: translate(calc(${cx - 8}px - 50%), calc(${cy + 6}px - 50%)); }
+                20% { transform: translate(calc(${cx + 7}px - 50%), calc(${cy - 8}px - 50%)); }
+                30% { transform: translate(calc(${cx - 6}px - 50%), calc(${cy + 7}px - 50%)); }
+                40% { transform: translate(calc(${cx + 8}px - 50%), calc(${cy - 5}px - 50%)); }
+                50% { transform: translate(calc(${cx - 7}px - 50%), calc(${cy + 8}px - 50%)); }
+                60% { transform: translate(calc(${cx + 6}px - 50%), calc(${cy - 7}px - 50%)); }
+                70% { transform: translate(calc(${cx - 8}px - 50%), calc(${cy + 5}px - 50%)); }
+                80% { transform: translate(calc(${cx + 7}px - 50%), calc(${cy - 6}px - 50%)); }
+                90% { transform: translate(calc(${cx - 5}px - 50%), calc(${cy + 8}px - 50%)); }
+                100% { transform: translate(calc(${cx}px - 50%), calc(${cy}px - 50%)); }
             }
             @keyframes static-glitch {
                 0% {
@@ -1175,7 +1175,7 @@ class BibliographyEffects {
 
         await this.sleep(750);
         arena.style.animation = '';
-        arena.style.transform = 'translate(-50%, -50%)';
+        arena.style.transform = `translate(calc(${window.innerWidth / 2}px - 50%), calc(${window.innerHeight / 2}px - 50%))`;
         staticOverlay.remove();
 
         await this.showMutualRegard(arena, fighter1, fighter2, name1, name2);
@@ -1211,9 +1211,8 @@ class BibliographyEffects {
         heart.className = 'mutual-regard-heart';
         heart.style.cssText = `
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
             width: 200px;
             height: 180px;
             cursor: move;
@@ -1247,7 +1246,10 @@ class BibliographyEffects {
             </svg>
         `;
 
-        this.makeDraggable(heart);
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        heart.style.transform = `translate(calc(${cx}px - 50%), calc(${cy}px - 50%))`;
+        this.makeDraggable(heart, cx, cy);
         return heart;
     }
 
@@ -1256,10 +1258,10 @@ class BibliographyEffects {
         return name.length > maxLength ? name.substring(0, maxLength - 3) + '...' : name;
     }
 
-    private makeDraggable(element: HTMLElement): void {
+    private makeDraggable(element: HTMLElement, initialX = 0, initialY = 0): void {
         let isDragging = false;
-        let currentX = 0;
-        let currentY = 0;
+        let currentX = initialX;
+        let currentY = initialY;
         let velocity = { x: 0, y: 0 };
         let animationFrame: number | null = null;
         let currentScale = 1;
@@ -1416,7 +1418,7 @@ class BibliographyEffects {
             currentX += velocity.x;
             currentY += velocity.y;
 
-            element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${currentScale})`;
+            element.style.transform = `translate(calc(${currentX}px - 50%), calc(${currentY}px - 50%)) scale(${currentScale})`;
 
             if (shouldConnect) {
                 if (animationFrame) {
@@ -1431,6 +1433,22 @@ class BibliographyEffects {
             if (!isDragging) {
                 velocity.x *= FRICTION;
                 velocity.y *= FRICTION;
+
+                const hw = element.offsetWidth / 2;
+                const hh = element.offsetHeight / 2;
+                const heartCX = currentX;
+                const heartCY = currentY;
+                const BOUNDARY_FORCE = 0.03;
+                const MAX_BOUNDARY_VELOCITY = 3;
+                if (heartCX - hw < 0) velocity.x += BOUNDARY_FORCE * -(heartCX - hw);
+                else if (heartCX + hw > window.innerWidth) velocity.x -= BOUNDARY_FORCE * (heartCX + hw - window.innerWidth);
+                if (heartCY - hh < 0) velocity.y += BOUNDARY_FORCE * -(heartCY - hh);
+                else if (heartCY + hh > window.innerHeight) velocity.y -= BOUNDARY_FORCE * (heartCY + hh - window.innerHeight);
+                const boundarySpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+                if (boundarySpeed > MAX_BOUNDARY_VELOCITY) {
+                    velocity.x = (velocity.x / boundarySpeed) * MAX_BOUNDARY_VELOCITY;
+                    velocity.y = (velocity.y / boundarySpeed) * MAX_BOUNDARY_VELOCITY;
+                }
 
                 const scaleNearlyAtTarget = Math.abs(currentScale - targetScale) < 0.01;
                 if (Math.abs(velocity.x) < 0.1 && Math.abs(velocity.y) < 0.1 && scaleNearlyAtTarget) {
@@ -1457,11 +1475,7 @@ class BibliographyEffects {
             if (this.activeLockPopup && !this.lockPopupTimeout) {
                 this.lockPopupTimeout = window.setTimeout(() => {
                     if (this.activeLockPopup && !this.heartBeingDragged) {
-                        this.activeLockPopup.remove();
-                        this.activeLockPopup = null;
-                        this.lockPopupPosition = null;
-                        this.targetHymnElement = null;
-                        this.lockPopupTimeout = null;
+                        this.dismissLockPopup();
                     }
                 }, 10000);
             }
@@ -1835,6 +1849,11 @@ class BibliographyEffects {
             this.activeLockPopup.remove();
         }
 
+        if (this.lockPopupScrollListener) {
+            window.removeEventListener('scroll', this.lockPopupScrollListener, true);
+            this.lockPopupScrollListener = null;
+        }
+
         if (this.lockPopupTimeout) {
             clearTimeout(this.lockPopupTimeout);
             this.lockPopupTimeout = null;
@@ -1949,13 +1968,37 @@ class BibliographyEffects {
 
         this.lockPopupTimeout = window.setTimeout(() => {
             if (this.activeLockPopup && !this.heartBeingDragged) {
-                this.activeLockPopup.remove();
-                this.activeLockPopup = null;
-                this.lockPopupPosition = null;
-                this.targetHymnElement = null;
-                this.lockPopupTimeout = null;
+                this.dismissLockPopup();
             }
         }, 10000);
+
+        this.lockPopupScrollListener = () => {
+            const player = document.getElementById('cassette-player-container');
+            if (!player) return;
+            const rect = player.getBoundingClientRect();
+            const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+            if (!isVisible && this.activeLockPopup === popup && !this.heartBeingDragged) {
+                this.dismissLockPopup();
+            }
+        };
+        window.addEventListener('scroll', this.lockPopupScrollListener, true);
+    }
+
+    private dismissLockPopup(): void {
+        if (this.lockPopupScrollListener) {
+            window.removeEventListener('scroll', this.lockPopupScrollListener, true);
+            this.lockPopupScrollListener = null;
+        }
+        if (this.lockPopupTimeout) {
+            clearTimeout(this.lockPopupTimeout);
+            this.lockPopupTimeout = null;
+        }
+        if (this.activeLockPopup) {
+            this.activeLockPopup.remove();
+            this.activeLockPopup = null;
+        }
+        this.lockPopupPosition = null;
+        this.targetHymnElement = null;
     }
 
     unlockHymn(hymnElement: HTMLElement): void {
@@ -2141,6 +2184,11 @@ class BibliographyEffects {
 
                 if (hymnToUnlock.classList.contains('locked')) {
                     this.unlockHymn(hymnToUnlock);
+                }
+
+                if (this.lockPopupScrollListener) {
+                    window.removeEventListener('scroll', this.lockPopupScrollListener, true);
+                    this.lockPopupScrollListener = null;
                 }
 
                 setTimeout(() => {
