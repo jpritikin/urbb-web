@@ -27,6 +27,7 @@ class BibliographyEffects {
     private targetHymnElement: HTMLElement | null = null;
     private lockPopupTimeout: number | null = null;
     private lastReplacedSlot: number = 2;
+    private battlesWithoutMutualRegard: number = 0;
 
     initialize(): void {
         this.waitForBibliography();
@@ -737,11 +738,13 @@ class BibliographyEffects {
         this.updateBattleHP(arena, 'fighter2', hp2);
 
         const mutualRegardChance = 0.022;
+        const forceMutualRegard = this.battlesWithoutMutualRegard >= 4;
         let battleInterrupted = false;
 
         while (hp1.current > 0 && hp2.current > 0) {
-            if ((Math.random() < mutualRegardChance || debugTriggered) && !battleInterrupted) {
+            if ((Math.random() < mutualRegardChance || forceMutualRegard || debugTriggered) && !battleInterrupted) {
                 battleInterrupted = true;
+                this.battlesWithoutMutualRegard = 0;
                 await this.triggerMutualRegardTransition(arena, fighter1, fighter2, name1, name2);
                 return;
             }
@@ -755,8 +758,9 @@ class BibliographyEffects {
 
             if (hp2.current <= 0) break;
 
-            if ((Math.random() < mutualRegardChance || debugTriggered) && !battleInterrupted) {
+            if ((Math.random() < mutualRegardChance || forceMutualRegard || debugTriggered) && !battleInterrupted) {
                 battleInterrupted = true;
+                this.battlesWithoutMutualRegard = 0;
                 await this.triggerMutualRegardTransition(arena, fighter1, fighter2, name1, name2);
                 return;
             }
@@ -769,6 +773,7 @@ class BibliographyEffects {
             await this.sleep(500);
         }
 
+        this.battlesWithoutMutualRegard++;
         const winner = hp1.current > 0 ? name1 : name2;
         this.addBattleLog(arena, `🏆 ${winner} wins!`);
         this.hideHPBars(arena);
