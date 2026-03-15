@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>foreignObject Clip Test</title>
+<style>
+  body { margin: 0; background: #1a1a2e; color: #eee; font-family: monospace; }
+  #log { position: fixed; top: 0; right: 0; width: 280px; height: 100vh; overflow-y: auto;
+         background: rgba(0,0,0,0.85); padding: 8px; font-size: 11px; box-sizing: border-box;
+         border-left: 1px solid #444; z-index: 100; }
+  #log div { border-bottom: 1px solid #333; padding: 2px 0; word-break: break-all; }
+  #log .ok { color: #51cf66; }
+  #log .bad { color: #ff6b6b; }
+  #log .info { color: #74c0fc; }
+  #controls { position: fixed; bottom: 0; left: 0; right: 280px; background: rgba(0,0,0,0.85);
+              padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 100; }
+  button { padding: 6px 10px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px;
+           background: #4dabf7; color: #000; }
+  #svg-container { padding: 8px; padding-bottom: 60px; margin-right: 280px; }
+  svg { border: 1px solid #444; display: block; margin-bottom: 4px; }
+  h3 { color: #ffd43b; margin: 4px 0 2px; font-size: 12px; }
+  .test-wrap { margin-bottom: 12px; }
+  p.desc { color: #aaa; font-size: 11px; margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<div id="log"><div class="info">Log:</div></div>
+<div id="svg-container"></div>
+<div id="controls">
+  <button onclick="runAll()">Run All</button>
+  <button onclick="clearLog()">Clear Log</button>
+</div>
+<script>
+// Goal: canvas inside foreignObject should be clipped to a star/circle shape.
+// The star fill canvas is 400x400. The clip shape is a circle r=80 at center (250,240).
+// SUCCESS = only the circle region of the canvas is visible (rest is transparent/background).
+// FAIL = the full 400x400 canvas rectangle is visible (Safari clip-path bug).
+
+const FIELD_SIZE = 400;
+const SVG_W = 500, SVG_H = 340;
+const CX = 250, CY = 170;
+const FO_X = CX - FIELD_SIZE/2, FO_Y = CY - FIELD_SIZE/2;
+const CLIP_R = 80; // circle clip radius
+
+const log = document.getElementById('log');
+const container = document.getElementById('svg-container');
+let uid = 0;
+
+function addLog(msg, cls = '') {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `${new Date().toISOString().slice(14,23)} ${msg}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+function clearLog() { log.innerHTML = '<div class="info">Cleared</div>'; }
+
+function makeCanvas() {
+  const c = document.createElement('canvas');
+  c.width = FIELD_SIZE; c.height = FIELD_SIZE;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#e94560'; ctx.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+  ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2;
+  for (let x = 0; x <= FIELD_SIZE; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,FIELD_SIZE); ctx.stroke(); }
+  for (let y = 0; y <= FIELD_SIZE; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(FIELD_SIZE,y); ctx.stroke(); }
+  ctx.strokeStyle = '#51cf66'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, FIELD_SIZE-6, FIELD_SIZE-6);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px monospace'; ctx.fillText('CANVAS FILL', 10, 30);
+  return c;
+}
+
+function makeSVG(label, desc) {
+  const id = ++uid;
+  const wrap = document.createElement('div');
+  wrap.className = 'test-wrap';
+  const h3 = document.createElement('h3');
+  h3.textContent = label;
+  wrap.appendChild(h3);
+  if (desc) { const p = document.createElement('p'); p.className = 'desc'; p.textContent = desc; wrap.appendChild(p); }
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', SVG_W); svg.setAttribute('height', SVG_H);
+  svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+  // Background rect so we can see what's clipped away
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', SVG_W); bg.setAttribute('height', SVG_H);
+  bg.setAttribute('fill', '#16213e');
+  svg.appendChild(bg);
+  // Circle outline showing expected clip boundary
+  const outline = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  outline.setAttribute('cx', CX); outline.setAttribute('cy', CY); outline.setAttribute('r', CLIP_R);
+  outline.setAttribute('fill', 'none'); outline.setAttribute('stroke', 'rgba(255,255,255,0.3)');
+  outline.setAttribute('stroke-width', '1'); outline.setAttribute('stroke-dasharray', '4,4');
+  svg.appendChild(outline);
+  wrap.appendChild(svg);
+  container.appendChild(wrap);
+  return { svg, id };
+}
+
+// Reference: plain SVG rect clipped — should always work
+function testRef() {
+  const { svg } = makeSVG('REF: SVG rect with clip-path', 'SVG rect clipped to circle — should always work. If this fails, something is very wrong.');
+  const clipId = `clip${++uid}`;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', CX); c.setAttribute('cy', CY); c.setAttribute('r', CLIP_R);
+  clipPath.appendChild(c); defs.appendChild(clipPath); svg.appendChild(defs);
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('clip-path', `url(#${clipId})`);
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', FO_X); rect.setAttribute('y', FO_Y);
+  rect.setAttribute('width', FIELD_SIZE); rect.setAttribute('height', FIELD_SIZE);
+  rect.setAttribute('fill', '#e94560');
+  g.appendChild(rect); svg.appendChild(g);
+  addLog('REF: SVG rect clip — expect circle only', 'info');
+}
+
+// Test A: clip-path on <g> containing foreignObject (current approach — fails on Safari)
+function testA() {
+  const { svg } = makeSVG('A: clip-path on <g> containing foreignObject', 'Current approach. Fails on Safari — full red rectangle visible.');
+  const clipId = `clip${++uid}`;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', CX); c.setAttribute('cy', CY); c.setAttribute('r', CLIP_R);
+  clipPath.appendChild(c); defs.appendChild(clipPath); svg.appendChild(defs);
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('clip-path', `url(#${clipId})`);
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;`;
+  fo.appendChild(canvas); g.appendChild(fo); svg.appendChild(g);
+  addLog('A: clip-path on g>foreignObject', 'info');
+}
+
+// Test B: clip-path directly on foreignObject element
+function testB() {
+  const { svg } = makeSVG('B: clip-path directly on foreignObject', '');
+  const clipId = `clip${++uid}`;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', CX); c.setAttribute('cy', CY); c.setAttribute('r', CLIP_R);
+  clipPath.appendChild(c); defs.appendChild(clipPath); svg.appendChild(defs);
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  fo.setAttribute('clip-path', `url(#${clipId})`);
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;`;
+  fo.appendChild(canvas); svg.appendChild(fo);
+  addLog('B: clip-path on foreignObject directly', 'info');
+}
+
+// Test C: CSS clip-path circle() on the canvas element (HTML space)
+// The canvas is positioned at FO_X,FO_Y in SVG coords. The circle center
+// in canvas-local coords is (FIELD_SIZE/2, FIELD_SIZE/2).
+function testC() {
+  const { svg } = makeSVG('C: CSS clip-path circle() on canvas (HTML space)', 'clip-path applied via CSS to the canvas element itself.');
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;clip-path:circle(${CLIP_R}px at ${FIELD_SIZE/2}px ${FIELD_SIZE/2}px);`;
+  fo.appendChild(canvas); svg.appendChild(fo);
+  addLog('C: CSS clip-path circle() on canvas', 'info');
+}
+
+// Test D: CSS clip-path on wrapper div
+function testD() {
+  const { svg } = makeSVG('D: CSS clip-path circle() on wrapper div', '');
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  const div = document.createElement('div');
+  div.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;overflow:hidden;clip-path:circle(${CLIP_R}px at ${FIELD_SIZE/2}px ${FIELD_SIZE/2}px);`;
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;`;
+  div.appendChild(canvas); fo.appendChild(div); svg.appendChild(fo);
+  addLog('D: CSS clip-path circle() on wrapper div', 'info');
+}
+
+// Test E: SVG mask instead of clip-path (masks work on foreignObject in more browsers)
+function testE() {
+  const { svg } = makeSVG('E: SVG mask (not clip-path) on <g>', 'mask element instead of clip-path — better foreignObject support.');
+  const maskId = `mask${++uid}`;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+  mask.setAttribute('id', maskId);
+  mask.setAttribute('maskUnits', 'userSpaceOnUse');
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+  bg.setAttribute('width', SVG_W); bg.setAttribute('height', SVG_H);
+  bg.setAttribute('fill', 'black');
+  const mc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  mc.setAttribute('cx', CX); mc.setAttribute('cy', CY); mc.setAttribute('r', CLIP_R);
+  mc.setAttribute('fill', 'white');
+  mask.appendChild(bg); mask.appendChild(mc);
+  defs.appendChild(mask); svg.appendChild(defs);
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('mask', `url(#${maskId})`);
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;`;
+  fo.appendChild(canvas); g.appendChild(fo); svg.appendChild(g);
+  addLog('E: SVG mask on g>foreignObject', 'info');
+}
+
+// Test F: SVG mask directly on foreignObject
+function testF() {
+  const { svg } = makeSVG('F: SVG mask directly on foreignObject', '');
+  const maskId = `mask${++uid}`;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+  mask.setAttribute('id', maskId);
+  mask.setAttribute('maskUnits', 'userSpaceOnUse');
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+  bg.setAttribute('width', SVG_W); bg.setAttribute('height', SVG_H);
+  bg.setAttribute('fill', 'black');
+  const mc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  mc.setAttribute('cx', CX); mc.setAttribute('cy', CY); mc.setAttribute('r', CLIP_R);
+  mc.setAttribute('fill', 'white');
+  mask.appendChild(bg); mask.appendChild(mc);
+  defs.appendChild(mask); svg.appendChild(defs);
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', FO_X); fo.setAttribute('y', FO_Y);
+  fo.setAttribute('width', FIELD_SIZE); fo.setAttribute('height', FIELD_SIZE);
+  fo.setAttribute('mask', `url(#${maskId})`);
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${FIELD_SIZE}px;height:${FIELD_SIZE}px;display:block;`;
+  fo.appendChild(canvas); svg.appendChild(fo);
+  addLog('F: SVG mask on foreignObject directly', 'info');
+}
+
+// Test G: foreignObject sized to exactly the clip circle bounding box,
+// positioned so it only covers the clip area (no oversized canvas)
+function testG() {
+  const { svg } = makeSVG('G: foreignObject sized to clip bounding box', 'FO is 160x160 (2*r), canvas draws the circle region only.');
+  const size = CLIP_R * 2;
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', CX - CLIP_R); fo.setAttribute('y', CY - CLIP_R);
+  fo.setAttribute('width', size); fo.setAttribute('height', size);
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  // Clip to circle in canvas space, then draw fill
+  ctx.beginPath(); ctx.arc(CLIP_R, CLIP_R, CLIP_R, 0, Math.PI*2); ctx.clip();
+  ctx.fillStyle = '#e94560'; ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2;
+  for (let x = 0; x <= size; x += 20) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,size); ctx.stroke(); }
+  for (let y = 0; y <= size; y += 20) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(size,y); ctx.stroke(); }
+  canvas.style.cssText = `width:${size}px;height:${size}px;display:block;`;
+  fo.appendChild(canvas); svg.appendChild(fo);
+  addLog('G: FO sized to clip bbox, canvas clips itself', 'info');
+}
+
+// Test H: like G but using CSS border-radius on the div to clip to circle
+function testH() {
+  const { svg } = makeSVG('H: CSS border-radius on div (circle via overflow:hidden)', 'No SVG clipping at all — pure CSS.');
+  const size = CLIP_R * 2;
+  const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  fo.setAttribute('x', CX - CLIP_R); fo.setAttribute('y', CY - CLIP_R);
+  fo.setAttribute('width', size); fo.setAttribute('height', size);
+  const div = document.createElement('div');
+  div.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;`;
+  const canvas = makeCanvas();
+  canvas.style.cssText = `width:${size}px;height:${size}px;display:block;`;
+  div.appendChild(canvas); fo.appendChild(div); svg.appendChild(fo);
+  addLog('H: CSS border-radius+overflow:hidden on div', 'info');
+}
+
+function runAll() {
+  container.innerHTML = '';
+  uid = 0;
+  clearLog();
+  addLog(`UA: ${navigator.userAgent.slice(0,100)}`, 'info');
+  addLog(`${window.innerWidth}x${window.innerHeight} dpr:${window.devicePixelRatio}`, 'info');
+  testRef();
+  testA();
+  testB();
+  testC();
+  testD();
+  testE();
+  testF();
+  testG();
+  testH();
+  addLog('All tests rendered — check visuals above', 'info');
+}
+
+window.addEventListener('load', runAll);
+</script>
+</body>
+</html>
