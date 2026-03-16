@@ -1291,6 +1291,7 @@ class BibliographyEffects {
 
             element.style.cursor = 'grabbing';
             element.style.transition = 'none';
+            document.body.style.userSelect = 'none';
 
             if (!animationFrame) {
                 animationFrame = requestAnimationFrame(animate);
@@ -1470,6 +1471,7 @@ class BibliographyEffects {
             isDragging = false;
             this.heartBeingDragged = null;
             element.style.cursor = 'move';
+            document.body.style.userSelect = '';
             this.hideDebugPanel();
 
             if (this.activeLockPopup && !this.lockPopupTimeout) {
@@ -1482,6 +1484,7 @@ class BibliographyEffects {
         };
 
         element.addEventListener('mousedown', (e: MouseEvent) => {
+            e.preventDefault();
             startDrag(e.clientX, e.clientY);
         });
 
@@ -1496,9 +1499,10 @@ class BibliographyEffects {
 
         element.addEventListener('touchstart', (e: TouchEvent) => {
             if (e.touches.length === 1) {
+                e.preventDefault();
                 startDrag(e.touches[0].clientX, e.touches[0].clientY);
             }
-        }, { passive: true });
+        }, { passive: false });
 
         document.addEventListener('touchmove', (e: TouchEvent) => {
             if (isDragging && e.touches.length === 1) {
