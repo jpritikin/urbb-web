@@ -167,6 +167,7 @@ export class AnimatedStar {
     private nextArmChange: number;
     private transitionBundle: (PlannedTransitionBundle & TransitionScheduling) | null = null;
 
+    private isSafari: boolean = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     private fillField: StarFillField | null = null;
     private fillHue: number;
     private fillSaturation: number;
@@ -222,37 +223,55 @@ export class AnimatedStar {
         defs.appendChild(clipPath);
         this.wrapperGroup.appendChild(defs);
 
-        this.foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        this.foreignObject.setAttribute('x', String(this.centerX - fieldSize / 2));
-        this.foreignObject.setAttribute('y', String(this.centerY - fieldSize / 2));
-        this.foreignObject.setAttribute('width', String(fieldSize));
-        this.foreignObject.setAttribute('height', String(fieldSize));
-        const canvas = this.fillField.getCanvas();
-        canvas.style.width = `${fieldSize}px`;
-        canvas.style.height = `${fieldSize}px`;
-        canvas.style.display = 'block';
-        canvas.style.cursor = 'pointer';
-        canvas.style.pointerEvents = 'none';
-        canvas.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.onClick?.(this.centerX, this.centerY, e);
-        });
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.onClick?.(this.centerX, this.centerY, e);
-        }, { passive: false });
-        this.foreignObject.appendChild(canvas);
-
-        // Layer order from bottom to top:
-        // 1. Dynamic arm fills (created by transitionElements, inside clip path - rendered via foreignObject below)
-        // 2. Dynamic arm borders (will be inserted here dynamically)
-        // 3. Static star fill (clipped group with foreignObject)
-        // 4. Static star outline
-
         this.clippedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.clippedGroup.setAttribute('clip-path', 'url(#starClip)');
-        this.clippedGroup.appendChild(this.foreignObject);
+
+        if (this.isSafari) {
+            // Safari does not clip foreignObject content via SVG clip-path.
+            // Fall back to a solid fill rect using the star color.
+            const fillRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            fillRect.setAttribute('x', String(this.centerX - fieldSize / 2));
+            fillRect.setAttribute('y', String(this.centerY - fieldSize / 2));
+            fillRect.setAttribute('width', String(fieldSize));
+            fillRect.setAttribute('height', String(fieldSize));
+            fillRect.setAttribute('fill', `hsl(${this.fillHue}, ${this.fillSaturation}%, ${this.fillLightness}%)`);
+            fillRect.style.cursor = 'pointer';
+            fillRect.style.pointerEvents = 'all';
+            fillRect.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.onClick?.(this.centerX, this.centerY, e);
+            });
+            fillRect.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.onClick?.(this.centerX, this.centerY, e);
+            }, { passive: false });
+            this.clippedGroup.appendChild(fillRect);
+        } else {
+            this.foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+            this.foreignObject.setAttribute('x', String(this.centerX - fieldSize / 2));
+            this.foreignObject.setAttribute('y', String(this.centerY - fieldSize / 2));
+            this.foreignObject.setAttribute('width', String(fieldSize));
+            this.foreignObject.setAttribute('height', String(fieldSize));
+            const canvas = this.fillField.getCanvas();
+            canvas.style.width = `${fieldSize}px`;
+            canvas.style.height = `${fieldSize}px`;
+            canvas.style.display = 'block';
+            canvas.style.cursor = 'pointer';
+            canvas.style.pointerEvents = 'none';
+            canvas.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.onClick?.(this.centerX, this.centerY, e);
+            });
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.onClick?.(this.centerX, this.centerY, e);
+            }, { passive: false });
+            this.foreignObject.appendChild(canvas);
+            this.clippedGroup.appendChild(this.foreignObject);
+        }
+
         this.wrapperGroup.appendChild(this.clippedGroup);
 
         this.starBorder = new StarBorder(this.centerX, this.centerY);
@@ -285,6 +304,11 @@ export class AnimatedStar {
     setFillColor(saturation: number, lightness: number): void {
         this.fillSaturation = saturation;
         this.fillLightness = lightness;
+        if (this.isSafari) {
+            const fillRect = this.clippedGroup?.querySelector('rect');
+            if (fillRect) fillRect.setAttribute('fill', `hsl(${this.fillHue}, ${this.fillSaturation}%, ${this.fillLightness}%)`);
+            return;
+        }
         this.fillField = new StarFillField(this.fillHue, this.fillSaturation, this.fillLightness);
         if (this.foreignObject) {
             const canvas = this.fillField.getCanvas();
@@ -890,6 +914,11 @@ export class AnimatedStar {
     }
 
     setPointerEventsEnabled(enabled: boolean): void {
+        if (this.isSafari) {
+            const fillRect = this.clippedGroup?.querySelector('rect');
+            if (fillRect) fillRect.style.pointerEvents = enabled ? 'all' : 'none';
+            return;
+        }
         const canvas = this.fillField?.getCanvas();
         if (canvas) {
             canvas.style.pointerEvents = enabled ? 'auto' : 'none';
