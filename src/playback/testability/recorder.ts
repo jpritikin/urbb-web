@@ -1,4 +1,4 @@
-import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type OrchestratorSnapshot, type ModelSnapshot } from './types.js';
+import { WAIT_DURATION, type RecordedAction, type RecordedSession, type SerializedModel, type OrchestratorSnapshot, type ModelSnapshot, type ConvEvent } from './types.js';
 import type { RNG, SeededRNG, RngLogEntry } from './rng.js';
 import type { AttentionDemandEntry } from '../../simulator/timeAdvancer.js';
 
@@ -54,6 +54,7 @@ export class ActionRecorder {
         needAttention?: Record<string, number>,
         isTransitioning?: boolean,
         orchState?: OrchestratorSnapshot,
+        convLog?: ConvEvent[],
     ): void {
         if (count <= 0 || !this.initialModel) return;
         let rngCounts: { model: number } | undefined;
@@ -75,6 +76,7 @@ export class ActionRecorder {
             needAttention,
             isTransitioning,
             orchState,
+            convLog,
         });
     }
 

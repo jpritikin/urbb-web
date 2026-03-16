@@ -1,291 +1,192 @@
 IFS Simulator Architecture Primer
 ==================================
 
-Strictly enforce model-view separation to ensure playback of recorded sessions works correctly. Playback has intermittent failures indication violations of this architectural principal. Model state that depends on timers much use simulation time not wallclock time.
+Strictly enforce model-view separation — playback failures are usually violations of
+this. Model state that depends on timers must use simulation time, not wallclock time.
 
-Core pattern: Model-View-Controller with act/sync flow.
-All state mutations go through cloudManager.act(action, fn), which:
+Core pattern: MVC with act/sync flow.
+All state mutations go through cloudManager.act(action, fn):
   1. Clones model (for diff)
   2. Runs fn() which mutates model
-  3. Calls syncViewWithModel(oldModel) to propagate changes to view
+  3. Calls syncViewWithModel(oldModel)
   4. Records action for playback
 
 Key Files
 ---------
-src/cloud/cloudManager.ts        - Orchestrator. Owns model, view, controller, plus
+src/cloud/cloudManager.ts        - Orchestrator. Owns model, view, controller,
                                    expandDeepenEffect, playbackRecording,
                                    messageOrchestrator, panoramaInputHandler,
                                    panoramaMotion, carpetRenderer, uiManager.
-                                   Handles user interaction routing, animation loop,
-                                   act/sync flow.
-src/simulator/ifsModel.ts        - Pure state. Targets, blended parts, supporting parts,
-                                   self-ray, messages, thought bubbles, mode, pending blends,
-                                   pendingAction, displacedParts, victoryAchieved,
-                                   selfAmplification, conversationEffectiveStances,
-                                   conversationTherapistDelta, conversationParticipantIds,
-                                   conversationPhases, conversationSpeakerId,
-                                   messageIdCounter, onModeChange callback.
-                                   ThoughtBubble has validated flag; validateThoughtBubble()
-                                   marks bubble validated and extends expiry.
-                                   All state serializable to JSON.
-src/simulator/ifsView.ts         - View state + rendering coordination. Manages per-cloud
-                                   animated state (position, opacity, scale, blending degree).
-                                   syncWithModel() delegates to: updateSeatAssignments,
-                                   updateStarPosition, updateCloudStateTargets, syncSelfRay,
-                                   syncThoughtBubbles, syncMode, syncPendingActionBanner,
-                                   syncConversation, checkVictoryCondition.
-                                   Also handles displaced part spiral exits with delayed
-                                   target arrivals.
+src/simulator/ifsModel.ts        - Pure state (all serializable to JSON): targets,
+                                   blended/pending parts, supporting parts, self-ray,
+                                   messages, thought bubbles, mode, pendingAction,
+                                   displacedParts, victoryAchieved, selfAmplification,
+                                   conversation state (participants, phases, speakerId,
+                                   therapistDelta, shockDelta).
+src/simulator/ifsView.ts         - View state + rendering. syncWithModel() drives:
+                                   seat assignments, star position, cloud state targets,
+                                   self-ray, thought bubbles, mode, pending action banner,
+                                   conversation, victory condition.
 src/simulator/simulatorController.ts - Action validation (getValidActions) and execution
-                                   (executeAction). Returns ControllerActionResult with
-                                   stateChanges, uiFeedback, reduceBlending, triggerBacklash,
-                                   createSelfRay, trustGain.
-src/simulator/actionEffectApplicator.ts - Applies ControllerActionResult to model: handles
-                                   uiFeedback (thought bubbles), reduceBlending, triggerBacklash,
-                                   createSelfRay.
-src/simulator/actionFormatter.ts - KNOWN_ACTIONS set for validation, action label formatting
-                                   for playback, action serialization helpers.
-src/simulator/outcomes.ts        - Canonical outcome identifiers (OUTCOMES constant) used by
-                                   controller stateChanges. ACTION_OUTCOMES maps actions to
-                                   possible outcomes. outcome()/parseOutcome() for
-                                   serialization.
-src/simulator/therapistActions.ts - Action definitions. Three arrays:
-                                   STAR_MENU_ACTIONS (star pie menu),
-                                   CLOUD_MENU_ACTIONS (part pie menu),
-                                   SELFRAY_MENU_ACTIONS (self-ray pie menu).
-src/menu/pieMenu.ts              - Pie menu rendering/UI.
-src/menu/pieMenuController.ts    - Routes pie menu interactions to correct action set
-                                   based on MenuMode ('cloud' | 'selfRay' | 'star').
-                                   Filters to valid actions via controller.getValidActions().
-src/simulator/inputHandler.ts    - Cloud click/touch/hover handling, long-press detection.
-                                   Checks model for pendingAction; if set, routes click to
-                                   cloudManager.completePendingAction() instead of pie menu.
-src/simulator/uiManager.ts       - HTML UI elements: mode toggle, mobile banner, trace panel,
+                                   (executeAction). Returns ControllerActionResult.
+src/simulator/actionEffectApplicator.ts - Applies ControllerActionResult to model.
+src/simulator/actionFormatter.ts - KNOWN_ACTIONS set, action label/serialization helpers.
+src/simulator/outcomes.ts        - Canonical outcome identifiers (OUTCOMES, ACTION_OUTCOMES).
+src/simulator/therapistActions.ts - Action definitions for star, cloud, self-ray pie menus.
+src/menu/pieMenu.ts              - Pie menu rendering.
+src/menu/pieMenuController.ts    - Routes pie menu to correct action set; filters via
+                                   controller.getValidActions().
+src/simulator/inputHandler.ts    - Cloud click/touch/hover, long-press. Routes to pie menu
+                                   or cloudManager.completePendingAction() if pendingAction set.
+src/simulator/uiManager.ts       - HTML UI: mode toggle, mobile banner, utterance log panel,
                                    debug/pause buttons, recording overlay.
-src/simulator/timeAdvancer.ts    - Advances simulation time. Increases needAttention over time,
-                                   decays flip odds and therapist stance deltas,
-                                   checks attention thresholds, triggers spontaneous blends.
-                                   Also runs generic dialogue checks, self-loathing checks,
-                                   jealousy checks, orchestrator timer updates.
-                                   Processes in 0.5s interval chunks.
-src/simulator/messageOrchestrator.ts - Timed message exchanges between parts, blend-start
-                                   delays, cooldown timers (per-sender, generic dialogue,
-                                   self-loathing, jealousy). Grievance and pendulum dialogue
-                                   responses. Jealousy system: when trust gap between two
-                                   related parts exceeds inter-part trust + 0.15, the
-                                   lower-trust part demands attention and shows jealousy
-                                   thought bubble; pending jealousy deferred until part
-                                   joins conference.
-                                   Drives IFIO conversation phase progression: regulation
-                                   scoring, phase advancement, stance shock propagation,
-                                   listener violation detection, cycle reset logic.
-                                   Exports REGULATION_STANCE_LIMIT threshold.
-src/simulator/scenarios.ts       - Scenario definitions. Easy (Inner Critic + criticized),
-                                   Medium/Alcohol (Drinker + Shamer protect lonely one,
-                                   proxy to alcoholic parent). Session loading.
-src/simulator/scenarioSelector.ts - Scenario selection UI/logic with difficulty levels.
+src/simulator/timeAdvancer.ts    - Advances sim time in 0.5s chunks. Increases needAttention,
+                                   decays flip odds and therapist deltas, triggers spontaneous
+                                   blends, runs jealousy/self-loathing/orchestrator checks.
+src/simulator/messageOrchestrator.ts - IFIO conversation engine: regulation scoring, phase
+                                   advancement, stance shock, speaker nomination, listener/
+                                   speaker violation detection, polarity flips, dysregulated
+                                   streaks, cycle reset. Also handles blended utterances,
+                                   generic dialogues, self-loathing, jealousy.
+                                   Exports REGULATION_STANCE_LIMIT.
+src/simulator/scenarios.ts       - Scenario definitions + session loading.
+src/simulator/scenarioSelector.ts - Scenario selection UI.
 
 Part State
 ----------
-src/cloud/partStateManager.ts    - PartState (individual part data), PartBiography (field
-                                   revelation), PartDialogues (conditional responses).
-                                   Protection relations, proxy relations, inter-part
-                                   trust/stance. InterPartRelation has stanceFlipOdds with
-                                   stanceFlipOddsSetPoint (decays back when not in conference),
-                                   trustFloor (minimum inter-part trust, set by impact
-                                   recognition), impactRecognition/impactRejection dialogue
-                                   arrays. Trust overflow below trustFloor feeds into
-                                   stanceFlipOdds and stance extremity.
-                                   Conversational dialogue sets with 4-step or 6-step tuples
-                                   (speak, mirror, [clarify, mirror_again,] validate, empathize).
-                                   pickTupleIndex() selects a tuple at cycle start;
-                                   getTupleDialogue(speakerId, listenerId, tupleIndex, phase)
-                                   retrieves a line — always from the speaker's relation, for
-                                   both speaker and listener phases. getTupleLength() returns
-                                   4 or 6 from a pre-picked index.
-                                   getRelation(), getRelationStance(), applyStanceFlip(),
-                                   getRelationSummaries(), setInterPartTrustFloor() for
-                                   conversation introspection.
+src/cloud/partStateManager.ts    - PartState, PartBiography, PartDialogues. Protection/proxy
+                                   relations. InterPartRelation: trust, trustFloor, stance,
+                                   stanceMagnitude, stanceFlipOdds. Dialogue tuples (4-step or
+                                   6-step). pickTupleIndex(), getTupleDialogue(), getTupleLength().
+                                   Trust overflow below trustFloor feeds stanceFlipOdds/extremity.
 src/star/partState.ts            - Part biography and dialogue definitions.
 
 Dialogue Writing Guidelines
 ----------------------------
-Dialogues flash by fast in the app and appear with minimal context. Write them
-so they make sense standalone:
-- Spell out what you mean; avoid pronouns like "it", "this", "that" where the
-  referent isn't obvious from the line itself.
-- Prefer specific language ("Self is asking about my job") over vague references
-  ("Self wants to know about it").
+Dialogues flash by fast with minimal context. Write them to make sense standalone:
+- Spell out referents; avoid "it", "this", "that" without clear antecedent.
+- Prefer specific language ("Self is asking about my job") over vague ("Self wants to know").
 - Keep lines short enough to read at a glance.
 
 Visual/Animation
 ----------------
 src/cloud/cloudShape.ts          - SVG cloud rendering, lattice deformation for blending.
-src/cloud/cloudAnimation.ts      - Cloud-specific animations.
+src/cloud/cloudAnimation.ts      - Cloud animations.
 src/cloud/panoramaCloudMotion.ts - Cloud positions on 3D torus, velocity-based motion.
-src/cloud/panoramaInputHandler.ts - Panorama pinch-to-zoom, mouse wheel zoom, drag rotation.
-src/cloud/expandDeepenEffect.ts  - Visual effect for expand_deepen action: wavefront
-                                   propagation, dot particles, sparkles, selfAmplification boost.
-src/star/starAnimation.ts        - Animated star (Self), arm transitions for blended parts.
-src/star/starAnimationCore.ts    - Core geometry primitives for star.
-src/star/starBorder.ts           - Star border visual (IFIO conversation indicator).
-src/star/starFillField.ts        - Star field fill/animation.
-src/star/starDebugPanel.ts       - Debug visualization.
-src/star/sparkleColors.ts        - Sparkle color generation.
-src/star/selfRay.ts              - Beam from star to target part. BiographyField type:
-                                   'age'|'identity'|'job'|'jobAppraisal'|
-                                   'gratitude'|'compassion'.
-                                   PartContext interface for conditional field validation.
-src/star/carpetRenderer.ts       - Seat carpets for conference table positions. During
-                                   conversations, carpets tilt toward/away from partner based
-                                   on effective stance. Drag-to-rotate interaction lets
-                                   therapist nudge stance (speak/listen). Shows phase labels
-                                   and stance values as badges. CarpetState includes tiltAngle.
-src/simulator/view/SeatManager.ts - Assigns seats around conference table. Sentinel IDs:
-                                   STAR_CLOUD_ID ('*'), RAY_CLOUD_ID ('*ray*'),
-                                   MODE_TOGGLE_CLOUD_ID ('*mode*'),
-                                   UNBLENDED_SEAT_ID ('__unblended__').
-src/simulator/view/TransitionAnimator.ts - Mode transition animations (forward/reverse),
-                                   spiral exits for displaced parts, delayed arrivals.
-src/simulator/view/MessageRenderer.ts - Renders traveling messages between parts.
-src/simulator/view/ThoughtBubbleRenderer.ts - Thought bubble rendering.
-src/simulator/view/bubblePlacement.ts - Positioning logic for thought bubbles.
-src/simulator/view/StretchAnimator.ts - Stretch animations.
-src/simulator/view/HelpPanel.ts  - Help panel UI.
-src/simulator/view/VictoryBanner.ts - Victory condition banner.
-src/simulator/view/ViewEvents.ts - View event system (ViewEventMap).
-src/simulator/view/types.ts      - View-specific types.
+src/cloud/panoramaInputHandler.ts - Pinch-to-zoom, mouse wheel zoom, drag rotation.
+src/cloud/expandDeepenEffect.ts  - expand_deepen visual effect.
+src/star/starAnimation.ts        - Animated star (Self), arm transitions.
+src/star/starBorder.ts           - Star border (IFIO conversation indicator).
+src/star/selfRay.ts              - Beam from star to target. BiographyField type.
+src/star/carpetRenderer.ts       - Seat carpets. Tilt toward/away from partner by stance.
+                                   Drag-to-rotate nudges therapist delta. Phase/stance badges.
+src/simulator/view/SeatManager.ts - Seat assignments. Sentinel IDs: STAR_CLOUD_ID ('*'),
+                                   RAY_CLOUD_ID ('*ray*'), UNBLENDED_SEAT_ID ('__unblended__').
+src/simulator/view/TransitionAnimator.ts - Mode transition animations, spiral exits.
+src/simulator/view/MessageRenderer.ts - Traveling messages between parts.
+src/simulator/view/ThoughtBubbleRenderer.ts / bubblePlacement.ts - Thought bubbles.
 
 Playback/Testing
 ----------------
-src/playback/testability/types.ts - SerializedModel (includes conversationEffectiveStances,
-                                   conversationTherapistDelta, conversationParticipantIds,
-                                   conversationPhases, conversationSpeakerId,
-                                   selfAmplification, mode, victoryAchieved, displacedParts,
-                                   thoughtBubbles, orchestrator state, biography snapshots),
-                                   ModelSnapshot (includes conversation state + interPartRelations),
-                                   RecordedAction, RecordedSession, ControllerActionResult,
-                                   Scenario, etc.
-src/playback/playbackRecordingCoordinator.ts - Records/replays sessions for testing.
-                                   getDiagnostics() returns model + view debug state:
-                                   mode, pendingAction, rngCallCount, orchestrator
-                                   timers/cooldowns, targets, blended, and per-cloud
-                                   view state (opacity, targetOpacity, position,
-                                   positionTarget, blendingDegree, targetBlendingDegree).
-src/playback/playback.ts         - Playback engine. PlaybackSpeed: 'realtime' | 'highlights'
-                                   | 'speedrun'.
-src/playback/playbackReticle.ts  - Visual reticle for playback.
-src/playback/testability/rng.ts  - Seeded RNG. model.random() for reproducibility.
+src/playback/testability/types.ts - SerializedModel, OrchestratorSnapshot, ConvEvent
+                                   (utterance/shock/nominate per process_intervals),
+                                   ModelSnapshot (conversation state + interPartRelations +
+                                   therapistDelta + shockDelta), RecordedAction (convLog?),
+                                   RecordedSession, ControllerActionResult, Scenario.
+src/playback/playbackRecordingCoordinator.ts - Records/replays sessions.
+src/playback/testability/rng.ts  - Seeded RNG. Use model.random() for reproducibility.
 src/playback/testability/headlessSimulator.ts - Headless test runner.
 src/playback/testability/monteCarlo.ts - Monte Carlo testing.
 src/playback/testability/recorder.ts - Session recording.
-src/playback/testability/scenarios.ts - Test scenario infrastructure.
 
 Modes
 -----
 SimulatorMode: 'panorama' | 'foreground'
-- Panorama: all clouds visible on torus, click selects a target (enters foreground).
-  Supports pinch-to-zoom, mouse wheel zoom, drag rotation via panoramaInputHandler.
-- Foreground: conference table view. Targets sit at seats, blended parts at star center,
-  supporting parts orbit their target. Non-participating clouds fade out.
-- Transitions animate smoothly (forward/reverse) via TransitionAnimator.
-- Clouds move between zoomGroup (panorama coords) and uiGroup (screen coords).
+- Panorama: clouds on torus, click selects target (enters foreground).
+- Foreground: conference table. Targets at seats, blended at star, supporting parts orbit target.
+- Transitions via TransitionAnimator. Clouds move between zoomGroup and uiGroup.
 
 Action Flow
 -----------
 1. User clicks cloud/star → inputHandler routes based on mode
-2. Pie menu shows valid actions (filtered by simulatorController.getValidActions())
-3. User selects action → pieMenuController dispatches to cloudManager handler
-4. cloudManager calls act(recordedAction, () => {
-     if blendReason is 'spontaneous', setBlendReason to 'therapist'  // inside act()
+2. Pie menu shows valid actions (simulatorController.getValidActions())
+3. User selects → pieMenuController dispatches to cloudManager handler
+4. cloudManager.act(label, () => {
      result = controller.executeAction(actionId, cloudId, options);
-     effectApplicator.apply(result, cloudId);  // includes promoteBlendedToTarget if degree→0
+     effectApplicator.apply(result, cloudId);
    })
-5. act() then calls syncViewWithModel() to propagate all changes
+5. act() calls syncViewWithModel()
 
-Internal actions (not user-initiated): ray_field_select, spontaneous_blend, backlash,
-mode_change, process_intervals. All tracked via actionFormatter's KNOWN_ACTIONS.
-
-Notice_part on a protector from a related part triggers impact recognition:
-if noticer's trust > protector's trust, sets inter-part trustFloor to 0.25
-(impactRecognition dialogues); otherwise shows impactRejection dialogues.
-
-Validate action now requires an unvalidated thought bubble; validated bubbles
-get extended expiry. Gratitude on active protectors requires jobAppraisal
-revealed first.
+Internal actions: ray_field_select, spontaneous_blend, backlash, mode_change,
+process_intervals. All in actionFormatter's KNOWN_ACTIONS.
 
 Pending Actions
 ---------------
-Some actions (feel_toward, notice_part, add_target) need a second click to pick a
-target. The controller sets model.pendingAction = { actionId, sourceCloudId }.
-The view shows a banner (syncPendingActionBanner) with dismiss button.
-inputHandler checks model.getPendingAction(); if set, next cloud click calls
-cloudManager.completePendingAction(targetCloudId) which dispatches to the
-appropriate handler. Cleared on dismiss, mode change to foreground, or completion.
+feel_toward, notice_part, add_target need a second click. Controller sets
+model.pendingAction = { actionId, sourceCloudId }. View shows banner with dismiss.
+Next cloud click → cloudManager.completePendingAction(). Cleared on dismiss,
+mode change to foreground, or completion.
 
 Blending Lifecycle
 ------------------
-spontaneous (needAttention threshold) → partDemandsAttention() → addBlendedPart
-  If already a target, removes from targets first then blends.
-  If not in conference, displaces existing targets (tracked in displacedParts,
-  animated as spiral exits).
-  Blended parts' needAttention decays over time (0.98^dt).
-therapist-initiated: blend action → removeTargetCloud + addBlendedPart
-Separation: separate action → reduceBlending (inside act()) → degree reaches 0 →
-  promoteBlendedToTarget (synchronously inside act()) → syncViewWithModel() →
-  animateCloudStates() emits completedUnblendings → finishUnblending() triggers
-  visual stretch-resolution animation (view-only, no model mutations)
+spontaneous: needAttention threshold → partDemandsAttention() → addBlendedPart
+  - Already a target: removes from targets first.
+  - Not in conference: displaces existing targets (displacedParts, spiral exits).
+  - Blended needAttention decays (0.98^dt).
+therapist: blend action → removeTargetCloud + addBlendedPart
+Separation: separate → reduceBlending → degree→0 → promoteBlendedToTarget →
+  syncViewWithModel() → completedUnblendings → stretch-resolution animation (view only)
 Pending blends: enqueuePendingBlend → view animates arrival → promotePendingBlend
 
 Conference Participants
 -----------------------
-model.getConferenceCloudIds() returns union of: targets, blended, pending blends,
-supporting parts. All are visible in foreground mode.
+model.getConferenceCloudIds() = union of targets + blended + pending blends + supporting parts.
 
 Conversation System
 -------------------
-Authoritative spec: ~/coach/content/docs/ifs/conversation/_index.md and ~/coach/docs/conversation.txt
+Authoritative spec for game mechanics: ~/coach/src/ifsConversationSim.ts
+Dialogue writing guide: ~/coach/docs/conversation.txt
+Analysis tool: npx tsx scripts/extractConversationData.ts <recording.json>
 
-model.isConversationPossible() checks if two parts can have a directed dialogue.
-model.initConversation() applies stance flips, picks initial speaker (highest stance),
-sets phases (speaker→speak, listener→listen). Conversation state: participantIds,
-speakerId, phases map, effectiveStances cache, therapistDelta map.
+model.isConversationPossible(): requires foreground, no blended parts, exactly 2 targets
+with an inter-part relation.
+model.initConversation(): applies stance flips, picks initial speaker (highest stance),
+sets phases (speaker→speak, listener→listen).
 
-Effective stance = relation stance + therapist delta (clamped to [-1,1]).
-Therapist deltas decay exponentially. Carpets can be drag-rotated to nudge deltas.
+Effective stance = relation stance + therapistDelta + shockDelta (clamped to [-1,1]).
+Therapist and shock deltas decay exponentially.
 
-IFIO phase cycle: 4-step (speak/listen → listen/mirror → validate/listen →
-listen/empathize) or 6-step (adds clarify/listen → listen/mirror_again between mirror
-and validate). Cycle length determined by tuple length, picked once at cycle start via
-pickTupleIndex(). All lines — both speaker and listener — come from the speaker's tuple
-(speaker→listener relation). Phases advance when regulationScore > 0.5 and respond
-timer elapses. Dysregulated speakers may nag (probabilistic speak with no phase advance).
-On empathize completion: large trust bonus to both, former speaker's stance softened.
-Sustained regulation grants periodic small trust gains.
+IFIO phase cycle:
+- 4-step: speak/listen → listen/mirror → validate/listen → listen/empathize
+- 6-step: adds clarify/listen → listen/mirror_again between mirror and validate
+Cycle length from tuple length, picked once at cycle start (pickTupleIndex()).
+All lines — speaker and listener — come from the speaker's tuple.
+Phases advance when regulationScore > 0.5 and respondTimer elapses.
+On empathize: trust bonus to both, speaker's stance softened. Both enter listen/listen;
+after NEW_CYCLE_DELAY the highest-stance part becomes new speaker.
 
-Listener violation: if the passive listener's stance exceeds REGULATION_STANCE_LIMIT
-for >1s, conversation resets with that part as the new speaker (new tuple drawn).
+Dysregulated speaker: probabilistic utterance that doesn't advance phase; sets
+dysregulatedSpokePending until regulation recovers, then phase advances.
+SpeakRole in listen phase: fires dysregulated utterance after LISTENER_VIOLATION_GRACE.
+ListenRole violation: passive listener exceeds REGULATION_STANCE_LIMIT for >1s →
+resets conversation with that part as new speaker.
+Polarity flip: receiver shocked below -REGULATION_STANCE_LIMIT with p=stanceFlipOdds →
+erupts, becomes new speaker.
 
-When both parts are in listen/listen after empathize completes, after NEW_CYCLE_DELAY
-the part with highest stance becomes the new speaker and a fresh cycle begins.
-
-Stance shock: positive speaker pushes receiver negative (opposite polarity); negative
-speaker pulls receiver positive. With probability stanceFlipOdds the direction reverses
-(receiver mirrors speaker's polarity). Shock magnitude scaled by speaker stance,
-attenuated by selfTrust and interPartTrust, amplified by dysregulated-streak multiplier.
+Stance shock: streakMult × 0.3 × |speakerStance| × 2 / ((1+selfTrust)(1+interTrust)).
+Default polarity: opposite to speaker. With p=stanceFlipOdds: same as speaker.
+streakMult = e^(k×streak), k=log(1.2)/5.
 
 Backlash
 --------
-checkBacklash() iterates ALL non-consenting protectors of a protectee,
-reducing each protector's trust by trustGain/2 and probabilistically
-triggering backlash (newTrust < rng). All protectors are checked (not
-short-circuited); if multiple trigger, one is picked randomly.
+checkBacklash() iterates ALL non-consenting protectors, reduces each trust by trustGain/2,
+probabilistically triggers backlash (newTrust < rng). Multiple triggers → one picked randomly.
 
-Stance shock: see Conversation System above for full shock mechanics.
+Notice_part on a protector: if noticer's trust > protector's trust, sets inter-part
+trustFloor to 0.25 (impactRecognition dialogues); otherwise impactRejection dialogues.
 
-MessageType: 'conversation'. Messages travel between parts as PartMessages
-rendered by MessageRenderer. Blended parts send dysregulated utterances using
-inter-part conversation dialogues.
+Validate requires an unvalidated thought bubble (extends expiry on validation).
+Gratitude on active protectors requires jobAppraisal revealed first.
 
-View tracks conversationParticipantIds via syncConversation(). Star border morphs
-to indicate active IFIO conversation. Carpet badges show phase labels and stance.
+View: star border morphs for active IFIO conversation. Carpets drag-rotatable to nudge
+therapist delta. Phase labels and stance shown as carpet badges.

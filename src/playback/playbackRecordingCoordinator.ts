@@ -17,6 +17,7 @@ export interface PlaybackRecordingDependencies {
         setSelfRay(cloudId: string): void;
         getConversationPhases(): Map<string, string>;
         getConversationTherapistDeltas(): Map<string, number>;
+        getConversationShockDeltas(): Map<string, number>;
         getTherapistStanceDelta(cloudId: string): number;
         getConversationSpeakerId(): string | null;
         getConversationParticipantIds(): [string, string] | null;
@@ -55,7 +56,7 @@ export interface PlaybackRecordingDependencies {
     };
     hasResolvingClouds: () => boolean;
     getTimeAdvancer: () => { getAndResetIntervalCount(): number; advanceIntervals(count: number): void; getAndResetAttentionDemandLog(): import('../simulator/timeAdvancer.js').AttentionDemandEntry[] } | null;
-    getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void } | null;
+    getMessageOrchestrator: () => { getDebugState(): OrchestratorSnapshot; restoreState(snapshot: OrchestratorSnapshot): void; getAndResetConvLog(): import('../playback/testability/types.js').ConvEvent[] } | null;
     getPieMenuController: () => { isOpen(): boolean; getMenuCenter(): { x: number; y: number } | null; getCurrentMenuItems(): { id: string }[] } | null;
     getAnimatedStar: () => { simulateClick(): void; getElement(): SVGGElement | null; setPointerEventsEnabled(enabled: boolean): void } | null;
     getUIManager: () => { isMobile(): boolean; getIsFullscreen(): boolean; simulateModeToggleClick(): void; setCommLogPointerEventsEnabled(enabled: boolean): void } | null;
@@ -176,7 +177,8 @@ export class PlaybackRecordingCoordinator {
                     needAttention[id] = model.parts.getNeedAttention(id);
                 }
                 const isTransitioning = this.deps.getView().isTransitioning();
-                this.recorder.recordIntervals(intervalCount, attentionDemands, needAttention, isTransitioning, this.lastOrchestratorSnapshot);
+                const convLog = this.deps.getMessageOrchestrator()?.getAndResetConvLog();
+                this.recorder.recordIntervals(intervalCount, attentionDemands, needAttention, isTransitioning, this.lastOrchestratorSnapshot, convLog?.length ? convLog : undefined);
             }
         }
     }
@@ -222,6 +224,7 @@ export class PlaybackRecordingCoordinator {
             trust,
             conversationPhases: Object.fromEntries(model.getConversationPhases()),
             conversationTherapistDelta: Object.fromEntries(model.getConversationTherapistDeltas()),
+            conversationShockDelta: Object.fromEntries(model.getConversationShockDeltas()),
             conversationSpeakerId: model.getConversationSpeakerId(),
             conversationParticipantIds: model.getConversationParticipantIds(),
             interPartRelations: model.parts.getRelationSummaries(),
@@ -376,7 +379,7 @@ export class PlaybackRecordingCoordinator {
                         }
                         const orchFields: (keyof OrchestratorSnapshot)[] = [
                             'respondTimer', 'regulationScore', 'sustainedRegulationTimer',
-                            'newCycleTimer', 'listenerViolationTimer',
+                            'newCycleTimer', 'listenRoleViolationTimer', 'speakRoleViolationTimer',
                         ];
                         for (const field of orchFields) {
                             const expected = orchState[field];
@@ -468,7 +471,8 @@ export class PlaybackRecordingCoordinator {
                         regulationScore: orchState?.regulationScore ?? 0,
                         sustainedRegulationTimer: orchState?.sustainedRegulationTimer ?? 0,
                         newCycleTimer: orchState?.newCycleTimer ?? 0,
-                        listenerViolationTimer: orchState?.listenerViolationTimer ?? 0,
+                        listenRoleViolationTimer: orchState?.listenRoleViolationTimer ?? 0,
+                        speakRoleViolationTimer: orchState?.speakRoleViolationTimer ?? 0,
                     },
                     conversationState: {
                         speaker: model.getConversationSpeakerId(),

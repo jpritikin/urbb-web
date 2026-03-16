@@ -230,7 +230,7 @@ setFullscreen(isFullscreen: boolean): void {
         const btn = document.createElement('button');
         btn.className = 'zoom-toggle-btn';
         btn.textContent = '📜';
-        btn.title = 'Show communication log';
+        btn.title = 'Show utterance log';
         btn.addEventListener('click', () => this.toggleCommLog());
 
         foreignObject.appendChild(btn);
@@ -244,7 +244,7 @@ setFullscreen(isFullscreen: boolean): void {
 
         const header = document.createElement('div');
         header.className = 'comm-log-header';
-        header.textContent = 'Communication Log';
+        header.textContent = 'Utterance Log';
         this.commLogPanel.appendChild(header);
 
         const content = document.createElement('div');

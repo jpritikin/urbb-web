@@ -856,6 +856,15 @@ export class SimulatorModel {
         return result;
     }
 
+    getConversationShockDeltas(): Map<string, number> {
+        const result = new Map<string, number>();
+        if (!this.conversationParticipantIds) return result;
+        for (const id of this.conversationParticipantIds) {
+            result.set(id, this.conversationShockDelta.get(id) ?? 0);
+        }
+        return result;
+    }
+
     isConversationPossible(): { possible: boolean; participantIds: [string, string] | null } {
         if (this.mode !== 'foreground') return { possible: false, participantIds: null };
         if (this.blendedParts.size > 0) return { possible: false, participantIds: null };

@@ -1,6 +1,7 @@
 import { SimulatorModel, PartMessage } from './ifsModel.js';
 import { PartStateManager, type IfioPhase } from '../cloud/partStateManager.js';
 import { RNG, pickRandom } from '../playback/testability/rng.js';
+import type { ConvEvent } from '../playback/testability/types.js';
 
 export const REGULATION_STANCE_LIMIT = 0.3;
 
@@ -22,14 +23,21 @@ export class MessageOrchestrator {
     private summonArrivalTimers: Map<string, number> = new Map();
     private genericDialogueCooldowns: Map<string, number> = new Map();
     private selfLoathingCooldowns: Map<string, number> = new Map();
-    private sustainedRegulationTimer: number = 0;
     private regulationScore: number = 0;
     private respondTimer: number = 0;
     private newCycleTimer: number = 0;
-    private listenerViolationTimer: number = 0;
+    private listenRoleViolationTimer: number = 0;
+    private speakRoleViolationTimer: number = 0;
     private dysregulatedStreaks: Map<string, number> = new Map();
+    private dysregulatedSpokePending: boolean = false;
     private currentCycleLength: 4 | 6 = 4;
     private currentTupleIndex: number = 0;
+
+    private setCurrentTuple(speakerId: string, listenerId: string, rng: () => number): void {
+        this.currentTupleIndex = this.relationships.pickTupleIndex(speakerId, listenerId, rng);
+        this.currentCycleLength = this.relationships.getTupleLength(speakerId, listenerId, this.currentTupleIndex);
+    }
+    private convLog: ConvEvent[] = [];
 
     private readonly BLEND_MESSAGE_DELAY = 2;
     private readonly GENERIC_DIALOGUE_INTERVAL = 8;
@@ -37,7 +45,6 @@ export class MessageOrchestrator {
     private readonly SPEAK_BASE_RATE = 0.5;
     private readonly RESPOND_DELAY = 3;
     private readonly NEW_CYCLE_DELAY = 4;
-    private readonly SUSTAINED_TRUST_INTERVAL = 10;
     private readonly REGULATION_RECOVER_RATE = 0.5;
     private readonly REGULATION_DECAY_RATE = 0.3;
     private readonly SUMMON_ARRIVAL_DELAY = 2;
@@ -285,13 +292,32 @@ export class MessageOrchestrator {
         this.callbacks.showThoughtBubble(`You like ${favoredName} more than me`, jealousId, false);
     }
 
+    private static readonly DYSREGULATED_LABELS: [number, string][] = [
+        [0.50, 'Nag'],
+        [0.65, 'Jab'],
+        [0.75, 'Snap'],
+        [0.85, 'Accuse'],
+        [0.95, 'Shout'],
+        [1.01, 'Explode'],
+    ];
+
+    private static readonly PHASE_LABEL_MAP: Record<string, string> = {
+        speak: 'Speak', mirror: 'Mirror', clarify: 'Clarify',
+        mirror_again: 'Mirror again', validate: 'Validate', empathize: 'Empathize',
+    };
+
+    private dysregulatedLabel(stance: number): string {
+        const entry = MessageOrchestrator.DYSREGULATED_LABELS.find(([threshold]) => stance < threshold);
+        return entry ? entry[1] : 'Explode';
+    }
+
     checkAndShowConversationDialogues(deltaTime: number): void {
         const participantIds = this.model.getConversationParticipantIds();
         if (!participantIds) {
-            this.sustainedRegulationTimer = 0;
             this.regulationScore = 0;
             this.respondTimer = 0;
             this.newCycleTimer = 0;
+            this.speakRoleViolationTimer = 0;
             return;
         }
         const [partA, partB] = participantIds;
@@ -300,8 +326,73 @@ export class MessageOrchestrator {
         this.advanceConversationPhases(deltaTime, partA, partB);
 
         const regulated = this.regulationScore > 0.5;
+        const speakRoleId = this.model.getConversationSpeakerId();
 
-        const speakerId = this.model.getConversationSpeakerId();
+        // When regulation recovers after a dysregulated outburst, advance phase immediately.
+        if (regulated && this.dysregulatedSpokePending) {
+            this.dysregulatedSpokePending = false;
+            this.speakRoleViolationTimer = 0;
+            this.respondTimer = 0;
+            if (speakRoleId) {
+                const speakRolePhase = this.model.getConversationPhase(speakRoleId);
+                if (speakRolePhase !== 'listen') {
+                    this.tryAdvancePhase(partA, partB);
+                }
+            }
+            return;
+        }
+
+        // SpeakRole dysregulated utterance — fires regardless of which active phase SpeakRole holds.
+        // When in `listen` (waiting for ListenRole): timer-gated.
+        // When in an active phase (speak/validate/clarify/mirror_again): probabilistic each tick.
+        // Either way: doesn't advance phase; sets dysregulatedSpokePending so phase advances on regulation recovery.
+        if (!regulated && speakRoleId) {
+            const speakRoleStance = this.model.getConversationEffectiveStance(speakRoleId);
+            const speakRolePhase = this.model.getConversationPhase(speakRoleId);
+            const listenRoleId = speakRoleId === partA ? partB : partA;
+            const isSpeakRoleActive = speakRolePhase === 'speak' || speakRolePhase === 'validate' || speakRolePhase === 'clarify' || speakRolePhase === 'mirror_again';
+
+            if (speakRoleStance >= REGULATION_STANCE_LIMIT) {
+                if (speakRolePhase === 'listen') {
+                    this.speakRoleViolationTimer += deltaTime;
+                    if (this.speakRoleViolationTimer >= this.LISTENER_VIOLATION_GRACE) {
+                        this.speakRoleViolationTimer = 0;
+                        const listenRolePhase = this.model.getConversationPhase(listenRoleId);
+                        const activePhase = listenRolePhase === 'empathize' ? 'validate'
+                            : listenRolePhase === 'mirror_again' ? 'clarify'
+                            : 'speak';
+                        const text = this.relationships.getTupleDialogue(speakRoleId, listenRoleId, this.currentTupleIndex, activePhase);
+                        if (text) {
+                            this.sendConversationMessage(speakRoleId, listenRoleId, text, this.dysregulatedLabel(speakRoleStance), speakRoleStance, true);
+                            this.applyStanceShock(speakRoleId, listenRoleId, speakRoleStance);
+                            this.dysregulatedSpokePending = true;
+                        }
+                    }
+                } else if (isSpeakRoleActive) {
+                    this.speakRoleViolationTimer = 0;
+                    const s = Math.max(0, speakRoleStance + 0.3);
+                    if (this.rng.random('conv_speak') < s * this.SPEAK_BASE_RATE * deltaTime) {
+                        if (speakRolePhase === 'speak') {
+                            this.setCurrentTuple(speakRoleId, listenRoleId, () => this.rng.random('cycle_length'));
+                        }
+                        const text = this.relationships.getTupleDialogue(speakRoleId, listenRoleId, this.currentTupleIndex, speakRolePhase);
+                        if (text) {
+                            this.sendConversationMessage(speakRoleId, listenRoleId, text, this.dysregulatedLabel(speakRoleStance), speakRoleStance, true);
+                            this.applyStanceShock(speakRoleId, listenRoleId, speakRoleStance);
+                            this.dysregulatedSpokePending = true;
+                        }
+                    }
+                } else {
+                    this.speakRoleViolationTimer = 0;
+                }
+            } else {
+                this.speakRoleViolationTimer = 0;
+            }
+        } else if (regulated) {
+            this.speakRoleViolationTimer = 0;
+        }
+
+        if (this.dysregulatedSpokePending) return;
 
         for (const partId of [partA, partB]) {
             const otherId = partId === partA ? partB : partA;
@@ -313,7 +404,6 @@ export class MessageOrchestrator {
             let advanceAfter = false;
             if (phase === 'speak') {
                 if (regulated) {
-                    // Regulated: send one message then advance phase
                     this.respondTimer += deltaTime;
                     if (this.respondTimer >= this.RESPOND_DELAY) {
                         shouldSpeak = true;
@@ -321,13 +411,10 @@ export class MessageOrchestrator {
                         this.respondTimer = 0;
                     }
                 } else if (effectiveStance >= REGULATION_STANCE_LIMIT) {
-                    // Dysregulated flooding: probabilistic speaking, no phase advance
-                    const s = effectiveStance + 0.3;
-                    const speakProb = Math.max(0, s) ** 2 * this.SPEAK_BASE_RATE * deltaTime;
-                    shouldSpeak = this.rng.random('conv_speak') < speakProb;
+                    // Handled above via dysreg path; skip here to avoid double-fire on speak phase
                 }
             } else {
-                // Non-speak phases (mirror/clarify/validate/empathize): only when regulated
+                // Non-speak active phases: only fire when regulated (dysreg handled above)
                 if (regulated) {
                     this.respondTimer += deltaTime;
                     if (this.respondTimer >= this.RESPOND_DELAY) {
@@ -339,21 +426,13 @@ export class MessageOrchestrator {
             }
             if (!shouldSpeak) continue;
 
-            // All lines come from the speaker's tuple (speaker→listener relation)
-            const [tupleFromId, tupleToId] = speakerId === partId
+            const [tupleFromId, tupleToId] = speakRoleId === partId
                 ? [partId, otherId]
                 : [otherId, partId];
             const text = this.relationships.getTupleDialogue(tupleFromId, tupleToId, this.currentTupleIndex, phase);
             if (text) {
-                const DYSREGULATED_LABELS = ['Nag', 'Jab', 'Snap'];
-                const PHASE_LABEL_MAP: Record<string, string> = {
-                    speak: 'Speak', mirror: 'Mirror', clarify: 'Clarify',
-                    mirror_again: 'Mirror again', validate: 'Validate', empathize: 'Empathize',
-                };
-                const phaseLabel = phase === 'speak' && !advanceAfter
-                    ? DYSREGULATED_LABELS[Math.floor(this.rng.random('dysreg_label') * DYSREGULATED_LABELS.length)]
-                    : (PHASE_LABEL_MAP[phase] ?? phase);
-                this.sendConversationMessage(partId, otherId, text, phaseLabel);
+                const label = MessageOrchestrator.PHASE_LABEL_MAP[phase] ?? phase;
+                this.sendConversationMessage(partId, otherId, text, label, effectiveStance, false);
                 this.applyStanceShock(partId, otherId, effectiveStance);
                 if (advanceAfter) {
                     this.tryAdvancePhase(partA, partB);
@@ -376,82 +455,105 @@ export class MessageOrchestrator {
                 // Waiting state: therapist Activate (addTherapistStanceDelta) can push one above 0
                 const aboveZero = stanceA >= 0 ? partA : stanceB >= 0 ? partB : null;
                 if (aboveZero) {
-                    this.resetConversation(aboveZero, partA, partB);
+                    this.resetConversation(aboveZero, partA, partB, 'activate');
                 }
                 return;
             }
             this.newCycleTimer += deltaTime;
             if (this.newCycleTimer >= this.NEW_CYCLE_DELAY) {
                 const newSpeaker = stanceA >= stanceB ? partA : partB;
-                this.resetConversation(newSpeaker, partA, partB);
+                this.resetConversation(newSpeaker, partA, partB, 'new-cycle');
             }
             return;
         }
         this.newCycleTimer = 0;
 
-        if (!speakerId) return;
-        const listenerId = speakerId === partA ? partB : partA;
-        const phaseS = this.model.getConversationPhase(speakerId);
-        const phaseL = this.model.getConversationPhase(listenerId);
+        const speakRoleId = this.model.getConversationSpeakerId();
+        if (!speakRoleId) return;
+        const listenRoleId = speakRoleId === partA ? partB : partA;
+        const phaseS = this.model.getConversationPhase(speakRoleId);
+        const phaseL = this.model.getConversationPhase(listenRoleId);
 
-        // Determine who should be passively listening right now
-        let currentListeningPart: string | null = null;
-        if (phaseS === 'speak' && phaseL === 'listen') currentListeningPart = listenerId;
-        else if (phaseS === 'listen' && phaseL === 'mirror') currentListeningPart = speakerId;
-        else if (phaseS === 'listen' && phaseL === 'mirror_again') currentListeningPart = speakerId;
-        else if (phaseS === 'clarify' && phaseL === 'listen') currentListeningPart = listenerId;
-        else if (phaseS === 'validate' && phaseL === 'listen') currentListeningPart = listenerId;
-        else if (phaseS === 'listen' && phaseL === 'empathize') currentListeningPart = speakerId;
+        // Check whether the ListenRole part is dysregulated — if so, it interrupts and becomes the new SpeakRole part.
+        // The SpeakRole part in the `listen` phase (waiting for ListenRole to act) is handled separately by
+        // speakRoleViolationTimer and is excluded here.
+        let listenRoleViolating = false;
+        if (phaseS === 'speak' && phaseL === 'listen') listenRoleViolating = true;
+        else if (phaseS === 'listen' && phaseL === 'mirror') listenRoleViolating = true;
+        else if (phaseS === 'listen' && phaseL === 'mirror_again') listenRoleViolating = true;
+        else if (phaseS === 'clarify' && phaseL === 'listen') listenRoleViolating = true;
+        else if (phaseS === 'validate' && phaseL === 'listen') listenRoleViolating = true;
+        else if (phaseS === 'listen' && phaseL === 'empathize') listenRoleViolating = true;
 
-        if (!currentListeningPart) {
-            this.listenerViolationTimer = 0;
+        if (!listenRoleViolating) {
+            this.listenRoleViolationTimer = 0;
             return;
         }
 
-        const stance = this.model.getConversationEffectiveStance(currentListeningPart);
+        const stance = this.model.getConversationEffectiveStance(listenRoleId);
         if (stance > REGULATION_STANCE_LIMIT) {
-            this.listenerViolationTimer += deltaTime;
-            if (this.listenerViolationTimer >= this.LISTENER_VIOLATION_GRACE) {
-                this.listenerViolationTimer = 0;
-                this.resetConversation(currentListeningPart, partA, partB);
+            this.listenRoleViolationTimer += deltaTime;
+            if (this.listenRoleViolationTimer >= this.LISTENER_VIOLATION_GRACE) {
+                this.listenRoleViolationTimer = 0;
+                this.resetConversation(listenRoleId, partA, partB, 'listen-violation');
+                // Immediately fire a dysregulated utterance from the new SpeakRole (the violator).
+                // The shock will push the new ListenRole toward negative stance, breaking the
+                // oscillation loop where both parts remain dysregulated indefinitely.
+                const newListenRoleId = listenRoleId === partA ? partB : partA;
+                const newStance = this.model.getConversationEffectiveStance(listenRoleId);
+                const text = this.relationships.getTupleDialogue(listenRoleId, newListenRoleId, this.currentTupleIndex, 'speak');
+                if (text) {
+                    this.sendConversationMessage(listenRoleId, newListenRoleId, text, this.dysregulatedLabel(newStance), newStance, true);
+                    this.applyStanceShock(listenRoleId, newListenRoleId, newStance);
+                    this.dysregulatedSpokePending = true;
+                }
             }
         } else {
-            this.listenerViolationTimer = 0;
+            this.listenRoleViolationTimer = 0;
         }
     }
 
-    private resetConversation(newSpeakerId: string, partA: string, partB: string): void {
-        const newListenerId = newSpeakerId === partA ? partB : partA;
-        const speakerRel = this.relationships.getRelation(newSpeakerId, newListenerId);
-        if (speakerRel) {
-            const oldStance = speakerRel.stance;
-            const selfTrust = this.model.getSelfTrust(newSpeakerId);
+    private resetConversation(newSpeakRoleId: string, partA: string, partB: string, reason: 'new-cycle' | 'listen-violation' | 'activate' | 'flip'): void {
+        const newListenRoleId = newSpeakRoleId === partA ? partB : partA;
+        const speakRoleRel = this.relationships.getRelation(newSpeakRoleId, newListenRoleId);
+        if (speakRoleRel) {
+            const oldStance = speakRoleRel.stance;
+            const selfTrust = this.model.getSelfTrust(newSpeakRoleId);
             const fresh = PartStateManager.drawInitialStance(Math.abs(oldStance), selfTrust, () => this.rng.random('resample_stance'));
-            const flipped = this.rng.random('resample_flip') < speakerRel.stanceFlipOdds;
+            const flipped = this.rng.random('resample_flip') < speakRoleRel.stanceFlipOdds;
             const newStance = 0.75 * (flipped ? -fresh : fresh) + 0.25 * oldStance;
-            this.callbacks.act(`reset conversation → ${newSpeakerId}`, () => {
-                speakerRel.stance = Math.max(-1, Math.min(1, newStance));
-                this.model.setConversationSpeakerId(newSpeakerId);
-                this.model.setConversationPhase(newSpeakerId, 'speak');
-                this.model.setConversationPhase(newListenerId, 'listen');
+            this.callbacks.act(`reset conversation → ${newSpeakRoleId}`, () => {
+                speakRoleRel.stance = Math.max(-1, Math.min(1, newStance));
+                this.model.setConversationSpeakerId(newSpeakRoleId);
+                this.model.setConversationPhase(newSpeakRoleId, 'speak');
+                this.model.setConversationPhase(newListenRoleId, 'listen');
             });
         } else {
-            this.callbacks.act(`reset conversation → ${newSpeakerId}`, () => {
-                this.model.setConversationSpeakerId(newSpeakerId);
-                this.model.setConversationPhase(newSpeakerId, 'speak');
-                this.model.setConversationPhase(newListenerId, 'listen');
+            this.callbacks.act(`reset conversation → ${newSpeakRoleId}`, () => {
+                this.model.setConversationSpeakerId(newSpeakRoleId);
+                this.model.setConversationPhase(newSpeakRoleId, 'speak');
+                this.model.setConversationPhase(newListenRoleId, 'listen');
             });
         }
-        this.currentTupleIndex = this.relationships.pickTupleIndex(newSpeakerId, newListenerId, () => this.rng.random('cycle_length'));
-        this.currentCycleLength = this.relationships.getTupleLength(newSpeakerId, newListenerId, this.currentTupleIndex);
+        this.setCurrentTuple(newSpeakRoleId, newListenRoleId, () => this.rng.random('cycle_length'));
+        this.convLog.push({ kind: 'nominate', newSpeakerId: newSpeakRoleId, nominateReason: reason });
         this.respondTimer = 0;
         this.newCycleTimer = 0;
+        this.speakRoleViolationTimer = 0;
+        this.dysregulatedSpokePending = false;
         this.dysregulatedStreaks.clear();
     }
 
-    private sendConversationMessage(senderId: string, targetId: string, text: string, phaseLabel?: string): void {
+    getAndResetConvLog(): ConvEvent[] {
+        const log = this.convLog;
+        this.convLog = [];
+        return log;
+    }
+
+    private sendConversationMessage(senderId: string, targetId: string, text: string, phaseLabel?: string, senderStance?: number, dysregulated?: boolean): void {
         const senderName = this.model.parts.getPartName(senderId);
         const targetName = this.model.parts.getPartName(targetId);
+        this.convLog.push({ kind: 'utterance', senderId, receiverId: targetId, phase: phaseLabel, senderStance, dysregulated });
         this.callbacks.act(`${senderName} speaks to ${targetName}`, () => {
             this.model.sendMessage(senderId, targetId, text, 'conversation', phaseLabel);
         });
@@ -479,9 +581,8 @@ export class MessageOrchestrator {
         const direction = pullToward ? Math.sign(speakerStance) : -Math.sign(speakerStance);
         if (direction === 0) return;
 
-        const currentShock = this.model.getConversationShockDelta(receiverId);
-        const receiverEffective = this.model.getConversationEffectiveStance(receiverId);
-        const newEffective = receiverEffective + direction * shockMagnitude;
+        const receiverEffBefore = this.model.getConversationEffectiveStance(receiverId);
+        const newEffective = receiverEffBefore + direction * shockMagnitude;
 
         if (newEffective < -1) {
             const overflow = -1 - newEffective;
@@ -492,14 +593,15 @@ export class MessageOrchestrator {
         } else {
             this.callbacks.act(`stance shock ${speakerId}→${receiverId}`, () => {
                 this.model.addConversationShockDelta(receiverId, direction * shockMagnitude);
-                this.relationships.addInterPartTrust(receiverId, speakerId, -shockMagnitude, () => this.rng.random('shock_trust'));
             });
         }
 
+        const receiverEffAfter = this.model.getConversationEffectiveStance(receiverId);
+        this.convLog.push({ kind: 'shock', senderId: speakerId, receiverId, senderStance: speakerStance, shockDelta: direction * shockMagnitude, receiverEffBefore, receiverEffAfter });
+
         // Polarity flip: withdrawn receiver erupts when shocked negative
-        const receiverStanceAfter = this.model.getConversationEffectiveStance(receiverId);
-        if (receiverStanceAfter < -REGULATION_STANCE_LIMIT && this.rng.random('polarity_flip') < rel.stanceFlipOdds) {
-            this.triggerPolarityFlip(receiverId, speakerId, receiverStanceAfter);
+        if (receiverEffAfter < -REGULATION_STANCE_LIMIT && this.rng.random('polarity_flip') < rel.stanceFlipOdds) {
+            this.triggerPolarityFlip(receiverId, speakerId, receiverEffAfter);
         }
     }
 
@@ -516,12 +618,15 @@ export class MessageOrchestrator {
             this.model.setConversationSpeakerId(partId);
             const participantIds = this.model.getConversationParticipantIds()!;
             const [a, b] = participantIds;
-            const listenerId = partId === a ? b : a;
+            const newListenRoleId = partId === a ? b : a;
             this.model.setConversationPhase(partId, 'speak');
-            this.model.setConversationPhase(listenerId, 'listen');
+            this.model.setConversationPhase(newListenRoleId, 'listen');
         });
+        this.setCurrentTuple(partId, speakerId, () => this.rng.random('cycle_length'));
+        this.convLog.push({ kind: 'nominate', newSpeakerId: partId, nominateReason: 'flip' });
         this.respondTimer = 0;
         this.newCycleTimer = 0;
+        this.speakRoleViolationTimer = 0;
         const outbursts = ["I can't take it anymore!", "That's it, I'm done!", 'Stop!', 'You never listen!'];
         this.callbacks.showThoughtBubble(outbursts[Math.floor(this.rng.random('outburst') * outbursts.length)], partId);
     }
@@ -537,123 +642,104 @@ export class MessageOrchestrator {
             this.regulationScore = Math.max(0, this.regulationScore - this.REGULATION_DECAY_RATE * deltaTime);
         }
 
-        if (this.regulationScore > 0.5) {
-            this.sustainedRegulationTimer += deltaTime;
-            if (this.sustainedRegulationTimer >= this.SUSTAINED_TRUST_INTERVAL) {
-                this.sustainedRegulationTimer -= this.SUSTAINED_TRUST_INTERVAL;
-                this.addProportionalTrust(partA, partB, 0.01);
-                this.addProportionalTrust(partB, partA, 0.01);
-            }
-        } else {
-            this.sustainedRegulationTimer = 0;
+        if (this.regulationScore <= 0.5) {
         }
     }
 
-    private addProportionalTrust(fromId: string, toId: string, baseDelta: number): void {
-        const rel = this.relationships.getRelation(fromId, toId);
-        const currentTrust = rel?.trust ?? 0;
-        const scaled = baseDelta * (1 - currentTrust);
-        this.relationships.addInterPartTrust(fromId, toId, scaled, () => this.rng.random('prop_trust'));
-    }
 
     private tryAdvancePhase(partA: string, partB: string): void {
-        const speakerId = this.model.getConversationSpeakerId();
-        if (!speakerId) return;
-        const listenerId = speakerId === partA ? partB : partA;
+        const speakRoleId = this.model.getConversationSpeakerId();
+        if (!speakRoleId) return;
+        const listenRoleId = speakRoleId === partA ? partB : partA;
 
-        const phaseS = this.model.getConversationPhase(speakerId);
-        const phaseL = this.model.getConversationPhase(listenerId);
+        const phaseS = this.model.getConversationPhase(speakRoleId);
+        const phaseL = this.model.getConversationPhase(listenRoleId);
         if (!phaseS || !phaseL) return;
 
         this.respondTimer = 0;
 
         if (this.currentCycleLength === 6) {
             // 6-step repair loop:
-            // S:speak/L:listen → S:listen/L:mirror → S:clarify/L:listen → S:listen/L:mirror_again → S:validate/L:listen → S:listen/L:empathize
+            // SR:speak/LR:listen → SR:listen/LR:mirror → SR:clarify/LR:listen → SR:listen/LR:mirror_again → SR:validate/LR:listen → SR:listen/LR:empathize
             if (phaseS === 'speak' && phaseL === 'listen') {
-                this.model.setConversationPhase(speakerId, 'listen');
-                this.model.setConversationPhase(listenerId, 'mirror');
+                this.model.setConversationPhase(speakRoleId, 'listen');
+                this.model.setConversationPhase(listenRoleId, 'mirror');
             } else if (phaseS === 'listen' && phaseL === 'mirror') {
-                this.model.setConversationPhase(speakerId, 'clarify');
-                this.model.setConversationPhase(listenerId, 'listen');
+                this.model.setConversationPhase(speakRoleId, 'clarify');
+                this.model.setConversationPhase(listenRoleId, 'listen');
             } else if (phaseS === 'clarify' && phaseL === 'listen') {
-                this.model.setConversationPhase(speakerId, 'listen');
-                this.model.setConversationPhase(listenerId, 'mirror_again');
+                this.model.setConversationPhase(speakRoleId, 'listen');
+                this.model.setConversationPhase(listenRoleId, 'mirror_again');
             } else if (phaseS === 'listen' && phaseL === 'mirror_again') {
-                this.model.setConversationPhase(speakerId, 'validate');
-                this.model.setConversationPhase(listenerId, 'listen');
-                this.addProportionalTrust(speakerId, listenerId, 0.05);
+                this.model.setConversationPhase(speakRoleId, 'validate');
+                this.model.setConversationPhase(listenRoleId, 'listen');
             } else if (phaseS === 'validate' && phaseL === 'listen') {
-                this.model.setConversationPhase(speakerId, 'listen');
-                this.model.setConversationPhase(listenerId, 'empathize');
-                this.addProportionalTrust(listenerId, speakerId, 0.05);
+                this.model.setConversationPhase(speakRoleId, 'listen');
+                this.model.setConversationPhase(listenRoleId, 'empathize');
             } else if (phaseS === 'listen' && phaseL === 'empathize') {
-                this.completeEmpathize(listenerId, speakerId);
+                this.completeEmpathize(listenRoleId, speakRoleId);
             }
         } else {
-            // 4-step standard: S:speak/L:listen → S:listen/L:mirror → S:validate/L:listen → S:listen/L:empathize
+            // 4-step standard: SR:speak/LR:listen → SR:listen/LR:mirror → SR:validate/LR:listen → SR:listen/LR:empathize
             if (phaseS === 'speak' && phaseL === 'listen') {
-                this.model.setConversationPhase(speakerId, 'listen');
-                this.model.setConversationPhase(listenerId, 'mirror');
-                this.addProportionalTrust(listenerId, speakerId, 0.05);
+                this.model.setConversationPhase(speakRoleId, 'listen');
+                this.model.setConversationPhase(listenRoleId, 'mirror');
             } else if (phaseS === 'listen' && phaseL === 'mirror') {
-                this.model.setConversationPhase(speakerId, 'validate');
-                this.model.setConversationPhase(listenerId, 'listen');
-                this.addProportionalTrust(speakerId, listenerId, 0.05);
+                this.model.setConversationPhase(speakRoleId, 'validate');
+                this.model.setConversationPhase(listenRoleId, 'listen');
             } else if (phaseS === 'validate' && phaseL === 'listen') {
-                this.model.setConversationPhase(speakerId, 'listen');
-                this.model.setConversationPhase(listenerId, 'empathize');
-                this.addProportionalTrust(listenerId, speakerId, 0.05);
+                this.model.setConversationPhase(speakRoleId, 'listen');
+                this.model.setConversationPhase(listenRoleId, 'empathize');
             } else if (phaseS === 'listen' && phaseL === 'empathize') {
-                this.completeEmpathize(listenerId, speakerId);
+                this.completeEmpathize(listenRoleId, speakRoleId);
             }
         }
     }
 
-    private completeEmpathize(empathizerId: string, speakerId: string): void {
-        // Large diminishing-returns trust gain
+    private completeEmpathize(listenRoleId: string, speakRoleId: string): void {
         const trustBoost = (id: string, otherId: string) => {
             const rel = this.relationships.getRelation(id, otherId);
             const trust = rel?.trust ?? 0;
             const delta = this.CYCLE_TRUST_BOOST_FACTOR * (1 - trust);
             this.relationships.addInterPartTrust(id, otherId, delta, () => this.rng.random('empathize_trust'));
         };
-        trustBoost(empathizerId, speakerId);
-        trustBoost(speakerId, empathizerId);
+        trustBoost(speakRoleId, listenRoleId);
 
-        // Soften former speaker's raw stance
-        const speakerRel = this.relationships.getRelation(speakerId, empathizerId);
-        if (speakerRel) {
-            this.callbacks.act(`soften stance ${speakerId}`, () => {
-                speakerRel.stance *= this.CYCLE_STANCE_SOFTEN;
+        // Soften SpeakRole part's raw stance
+        const speakRoleRel = this.relationships.getRelation(speakRoleId, listenRoleId);
+        if (speakRoleRel) {
+            this.callbacks.act(`soften stance ${speakRoleId}`, () => {
+                speakRoleRel.stance *= this.CYCLE_STANCE_SOFTEN;
             });
         }
 
-        this.model.setConversationPhase(empathizerId, 'listen');
-        this.model.setConversationPhase(speakerId, 'listen');
+        this.model.setConversationPhase(listenRoleId, 'listen');
+        this.model.setConversationPhase(speakRoleId, 'listen');
+        this.dysregulatedSpokePending = false;
         this.dysregulatedStreaks.clear();
     }
 
-    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; respondTimer: number; regulationScore: number; sustainedRegulationTimer: number; newCycleTimer: number; listenerViolationTimer: number; selfLoathingCooldowns: Record<string, number>; genericDialogueCooldowns: Record<string, number>; summonArrivalTimers: Record<string, number>; dysregulatedStreaks: Record<string, number>; currentCycleLength: number; currentTupleIndex: number } {
+    getDebugState(): { blendTimers: Record<string, number>; cooldowns: Record<string, number>; pending: Record<string, string>; respondTimer: number; regulationScore: number; newCycleTimer: number; listenRoleViolationTimer: number; speakRoleViolationTimer: number; selfLoathingCooldowns: Record<string, number>; genericDialogueCooldowns: Record<string, number>; summonArrivalTimers: Record<string, number>; dysregulatedStreaks: Record<string, number>; dysregulatedSpokePending: boolean; currentCycleLength: number; currentTupleIndex: number } {
         return {
             blendTimers: Object.fromEntries(this.blendStartTimers),
             cooldowns: Object.fromEntries(this.messageCooldownTimers),
             pending: Object.fromEntries(this.pendingSummonTargets),
             respondTimer: this.respondTimer,
             regulationScore: this.regulationScore,
-            sustainedRegulationTimer: this.sustainedRegulationTimer,
             newCycleTimer: this.newCycleTimer,
-            listenerViolationTimer: this.listenerViolationTimer,
+            listenRoleViolationTimer: this.listenRoleViolationTimer,
+            speakRoleViolationTimer: this.speakRoleViolationTimer,
             selfLoathingCooldowns: Object.fromEntries(this.selfLoathingCooldowns),
             genericDialogueCooldowns: Object.fromEntries(this.genericDialogueCooldowns),
             summonArrivalTimers: Object.fromEntries(this.summonArrivalTimers),
             dysregulatedStreaks: Object.fromEntries(this.dysregulatedStreaks),
+            dysregulatedSpokePending: this.dysregulatedSpokePending,
             currentCycleLength: this.currentCycleLength,
             currentTupleIndex: this.currentTupleIndex,
         };
     }
 
-    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; respondTimer?: number; regulationScore?: number; sustainedRegulationTimer?: number; newCycleTimer?: number; listenerViolationTimer?: number; selfLoathingCooldowns?: Record<string, number>; genericDialogueCooldowns?: Record<string, number>; summonArrivalTimers?: Record<string, number>; dysregulatedStreaks?: Record<string, number>; currentCycleLength?: number; currentTupleIndex?: number }): void {
+    restoreState(snapshot: { blendTimers?: Record<string, number>; cooldowns?: Record<string, number>; pending?: Record<string, string>; respondTimer?: number; regulationScore?: number; newCycleTimer?: number; listenRoleViolationTimer?: number; speakRoleViolationTimer?: number; selfLoathingCooldowns?: Record<string, number>; genericDialogueCooldowns?: Record<string, number>; summonArrivalTimers?: Record<string, number>; dysregulatedStreaks?: Record<string, number>; dysregulatedSpokePending?: boolean; currentCycleLength?: number; currentTupleIndex?: number }): void {
         if (snapshot.blendTimers) {
             this.blendStartTimers = new Map(Object.entries(snapshot.blendTimers));
         }
@@ -665,9 +751,9 @@ export class MessageOrchestrator {
         }
         if (snapshot.respondTimer !== undefined) this.respondTimer = snapshot.respondTimer;
         if (snapshot.regulationScore !== undefined) this.regulationScore = snapshot.regulationScore;
-        if (snapshot.sustainedRegulationTimer !== undefined) this.sustainedRegulationTimer = snapshot.sustainedRegulationTimer;
         if (snapshot.newCycleTimer !== undefined) this.newCycleTimer = snapshot.newCycleTimer;
-        if (snapshot.listenerViolationTimer !== undefined) this.listenerViolationTimer = snapshot.listenerViolationTimer;
+        if (snapshot.listenRoleViolationTimer !== undefined) this.listenRoleViolationTimer = snapshot.listenRoleViolationTimer;
+        if (snapshot.speakRoleViolationTimer !== undefined) this.speakRoleViolationTimer = snapshot.speakRoleViolationTimer;
         if (snapshot.selfLoathingCooldowns) {
             this.selfLoathingCooldowns = new Map(Object.entries(snapshot.selfLoathingCooldowns));
         }
@@ -680,6 +766,7 @@ export class MessageOrchestrator {
         if (snapshot.dysregulatedStreaks) {
             this.dysregulatedStreaks = new Map(Object.entries(snapshot.dysregulatedStreaks).map(([k, v]) => [k, Number(v)]));
         }
+        if (snapshot.dysregulatedSpokePending !== undefined) this.dysregulatedSpokePending = snapshot.dysregulatedSpokePending;
         if (snapshot.currentCycleLength !== undefined) {
             this.currentCycleLength = snapshot.currentCycleLength === 6 ? 6 : 4;
         }

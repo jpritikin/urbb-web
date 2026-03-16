@@ -46,6 +46,20 @@ export interface SerializedModel {
     orchestratorState?: OrchestratorSnapshot;
 }
 
+export interface ConvEvent {
+    kind: 'utterance' | 'shock' | 'phase' | 'nominate';
+    senderId?: string;
+    receiverId?: string;
+    phase?: string;
+    senderStance?: number;        // effective stance of sender at moment of utterance
+    shockDelta?: number;          // signed shock applied to receiver
+    receiverEffBefore?: number;   // receiver effective stance before shock
+    receiverEffAfter?: number;    // receiver effective stance after shock
+    newSpeakerId?: string;        // for nominate/phase events
+    nominateReason?: 'new-cycle' | 'listen-violation' | 'activate' | 'flip';
+    dysregulated?: boolean;       // true for dysregulated utterances
+}
+
 export interface OrchestratorSnapshot {
     blendTimers: Record<string, number>;
     cooldowns: Record<string, number>;
@@ -54,12 +68,15 @@ export interface OrchestratorSnapshot {
     regulationScore?: number;
     sustainedRegulationTimer?: number;
     newCycleTimer?: number;
-    listenerViolationTimer?: number;
+    listenRoleViolationTimer?: number;
+    speakRoleViolationTimer?: number;
     selfLoathingCooldowns?: Record<string, number>;
     genericDialogueCooldowns?: Record<string, number>;
     summonArrivalTimers?: Record<string, number>;
     dysregulatedStreaks?: Record<string, number>;
+    dysregulatedSpokePending?: boolean;
     currentCycleLength?: number;
+    currentTupleIndex?: number;
 }
 
 export interface BiographySnapshot {
@@ -88,6 +105,7 @@ export interface ModelSnapshot {
     trust?: Record<string, number>;
     conversationPhases?: Record<string, string>;
     conversationTherapistDelta?: Record<string, number>;
+    conversationShockDelta?: Record<string, number>;
     conversationSpeakerId?: string | null;
     conversationParticipantIds?: [string, string] | null;
     interPartRelations?: { fromId: string; toId: string; stance: number; trust: number }[];
@@ -113,6 +131,7 @@ export interface RecordedAction {
     thoughtBubble?: { text: string; cloudId: string };
     rngCounts?: { model: number };
     rngLog?: RngLogEntry[];  // Model RNG calls with labels and values
+    convLog?: ConvEvent[];  // Per-utterance conversation events (process_intervals only)
     attentionDemands?: AttentionDemandEntry[];  // Attention demands found during intervals
     needAttention?: Record<string, number>;  // Per-part needAttention after intervals
     isTransitioning?: boolean;  // Whether view was transitioning when recorded
