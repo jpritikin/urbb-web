@@ -68,6 +68,9 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
         <div class="hymn-item unlocked" data-hymn="a-força-e-a-verdade" data-title="A Força E A Verdade">
           <span class="hymn-title">A Força E A Verdade</span>
         </div>
+        <div class="hymn-item unlocked" data-hymn="não-creia-nos-mestres" data-title="Não Creia Nos Mestres Que Te Aparecem">
+          <span class="hymn-title">Não Creia Nos Mestres Que Te Aparecem</span>
+        </div>
         <div class="hymn-item locked" data-hymn="eu-pedi-uma-graça" data-title="Eu Pedi Uma Graça">
           <span class="hymn-title">Eu Pedi Uma Graça</span>
           <span class="hymn-lock">🔒</span>
