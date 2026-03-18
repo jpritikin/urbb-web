@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.4.8"
+version: "v1.4.9"
 ---
 
 ## What is This?
@@ -119,9 +119,8 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
         <div class="hymn-item unlocked" data-hymn="sol-lua-estrela" data-title="Sol, Lua, Estrela">
           <span class="hymn-title">Sol, Lua, Estrela</span>
         </div>
-        <div class="hymn-item locked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
+        <div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
           <span class="hymn-title">Mamãe Vosso Brilho É Tão Lindo</span>
-          <span class="hymn-lock">🔒</span>
         </div>
       </div>
     </div>
