@@ -116,10 +116,7 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
         <div class="hymn-item unlocked" data-hymn="brilho-do-sol" data-title="Brilho do Sol">
           <span class="hymn-title">Brilho do Sol</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="sol-lua-estrela" data-title="Sol, Lua, Estrela">
-          <span class="hymn-title">Sol, Lua, Estrela</span>
-        </div>
-        <div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
+<div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
           <span class="hymn-title">Mamãe Vosso Brilho É Tão Lindo</span>
         </div>
       </div>
