@@ -22,6 +22,8 @@
 }
 
 #salmon-container {
+  flex: 1;
+  min-height: 0;
   background: rgba(0, 0, 0, 0.05);
   border: 1px dashed rgba(255, 215, 0, 0.3);
   border-radius: 4px;
@@ -36,7 +38,7 @@
 
 #salmon-canvas {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   display: block;
 }
 
@@ -55,6 +57,9 @@
   border-radius: 8px;
   padding: 1rem;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 26rem;
 }
 
 
@@ -62,6 +67,18 @@
   background: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   padding: 0.5rem;
+}
+
+#hymn-citation {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--daime-purple);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: inherit;
+  background: rgba(147, 112, 219, 0.08);
+  border-radius: 0 4px 4px 0;
 }
 
 .dark .hymn-player {
@@ -130,6 +147,10 @@
   border-radius: 12px;
   padding: 1rem;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 26rem;
+  box-sizing: border-box;
 }
 
 #dev-unlock-btn {
@@ -151,7 +172,8 @@
 }
 
 #hymn-list-scroll {
-  max-height: 380px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 

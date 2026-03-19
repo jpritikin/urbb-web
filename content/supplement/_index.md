@@ -33,9 +33,9 @@ Whether you're considering IFS therapy, already working with a therapist, or tra
 
 [Santo Daime](https://www.santodaime.org/) is a Brazilian ayahuasca religion where participants drink a psychoactive brew and then—here's the interesting part—maintain external focus through synchronized hymn singing and ritual movements. While the drug pulls attention inward toward private visions, the discipline (called *firmeza* or "firmness") is staying anchored in shared reality with the community. The hymns function as collective reference points 🎵, objects of mutual attention that help everyone navigate altered states together rather than drifting into isolated experiences (more details in chapter 7).
 
-The recordings here exist somewhere in the liminal space between "technically adequate" and "why did he think this was a good idea?" The author, possessing neither musical training nor appropriate shame, recorded himself singing these hymns in multitrack (at least 3 layers of his own voice, no instruments). Multiple voices is how these hymns would always be heard in actual Santo Daime rituals—and conveniently, the layering helps conceal the author's weakness in Portuguese pronunciation. Listen to at least one.
+Santo Daime has almost no written texts beyond the hymns themselves, so these recordings double as citations. Each hymn appears in the book as evidence for a specific claim. Select a hymn below to see what it's cited for.
 
-Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along awkwardly in your kitchen. Let us share a few moments before you return to your regularly scheduled doomscrolling. Have mercy on my needy parts that are deeply embarrassed about making this emotional appeal but are doing it anyway because the alternative feels somehow worse.
+The recordings here exist somewhere in the liminal space between "technically adequate" and "why did he think this was a good idea?" The author, possessing neither musical training nor appropriate shame, recorded himself singing these hymns in multitrack (at least 3 layers of his own voice, no instruments). Multiple voices is how these hymns would always be heard in actual Santo Daime rituals—and conveniently, the layering helps conceal the author's weakness in Portuguese pronunciation.
 
 <div id="cassette-player-container">
   <div id="cassette-deck">
@@ -52,71 +52,72 @@ Maybe learn the melody to "Examine A Consciência" while doing dishes. Hum along
         <button id="play-next-btn" class="active" title="Play through all available hymns">⏭️</button>
         <div id="current-hymn-display">No cassette loaded</div>
       </div>
+      <div id="hymn-citation">Select a hymn to see why it&#39;s cited in the book.</div>
     </div>
   </div>
 
   <div id="hymn-list-container">
     <div id="hymn-list-scroll">
       <div id="hymn-list">
-        <div class="hymn-item unlocked" data-hymn="examine-a-consciência" data-title="Examine A Consciência">
+        <div class="hymn-item unlocked" data-hymn="examine-a-consciência" data-title="Examine A Consciência" data-citation="Members become more aware of their feelings and behavior without formal instruction.">
           <span class="hymn-title">Examine A Consciência</span>
         </div>
-        <div class="hymn-item locked" data-hymn="eu-não-sou-deus" data-title="Eu Não Sou Deus">
+        <div class="hymn-item locked" data-hymn="eu-não-sou-deus" data-title="Eu Não Sou Deus" data-citation="Beautiful acknowledgment of the messianic impulse.">
           <span class="hymn-title">Eu Não Sou Deus</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="a-força-e-a-verdade" data-title="A Força E A Verdade">
+        <div class="hymn-item unlocked" data-hymn="a-força-e-a-verdade" data-title="A Força E A Verdade" data-citation="Members often reframe difficult experiences as learning opportunities rather than unwanted events.">
           <span class="hymn-title">A Força E A Verdade</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="não-creia-nos-mestres" data-title="Não Creia Nos Mestres Que Te Aparecem">
+        <div class="hymn-item unlocked" data-hymn="não-creia-nos-mestres" data-title="Não Creia Nos Mestres Que Te Aparecem" data-citation="This hymn is absurd — I think you can trust other teachers besides Jesus.">
           <span class="hymn-title">Não Creia Nos Mestres Que Te Aparecem</span>
         </div>
-        <div class="hymn-item locked" data-hymn="eu-pedi-uma-graça" data-title="Eu Pedi Uma Graça">
+        <div class="hymn-item locked" data-hymn="eu-pedi-uma-graça" data-title="Eu Pedi Uma Graça" data-citation="Appeal to the reader for grace — there are probably errors in the book.">
           <span class="hymn-title">Eu Pedi Uma Graça</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="sentado-no-trono" data-title="Sentado No Trono">
+        <div class="hymn-item unlocked" data-hymn="sentado-no-trono" data-title="Sentado No Trono" data-citation="Background music accompanying the key section &#34;Playing with Pronouns.&#34;">
           <span class="hymn-title">Sentado No Trono</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="centro-livre" data-title="Centro Livre">
+        <div class="hymn-item unlocked" data-hymn="centro-livre" data-title="Centro Livre" data-citation="Provides background on the key concept of centro livre in Santo Daime.">
           <span class="hymn-title">Centro Livre</span>
         </div>
-        <div class="hymn-item locked" data-hymn="o-santo-daime-me-chamou" data-title="O Santo Daime Me Chamou">
+        <div class="hymn-item locked" data-hymn="o-santo-daime-me-chamou" data-title="O Santo Daime Me Chamou" data-citation="Daime facilitates self correction.">
           <span class="hymn-title">O Santo Daime Me Chamou</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="hospital-divino" data-title="Hospital Divino">
+        <div class="hymn-item unlocked" data-hymn="hospital-divino" data-title="Hospital Divino" data-citation="Grounds the history of how Mestre Irineu viewed Santo Daime as a divine hospital.">
           <span class="hymn-title">Hospital Divino</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="chamo-a-força" data-title="Chamo A Força">
+        <div class="hymn-item unlocked" data-hymn="chamo-a-força" data-title="Chamo A Força" data-citation="Acknowledges that intentional perturbation can advance a self-concept differentiation process.">
           <span class="hymn-title">Chamo A Força</span>
         </div>
-        <div class="hymn-item locked" data-hymn="estou-aqui" data-title="Estou Aqui">
+        <div class="hymn-item locked" data-hymn="estou-aqui" data-title="Estou Aqui" data-citation="A hymn that switches between march and waltz time.">
           <span class="hymn-title">Estou Aqui</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="batalha" data-title="Batalha">
+        <div class="hymn-item locked" data-hymn="batalha" data-title="Batalha" data-citation="Example of violent imagery in Santo Daime hymns.">
           <span class="hymn-title">Batalha</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="o-daime-é-o-daime" data-title="O Daime É O Daime">
+        <div class="hymn-item locked" data-hymn="o-daime-é-o-daime" data-title="O Daime É O Daime" data-citation="Daime as the teacher of teachers.">
           <span class="hymn-title">O Daime É O Daime</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item locked" data-hymn="linha-do-tucum" data-title="Linha Do Tucum">
+        <div class="hymn-item locked" data-hymn="linha-do-tucum" data-title="Linha Do Tucum" data-citation="A hymn that switches between march and waltz time.">
           <span class="hymn-title">Linha Do Tucum</span>
           <span class="hymn-lock">🔒</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="deus-é-para-todos" data-title="Deus É Para Todos">
+        <div class="hymn-item unlocked" data-hymn="deus-é-para-todos" data-title="Deus É Para Todos" data-citation="God is for everybody — this hymn advocates against secrecy.">
           <span class="hymn-title">Deus É Para Todos</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="eu-provo-com-os-meus-irmãos" data-title="Eu Provo Com Os Meus Irmãos">
+        <div class="hymn-item unlocked" data-hymn="eu-provo-com-os-meus-irmãos" data-title="Eu Provo Com Os Meus Irmãos" data-citation="Provides background on the key concept of centro livre in Santo Daime.">
           <span class="hymn-title">Eu Provo Com Os Meus Irmãos</span>
         </div>
-        <div class="hymn-item unlocked" data-hymn="brilho-do-sol" data-title="Brilho do Sol">
+        <div class="hymn-item unlocked" data-hymn="brilho-do-sol" data-title="Brilho do Sol" data-citation="The Self as a brilliant star.">
           <span class="hymn-title">Brilho do Sol</span>
         </div>
-<div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo">
+        <div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo" data-citation="The Self as a brilliant star.">
           <span class="hymn-title">Mamãe Vosso Brilho É Tão Lindo</span>
         </div>
       </div>

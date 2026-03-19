@@ -301,6 +301,11 @@ class AnimatronicSalmon {
         this.ctx.restore();
     }
 
+    public resize(): void {
+        this.setupCanvas();
+        this.pickNewDriftTarget();
+    }
+
     public startPlaying(): void {
         this.isPlaying = true;
         this.scheduleNextTransition();
@@ -654,6 +659,14 @@ class CassettePlayer {
 
         document.getElementById('current-hymn-display')!.textContent = hymnTitle;
         (document.getElementById('play-pause-btn') as HTMLButtonElement).disabled = false;
+
+        const citation = hymnElement.getAttribute('data-citation');
+        const citationEl = document.getElementById('hymn-citation');
+        if (citationEl) {
+            citationEl.textContent = citation || 'Why we cite this hymn';
+        }
+
+        setTimeout(() => this.salmon.resize(), 50);
     }
 
     private togglePlayPause(): void {

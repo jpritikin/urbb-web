@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This is a Hugo static website project to promote my new book "Religion Unburdened by Belief" with TypeScript, deployed to Cloudflare Pages.
+This is a Hugo static website project to promote my new book "Religion Unburdened by Belief" with TypeScript, deployed to Cloudflare Pages. Don't edit Javascript; it's generated from Typescript.
 
 ## Book Content & Style
 
