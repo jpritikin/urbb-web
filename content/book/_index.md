@@ -118,9 +118,9 @@ Consider this an invitation. Faith optional. Courage required.
   Sidebars and footnotes excluded to preserve the listening journey.</p>
     <span class="order-button order-button--disabled">Coming Soon</span>
   </div>
-  <div class="format-card format-card--disabled">
+  <div class="format-card">
     <h3>📱 Ebook</h3>
     <p>Instant delivery. ⚡ Includes full-color illustrations throughout. 🎨</p>
-    <span class="order-button order-button--disabled">Coming Soon</span>
+    <a class="order-button no-underline hover:no-underline" href="https://books2read.com/b/mqdYy6" target="_blank" rel="noopener">Order Ebook</a>
   </div>
 </div>
