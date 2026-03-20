@@ -115,7 +115,7 @@ Consider this an invitation. Faith optional. Courage required.
   <div class="format-card format-card--disabled">
     <h3>🎧 Audiobook</h3>
     <p>Experience the full text read by the author—including hymns sung as intended. 🎵
-  Sidebars and footnotes excluded to preserve the listening journey.</p>
+  Sidebars, footnotes, and appendices excluded to preserve the listening journey.</p>
     <span class="order-button order-button--disabled">Coming Soon</span>
   </div>
   <div class="format-card">
