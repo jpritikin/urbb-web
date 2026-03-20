@@ -57,3 +57,10 @@ This work is for those ready to **transcend limiting beliefs** and step into the
 </div>
 
 *How long does this journey take? This will vary from person to person, as each soul's unfolding honors its own sacred timing.* ⏳🌹
+
+## Direct Email
+
+No spam please
+
+- [bro (at) estrelacounseling.com](mailto:bro@estrelacounseling.com)
+- [jpritikin (at) pobox.com](mailto:jpritikin@pobox.com)
