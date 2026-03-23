@@ -1,0 +1,111 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #e5fdff;
+    font-family: 'Courier New', monospace;
+}
+
+#promo-root {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+}
+
+/* Simulator fills the whole frame */
+#cloud-container {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#cloud-container svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+/* Placard: gold carpet rectangle, centered in lower third */
+#url-placard {
+    position: absolute;
+    top: 820px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1120px;
+    height: 108px;
+    z-index: 50;
+
+    background: #B8860B;
+    border: 6px solid #8B6914;
+    box-shadow: 4px 4px 0 #2A1505, 5px 5px 0 #2A1505, 6px 6px 0 #2A1505,
+                7px 7px 0 #1A0A02;
+
+    /* Inset red frame via outline trick */
+    outline: 4px solid #8B0000;
+    outline-offset: -16px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    opacity: 0;
+}
+
+/* URL text sits on the placard */
+#url-display {
+    position: relative;
+    z-index: 51;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.url-char {
+    display: inline-block;
+    position: relative;
+    font-size: 48px;
+    white-space: pre;
+}
+
+/* Invisible placeholder text — gives .url-char its natural width */
+.url-placeholder {
+    visibility: hidden;
+    display: inline-block;
+    white-space: pre;
+}
+
+/* Flying fragment halves, absolutely positioned over the placeholder */
+.url-frag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: inline-block;
+    transform-origin: top left;
+    will-change: transform, opacity, clip-path;
+    white-space: pre;
+}
+
+/* Hide all simulator UI chrome */
+.zoom-toggle-btn,
+.mode-toggle-fo,
+.fullscreen-toggle-fo,
+.comm-log-toggle-fo,
+.help-button,
+.help-close-btn,
+.help-panel-container,
+.comm-log-panel,
+.mobile-fullscreen-banner,
+#cloud-container > button {
+    display: none !important;
+}

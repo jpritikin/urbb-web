@@ -81,6 +81,8 @@ export class CloudManager {
     private expandDeepenEffect: ExpandDeepenEffect | null = null;
     private timeAdvancer: TimeAdvancer | null = null;
     private playbackRecording: PlaybackRecordingCoordinator;
+    private promoMode: boolean = false;
+    private verticalShift: number = 0;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -300,7 +302,7 @@ export class CloudManager {
                     this.playbackRecording.recordIntervals();
                     this.promotePendingBlend(cloudId);
                 },
-            }//, { skipAttentionChecks: true }
+            }, this.promoMode ? { skipAttentionChecks: true } : undefined
         );
 
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container', 'pointer-events': 'none' });
@@ -695,6 +697,29 @@ export class CloudManager {
 
     setZoom(zoomLevel: number): void {
         this.view.setPanoramaZoom(zoomLevel);
+    }
+
+    // Call before finalizePanoramaSetup — sets config used when generating initial positions.
+    setInitialTilt(radians: number): void {
+        this.panoramaMotion.updateConfig({ torusRotationX: radians });
+    }
+
+    setTorusMinorRadius(radius: number): void {
+        this.panoramaMotion.updateConfig({ torusMinorRadius: radius });
+    }
+
+    // Call after startAnimation — retransforms all existing positions to new tilt angle.
+    setTiltAngle(radians: number): void {
+        this.panoramaMotion.setTiltAngle(radians, this.instances);
+    }
+
+    setPromoMode(enabled: boolean): void {
+        this.promoMode = enabled;
+    }
+
+    setVerticalShift(px: number): void {
+        this.verticalShift = px;
+        this.updateZoomGroup();
     }
 
     setTransitionDuration(seconds: number): void {
@@ -1238,7 +1263,7 @@ export class CloudManager {
         const scale = this.view.getCurrentZoomFactor();
 
         this.zoomGroup.setAttribute('transform',
-            `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
+            `translate(${centerX}, ${centerY + this.verticalShift}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
     }
 
     private moveCloudToUIGroup(cloudId: string): void {
