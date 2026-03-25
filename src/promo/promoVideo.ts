@@ -1,5 +1,6 @@
 import { CloudManager } from '../cloud/cloudManager.js';
 
+
 // ── Timeline ─────────────────────────────────────────────────────────────────
 // 0–3s        : hold (star occluded, zoomed out)
 // 3–11s       : reveal (tilt + zoom in)
@@ -238,7 +239,11 @@ function updateUrl(elapsed: number): void {
     const placardEl = document.getElementById('url-placard');
     if (placardEl) {
         const tp = Math.max(0, Math.min(1, (elapsed - placardRevealTime) / PLACARD_FADE));
-        placardEl.style.opacity = String(cubicInOut(tp));
+        const a = cubicInOut(tp);
+        placardEl.style.background = `rgba(184, 134, 11, ${a})`;
+        placardEl.style.borderColor = `rgba(139, 105, 20, ${a})`;
+        placardEl.style.outlineColor = `rgba(139, 0, 0, ${a})`;
+        placardEl.style.boxShadow = `4px 4px 0 rgba(42,21,5,${a}), 5px 5px 0 rgba(42,21,5,${a}), 6px 6px 0 rgba(42,21,5,${a}), 7px 7px 0 rgba(26,10,2,${a})`;
     }
     for (const entry of charEntries) {
         for (const hf of entry.halves) {
@@ -316,10 +321,11 @@ function startPromo(): void {
     let startTime: number | null = null;
     let lastFrameTime = -Infinity;
     let lastTilt = TILT_START;
+    const syntheticClock = !!(window as any).__advanceFrame;
 
     function tick(now: number): void {
         if (startTime === null) startTime = now;
-        if (now - lastFrameTime < FRAME_INTERVAL) {
+        if (!syntheticClock && now - lastFrameTime < FRAME_INTERVAL) {
             requestAnimationFrame(tick);
             return;
         }

@@ -43,20 +43,18 @@ html, body {
     height: 108px;
     z-index: 50;
 
-    background: #B8860B;
-    border: 6px solid #8B6914;
-    box-shadow: 4px 4px 0 #2A1505, 5px 5px 0 #2A1505, 6px 6px 0 #2A1505,
-                7px 7px 0 #1A0A02;
+    background: rgba(184, 134, 11, 0);
+    border: 6px solid rgba(139, 105, 20, 0);
+    box-shadow: none;
 
     /* Inset red frame via outline trick */
-    outline: 4px solid #8B0000;
+    outline: 4px solid rgba(139, 0, 0, 0);
     outline-offset: -16px;
 
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: visible;
-    opacity: 0;
 }
 
 /* URL text sits on the placard */

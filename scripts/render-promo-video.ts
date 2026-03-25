@@ -12,7 +12,7 @@
  */
 
 import { chromium } from 'playwright';
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
@@ -44,44 +44,53 @@ async function main(): Promise<void> {
     const page = await browser.newPage();
     await page.setViewportSize({ width: WIDTH, height: HEIGHT });
 
-    console.log(`Navigating to ${BASE_URL}`);
-    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-
-    // Wait for the promo animation driver to signal readiness
-    await page.waitForFunction(() => (window as any).promoReady === true, { timeout: 10_000 });
-    console.log('Promo ready. Capturing frames…');
-
-    // Drive time synthetically: inject a controlled clock so we get exact frames.
-    // We override requestAnimationFrame to be driven by us, then step through.
-    await page.evaluate(() => {
-        const realRAF = window.requestAnimationFrame.bind(window);
-        const callbacks: Map<number, FrameRequestCallback> = new Map();
+    await page.addInitScript(`
+        (function() {
+        const callbacks = new Map();
         let handle = 0;
         let simTime = 0;
 
-        (window as any).__rafCallbacks = callbacks;
-        (window as any).__advanceFrame = (dt: number) => {
+        window.__rafCallbacks = callbacks;
+        window.__advanceFrame = function(dt) {
             simTime += dt;
             const cbs = Array.from(callbacks.values());
             callbacks.clear();
             for (const cb of cbs) cb(simTime);
         };
 
-        window.requestAnimationFrame = (cb: FrameRequestCallback): number => {
+        window.requestAnimationFrame = function(cb) {
             const h = ++handle;
             callbacks.set(h, cb);
             return h;
         };
-        window.cancelAnimationFrame = (h: number) => { callbacks.delete(h); };
+        window.cancelAnimationFrame = function(h) { callbacks.delete(h); };
 
-        // Kick off the first rAF tick at t=0
-        (window as any).__advanceFrame(0);
+        Object.defineProperty(document, 'hidden', { get: function() { return false; } });
+        Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; } });
+        })();
+    `);
+
+    await page.route('**/*', (route) => {
+        const url = route.request().url();
+        if (url.startsWith('http') && !url.startsWith(BASE_URL) && !url.startsWith('http://localhost')) {
+            route.abort();
+        } else {
+            route.continue();
+        }
     });
+
+    console.log(`Navigating to ${BASE_URL}`);
+    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+    await page.evaluate(`document.fonts.ready`);
+
+    await page.waitForFunction(() => (window as any).promoReady === true, { timeout: 10_000 });
+    console.log('Promo ready. Capturing frames…');
+
+    await page.evaluate(`window.__advanceFrame(0)`);
 
     const dtMs = 1000 / FPS;
 
     for (let i = 0; i < FRAMES; i++) {
-        // Advance simulation by one frame
         await page.evaluate((dt: number) => {
             (window as any).__advanceFrame(dt);
         }, dtMs);
