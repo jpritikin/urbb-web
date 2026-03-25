@@ -19,7 +19,7 @@ import { join } from 'path';
 const WIDTH = 1920;
 const HEIGHT = 1080;
 const FPS = 24;
-const TOTAL_SECONDS = 60;
+const TOTAL_SECONDS = 180;
 const FRAMES = TOTAL_SECONDS * FPS;
 
 const OUTPUT = process.argv[2] ?? 'promo.mp4';

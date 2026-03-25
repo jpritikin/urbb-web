@@ -69,44 +69,44 @@ const PLACARD_CX = SCREEN_W / 2;
 const PLACARD_CY = PLACARD_TOP + PLACARD_H / 2;
 
 // ── Clip-path half-plane polygon ──────────────────────────────────────────────
-// Returns clip-path polygon strings for the two halves of a unit box [0,0]→[1,1]
-// cut by a line through (0.5, 0.5) at angle `theta` (radians).
-// side=0: the half where the normal points (cos θ, sin θ) is positive
-// side=1: the opposite half
-function halfPlaneClip(theta: number, side: 0 | 1): string {
-    // Normal to cut line
+// Returns the centroid of a polygon as [x, y] in [0,1] coordinates.
+function polygonCentroid(poly: [number, number][]): [number, number] {
+    let area = 0, cx = 0, cy = 0;
+    for (let i = 0; i < poly.length; i++) {
+        const [x0, y0] = poly[i];
+        const [x1, y1] = poly[(i + 1) % poly.length];
+        const cross = x0 * y1 - x1 * y0;
+        area += cross;
+        cx += (x0 + x1) * cross;
+        cy += (y0 + y1) * cross;
+    }
+    area /= 2;
+    cx /= 6 * area;
+    cy /= 6 * area;
+    return [cx, cy];
+}
+
+// Returns [clipPath string, transformOrigin string] for a half-plane clip.
+function halfPlaneClipWithOrigin(theta: number, side: 0 | 1): [string, string] {
     const nx = Math.cos(theta);
     const ny = Math.sin(theta);
-
-    // The 4 corners of the unit box
-    const corners = [
-        [0, 0], [1, 0], [1, 1], [0, 1],
-    ];
-
-    // Signed distance of each corner from the line through (0.5, 0.5)
+    const corners: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
     const dist = corners.map(([x, y]) => (x - 0.5) * nx + (y - 0.5) * ny);
-
-    // For side 0 we keep corners where dist >= 0, for side 1 where dist <= 0
     const sign = side === 0 ? 1 : -1;
-
-    // Build polygon by walking edges and collecting kept corners + intersections
     const poly: [number, number][] = [];
     for (let i = 0; i < 4; i++) {
         const j = (i + 1) % 4;
         const di = dist[i] * sign;
         const dj = dist[j] * sign;
-        if (di >= 0) poly.push(corners[i] as [number, number]);
-        // Edge crosses the line
+        if (di >= 0) poly.push(corners[i]);
         if ((di > 0 && dj < 0) || (di < 0 && dj > 0)) {
             const t = di / (di - dj);
-            const ix = lerp(corners[i][0], corners[j][0], t);
-            const iy = lerp(corners[i][1], corners[j][1], t);
-            poly.push([ix, iy]);
+            poly.push([lerp(corners[i][0], corners[j][0], t), lerp(corners[i][1], corners[j][1], t)]);
         }
     }
-
     const pts = poly.map(([x, y]) => `${(x * 100).toFixed(1)}% ${(y * 100).toFixed(1)}%`).join(', ');
-    return `polygon(${pts})`;
+    const [cx, cy] = polygonCentroid(poly);
+    return [`polygon(${pts})`, `${(cx * 100).toFixed(1)}% ${(cy * 100).toFixed(1)}%`];
 }
 
 // ── Off-screen radial start position ─────────────────────────────────────────
@@ -135,6 +135,7 @@ interface HalfFrag {
     startSize: number;
     animStart: number;
     animEnd: number;
+    transformOrigin: string;
     // mutable color state
     colorIdx: number;
     prevColorIdx: number;
@@ -180,12 +181,14 @@ function buildUrlDisplay(): void {
             const frag = document.createElement('span');
             frag.className = 'url-frag';
             frag.textContent = ch === ' ' ? '\u00a0' : ch;
-            frag.style.clipPath = halfPlaneClip(cutAngle, side as 0 | 1);
+            const [clipPath, transformOrigin] = halfPlaneClipWithOrigin(cutAngle, side as 0 | 1);
+            frag.style.clipPath = clipPath;
+            frag.style.transformOrigin = transformOrigin;
 
             // Each half gets its own angle within the upper semicircle
             const travelAngle = baseAngle + (side === 1 ? (Math.random() - 0.5) * 0.8 : 0);
             const [ox, oy] = offScreenRadial(travelAngle);
-            const startRot = (Math.random() - 0.5) * 6 * 360;
+            const startRot = (Math.random() - 0.5) * 8 * 360;
 
             const animStart = 0.5 + Math.random() * 8;
             const animEnd = animStart + 5 + Math.random() * 5;
@@ -203,7 +206,7 @@ function buildUrlDisplay(): void {
             const settleThreshold = (Math.random() - 0.5) * 2;  // [-1, +1] seconds from animEnd
             halves.push({
                 el: frag, startX: ox, startY: oy, startRot, startSize,
-                animStart, animEnd,
+                animStart, animEnd, transformOrigin,
                 colorIdx, prevColorIdx: colorIdx,
                 nextSwitchTime: animStart + nextSwitchDelay(),
                 settleThreshold, whiteSettle,
