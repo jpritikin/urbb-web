@@ -1,13 +1,12 @@
 import { CloudManager } from '../cloud/cloudManager.js';
 
 // ── Timeline ─────────────────────────────────────────────────────────────────
-// 0–3s   : hold (star occluded, zoomed out)
-// 3–11s  : reveal (tilt + zoom in)
-// 11–15s : hold (star visible, clouds orbit)
+// 0–3s        : hold (star occluded, zoomed out)
+// 3–11s       : reveal (tilt + zoom in)
+// 11s–TOTAL   : hold (star visible, clouds orbit, URL assembles)
 
 const HOLD_START = 3;
 const REVEAL_END = 11;
-const TOTAL = 15;
 
 const ZOOM_START = 0.45;
 const ZOOM_END = 1.1;
@@ -45,15 +44,16 @@ const WORDS = [
 
 // ── URL fragment animation ────────────────────────────────────────────────────
 const URL_TEXT = 'https://unburdened.biz/';
-const FINAL_FONT_PX = 48;
+const FINAL_FONT_PX = 50;
 
 const FRAG_COLORS = [
     '#7fff00', '#ff6ec7', '#00ffff', '#ffd700', '#ff4500',
     '#9b59b6', '#2ecc71', '#e74c3c', '#3498db', '#f39c12',
 ];
 
-const URL_ANIM_START = 1;
-const URL_ANIM_END = 10;
+const WHITE_SETTLE_MIN = 0.8;
+const WHITE_SETTLE_MAX = 2.0;
+let TOTAL = 0;  // computed after buildUrlDisplay()
 
 // Screen dimensions (fixed for promo render)
 const SCREEN_W = 1920;
@@ -121,8 +121,8 @@ function offScreenRadial(angle: number): [number, number] {
     if (sin > 0) tEdge = Math.min(tEdge, (SCREEN_H - PLACARD_CY) / sin);
     if (sin < 0) tEdge = Math.min(tEdge, -PLACARD_CY / sin);
 
-    // Overshoot just past the screen edge: 100–400px beyond it
-    const dist = tEdge + 100 + Math.random() * 300;
+    // Overshoot well past the screen edge: 600–1200px beyond it
+    const dist = tEdge + 600 + Math.random() * 600;
     return [cos * dist, sin * dist];
 }
 
@@ -136,10 +136,10 @@ interface HalfFrag {
     animEnd: number;
     // mutable color state
     colorIdx: number;
-    settledAt: number;   // elapsed time when tf first hit 1, or -1
-    settledR: number;
-    settledG: number;
-    settledB: number;
+    prevColorIdx: number;
+    nextSwitchTime: number;   // elapsed time of next color switch
+    settleThreshold: number;  // signed offset from animEnd: white settle starts at animEnd + settleThreshold
+    whiteSettle: number;      // white settle ends at animEnd + whiteSettle
 }
 
 interface CharEntry {
@@ -172,7 +172,7 @@ function buildUrlDisplay(): void {
         // Both halves start somewhere in the 180° arc above the placard.
         // Angles in [-π, 0] point upward in screen coords (negative Y = up).
         // Spread evenly across the arc with jitter, independently per half.
-        const baseAngle = -Math.PI + (ci / totalChars) * Math.PI + (Math.random() - 0.5) * 0.3;
+        const baseAngle = -2 * Math.PI / 3 + (ci / totalChars) * 2 * Math.PI / 3 + (Math.random() - 0.5) * 0.3;
 
         const halves: HalfFrag[] = [];
         for (let side = 0; side < 2; side++) {
@@ -184,27 +184,28 @@ function buildUrlDisplay(): void {
             // Each half gets its own angle within the upper semicircle
             const travelAngle = baseAngle + (side === 1 ? (Math.random() - 0.5) * 0.8 : 0);
             const [ox, oy] = offScreenRadial(travelAngle);
-            const startRot = (Math.random() - 0.5) * 2 * 360;
+            const startRot = (Math.random() - 0.5) * 6 * 360;
 
-            // Each fragment has its own arrival window within the global anim range
-            const totalWindow = URL_ANIM_END - URL_ANIM_START;
-            const fragDuration = 2 + Math.random() * 3;
-            const animStart = URL_ANIM_START + Math.random() * (totalWindow - fragDuration);
-            const animEnd = animStart + fragDuration;
+            const animStart = 0.5 + Math.random() * 8;
+            const animEnd = animStart + 5 + Math.random() * 5;
 
-            const startSize = FINAL_FONT_PX * (6 + Math.random() * 4);
+            const startSize = FINAL_FONT_PX * (10 + Math.random() * 4);
             const colorIdx = Math.floor(Math.random() * FRAG_COLORS.length);
 
             frag.style.fontSize = `${startSize}px`;
             frag.style.transform = `translate(${ox}px, ${oy}px) rotate(${startRot}deg)`;
-            frag.style.opacity = '0';
+            frag.style.opacity = '1';
             frag.style.color = FRAG_COLORS[colorIdx];
 
             charWrap.appendChild(frag);
+            const whiteSettle = WHITE_SETTLE_MIN + Math.random() * (WHITE_SETTLE_MAX - WHITE_SETTLE_MIN);
+            const settleThreshold = (Math.random() - 0.5) * 2;  // [-1, +1] seconds from animEnd
             halves.push({
                 el: frag, startX: ox, startY: oy, startRot, startSize,
                 animStart, animEnd,
-                colorIdx, settledAt: -1, settledR: 255, settledG: 255, settledB: 255,
+                colorIdx, prevColorIdx: colorIdx,
+                nextSwitchTime: animStart + nextSwitchDelay(),
+                settleThreshold, whiteSettle,
             });
         }
 
@@ -220,28 +221,20 @@ function buildUrlDisplay(): void {
 
 }
 
-// Sigmoid: steeper = faster transition probability ramp
-function sigmoid(x: number, steepness = 5): number {
+// Sigmoid centered at 0.5; steepness=7.8 gives ~98% at x=1
+function sigmoid(x: number, steepness = 7.8): number {
     return 1 / (1 + Math.exp(-steepness * (x - 0.5)));
 }
 
-const WHITE_SETTLE = 0.4;  // seconds to fade to white after arrival
+function nextSwitchDelay(): number {
+    return 2 + Math.random();
+}
+
 const PLACARD_FADE = 1.0;  // seconds for placard to ease in
 
-let placardRevealTime = Infinity;  // set when enough fragments have arrived
+let placardRevealTime = 0;  // set after buildUrlDisplay()
 
 function updateUrl(elapsed: number): void {
-    // Trigger placard once 3 fragments have settled
-    if (placardRevealTime === Infinity) {
-        let settledCount = 0;
-        for (const entry of charEntries) {
-            for (const hf of entry.halves) {
-                if (hf.settledAt >= 0) settledCount++;
-            }
-        }
-        if (settledCount >= 3) placardRevealTime = elapsed;
-    }
-
     const placardEl = document.getElementById('url-placard');
     if (placardEl) {
         const tp = Math.max(0, Math.min(1, (elapsed - placardRevealTime) / PLACARD_FADE));
@@ -259,33 +252,31 @@ function updateUrl(elapsed: number): void {
 
             let colorStr: string;
 
-            if (tf >= 1) {
-                // Record the moment of arrival and the color we landed on
-                if (hf.settledAt < 0) {
-                    hf.settledAt = elapsed;
-                    const hex = FRAG_COLORS[hf.colorIdx];
-                    hf.settledR = parseInt(hex.slice(1, 3), 16);
-                    hf.settledG = parseInt(hex.slice(3, 5), 16);
-                    hf.settledB = parseInt(hex.slice(5, 7), 16);
-                }
-                const tw = Math.min(1, (elapsed - hf.settledAt) / WHITE_SETTLE);
-                const r = Math.round(lerp(hf.settledR, 255, tw));
-                const g = Math.round(lerp(hf.settledG, 255, tw));
-                const b = Math.round(lerp(hf.settledB, 255, tw));
-                colorStr = `rgb(${r},${g},${b})`;
+            const settleStart = hf.animEnd + hf.settleThreshold;
+            const settleEnd = hf.animEnd + hf.whiteSettle;
+
+            if (elapsed >= settleEnd + 10) {
+                colorStr = '#ffffff';
+            } else if (elapsed >= settleStart) {
+                const tSettle = Math.min(1, (elapsed - settleStart) / (settleEnd - settleStart));
+                colorStr = Math.random() < sigmoid(tSettle) ? '#ffffff' : FRAG_COLORS[hf.colorIdx];
             } else {
-                // Stochastic color switching: P(switch) rises via sigmoid as tf → 1
-                const pSwitch = sigmoid(tf);
-                if (Math.random() < pSwitch) {
+                // Every scheduled interval, advance to a new color
+                if (elapsed >= hf.nextSwitchTime) {
+                    hf.prevColorIdx = hf.colorIdx;
                     hf.colorIdx = (hf.colorIdx + 1) % FRAG_COLORS.length;
+                    hf.nextSwitchTime = elapsed + nextSwitchDelay();
                 }
-                colorStr = FRAG_COLORS[hf.colorIdx];
+                const tFlight = (elapsed - hf.animStart) / (hf.animEnd - hf.animStart);
+                colorStr = Math.random() < sigmoid(Math.max(0, Math.min(1, tFlight)))
+                    ? FRAG_COLORS[hf.colorIdx]
+                    : FRAG_COLORS[hf.prevColorIdx];
             }
 
             hf.el.style.fontSize = `${size}px`;
             hf.el.style.color = colorStr;
             hf.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
-            hf.el.style.opacity = elapsed < hf.animStart ? '0' : '1';
+            hf.el.style.opacity = '1';
         }
     }
 }
@@ -315,15 +306,24 @@ function setupSimulator(): CloudManager {
 // ── Main loop ─────────────────────────────────────────────────────────────────
 function startPromo(): void {
     buildUrlDisplay();
+    TOTAL = Math.max(...charEntries.flatMap(e => e.halves.map(h => h.animEnd + h.whiteSettle))) + 10 + 1;
+    placardRevealTime = Math.min(...charEntries.flatMap(e => e.halves.map(h => h.animEnd)));
     const cm = setupSimulator();
 
     (window as any).promoReady = true;
 
+    const FRAME_INTERVAL = 1000 / 24;
     let startTime: number | null = null;
+    let lastFrameTime = -Infinity;
     let lastTilt = TILT_START;
 
     function tick(now: number): void {
         if (startTime === null) startTime = now;
+        if (now - lastFrameTime < FRAME_INTERVAL) {
+            requestAnimationFrame(tick);
+            return;
+        }
+        lastFrameTime = now;
         const elapsed = (now - startTime) / 1000;
         const t = Math.min(elapsed, TOTAL);
 

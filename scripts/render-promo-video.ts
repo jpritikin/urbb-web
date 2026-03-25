@@ -16,11 +16,11 @@ import { execSync, spawn } from 'child_process';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
-const WIDTH  = 1920;
+const WIDTH = 1920;
 const HEIGHT = 1080;
-const FPS    = 24;
-const TOTAL_SECONDS = 15;
-const FRAMES = TOTAL_SECONDS * FPS;        // 360
+const FPS = 24;
+const TOTAL_SECONDS = 60;
+const FRAMES = TOTAL_SECONDS * FPS;
 
 const OUTPUT = process.argv[2] ?? 'promo.mp4';
 const FRAMES_DIR = '/tmp/promo-frames';
