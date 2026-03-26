@@ -142,6 +142,33 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Unlocked state persists on page reload (saved to localStorage)
    - Alternative sequence: 26, 108, 115, 152
 
+### Bibliography Filtering & Sort
+
+**F2K** Scroll to the Bibliography section and tap a category label (e.g., **Psychology & Psychotherapy**)
+   - Entries shuffle into random order
+   - A retro terminal panel appears with boot-up messages (e.g., "INITIATING CROSS-REFERENCE ANALYSIS...")
+   - A progress bar appears while the animated bubble sort runs
+   - Only entries in that category are shown; others are hidden
+   - An A–Z navigation sidebar appears on the right
+
+**V6T** While the sort is running, tap a letter in the A–Z sidebar
+   - Behavior is unreliable during sort (by design):
+     - 25% chance: scrolls to the correct letter
+     - 30% chance: scrolls to a wrong letter; button briefly shows a glitch emoji
+     - 20% chance: scrolls to a random position; button briefly shows 🫠
+     - 25% chance: does nothing; button briefly shows a glitch emoji
+
+**B3N** After sorting completes, tap a letter in the A–Z sidebar
+   - Scrolls reliably to the first entry starting with that letter
+   - Letters with no visible entries are dimmed
+
+**P7M** Tap the same category label again (while not sorting)
+   - All entries reappear in shuffled order; sort UI hides; A–Z nav resets
+
+**J5W** Tap a different category label while the bubble sort is actively running
+   - A "nausea" modal appears (e.g., "SORT INTERRUPTED — The sorting algorithm is experiencing acute nausea...")
+   - Tap OK to acknowledge; new filter then starts
+
 ### Bibliography Battle System
 
 **A4F** Scroll down to the Bibliography section
@@ -175,7 +202,7 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Winner announced in battle log
    - Dismiss button appears with random phrase (e.g., "Thank you for resolving this contest")
 
-**R7E** **Mutual Regard** (2.2% chance per turn): Start a new battle and repeat if needed
+**R7E** **Mutual Regard** (2.2% chance per turn, guaranteed within 5 battles): Start battles until it triggers
    - Occasionally battle stops mid-fight
    - Screen shakes violently
    - Static/glitch overlay appears
@@ -209,6 +236,11 @@ Follow these steps exactly on a mobile device. Report any step where the expecte
    - Hymn flashes gold and becomes clickable
    - Lock popup fades away
 
+**C9L** Click on a bibliography entry that has an external URL link
+   - A confirmation dialog appears: "Opening External Link, continue?"
+   - "Yes" opens the link in a new tab; "Cancel" dismisses without navigating
+   - Tapping outside the dialog also dismisses it
+
 **D7V** **Long press to copy bibliography**: Press and hold on any bibliography entry
    - After 500ms of holding, "📋 Copied!" feedback appears
    - Full citation text is copied to clipboard
@@ -231,6 +263,6 @@ You're done testing! Thank you for your time.
 
 * Each markdown page has a version number to help know when testing procedures need updating. This testing guide was built assuming the following versions:
 
-- Homepage: v1.7.2
+- Homepage: v1.7.3
 - Gallery: v1.1.0
-- Online Supplement: v1.4.7
+- Online Supplement: v1.4.9
