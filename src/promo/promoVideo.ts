@@ -54,7 +54,7 @@ const FRAG_COLORS = [
 
 const WHITE_SETTLE_MIN = 0.8;
 const WHITE_SETTLE_MAX = 2.0;
-let TOTAL = 0;  // computed after buildUrlDisplay()
+let settledTime = 0;  // elapsed time when all URL fragments have settled to white
 
 // Screen dimensions (fixed for promo render)
 const SCREEN_W = 1920;
@@ -142,6 +142,7 @@ interface HalfFrag {
     nextSwitchTime: number;   // elapsed time of next color switch
     settleThreshold: number;  // signed offset from animEnd: white settle starts at animEnd + settleThreshold
     whiteSettle: number;      // white settle ends at animEnd + whiteSettle
+    halfBoldDelay: number;    // per-half stagger offset for bold sweeps (seconds)
 }
 
 interface CharEntry {
@@ -210,6 +211,7 @@ function buildUrlDisplay(): void {
                 colorIdx, prevColorIdx: colorIdx,
                 nextSwitchTime: animStart + nextSwitchDelay(),
                 settleThreshold, whiteSettle,
+                halfBoldDelay: Math.random() * 0.15,
             });
         }
 
@@ -289,6 +291,68 @@ function updateUrl(elapsed: number): void {
     }
 }
 
+// ── Bold sweeps ──────────────────────────────────────────────────────────────
+interface BoldSweep {
+    startTime: number;    // elapsed time when sweep begins
+    speed: number;        // chars per second
+    direction: 1 | -1;   // left-to-right or right-to-left
+}
+
+const MAX_SWEEPS = 2;
+const activeSweeps: BoldSweep[] = [];
+let nextSweepTime = 0;  // set after URL settles
+
+function scheduleNextSweep(now: number): void {
+    nextSweepTime = now + 2 + Math.random() * 6;
+}
+
+function launchSweep(now: number): void {
+    const speed = 3 + Math.random() * 12;  // 3–15 chars/sec
+    const direction = Math.random() < 0.5 ? 1 : -1;
+    activeSweeps.push({ startTime: now, speed, direction });
+}
+
+function updateBoldSweeps(elapsed: number, settled: boolean): void {
+    if (!settled) return;
+
+    // Initialize on first settled frame
+    if (nextSweepTime === 0) {
+        scheduleNextSweep(elapsed);
+    }
+
+    // Launch new sweep if it's time and we're under the cap
+    if (elapsed >= nextSweepTime && activeSweeps.length < MAX_SWEEPS) {
+        launchSweep(elapsed);
+        scheduleNextSweep(elapsed);
+    }
+
+    const n = URL_TEXT.length;
+    const BOLD_WIDTH = 1.5;
+
+    // Expire sweeps that have passed all characters
+    for (let si = activeSweeps.length - 1; si >= 0; si--) {
+        const sweep = activeSweeps[si];
+        const dt = elapsed - sweep.startTime;  // max dt (delay=0 half is furthest along)
+        const center = sweep.direction === 1 ? dt * sweep.speed : (n - 1) - dt * sweep.speed;
+        const pastEnd = sweep.direction === 1 ? center - BOLD_WIDTH > n - 1 : center + BOLD_WIDTH < 0;
+        if (pastEnd) activeSweeps.splice(si, 1);
+    }
+
+    // Compute bold state per half (reset first, then OR across sweeps)
+    for (let ci = 0; ci < n; ci++) {
+        for (const hf of charEntries[ci].halves) {
+            let bold = false;
+            for (const sweep of activeSweeps) {
+                const dt = elapsed - sweep.startTime - hf.halfBoldDelay;
+                if (dt < 0) continue;
+                const center = sweep.direction === 1 ? dt * sweep.speed : (n - 1) - dt * sweep.speed;
+                if (ci >= center - BOLD_WIDTH && ci <= center + BOLD_WIDTH) { bold = true; break; }
+            }
+            hf.el.style.fontWeight = bold ? '700' : '400';
+        }
+    }
+}
+
 // ── Simulator setup ──────────────────────────────────────────────────────────
 function setupSimulator(): CloudManager {
     const cm = new CloudManager();
@@ -311,10 +375,27 @@ function setupSimulator(): CloudManager {
     return cm;
 }
 
+// ── Debug overlay ─────────────────────────────────────────────────────────────
+function createDebugOverlay(): HTMLElement | null {
+    if ((window as any).__advanceFrame) return null;
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;bottom:8px;left:8px;font:14px monospace;color:#0f0;background:rgba(0,0,0,0.6);padding:4px 8px;z-index:9999;pointer-events:none;white-space:pre';
+    document.body.appendChild(el);
+    return el;
+}
+
+function getPhaseLabel(t: number, settled: boolean): string {
+    if (settled) return 'settled/sweeps';
+    if (t < HOLD_START) return 'hold-start';
+    if (t < REVEAL_END) return 'reveal';
+    if (t < placardRevealTime) return 'assembling';
+    return 'settling';
+}
+
 // ── Main loop ─────────────────────────────────────────────────────────────────
 function startPromo(): void {
     buildUrlDisplay();
-    TOTAL = Math.max(...charEntries.flatMap(e => e.halves.map(h => h.animEnd + h.whiteSettle))) + 10 + 1;
+    settledTime = Math.max(...charEntries.flatMap(e => e.halves.map(h => h.animEnd + h.whiteSettle))) + 10;
     placardRevealTime = Math.min(...charEntries.flatMap(e => e.halves.map(h => h.animEnd)));
     const cm = setupSimulator();
 
@@ -325,6 +406,7 @@ function startPromo(): void {
     let lastFrameTime = -Infinity;
     let lastTilt = TILT_START;
     const syntheticClock = !!(window as any).__advanceFrame;
+    const debugEl = createDebugOverlay();
 
     function tick(now: number): void {
         if (startTime === null) startTime = now;
@@ -334,7 +416,7 @@ function startPromo(): void {
         }
         lastFrameTime = now;
         const elapsed = (now - startTime) / 1000;
-        const t = Math.min(elapsed, TOTAL);
+        const t = elapsed;
 
         if (t >= HOLD_START && t <= REVEAL_END) {
             const p = (t - HOLD_START) / (REVEAL_END - HOLD_START);
@@ -351,13 +433,16 @@ function startPromo(): void {
             lastTilt = TILT_END;
         }
 
+        const settled = t >= settledTime;
         updateUrl(t);
+        updateBoldSweeps(t, settled);
 
-        if (t < TOTAL) {
-            requestAnimationFrame(tick);
-        } else {
-            (window as any).promoDone = true;
+        if (debugEl) {
+            const phase = getPhaseLabel(t, settled);
+            debugEl.textContent = `t=${t.toFixed(1)}s  ${phase}\nsettledAt=${settledTime.toFixed(1)}s  sweeps=${activeSweeps.length}  nextSweep=${nextSweepTime > 0 ? (nextSweepTime - t).toFixed(1) + 's' : '-'}`;
         }
+
+        requestAnimationFrame(tick);
     }
 
     requestAnimationFrame(tick);
