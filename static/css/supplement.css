@@ -114,15 +114,43 @@
   cursor: not-allowed;
 }
 
-#loop-btn.active,
-#play-next-btn.active {
-  background: var(--daime-blue);
-  box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
+.play-mode-toggle {
+  display: flex;
+  border: 1px solid var(--daime-gold);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#loop-btn:not(.active),
-#play-next-btn:not(.active) {
-  opacity: 0.5;
+.play-mode-toggle button {
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  margin: 0;
+  filter: saturate(0) brightness(0.7);
+  opacity: 0.6;
+}
+
+.play-mode-toggle button + button {
+  border-left: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.play-mode-toggle button.active {
+  background: var(--daime-blue);
+  filter: none;
+  opacity: 1;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes mode-nudge {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-3px); }
+  75%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+.play-mode-toggle button.nudge {
+  animation: mode-nudge 0.25s ease;
 }
 
 #current-hymn-display {

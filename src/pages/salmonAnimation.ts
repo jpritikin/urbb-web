@@ -678,11 +678,22 @@ class CassettePlayer {
     }
 
     private setPlayMode(mode: PlayMode): void {
-        this.playMode = mode;
-        this.audio.loop = (mode === 'loop');
-
         const loopBtn = document.getElementById('loop-btn');
         const playNextBtn = document.getElementById('play-next-btn');
+
+        if (mode === this.playMode) {
+            const inactiveBtn = mode === 'loop' ? playNextBtn : loopBtn;
+            if (inactiveBtn) {
+                inactiveBtn.classList.remove('nudge');
+                void (inactiveBtn as HTMLElement).offsetWidth; // reflow to restart animation
+                inactiveBtn.classList.add('nudge');
+                inactiveBtn.addEventListener('animationend', () => inactiveBtn.classList.remove('nudge'), { once: true });
+            }
+            return;
+        }
+
+        this.playMode = mode;
+        this.audio.loop = (mode === 'loop');
 
         if (loopBtn) {
             loopBtn.classList.toggle('active', mode === 'loop');

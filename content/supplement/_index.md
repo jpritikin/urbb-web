@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.4.9"
+version: "v1.5.0"
 ---
 
 ## What is This?
@@ -56,8 +56,10 @@ The recordings here exist somewhere in the liminal space between "technically ad
       </audio>
       <div id="player-controls">
         <button id="play-pause-btn" disabled>▶</button>
-        <button id="loop-btn" title="Loop current track">🔁</button>
-        <button id="play-next-btn" class="active" title="Play through all available hymns">⏭️</button>
+        <div class="play-mode-toggle" role="group" aria-label="Play mode">
+          <button id="loop-btn" title="Loop current track">🔁</button>
+          <button id="play-next-btn" class="active" title="Play through all available hymns">⏭️</button>
+        </div>
         <div id="current-hymn-display">No cassette loaded</div>
       </div>
       <div id="hymn-citation">Select a hymn to see why it&#39;s cited in the book.</div>
