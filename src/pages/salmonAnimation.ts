@@ -721,13 +721,33 @@ class CassettePlayer {
             const hymnId = nextHymn.getAttribute('data-hymn');
             const hymnTitle = nextHymn.getAttribute('data-title');
             if (hymnId && hymnTitle) {
-                await this.loadCassette(hymnId, hymnTitle, nextHymn);
+                if (document.hidden) {
+                    await this.loadCassetteQuiet(hymnId, hymnTitle, nextHymn);
+                } else {
+                    await this.loadCassette(hymnId, hymnTitle, nextHymn);
+                }
                 this.audio.play();
             }
         } else {
             this.salmon.stopPlaying();
             const playPauseBtn = document.getElementById('play-pause-btn');
             if (playPauseBtn) playPauseBtn.textContent = '▶';
+        }
+    }
+
+    private loadCassetteQuiet(hymnId: string, hymnTitle: string, hymnElement: HTMLElement): void {
+        this.audio.pause();
+        this.currentHymn = hymnTitle;
+        this.source.src = `/audio/${hymnId}.mp3`;
+        this.audio.load();
+
+        document.getElementById('current-hymn-display')!.textContent = hymnTitle;
+        (document.getElementById('play-pause-btn') as HTMLButtonElement).disabled = false;
+
+        const citation = hymnElement.getAttribute('data-citation');
+        const citationEl = document.getElementById('hymn-citation');
+        if (citationEl) {
+            citationEl.textContent = citation || 'Why we cite this hymn';
         }
     }
 }
