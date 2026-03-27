@@ -7,6 +7,14 @@ version: "v1.4.9"
 
 An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to 📄 paper. This supplement offers an interactive IFS (Internal Family Systems) therapist simulator, Santo Daime hymn recordings, and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
 
+## 🛡️ Spoiler-Free Zone
+
+The book has surprises. Good ones. The kind that land differently if you don't see them coming. 🤫
+
+Every effort has been made to keep this supplement and the book's promo website completely spoiler-free—so you're safe here. Read freely. Poke around. Nothing will ruin anything.
+
+But if someone offers to "explain the structure" of the book before you've read it, that person is not your friend. ⚠️ The correct response is a warm smile and a subject change. You're allowed to protect your reading experience.
+
 ## What is Internal Family Systems (IFS)?
 
 Religion and mental health have always overlapped in their attempts to understand troubled minds. Is that voice divine revelation or auditory hallucination? Is ego dissolution mystical or pathological? Religious traditions developed frameworks like spirit possession 👻 and contemplative practices 🧘 to address such questions. Modern mental health professionals inherit these challenges. They encounter the same phenomena—voices, ego dissolution, altered states—but interpret them through secular frameworks rather than religious ones.
