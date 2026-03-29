@@ -29,13 +29,20 @@ const WORDS = [
     'pride', 'trust', 'doubt', 'care', 'guilt', 'love', 'loss',
     'anger', 'peace', 'worry', 'safety', 'wonder', 'sorrow',
     'envy', 'longing', 'regret', 'dread', 'bliss', 'hurt',
-    'numb', 'tender', 'fury', 'still',
+    'numb', 'tender', 'fury', 'still', 'want', 'need', 'hide',
+    'flee', 'freeze', 'reach', 'cling', 'push', 'break', 'mend',
     // longer words for size variance
     'overwhelmed', 'disconnected', 'vulnerability', 'compassion',
     'abandonment', 'worthlessness', 'protection', 'forgiveness',
     'resentment', 'exhaustion', 'powerlessness', 'belonging',
+    'hypervigilance', 'disassociation', 'inner-critic', 'self-worth',
+    'parentified', 'catastrophizing', 'shame-spiral', 'freeze-response',
     // short for more variance
     'awe', 'awe', 'raw', 'ache', 'ok', 'safe', 'held', 'seen',
+    'no', 'go', 'stay', 'yes', 'me', 'us', 'free', 'whole',
+    // IFS-specific
+    'exile', 'firefighter', 'manager', 'Self', 'unburdened',
+    'protector', 'witness', 'trailhead', 'legacy', 'burden',
 ];
 
 // ── URL fragment animation ────────────────────────────────────────────────────
@@ -118,7 +125,7 @@ function offScreenRadial(angle: number): [number, number] {
     if (sin < 0) tEdge = Math.min(tEdge, -PLACARD_CY / sin);
 
     // Overshoot well past the screen edge: 600–1200px beyond it
-    const dist = tEdge + 600 + Math.random() * 600;
+    const dist = tEdge + 800 + Math.random() * 200;
     return [cos * dist, sin * dist];
 }
 
@@ -385,7 +392,7 @@ let lastRayStartTime = -1;
 let nextHeartTime = -1;  // elapsed time of next heart spawn (Poisson process)
 let lastPosInfo = '';
 
-const HEART_RATE = 1.5;  // hearts per second (Poisson λ)
+const HEART_RATE = 0.8;  // hearts per second (Poisson λ)
 
 function nextHeartDelay(): number {
     // Exponential inter-arrival time for Poisson process
@@ -484,7 +491,7 @@ function spawnHeart(cm: CloudManager, cloudId: string, now: number): void {
     const cy = ctm.b * positions.cloudPos.x + ctm.d * positions.cloudPos.y + ctm.f;
 
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;will-change:transform,opacity;line-height:1;pointer-events:none;white-space:nowrap';
+    el.style.cssText = `position:fixed;will-change:transform,opacity;line-height:1;pointer-events:none;white-space:nowrap;transform:translate(${cx}px,${cy}px) translate(-50%,-50%)`;
     el.textContent = HEART_EMOJIS[Math.floor(Math.random() * HEART_EMOJIS.length)];
     ensurePromoOverlay().appendChild(el);
 
