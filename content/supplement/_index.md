@@ -130,6 +130,10 @@ The recordings here exist somewhere in the liminal space between "technically ad
         <div class="hymn-item unlocked" data-hymn="mamãe-vosso-brilho-é-tão-lindo" data-title="Mamãe Vosso Brilho É Tão Lindo" data-citation="Testimony that the Self resembles a brilliant star.">
           <span class="hymn-title">Mamãe Vosso Brilho É Tão Lindo</span>
         </div>
+        <div class="hymn-item locked" data-hymn="eu-invoco-meu-mestre" data-title="Eu Invoco Meu Mestre" data-citation="Offered as a tribute to the leaders who worked tirelessly and with great beauty of heart to establish the Santo Daime.">
+          <span class="hymn-title">Eu Invoco Meu Mestre</span>
+          <span class="hymn-lock">🔒</span>
+        </div>
       </div>
     </div>
     <p style="margin-top: 1rem; font-size: 0.9rem; color: #888; font-style: italic;">
