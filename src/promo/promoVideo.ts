@@ -1,13 +1,8 @@
 import { CloudManager } from '../cloud/cloudManager.js';
 
 
-// ── Timeline ─────────────────────────────────────────────────────────────────
-// 0–3s        : hold (star occluded, zoomed out)
-// 3–11s       : reveal (tilt + zoom in)
-// 11s–TOTAL   : hold (star visible, clouds orbit, URL assembles)
-
 const HOLD_START = 3;
-const REVEAL_END = 11;
+const REVEAL_END = 19;
 
 const ZOOM_START = 0.45;
 const ZOOM_END = 1.1;
@@ -191,7 +186,7 @@ function buildUrlDisplay(): void {
             const [ox, oy] = offScreenRadial(travelAngle);
             const startRot = (Math.random() - 0.5) * 8 * 360;
 
-            const animStart = 0.5 + Math.random() * 8;
+            const animStart = REVEAL_END + Math.random() * 8;
             const animEnd = animStart + 5 + Math.random() * 5;
 
             const startSize = FINAL_FONT_PX * (10 + Math.random() * 4);
