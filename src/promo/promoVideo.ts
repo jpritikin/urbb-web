@@ -348,6 +348,221 @@ function updateBoldSweeps(elapsed: number, settled: boolean): void {
     }
 }
 
+// ── Panorama self-ray ────────────────────────────────────────────────────────
+const HEART_EMOJIS = ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '💖', '💗', '💝'];
+
+interface FloatingHeart {
+    el: HTMLElement;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    startTime: number;
+    duration: number;
+    startSize: number;
+    endSize: number;
+}
+
+interface PromoRay {
+    group: SVGGElement;
+    outerPath: SVGPathElement;
+    innerPath: SVGPathElement;
+    borderPath: SVGPathElement;
+    targetCloudId: string;
+    startTime: number;
+    duration: number;
+}
+
+const floatingHearts: FloatingHeart[] = [];
+let activeRay: PromoRay | null = null;
+let promoRayOverlay: HTMLElement | null = null;
+
+// Time state for panorama ray scheduling
+let nextRayTime = 0;
+let rayPhase: 'idle' | 'active' = 'idle';
+let rayEndTime = 0;
+let lastRayStartTime = -1;
+let nextHeartTime = -1;  // elapsed time of next heart spawn (Poisson process)
+let lastPosInfo = '';
+
+const HEART_RATE = 1.5;  // hearts per second (Poisson λ)
+
+function nextHeartDelay(): number {
+    // Exponential inter-arrival time for Poisson process
+    return -Math.log(1 - Math.random()) / HEART_RATE;
+}
+
+function ensurePromoOverlay(): HTMLElement {
+    if (promoRayOverlay) return promoRayOverlay;
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10';
+    document.body.appendChild(el);
+    promoRayOverlay = el;
+    return el;
+}
+
+function buildRayPath(sx: number, sy: number, ex: number, ey: number, widthStart: number, widthEnd: number): string {
+    const dx = ex - sx;
+    const dy = ey - sy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const px = -Math.sin(angle);
+    const py = Math.cos(angle);
+    const endDist = dist + 40;
+    const aex = sx + endDist * Math.cos(angle);
+    const aey = sy + endDist * Math.sin(angle);
+
+    const p1x = sx + px * widthStart, p1y = sy + py * widthStart;
+    const p2x = sx - px * widthStart, p2y = sy - py * widthStart;
+    const p3x = aex - px * widthEnd, p3y = aey - py * widthEnd;
+    const p4x = aex + px * widthEnd, p4y = aey + py * widthEnd;
+    return `M ${p1x},${p1y} L ${p2x},${p2y} L ${p3x},${p3y} L ${p4x},${p4y} Z`;
+}
+
+function createPromoRay(cm: CloudManager, now: number, duration: number): void {
+    const cloudId = cm.pickRandomVisibleCloudId();
+    if (!cloudId) return;
+
+    const positions = cm.getPromoRayPositions(cloudId);
+    if (!positions) return;
+
+    const zoomGroup = cm.getZoomGroup();
+    if (!zoomGroup) return;
+
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.style.opacity = '0';
+    group.setAttribute('pointer-events', 'none');
+
+    const outerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outerPath.setAttribute('fill', '#fff280');
+
+    const innerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    innerPath.setAttribute('fill', '#ffc699');
+
+    const borderPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    borderPath.setAttribute('fill', 'none');
+    borderPath.setAttribute('stroke', '#f400d7');
+    borderPath.setAttribute('stroke-width', '1');
+    borderPath.setAttribute('stroke-dasharray', '2,2');
+
+    group.appendChild(outerPath);
+    group.appendChild(innerPath);
+    group.appendChild(borderPath);
+    zoomGroup.insertBefore(group, zoomGroup.firstChild);
+
+    activeRay = { group, outerPath, innerPath, borderPath, targetCloudId: cloudId, startTime: now, duration };
+    applyRayPositions(activeRay, positions.starPos, positions.cloudPos);
+    nextHeartTime = now + 1 + nextHeartDelay();
+}
+
+function applyRayPositions(ray: PromoRay, starPos: { x: number; y: number }, cloudPos: { x: number; y: number }): void {
+    const outer = buildRayPath(starPos.x, starPos.y, cloudPos.x, cloudPos.y, 4, 18);
+    const inner = buildRayPath(starPos.x, starPos.y, cloudPos.x, cloudPos.y, 2, 10);
+    ray.outerPath.setAttribute('d', outer);
+    ray.innerPath.setAttribute('d', inner);
+    ray.borderPath.setAttribute('d', outer);
+}
+
+function removeRay(): void {
+    if (!activeRay) return;
+    const g = activeRay.group;
+    g.style.transition = 'opacity 0.4s ease-out';
+    g.style.opacity = '0';
+    setTimeout(() => g.parentNode?.removeChild(g), 450);
+    activeRay = null;
+}
+
+function spawnHeart(cm: CloudManager, cloudId: string, now: number): void {
+    const positions = cm.getPromoRayPositions(cloudId);
+    if (!positions) return;
+
+    const zoomGroup = cm.getZoomGroup();
+    if (!zoomGroup) return;
+    const ctm = (zoomGroup as SVGGraphicsElement).getScreenCTM();
+    if (!ctm) return;
+    const cx = ctm.a * positions.cloudPos.x + ctm.c * positions.cloudPos.y + ctm.e;
+    const cy = ctm.b * positions.cloudPos.x + ctm.d * positions.cloudPos.y + ctm.f;
+
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;will-change:transform,opacity;line-height:1;pointer-events:none;white-space:nowrap';
+    el.textContent = HEART_EMOJIS[Math.floor(Math.random() * HEART_EMOJIS.length)];
+    ensurePromoOverlay().appendChild(el);
+
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.8;
+    const speed = 30 + Math.random() * 40;
+    floatingHearts.push({
+        el, x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        startTime: now,
+        duration: 1.2 + Math.random() * 0.8,
+        startSize: 14 + Math.random() * 10,
+        endSize: 32 + Math.random() * 24,
+    });
+}
+
+function updatePromoRay(elapsed: number, cm: CloudManager): void {
+    // Animate existing hearts
+    for (let i = floatingHearts.length - 1; i >= 0; i--) {
+        const h = floatingHearts[i];
+        const age = elapsed - h.startTime;
+        const t = Math.min(1, age / h.duration);
+        const size = lerp(h.startSize, h.endSize, t);
+        const x = h.x + h.vx * age;
+        const y = h.y + h.vy * age;
+        const opacity = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+        h.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+        h.el.style.fontSize = `${size}px`;
+        h.el.style.opacity = String(opacity);
+        if (t >= 1) {
+            h.el.remove();
+            floatingHearts.splice(i, 1);
+        }
+    }
+
+    if (nextRayTime === 0) {
+        nextRayTime = elapsed + 10 + Math.random() * 10;
+        return;
+    }
+
+    if (rayPhase === 'idle') {
+        if (elapsed >= nextRayTime) {
+            const rayDuration = 3 + Math.random() * 3;
+            createPromoRay(cm, elapsed, rayDuration);
+            if (activeRay) {
+                rayPhase = 'active';
+                rayEndTime = elapsed + rayDuration;
+                lastRayStartTime = elapsed;
+                cm.setPromoRayTarget(activeRay.targetCloudId);
+            }
+        }
+    } else {
+        // Track positions every frame, fade in/out
+        if (activeRay) {
+            const positions = cm.getPromoRayPositions(activeRay.targetCloudId);
+            if (positions) applyRayPositions(activeRay, positions.starPos, positions.cloudPos);
+
+            if (elapsed >= nextHeartTime && elapsed < rayEndTime) {
+                spawnHeart(cm, activeRay.targetCloudId, elapsed);
+                nextHeartTime = elapsed + nextHeartDelay();
+            }
+
+            const age = elapsed - activeRay.startTime;
+            const fadeIn = Math.min(1, age / 0.4);
+            const fadeOut = Math.max(0, 1 - Math.max(0, elapsed - (rayEndTime - 0.4)) / 0.4);
+            activeRay.group.style.opacity = String(Math.min(fadeIn, fadeOut) * 0.85);
+        }
+
+        if (elapsed >= rayEndTime) {
+            removeRay();
+            cm.setPromoRayTarget(null);
+            rayPhase = 'idle';
+            nextHeartTime = -1;
+            nextRayTime = elapsed + 10 + Math.random() * 10;
+        }
+    }
+}
+
 // ── Simulator setup ──────────────────────────────────────────────────────────
 function setupSimulator(): CloudManager {
     const cm = new CloudManager();
@@ -371,11 +586,29 @@ function setupSimulator(): CloudManager {
 }
 
 // ── Debug overlay ─────────────────────────────────────────────────────────────
-function createDebugOverlay(): HTMLElement | null {
+function createDebugOverlay(onSkip: () => void, onPauseToggle: () => void): HTMLElement | null {
     if ((window as any).__advanceFrame) return null;
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;bottom:8px;left:8px;font:14px monospace;color:#0f0;background:rgba(0,0,0,0.6);padding:4px 8px;z-index:9999;pointer-events:none;white-space:pre';
+    el.style.cssText = 'position:fixed;bottom:60px;left:8px;font:14px monospace;color:#0f0;background:rgba(0,0,0,0.6);padding:4px 8px;z-index:9999;white-space:pre;user-select:text';
     document.body.appendChild(el);
+
+    const skipBtn = document.createElement('button');
+    skipBtn.textContent = '+10s';
+    skipBtn.style.cssText = 'position:fixed;bottom:60px;left:260px;font:14px monospace;color:#0f0;background:rgba(0,0,0,0.6);border:1px solid #0f0;padding:2px 8px;z-index:9999;cursor:pointer';
+    skipBtn.addEventListener('click', onSkip);
+    document.body.appendChild(skipBtn);
+
+    const pauseBtn = document.createElement('button');
+    pauseBtn.textContent = '⏸';
+    pauseBtn.style.cssText = 'position:fixed;bottom:10px;left:8px;z-index:9999;padding:6px 10px;font-size:16px;background:#ff6b6b;color:white;border:none;border-radius:4px;cursor:pointer';
+    pauseBtn.addEventListener('click', () => {
+        onPauseToggle();
+        const isPaused = pauseBtn.textContent === '⏸';
+        pauseBtn.textContent = isPaused ? '▶' : '⏸';
+        pauseBtn.style.background = isPaused ? '#51cf66' : '#ff6b6b';
+    });
+    document.body.appendChild(pauseBtn);
+
     return el;
 }
 
@@ -398,19 +631,34 @@ function startPromo(): void {
 
     const FRAME_INTERVAL = 1000 / 24;
     let startTime: number | null = null;
+    let timeOffset = 0;
+    let paused = false;
+    let pauseStartTime: number | null = null;
     let lastFrameTime = -Infinity;
     let lastTilt = TILT_START;
     const syntheticClock = !!(window as any).__advanceFrame;
-    const debugEl = createDebugOverlay();
+    const debugEl = createDebugOverlay(
+        () => { timeOffset += 10; },
+        () => {
+            paused = !paused;
+            if (paused) {
+                pauseStartTime = performance.now();
+            } else if (pauseStartTime !== null) {
+                timeOffset -= (performance.now() - pauseStartTime) / 1000;
+                pauseStartTime = null;
+            }
+        }
+    );
 
     function tick(now: number): void {
         if (startTime === null) startTime = now;
+        if (paused) { requestAnimationFrame(tick); return; }
         if (!syntheticClock && now - lastFrameTime < FRAME_INTERVAL) {
             requestAnimationFrame(tick);
             return;
         }
         lastFrameTime = now;
-        const elapsed = (now - startTime) / 1000;
+        const elapsed = (now - startTime) / 1000 + timeOffset;
         const t = elapsed;
 
         if (t >= HOLD_START && t <= REVEAL_END) {
@@ -431,10 +679,16 @@ function startPromo(): void {
         const settled = t >= settledTime;
         updateUrl(t);
         updateBoldSweeps(t, settled);
+        if (settled) updatePromoRay(t, cm);
 
         if (debugEl) {
             const phase = getPhaseLabel(t, settled);
-            debugEl.textContent = `t=${t.toFixed(1)}s  ${phase}\nsettledAt=${settledTime.toFixed(1)}s  sweeps=${activeSweeps.length}  nextSweep=${nextSweepTime > 0 ? (nextSweepTime - t).toFixed(1) + 's' : '-'}`;
+            const rayInfo = lastRayStartTime >= 0 ? `lastRay=${lastRayStartTime.toFixed(1)}s  rayPhase=${rayPhase}` : 'no ray yet';
+            if (activeRay) {
+                const pos = cm.getPromoRayPositions(activeRay.targetCloudId);
+                if (pos) lastPosInfo = `\nstar=(${pos.starPos.x.toFixed(0)},${pos.starPos.y.toFixed(0)}) cloud=(${pos.cloudPos.x.toFixed(0)},${pos.cloudPos.y.toFixed(0)})\n${pos.debug}`;
+            }
+            debugEl.textContent = `t=${t.toFixed(1)}s  ${phase}\nsettledAt=${settledTime.toFixed(1)}s  sweeps=${activeSweeps.length}  nextSweep=${nextSweepTime > 0 ? (nextSweepTime - t).toFixed(1) + 's' : '-'}\n${rayInfo}  nextRay=${nextRayTime > 0 ? (nextRayTime - t).toFixed(1) + 's' : '-'}${lastPosInfo}`;
         }
 
         requestAnimationFrame(tick);

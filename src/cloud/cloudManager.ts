@@ -624,6 +624,50 @@ export class CloudManager {
         return instance?.cloud ?? null;
     }
 
+    pickRandomVisibleCloudId(): string | null {
+        const visible: string[] = [];
+        for (const instance of this.instances) {
+            if (this.getCloudVisualCenter(instance.cloud.id)) visible.push(instance.cloud.id);
+        }
+        if (visible.length === 0) return null;
+        return visible[Math.floor(Math.random() * visible.length)];
+    }
+
+    // Returns positions in zoom-group coordinate space (pre-zoom).
+    // Ray should be inserted into zoom-group so no transform math is needed.
+    getPromoRayPositions(cloudId: string): { starPos: { x: number; y: number }; cloudPos: { x: number; y: number }; debug: string } | null {
+        if (!this.svgElement) return null;
+        const cloudState = this.view.getCloudState(cloudId);
+        if (!cloudState || cloudState.opacity < 0.1) return null;
+        const cloud = this.getCloudById(cloudId);
+        const cloudPos = cloud ? cloud.getVisualCenter() : { x: cloudState.x, y: cloudState.y };
+        // In panorama mode the star sits at the canvas center in zoom-group space
+        const starPos = { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
+        const zoom = this.view.getCurrentZoomFactor();
+        const debug = `cw=${this.canvasWidth}x${this.canvasHeight} zoom=${zoom.toFixed(2)} vShift=${this.verticalShift.toFixed(0)} cloud=(${cloudPos.x.toFixed(0)},${cloudPos.y.toFixed(0)})`;
+        return { starPos, cloudPos, debug };
+    }
+
+    getZoomGroup(): SVGGElement | null {
+        return this.zoomGroup;
+    }
+
+    setPromoRayTarget(cloudId: string | null): void {
+        for (const instance of this.instances) {
+            const fill = instance.cloud.id === cloudId ? '#fffde0' : null;
+            instance.cloud.setFillOverride(fill);
+        }
+        this.updateAllCloudStyles();
+    }
+
+    getUIGroup(): SVGGElement | null {
+        return this.uiGroup;
+    }
+
+    getSVGElement(): SVGSVGElement | null {
+        return this.svgElement;
+    }
+
     private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
         const cloudState = this.view.getCloudState(cloudId);
         if (!cloudState || cloudState.opacity < 0.1) {
@@ -639,7 +683,7 @@ export class CloudManager {
             const centerY = this.canvasHeight / 2;
             pos = {
                 x: centerX + (pos.x - centerX) * zoom,
-                y: centerY + (pos.y - centerY) * zoom
+                y: centerY + this.verticalShift + (pos.y - centerY) * zoom
             };
         }
         const margin = 50;
