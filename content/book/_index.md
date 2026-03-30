@@ -7,7 +7,7 @@ version: "v1.3.0"
 
 ## Watch the Trailer
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/mgEzPGlBZG8?si=ZYRLWya007gMxIlQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/2gZdan1dZFA?si=Q_QjHotJd3EIqrQD" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## Acclaim
 
