@@ -6,6 +6,7 @@ interface Blurb {
     name: string;
     role: string;
     works: string[];
+    aprilFools?: boolean;
 }
 
 function formatAttr(blurb: Blurb): string {
@@ -61,10 +62,16 @@ function initModal(): void {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 }
 
+function isAprilFools(): boolean {
+    const now = new Date();
+    return now.getMonth() === 3 && now.getDate() === 1;
+}
+
 async function initBlurbs(): Promise<void> {
     const response = await fetch('/data/blurbs.json');
     const blurbs: Blurb[] = await response.json();
-    renderBlurbs(blurbs);
+    const showAprilFools = isAprilFools() || Math.random() < 0.5;
+    renderBlurbs(blurbs.filter(b => !b.aprilFools || showAprilFools));
 }
 
 document.addEventListener('DOMContentLoaded', () => {

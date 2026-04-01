@@ -134,6 +134,35 @@
 }
 .dark #news-empty { color: #9ca3af; }
 
+.news-permalink {
+  font-size: 0.9rem;
+  color: transparent;
+  text-decoration: none;
+  margin-left: 0.4rem;
+  transition: color 0.15s;
+  user-select: none;
+}
+.news-title:hover .news-permalink,
+.news-permalink:focus { color: #6b7280; }
+.dark .news-title:hover .news-permalink,
+.dark .news-permalink:focus { color: #9ca3af; }
+.news-item.highlighted {
+  border-left-color: #15803d;
+  background: rgba(134, 239, 172, 0.08);
+  border-radius: 0 0.25rem 0.25rem 0;
+  font-size: 1.2em;
+  margin-top: 6rem;
+  margin-bottom: 6rem;
+}
+.dark .news-item.highlighted {
+  border-left-color: #86efac;
+  background: rgba(134, 239, 172, 0.06);
+}
+.news-item.highlight-adjacent {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
 .news-item.future { display: none; }
 .news-item.future.future-visible { display: block; }
 .news-item.future .news-date::after {
@@ -200,9 +229,9 @@
 
   <div id="news-list">
     {{ range sort (where .Site.RegularPages "Section" "news") "Date" "desc" }}
-    <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}">
+    <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}" id="{{ .File.ContentBaseName }}">
       <div class="news-date">{{ .Date.Format "2 January 2006" }}</div>
-      <div class="news-title">{{ .Title }}</div>
+      <div class="news-title">{{ .Title }} <a class="news-permalink" href="#{{ .File.ContentBaseName }}" title="Link to this item">¶</a></div>
       <div class="prose dark:prose-invert prose-sm max-w-none
         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-2
         prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline">

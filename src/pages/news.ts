@@ -156,6 +156,77 @@ function init() {
     }
   });
 
+  function clearHighlight() {
+    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => {
+      el.classList.remove('highlighted', 'highlight-adjacent');
+    });
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  function highlightItem(id: string, scrollBehavior: ScrollBehavior = 'smooth') {
+    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => {
+      el.classList.remove('highlighted', 'highlight-adjacent');
+    });
+    const target = document.getElementById(id);
+    if (!target) return;
+    const isFuture = target.classList.contains('future');
+    if (isFuture) {
+      showFuture = true;
+      futureToggle.textContent = '🙈 Seal the Veil';
+    }
+    applyFilter(null, showFuture);
+    render();
+    target.classList.add('highlighted');
+    const prev = target.previousElementSibling as HTMLElement | null;
+    const next = target.nextElementSibling as HTMLElement | null;
+    if (prev?.classList.contains('news-item')) prev.classList.add('highlight-adjacent');
+    if (next?.classList.contains('news-item')) next.classList.add('highlight-adjacent');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const navHeight = (document.querySelector('nav') as HTMLElement | null)?.offsetHeight ?? 0;
+      const rect = target.getBoundingClientRect();
+      const top = rect.top + window.scrollY - navHeight - 24;
+      console.log('[news] highlightItem scroll:', { id, rectTop: rect.top, scrollY: window.scrollY, navHeight, top });
+      window.scrollTo({ top, behavior: scrollBehavior });
+    }));
+  }
+
+  function navigateTo(id: string) {
+    history.pushState(null, '', '#' + id);
+    highlightItem(id);
+  }
+
+  window.addEventListener('hashchange', () => {
+    const id = location.hash.slice(1);
+    if (id) highlightItem(id);
+    else clearHighlight();
+  });
+
+  document.querySelectorAll<HTMLAnchorElement>('.news-permalink').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href')?.slice(1);
+      if (!id) return;
+      const item = document.getElementById(id);
+      if (item?.classList.contains('highlighted')) {
+        clearHighlight();
+      } else {
+        navigateTo(id);
+      }
+    });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.querySelector('.news-item.highlighted')) {
+      clearHighlight();
+    }
+  });
+
+  const hash = location.hash.slice(1);
+  if (hash) {
+    highlightItem(hash, 'instant');
+    return;
+  }
+
   applyFilter(null, showFuture);
   render();
 }
