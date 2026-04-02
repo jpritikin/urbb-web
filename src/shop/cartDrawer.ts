@@ -69,6 +69,7 @@ export function syncBadge(state: CartState) {
 
 export function openCart() {
     if (!drawer) initCartDrawer();
+    ensureDrawerInDom();
     syncDrawer(getCart());
     drawer!.classList.add('cart-open');
     overlay!.classList.add('cart-open');
@@ -126,9 +127,13 @@ export function initCartDrawer() {
         }
     });
 
-    document.body.appendChild(overlay);
-    document.body.appendChild(drawer);
-
     onCartChange(state => syncDrawer(state));
     syncBadge(getCart());
+}
+
+function ensureDrawerInDom() {
+    if (!overlay!.parentNode) {
+        document.body.appendChild(overlay!);
+        document.body.appendChild(drawer!);
+    }
 }
