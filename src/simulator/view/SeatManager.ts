@@ -428,7 +428,9 @@ export class SeatManager {
             landingProgress: 0,
             effectiveStance: 0,
             tiltAngle: 0,
-            positionFrozen: false
+            positionFrozen: false,
+            unregulatedSign: 0,
+            unregulatedTime: 0
         });
         this.carpetVelocities.set(seatId, { vx: 0, vy: 0 });
     }

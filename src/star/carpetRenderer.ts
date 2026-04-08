@@ -1,4 +1,5 @@
 import { REGULATION_STANCE_LIMIT } from '../simulator/messageOrchestrator.js';
+import { updateTilt } from './carpetTiltDynamics.js';
 
 export const CARPET_VERTEX_COUNT = 15;
 const CARPET_BASE_WIDTH = 40;
@@ -29,6 +30,8 @@ export interface CarpetState {
     effectiveStance: number;
     tiltAngle: number;
     positionFrozen: boolean;
+    unregulatedSign: number;
+    unregulatedTime: number;
 }
 
 export const CARPET_FLY_DURATION = 1.5;
@@ -626,9 +629,10 @@ export class CarpetRenderer {
                     if (partner) {
                         const dx = partner.currentX - carpet.currentX;
                         const tiltSign = dx >= 0 ? 1 : -1;
-                        const clampedStance = Math.max(-REGULATION_STANCE_LIMIT, Math.min(REGULATION_STANCE_LIMIT, carpet.effectiveStance));
-                        const targetTilt = tiltSign * (clampedStance / REGULATION_STANCE_LIMIT) * MAX_TILT;
-                        carpet.tiltAngle += (targetTilt - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
+                        const { tiltAngle, unregulatedSign, unregulatedTime } = updateTilt(carpet, carpet.effectiveStance, tiltSign, deltaTime);
+                        carpet.tiltAngle = tiltAngle;
+                        carpet.unregulatedSign = unregulatedSign;
+                        carpet.unregulatedTime = unregulatedTime;
                     }
                 } else {
                     carpet.tiltAngle += (0 - carpet.tiltAngle) * (1 - Math.exp(-2 * deltaTime));
