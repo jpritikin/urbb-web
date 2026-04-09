@@ -1,7 +1,7 @@
 export class AnimationLoop {
     private running: boolean = false;
     private animationFrameId: number | null = null;
-    private lastFrameTime: number = 0;
+    private lastFrameTime: number | null = null;
     private onFrame: (deltaTime: number) => void;
 
     constructor(onFrame: (deltaTime: number) => void) {
@@ -11,8 +11,7 @@ export class AnimationLoop {
     start(): void {
         if (this.running) return;
         this.running = true;
-        this.lastFrameTime = performance.now();
-        this.tick();
+        this.animationFrameId = requestAnimationFrame((t) => this.tick(t));
     }
 
     stop(): void {
@@ -21,6 +20,7 @@ export class AnimationLoop {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
+        this.lastFrameTime = null;
     }
 
     isRunning(): boolean {
@@ -36,27 +36,28 @@ export class AnimationLoop {
 
     resume(): void {
         if (this.running && this.animationFrameId === null) {
-            this.lastFrameTime = performance.now();
-            this.tick();
+            this.lastFrameTime = null;
+            this.animationFrameId = requestAnimationFrame((t) => this.tick(t));
         }
     }
 
-    private tick(): void {
+    private tick(timestamp: number): void {
         if (!this.running) return;
 
         if (document.hidden) {
-            this.lastFrameTime = performance.now();
-            this.animationFrameId = requestAnimationFrame(() => this.tick());
+            this.lastFrameTime = null;
+            this.animationFrameId = requestAnimationFrame((t) => this.tick(t));
             return;
         }
 
-        const currentTime = performance.now();
-        const deltaTime = Math.min((currentTime - this.lastFrameTime) / 1000, 0.1);
-        this.lastFrameTime = currentTime;
+        const deltaTime = this.lastFrameTime !== null
+            ? Math.min((timestamp - this.lastFrameTime) / 1000, 0.1)
+            : 0;
+        this.lastFrameTime = timestamp;
 
         this.onFrame(deltaTime);
 
-        this.animationFrameId = requestAnimationFrame(() => this.tick());
+        this.animationFrameId = requestAnimationFrame((t) => this.tick(t));
     }
 
     setupVisibilityHandling(): void {

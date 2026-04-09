@@ -81,6 +81,8 @@ export class CloudManager {
     private expandDeepenEffect: ExpandDeepenEffect | null = null;
     private timeAdvancer: TimeAdvancer | null = null;
     private playbackRecording: PlaybackRecordingCoordinator;
+    private promoMode: boolean = false;
+    private verticalShift: number = 0;
 
     constructor() {
         this.animationLoop = new AnimationLoop((dt) => this.animate(dt));
@@ -300,7 +302,7 @@ export class CloudManager {
                     this.playbackRecording.recordIntervals();
                     this.promotePendingBlend(cloudId);
                 },
-            }//, { skipAttentionChecks: true }
+            }, this.promoMode ? { skipAttentionChecks: true } : undefined
         );
 
         const thoughtBubbleContainer = createGroup({ id: 'thought-bubble-container', 'pointer-events': 'none' });
@@ -622,6 +624,50 @@ export class CloudManager {
         return instance?.cloud ?? null;
     }
 
+    pickRandomVisibleCloudId(): string | null {
+        const visible: string[] = [];
+        for (const instance of this.instances) {
+            if (this.getCloudVisualCenter(instance.cloud.id)) visible.push(instance.cloud.id);
+        }
+        if (visible.length === 0) return null;
+        return visible[Math.floor(Math.random() * visible.length)];
+    }
+
+    // Returns positions in zoom-group coordinate space (pre-zoom).
+    // Ray should be inserted into zoom-group so no transform math is needed.
+    getPromoRayPositions(cloudId: string): { starPos: { x: number; y: number }; cloudPos: { x: number; y: number }; debug: string } | null {
+        if (!this.svgElement) return null;
+        const cloudState = this.view.getCloudState(cloudId);
+        if (!cloudState || cloudState.opacity < 0.1) return null;
+        const cloud = this.getCloudById(cloudId);
+        const cloudPos = cloud ? cloud.getVisualCenter() : { x: cloudState.x, y: cloudState.y };
+        // In panorama mode the star sits at the canvas center in zoom-group space
+        const starPos = { x: this.canvasWidth / 2, y: this.canvasHeight / 2 };
+        const zoom = this.view.getCurrentZoomFactor();
+        const debug = `cw=${this.canvasWidth}x${this.canvasHeight} zoom=${zoom.toFixed(2)} vShift=${this.verticalShift.toFixed(0)} cloud=(${cloudPos.x.toFixed(0)},${cloudPos.y.toFixed(0)})`;
+        return { starPos, cloudPos, debug };
+    }
+
+    getZoomGroup(): SVGGElement | null {
+        return this.zoomGroup;
+    }
+
+    setPromoRayTarget(cloudId: string | null): void {
+        for (const instance of this.instances) {
+            const fill = instance.cloud.id === cloudId ? '#fffde0' : null;
+            instance.cloud.setFillOverride(fill);
+        }
+        this.updateAllCloudStyles();
+    }
+
+    getUIGroup(): SVGGElement | null {
+        return this.uiGroup;
+    }
+
+    getSVGElement(): SVGSVGElement | null {
+        return this.svgElement;
+    }
+
     private getCloudVisualCenter(cloudId: string): { x: number; y: number } | null {
         const cloudState = this.view.getCloudState(cloudId);
         if (!cloudState || cloudState.opacity < 0.1) {
@@ -637,7 +683,7 @@ export class CloudManager {
             const centerY = this.canvasHeight / 2;
             pos = {
                 x: centerX + (pos.x - centerX) * zoom,
-                y: centerY + (pos.y - centerY) * zoom
+                y: centerY + this.verticalShift + (pos.y - centerY) * zoom
             };
         }
         const margin = 50;
@@ -695,6 +741,29 @@ export class CloudManager {
 
     setZoom(zoomLevel: number): void {
         this.view.setPanoramaZoom(zoomLevel);
+    }
+
+    // Call before finalizePanoramaSetup — sets config used when generating initial positions.
+    setInitialTilt(radians: number): void {
+        this.panoramaMotion.updateConfig({ torusRotationX: radians });
+    }
+
+    setTorusMinorRadius(radius: number): void {
+        this.panoramaMotion.updateConfig({ torusMinorRadius: radius });
+    }
+
+    // Call after startAnimation — retransforms all existing positions to new tilt angle.
+    setTiltAngle(radians: number): void {
+        this.panoramaMotion.setTiltAngle(radians, this.instances);
+    }
+
+    setPromoMode(enabled: boolean): void {
+        this.promoMode = enabled;
+    }
+
+    setVerticalShift(px: number): void {
+        this.verticalShift = px;
+        this.updateZoomGroup();
     }
 
     setTransitionDuration(seconds: number): void {
@@ -1238,7 +1307,7 @@ export class CloudManager {
         const scale = this.view.getCurrentZoomFactor();
 
         this.zoomGroup.setAttribute('transform',
-            `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
+            `translate(${centerX}, ${centerY + this.verticalShift}) scale(${scale}) translate(${-centerX}, ${-centerY})`);
     }
 
     private moveCloudToUIGroup(cloudId: string): void {

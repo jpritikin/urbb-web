@@ -41,6 +41,32 @@ export class PanoramaCloudMotion {
         this.config = { ...this.config, ...config };
     }
 
+    // Re-expresses all existing cloud positions and targets under a new tilt angle,
+    // so the tilt can be animated at runtime without waiting for retargeting.
+    setTiltAngle(newTilt: number, instances: CloudInstance[]): void {
+        const oldTilt = this.config.torusRotationX;
+        this.config.torusRotationX = newTilt;
+
+        // Rotation delta: undo old tilt, apply new tilt (pure X-axis rotation of y/z)
+        const cosOld = Math.cos(oldTilt), sinOld = Math.sin(oldTilt);
+        const cosNew = Math.cos(newTilt), sinNew = Math.sin(newTilt);
+
+        const retilt = (pos: Vec3) => {
+            // Undo old tilt: rotate y/z by -oldTilt
+            const yt = pos.y * cosOld + pos.z * sinOld;
+            const zt = -pos.y * sinOld + pos.z * cosOld;
+            // Apply new tilt: rotate by +newTilt
+            pos.y = yt * cosNew - zt * sinNew;
+            pos.z = yt * sinNew + zt * cosNew;
+        };
+
+        for (const instance of instances) {
+            retilt(instance.position);
+            const state = this.states.get(instance.cloud.id);
+            if (state) retilt(state.targetPosition);
+        }
+    }
+
     setDimensions(width: number, height: number): void {
         this.config.torusMajorRadiusX = width * 0.35;
         this.config.torusMajorRadiusY = height * 0.35;

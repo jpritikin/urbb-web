@@ -1019,7 +1019,14 @@ export class Cloud {
         return { minX, maxX, minY, maxY };
     }
 
+    private fillOverride: string | null = null;
+
+    setFillOverride(color: string | null): void {
+        this.fillOverride = color;
+    }
+
     getFillColor(hovered: boolean): string {
+        if (this.fillOverride) return this.fillOverride;
         return hovered ? '#e0e0e0' : '#ffffff';
     }
 
