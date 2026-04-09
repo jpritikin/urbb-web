@@ -201,16 +201,17 @@ function init() {
     else clearHighlight();
   });
 
-  document.querySelectorAll<HTMLAnchorElement>('.news-permalink').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const id = link.getAttribute('href')?.slice(1);
-      if (!id) return;
-      const item = document.getElementById(id);
-      if (item?.classList.contains('highlighted')) {
+  document.querySelectorAll<HTMLElement>('.news-title').forEach(titleEl => {
+    titleEl.style.cursor = 'pointer';
+    titleEl.addEventListener('click', e => {
+      const link = (e.target as HTMLElement).closest('.news-permalink');
+      if (link) e.preventDefault();
+      const item = titleEl.closest<HTMLElement>('.news-item');
+      if (!item) return;
+      if (item.classList.contains('highlighted')) {
         clearHighlight();
       } else {
-        navigateTo(id);
+        navigateTo(item.id);
       }
     });
   });
