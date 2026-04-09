@@ -14,30 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const images = document.querySelectorAll('.gallery-item img');
   console.log('Gallery images found:', images.length);
 
-  images.forEach((img, index) => {
+  images.forEach((img) => {
     const imgElement = img as HTMLImageElement;
-
     imgElement.addEventListener('error', () => {
-      console.log(`Image ${index} error event fired`);
       imgElement.style.display = 'none';
       imgElement.removeAttribute('alt');
     });
-
-    imgElement.addEventListener('load', () => {
-      console.log(`Image ${index} loaded successfully`);
-    });
-
-    setTimeout(() => {
-      const complete = imgElement.complete;
-      const naturalWidth = imgElement.naturalWidth;
-      console.log(`Image ${index} - complete: ${complete}, naturalWidth: ${naturalWidth}`);
-
-      if (!complete || naturalWidth === 0) {
-        console.log(`Image ${index} hiding due to broken state`);
-        imgElement.style.display = 'none';
-        imgElement.removeAttribute('alt');
-      }
-    }, 100);
   });
 
   const galleryItemsArray = Array.from(galleryItems);
