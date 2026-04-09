@@ -4,7 +4,7 @@ import { STAR_CLOUD_ID, RAY_CLOUD_ID, MODE_TOGGLE_CLOUD_ID } from '../simulator/
 import { isStarMenuAction, isCloudMenuAction } from '../simulator/therapistActions.js';
 import { PlaybackReticle } from './playbackReticle.js';
 import { SPEED_CONFIGS } from '../simulator/scenarioSelector.js';
-import { MAX_TILT } from '../star/carpetRenderer.js';
+import { STANCE_TO_ANGLE_DEG } from '../star/carpetRenderer.js';
 import { REGULATION_STANCE_LIMIT } from '../simulator/messageOrchestrator.js';
 
 export type PlaybackSpeed = 'realtime' | 'highlights' | 'speedrun';
@@ -48,6 +48,7 @@ export interface PlaybackViewState {
     getIsFullscreen: () => boolean;
     getCarpetCenter: (cloudId: string) => { x: number; y: number } | null;
     getCarpetVisualCenter: (cloudId: string) => { x: number; y: number } | null;
+    getCarpetEdgeAnchor: (cloudId: string, horizontalSign: number) => { x: number; y: number } | null;
     getCarpetTiltSign: (cloudId: string) => number;
     isCarpetSettled: (cloudId: string) => boolean;
     getCurrentDragStanceDelta: () => number | null;
@@ -678,45 +679,43 @@ export class PlaybackController {
 
         const canvasWidth = this.svgElement.viewBox.baseVal.width || 800;
         const dragRadius = 200;
-        const targetAngleDeg = (stanceDelta / REGULATION_STANCE_LIMIT) * MAX_TILT;
+        const targetAngleDeg = STANCE_TO_ANGLE_DEG(stanceDelta);
 
-        // Mousedown somewhere on the carpet to start the drag. The carpet center
-        // may be occluded by the cloud sitting on it, so scan outward along the
-        // carpet until the mousedown registers (getLockedDragSign becomes non-null).
-        const preTiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
         const preCenter = this.callbacks.getCarpetCenter(action.cloudId);
         if (!preCenter) return;
-        const horizontalDir = preCenter.x < canvasWidth / 2 ? 1 : -1;
+        const preVisualCenter = this.callbacks.getCarpetVisualCenter(action.cloudId) ?? preCenter;
+        // Pick the side farther from center of canvas so the mousedown is clearly on one side
+        const horizontalSign = preCenter.x < canvasWidth / 2 ? 1 : -1;
 
-        const startX = preCenter.x + preTiltSign * 5;
-        const startY = preCenter.y;
+        // Mousedown slightly inside the edge (80% from visual center to edge) so
+        // elementFromPoint reliably hits the carpet surface.
+        const preAnchor = this.callbacks.getCarpetEdgeAnchor(action.cloudId, horizontalSign) ?? preVisualCenter;
+        const startX = preVisualCenter.x + (preAnchor.x - preVisualCenter.x) * 0.8;
+        const startY = preVisualCenter.y + (preAnchor.y - preVisualCenter.y) * 0.8;
         await this.reticle.showAt(startX, startY);
         this.callbacks.simulateMouseDown(startX, startY);
         const lockedSign = this.callbacks.getLockedDragSign();
 
-        // After mousedown the carpet is frozen and lockDirectionSign has run.
-        // Read the actual locked direction sign so our endpoint matches.
         if (lockedSign === null) {
-            console.error(`[NudgeDrag] ${action.cloudId} drag failed - mousedown missed carpet at svg(${startX.toFixed(0)},${startY.toFixed(0)})`);
-            this.handleError(`nudge_stance drag missed carpet ${action.cloudId}`, `action ${this.currentActionIndex}`);
+            this.handleError(
+                `nudge_stance drag missed carpet ${action.cloudId}\n` +
+                `  mousedown svg:(${startX.toFixed(1)},${startY.toFixed(1)})\n` +
+                `  visualCenter:(${preVisualCenter.x.toFixed(1)},${preVisualCenter.y.toFixed(1)})\n` +
+                `  edgeAnchor:(${preAnchor.x.toFixed(1)},${preAnchor.y.toFixed(1)}) hSign:${horizontalSign}`,
+                `action ${this.currentActionIndex}`);
             return;
         }
 
-        const center = this.callbacks.getCarpetCenter(action.cloudId) ?? preCenter;
-
-        // stanceDelta = (clamp(angleDeg, ±MAX_ROTATION_ANGLE) / MAX_TILT) * REGULATION_STANCE_LIMIT
-        // angleDeg = atan2(dy, |dx|) * lockedSign; no startAngle offset.
-        // So we want atan2(dy, |dx|) = targetAngleDeg / lockedSign.
+        // computeRotation uses anchor as pivot: angleDeg = atan2(dy, |dx|) * lockedSign
+        // Solve for cursor position each step using the live anchor at that moment,
+        // so the final mouseup sees the correct angle regardless of tilt animation.
         const rawAngleRad = (targetAngleDeg / lockedSign) * Math.PI / 180;
-        const endX = center.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalDir;
-        const endY = center.y + Math.sin(rawAngleRad) * dragRadius;
-        // Animate drag outward to end position (carpet is frozen so no drift)
         const steps = 8;
         const stepDelay = 30;
         for (let i = 1; i <= steps; i++) {
-            const t = i / steps;
-            const x = center.x + (endX - center.x) * t;
-            const y = center.y + (endY - center.y) * t;
+            const anchor = this.callbacks.getCarpetEdgeAnchor(action.cloudId, horizontalSign) ?? preAnchor;
+            const x = anchor.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalSign;
+            const y = anchor.y + Math.sin(rawAngleRad) * dragRadius;
             this.reticle.setTarget(x, y);
             this.callbacks.simulateMouseMove(x, y);
             await this.delay(stepDelay);

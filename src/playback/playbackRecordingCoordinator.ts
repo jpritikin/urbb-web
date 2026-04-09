@@ -66,7 +66,7 @@ export interface PlaybackRecordingDependencies {
     simulateRayClick: () => void;
     executeSpontaneousBlendForPlayback: (cloudId: string) => void;
     promotePendingBlendForPlayback: (cloudId: string) => void;
-    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; getLockedDragSign(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
+    getCarpetRenderer: () => { getCarpetCenter(id: string): { x: number; y: number } | null; getCarpetVisualCenter(id: string): { x: number; y: number } | null; getEdgeAnchor(id: string, horizontalSign: number): { x: number; y: number } | null; getTiltSign(id: string): number; isCarpetSettled(id: string): boolean; getCurrentDragStanceDelta(): number | null; getLockedDragSign(): number | null; setCarpetsInteractive(enabled: boolean): void } | null;
     checkBlendedPartsAttention: () => void;
     onRngChanged: (rng: RNG) => void;
     pauseAnimation: () => void;
@@ -409,6 +409,9 @@ export class PlaybackRecordingCoordinator {
             },
             getCarpetVisualCenter: (cloudId: string) => {
                 return this.deps.getCarpetRenderer()?.getCarpetVisualCenter(cloudId) ?? null;
+            },
+            getCarpetEdgeAnchor: (cloudId: string, horizontalSign: number) => {
+                return this.deps.getCarpetRenderer()?.getEdgeAnchor(cloudId, horizontalSign) ?? null;
             },
             getCarpetTiltSign: (cloudId: string) => {
                 return this.deps.getCarpetRenderer()?.getTiltSign(cloudId) ?? 1;
