@@ -683,12 +683,12 @@ export class PlaybackController {
         // Mousedown somewhere on the carpet to start the drag. The carpet center
         // may be occluded by the cloud sitting on it, so scan outward along the
         // carpet until the mousedown registers (getLockedDragSign becomes non-null).
-        // tiltSign is intentionally NOT fetched yet — it may change during reticle animation.
+        const preTiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
         const preCenter = this.callbacks.getCarpetCenter(action.cloudId);
         if (!preCenter) return;
         const horizontalDir = preCenter.x < canvasWidth / 2 ? 1 : -1;
 
-        const startX = preCenter.x;
+        const startX = preCenter.x + preTiltSign * 5;
         const startY = preCenter.y;
         await this.reticle.showAt(startX, startY);
         this.callbacks.simulateMouseDown(startX, startY);
@@ -710,7 +710,6 @@ export class PlaybackController {
         const rawAngleRad = (targetAngleDeg / lockedSign) * Math.PI / 180;
         const endX = center.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalDir;
         const endY = center.y + Math.sin(rawAngleRad) * dragRadius;
-
         // Animate drag outward to end position (carpet is frozen so no drift)
         const steps = 8;
         const stepDelay = 30;
