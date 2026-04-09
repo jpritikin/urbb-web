@@ -503,9 +503,9 @@ export class PlaybackRecordingCoordinator {
             },
             simulateMouseMove: (x: number, y: number) => {
                 const { clientX, clientY } = this.svgToScreenCoords(x, y);
-                const element = document.elementFromPoint(clientX, clientY);
-                if (!element) return;
-                element.dispatchEvent(new MouseEvent('mousemove', {
+                const svgElement = this.deps.getSvgElement();
+                if (!svgElement) return;
+                svgElement.dispatchEvent(new MouseEvent('mousemove', {
                     clientX, clientY, bubbles: true, cancelable: true
                 }));
             },
