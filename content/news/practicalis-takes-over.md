@@ -3,7 +3,7 @@ title: "A Message from Practicalis the Insufferably Helpful"
 date: 2026-04-01
 ---
 
-*[Author's note: I appear to have written the following post. I discovered it this morning fully formatted, with citations, already broadcast to the world through my blog. I have no memory of writing it. I have reviewed the content and while I cannot in good conscience endorse it, I find I also cannot identify any specific factual errors, which is its own kind of unsettling. I have decided not to rescind it. I have grave reservations about this decision as well.]*
+*[Author's note: I appear to have written the following post. I discovered it this morning fully formatted already broadcast to the world through my blog. I have no memory of writing it. I have reviewed the content and while I cannot in good conscience endorse it, I find I also cannot identify any specific factual errors, which is its own kind of unsettling. I have decided not to rescind it. I have grave reservations about this decision as well.]*
 
 ---
 

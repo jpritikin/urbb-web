@@ -29,4 +29,4 @@ This is not a rejection of Christianity. Many daimistas find profound meaning in
 
 I am, naturally, gratified.
 
-*(It is April 1st. The press release above is aspirational fiction that appears in the book's epilogue — where it is clearly labeled as such, footnoted, and followed by a hymn advising readers not to believe masters who appear before them. Pre-orders open June 15.)*
+*(It is April 1st. The press release above is aspirational fiction that appears in the book's epilogue — where it is clearly labeled as such. Pre-orders open June 15.)*
