@@ -684,8 +684,9 @@ export class PlaybackController {
         const preCenter = this.callbacks.getCarpetCenter(action.cloudId);
         if (!preCenter) return;
         const preVisualCenter = this.callbacks.getCarpetVisualCenter(action.cloudId) ?? preCenter;
-        // Pick the side farther from center of canvas so the mousedown is clearly on one side
-        const horizontalSign = preCenter.x < canvasWidth / 2 ? 1 : -1;
+        // Derive the side from stanceDelta sign and tilt sign to match the original drag direction.
+        const tiltSign = this.callbacks.getCarpetTiltSign(action.cloudId);
+        const horizontalSign = (Math.sign(stanceDelta) || 1) * tiltSign;
 
         // Mousedown slightly inside the edge (80% from visual center to edge) so
         // elementFromPoint reliably hits the carpet surface.
@@ -710,19 +711,37 @@ export class PlaybackController {
         // Solve for cursor position each step using the live anchor at that moment,
         // so the final mouseup sees the correct angle regardless of tilt animation.
         const rawAngleRad = (targetAngleDeg / lockedSign) * Math.PI / 180;
+        const vb = this.svgElement.viewBox.baseVal;
+        const margin = 5;
+        const clampToViewbox = (ax: number, ay: number, tx: number, ty: number): { x: number; y: number } => {
+            // Scale down along the direction vector until the endpoint is within viewbox
+            let dx = tx - ax, dy = ty - ay;
+            let scale = 1;
+            if (tx < vb.x + margin) scale = Math.min(scale, (vb.x + margin - ax) / dx);
+            if (tx > vb.x + vb.width - margin) scale = Math.min(scale, (vb.x + vb.width - margin - ax) / dx);
+            if (ty < vb.y + margin) scale = Math.min(scale, (vb.y + margin - ay) / dy);
+            if (ty > vb.y + vb.height - margin) scale = Math.min(scale, (vb.y + vb.height - margin - ay) / dy);
+            scale = Math.max(0, scale);
+            return { x: ax + dx * scale, y: ay + dy * scale };
+        };
+
         const steps = 8;
         const stepDelay = 30;
         for (let i = 1; i <= steps; i++) {
             const anchor = this.callbacks.getCarpetEdgeAnchor(action.cloudId, horizontalSign) ?? preAnchor;
-            const x = anchor.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalSign;
-            const y = anchor.y + Math.sin(rawAngleRad) * dragRadius;
+            const tx = anchor.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalSign;
+            const ty = anchor.y + Math.sin(rawAngleRad) * dragRadius;
+            const { x, y } = clampToViewbox(anchor.x, anchor.y, tx, ty);
             this.reticle.setTarget(x, y);
             this.callbacks.simulateMouseMove(x, y);
             await this.delay(stepDelay);
         }
 
-
         // Mouse up triggers commitRotation → onRotationEnd
+        const finalAnchor = this.callbacks.getCarpetEdgeAnchor(action.cloudId, horizontalSign) ?? preAnchor;
+        const ftx = finalAnchor.x + Math.abs(Math.cos(rawAngleRad)) * dragRadius * horizontalSign;
+        const fty = finalAnchor.y + Math.sin(rawAngleRad) * dragRadius;
+        const { x: finalX, y: finalY } = clampToViewbox(finalAnchor.x, finalAnchor.y, ftx, fty);
         this.callbacks.simulateMouseUp();
         await this.reticle.fadeOut();
     }
