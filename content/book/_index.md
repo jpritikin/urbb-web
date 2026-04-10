@@ -53,8 +53,8 @@ Consider this an invitation. Faith optional. Courage required.
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
     <p>Cloth-bound with dust jacket. ✨ Features a mesmerizing flip-book animation in the
-  margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️</p>
-    <p class="shop-item-price">$47.00</p>
+  margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️ Free domestic shipping. 📦</p>
+    <p class="shop-item-price">$0</p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590233764083"
         data-title="Religion Unburdened by Belief — Hardcover Collector's Edition"
@@ -65,8 +65,8 @@ Consider this an invitation. Faith optional. Courage required.
   <div class="format-card">
     <h3>📄 Paperback Collector's Edition</h3>
     <p>The complete text in a lightweight format. ✨ Features the same
-  flip-book margin animation and index as the hardcover. Perfect for underlining, marginalia, and lending to friends who need unburdening. 📝</p>
-    <p class="shop-item-price">$28.00</p>
+  flip-book margin animation and index as the hardcover. Perfect for underlining, marginalia, and lending to friends who need unburdening. 📝 Free domestic shipping. 📦</p>
+    <p class="shop-item-price">$0</p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590238417139"
         data-title="Religion Unburdened by Belief — Paperback Collector's Edition"
