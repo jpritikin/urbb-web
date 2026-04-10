@@ -1,3 +1,24 @@
+.author-portrait {
+    float: right;
+    margin: 0 0 1.5rem 2rem;
+    max-width: 200px;
+}
+
+.author-portrait img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    outline: 4px dotted rgba(128, 128, 128, 0.3);
+    outline-offset: 4px;
+}
+
+@media (max-width: 600px) {
+    .author-portrait {
+        float: none;
+        margin: 0 auto 1.5rem;
+    }
+}
+
 /* Reset body styles for internal pages */
 .page-body {
     overflow: auto;
