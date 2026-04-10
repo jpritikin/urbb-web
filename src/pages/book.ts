@@ -10,6 +10,7 @@ interface Blurb {
 }
 
 function formatAttr(blurb: Blurb): string {
+    if (!blurb.role && blurb.works.length === 0) return blurb.name;
     if (!blurb.role && blurb.works.length === 1) return `${blurb.name}, ${blurb.works[0]}`;
     if (!blurb.role) return blurb.name;
     return `${blurb.name}, ${blurb.role} ${blurb.works.join(' and ')}`;
@@ -17,6 +18,7 @@ function formatAttr(blurb: Blurb): string {
 
 function formatAttrHTML(blurb: Blurb): string {
     const worksHTML = blurb.works.map(w => `<em>${w}</em>`).join(' and ');
+    if (!blurb.role && blurb.works.length === 0) return `— <strong>${blurb.name}</strong>`;
     if (!blurb.role && blurb.works.length === 1) return `— <strong>${blurb.name}</strong>, ${worksHTML}`;
     if (!blurb.role) return `— <strong>${blurb.name}</strong>, ${worksHTML}`;
     return `— <strong>${blurb.name}</strong>, ${blurb.role} ${worksHTML}`;
