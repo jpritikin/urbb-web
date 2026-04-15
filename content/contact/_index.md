@@ -4,13 +4,6 @@ subtitle: "Let's Co-Create Connection ✨"
 version: "v1.0.0"
 ---
 
-## Interested in an Advanced Review Copy? 📚✨
-
-Sign up to receive updates about this book release and indicate your interest in becoming an Advanced Reader. 🌟
-
-<div data-tf-live="01JTED9XC8FEK8E778MAH3E8TJ"></div>
-<script src="//embed.typeform.com/next/embed.js"></script>
-
 ## Embodied Presence Work 🌸
 
 <style>
