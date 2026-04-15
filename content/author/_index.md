@@ -1,6 +1,8 @@
 ---
 title: "About the Author"
 version: "v1.0.0"
+aliases:
+  - /contact/
 ---
 
 <div class="author-portrait">
@@ -27,4 +29,11 @@ Joshua offers counseling in Oregon under [ORS 675.825(4)(a)](https://oregon.publ
 - **Psychedelic preparation & integration** 🍄
 - **Lifestyle, nutrition & physical health** 🥗
 
-[Book a free consultation](https://joshua-pritikin.clientsecure.me/request/service).
+[Book a free consultation](https://estrelacounseling.com/docs/staff/joshua/).
+
+## Direct Email
+
+No spam please
+
+- [bro (at) estrelacounseling.com](mailto:bro@estrelacounseling.com)
+- [jpritikin (at) pobox.com](mailto:jpritikin@pobox.com)
