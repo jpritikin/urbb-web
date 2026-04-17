@@ -86,3 +86,7 @@ Consider this an invitation. Faith optional. Courage required.
     <a class="order-button no-underline hover:no-underline" href="https://books2read.com/b/mqdYy6" target="_blank" rel="noopener">Order Ebook</a>
   </div>
 </div>
+
+## For Booksellers
+
+We know you need everything on paper. 📄 [Here's your sell sheet.](/sell-sheet.html?print=1)
