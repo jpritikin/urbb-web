@@ -33,6 +33,8 @@ We'll examine how techniques like careful psychological work, meditation, and ps
 
 Examining your beliefs—especially cherished religious ones—requires courage and may be uncomfortable. You may discover that ideas you thought were helping your inner growth have actually been holding you back. If you're ready to subtract, let's begin.
 
+⚠️ **A note on genre:** Approximately 10% of this book is fiction—deliberately. The fictional portions use story, satire, and fabricated ethnography to explore ideas that resist purely academic treatment. Don't worry—the fictional content is confined to a single chapter and conspicuously marked so you'll always know where you stand. 🎭
+
 ## Way of Open Inquiry
 
 *Religion Unburdened by Belief* poses the question: what would religion without belief actually look like? If you stripped away the creeds, the doctrines, the articles of faith—what’s left? Is there anything left?
