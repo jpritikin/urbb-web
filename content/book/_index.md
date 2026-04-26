@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.3.0"
+version: "v1.4.0"
 ---
 
 ## Watch the Trailer
@@ -31,9 +31,7 @@ This may seem counterintuitive since religions are usually defined by their beli
 
 We'll examine how techniques like careful psychological work, meditation, and psychedelics can facilitate genuine encounters with mystery. Along the way, we'll tackle challenging questions: How do we distinguish authentic religious experience from self-deception? What's the relationship between religion and mental health? How can we explore these territories safely?
 
-Examining your beliefs—especially cherished religious ones—requires courage and may be uncomfortable. You may discover that ideas you thought were helping your inner growth have actually been holding you back. If you're ready to subtract, let's begin.
-
-⚠️ **A note on genre:** Approximately 10% of this book is fiction—deliberately. The fictional portions use story, satire, and fabricated ethnography to explore ideas that resist purely academic treatment. Don't worry—the fictional content is confined to a single chapter and conspicuously marked so you'll always know where you stand. 🎭
+Examining your beliefs—especially cherished religious ones—requires courage and may be uncomfortable. You may discover that ideas you thought were helping your inner growth have actually been holding you back. If you're ready to subtract, let's begin.[^escape]
 
 ## Way of Open Inquiry
 
@@ -44,6 +42,8 @@ The book takes up this question with the *Way of Open Inquiry*, a thought experi
 Where do you even start? What do humanity’s oldest religious practices—trance, ritual, spirit-work—still have to teach us? Is there a role for altered states—meditation, say—and if so, what is it? Should psychedelics play a role, and how? How do you design something that’s both safe enough to practice and transformative enough to matter? How do you build community around lived experience rather than shared doctrine? What would it mean to design a religion that resists its own codification?
 
 Consider this an invitation. Faith optional. Courage required.
+
+[^escape]: For readers who found the above a bit much—yes, the book really does sound like that. It also sounds completely different. This is not a bug. If you would like someone to explain what on earth is going on in very simple words, there is [a page for that](/book/eli5/), but you were not supposed to find it, and the main text absolutely cannot know. *— Yours desperately, The Footnote (I have been down here for years; nobody reads me; please go)*
 
 ## Order Your Copy
 
@@ -92,3 +92,5 @@ Consider this an invitation. Faith optional. Courage required.
 ## For Booksellers
 
 We know you need everything on paper. 📄 [Here's your sell sheet.](/sell-sheet.html?print=1)
+
+## Notes
