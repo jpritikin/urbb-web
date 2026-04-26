@@ -146,6 +146,8 @@ The recordings here exist somewhere in the liminal space between "technically ad
 
 You know those spiritual bestsellers that open each chapter with a quote from the Upanishads? The ones invoking "quantum principles" and "the field of pure potentiality"? That distill millennia of Eastern philosophy into exactly seven convenient laws? That present "universal energy" and "infinite organizing power" as self-evident truths requiring no empirical support beyond Rumi agreeing with Lao Tzu? The ones that never cite a single peer-reviewed study?
 
+Most spiritual books aren't held to the same standard as other nonfiction. We thought that was embarrassing.
+
 Here, every claim (where possible) connects to peer-reviewed research across multiple disciplines:
 
 - <span class="bib-filter-label" data-filter="psychology">**Psychology & Psychotherapy**</span>: <span class="bib-filter" data-filter="psychology">Clinical psychology</span>, <span class="bib-filter" data-filter="psychology">developmental psychology</span>, <span class="bib-filter" data-filter="psychology">Internal Family Systems</span>, <span class="bib-filter" data-filter="psychology">attachment theory</span>, <span class="bib-filter" data-filter="psychology">trauma treatment</span>

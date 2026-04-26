@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.4.0"
+version: "v1.5.0"
 ---
 
 ## Watch the Trailer
@@ -32,6 +32,16 @@ This may seem counterintuitive since religions are usually defined by their beli
 We'll examine how techniques like careful psychological work, meditation, and psychedelics can facilitate genuine encounters with mystery. Along the way, we'll tackle challenging questions: How do we distinguish authentic religious experience from self-deception? What's the relationship between religion and mental health? How can we explore these territories safely?
 
 Examining your beliefs—especially cherished religious ones—requires courage and may be uncomfortable. You may discover that ideas you thought were helping your inner growth have actually been holding you back. If you're ready to subtract, let's begin.[^escape]
+
+## Why Citations?
+
+Spiritual books enjoy a double standard. Invoke quantum consciousness, cite Rumi agreeing with Lao Tzu, and nobody asks for your sources. This book declines that exemption.
+
+Claims throughout this book connect to peer-reviewed research. The citations are real and clickable in the [online supplement](/supplement/#bibliography). 🔬
+
+> With a spirit of openness, a willingness to question his every assertion, and a principled rejection of dogma, Pritikin presents a highly flexible "systematic framework" for a "critical shamanism" animated by this question: "How can we explore inner experiences while remaining rigorous?" ... With warmth and a wealth of persuasive research, he presents guidance for exploring altered states.
+>
+> *—BookLife/Publishers Weekly*
 
 ## Way of Open Inquiry
 
