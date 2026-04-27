@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.0"
+version: "v1.5.1"
 ---
 
 ## Watch the Trailer
@@ -86,11 +86,11 @@ Consider this an invitation. Faith optional. Courage required.
         Add to Cart
     </button>
   </div>
-  <div class="format-card format-card--disabled">
+  <div class="format-card">
     <h3>🎧 Audiobook</h3>
     <p>Experience the full text read by the author—including hymns sung as intended. 🎵
   Sidebars, footnotes, and appendices excluded to preserve the listening journey.</p>
-    <span class="order-button order-button--disabled">Coming Soon</span>
+    <a class="order-button no-underline hover:no-underline" href="https://libro.fm/audiobooks/9781972228036-religion-unburdened-by-belief-abridged" target="_blank" rel="noopener">Order Audiobook</a>
   </div>
   <div class="format-card">
     <h3>📱 Ebook</h3>
