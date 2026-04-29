@@ -39,9 +39,11 @@ Spiritual books enjoy a double standard. Invoke quantum consciousness, cite Rumi
 
 Claims throughout this book connect to peer-reviewed research. The citations are real and clickable in the [online supplement](/supplement/#bibliography). 🔬
 
-> With a spirit of openness, a willingness to question his every assertion, and a principled rejection of dogma, Pritikin presents a highly flexible "systematic framework" for a "critical shamanism" animated by this question: "How can we explore inner experiences while remaining rigorous?" ... With warmth and a wealth of persuasive research, he presents guidance for exploring altered states.
+> With a spirit of openness, a willingness to **question his every assertion**, and a **principled rejection of dogma**, Pritikin presents a highly flexible **"systematic framework"** for a **"critical shamanism"** animated by this question: "How can we explore inner experiences while **remaining rigorous**?" ... With warmth and a wealth of **persuasive research**, he presents guidance for exploring altered states.
 >
 > *—BookLife/Publishers Weekly*
+
+*We couldn't resist bolding the parts that gesture toward our **serious scholarship**.*
 
 ## Way of Open Inquiry
 

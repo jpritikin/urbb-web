@@ -188,14 +188,6 @@
     margin: 0 !important;
 }
 
-.book-page .prose blockquote strong {
-    color: #0c7fb3 !important;
-}
-
-.dark .book-page .prose blockquote strong {
-    color: #7fb3d5 !important;
-}
-
 /* Book Formats */
 .book-page .prose .book-formats {
     display: grid;
