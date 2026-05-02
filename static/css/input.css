@@ -23,14 +23,6 @@
     @apply text-sky-400 underline underline-offset-2 hover:text-sky-300;
   }
 
-  ul {
-    @apply list-disc pl-6 mb-4;
-  }
-
-  ol {
-    @apply list-decimal pl-6 mb-4;
-  }
-
   .footnotes hr {
     @apply hidden;
   }
