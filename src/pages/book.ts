@@ -197,6 +197,13 @@ function initPaperbackLocalModal(): void {
         storesView.hidden = false;
     };
 
+    const localLink = document.querySelector<HTMLButtonElement>('.local-stores-link');
+    localLink?.addEventListener('click', () => {
+        modal.setAttribute('aria-hidden', 'false');
+        modal.classList.add('is-open');
+        showStores();
+    });
+
     paperbackBtn.addEventListener('click', e => {
         if (sessionStorage.getItem(SESSION_KEY)) return;
         e.stopImmediatePropagation();

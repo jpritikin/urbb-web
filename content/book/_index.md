@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.3"
+version: "v1.5.4"
 ---
 
 ## Watch the Trailer
@@ -99,6 +99,7 @@ Consider this an invitation. Faith optional. Courage required.
         data-price="0">
         Add to Cart
     </button>
+    <button class="local-stores-link">🌲 Find at a local bookstore</button>
   </div>
 
 <div id="paperback-local-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">

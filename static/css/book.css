@@ -420,6 +420,24 @@
     }
 }
 
+.local-stores-link {
+    background: none;
+    border: none;
+    color: #7fb3d5;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-top: 0.5rem;
+    text-decoration: underline;
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.local-stores-link:hover {
+    color: #a8cde0;
+}
+
 /* Local Bookstore Modal */
 .local-modal-buttons {
     display: flex;
