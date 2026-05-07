@@ -76,8 +76,57 @@ async function initBlurbs(): Promise<void> {
     renderBlurbs(blurbs.filter(b => !b.aprilFools || showAprilFools));
 }
 
+function initHardcoverInfoModal(): void {
+    const modal = document.getElementById('hardcover-info-modal');
+    const infoBtn = document.querySelector<HTMLButtonElement>('.hardcover-info-btn');
+    const addToCartBtn = document.querySelector<HTMLButtonElement>(
+        '[data-variant-id="gid://shopify/ProductVariant/48590233764083"]'
+    );
+    if (!modal || !infoBtn) return;
+
+    let seen = false;
+
+    const markSeen = () => {
+        if (seen) return;
+        seen = true;
+        infoBtn.textContent = '☑️ Print run info';
+    };
+
+    const open = (thenAddToCart = false) => {
+        modal.setAttribute('aria-hidden', 'false');
+        modal.classList.add('is-open');
+        if (thenAddToCart) modal.dataset.pendingAddToCart = '1';
+        else delete modal.dataset.pendingAddToCart;
+    };
+
+    const close = () => {
+        modal.setAttribute('aria-hidden', 'true');
+        modal.classList.remove('is-open');
+        markSeen();
+        if (modal.dataset.pendingAddToCart) {
+            delete modal.dataset.pendingAddToCart;
+            addToCartBtn?.click();
+        }
+    };
+
+    infoBtn.textContent = '☐ Print run info';
+    infoBtn.addEventListener('click', () => open(false));
+    modal.querySelector('.blurb-modal-close')!.addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener('click', e => {
+            if (!seen) {
+                e.stopImmediatePropagation();
+                open(true);
+            }
+        }, true); // capturing phase — runs before addToCart.ts bubble listener
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initAddToCartButtons();
     initModal();
     initBlurbs();
+    initHardcoverInfoModal();
 });

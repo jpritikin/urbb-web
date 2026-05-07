@@ -238,6 +238,22 @@
     transform: translateY(-2px);
 }
 
+.book-page .prose .hardcover-info-btn {
+    background: none;
+    border: 1px dotted #7fb3d5;
+    color: #7fb3d5;
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    transition: background-color 0.2s;
+}
+
+.book-page .prose .hardcover-info-btn:hover {
+    background-color: rgba(127, 179, 213, 0.15);
+}
+
 .book-page .prose .format-card--disabled {
     opacity: 0.5;
     filter: grayscale(0.4);

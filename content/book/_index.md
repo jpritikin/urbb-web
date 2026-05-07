@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.1"
+version: "v1.5.2"
 ---
 
 ## Watch the Trailer
@@ -68,6 +68,7 @@ Consider this an invitation. Faith optional. Courage required.
     <h3>📖 Hardcover Collector's Edition</h3>
     <p>Cloth-bound with dust jacket. ✨ Features a mesmerizing flip-book animation in the
   margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️ Free domestic shipping. 📦</p>
+    <button class="hardcover-info-btn" aria-haspopup="dialog">ℹ️ Print run info</button>
     <p class="shop-item-price">$0</p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590233764083"
@@ -76,6 +77,17 @@ Consider this an invitation. Faith optional. Courage required.
         Add to Cart
     </button>
   </div>
+
+<div id="hardcover-info-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
+<div class="blurb-modal-inner">
+<button class="blurb-modal-close" aria-label="Close">✕</button>
+<div class="blurb-modal-content">
+<p class="blurb-modal-text">📖 The Hardcover Collector's Edition will go to print once <strong>50 preorders</strong> are reached. This ensures every copy gets the full attention it deserves in production.</p>
+<p class="blurb-modal-text">🔓 You can <strong>cancel your preorder at any time</strong> before the print threshold is reached — no questions asked, full refund guaranteed.</p>
+<p class="blurb-modal-text">Help us hit 50 and bring this book to life! 🚀</p>
+</div>
+</div>
+</div>
   <div class="format-card">
     <h3>📄 Paperback Collector's Edition</h3>
     <p>The complete text in a lightweight format. ✨ Features the same
