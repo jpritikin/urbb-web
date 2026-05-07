@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.2"
+version: "v1.5.3"
 ---
 
 ## Watch the Trailer
@@ -93,13 +93,34 @@ Consider this an invitation. Faith optional. Courage required.
     <p>The complete text in a lightweight format. ✨ Features the same
   flip-book margin animation and index as the hardcover. Perfect for underlining, marginalia, and lending to friends who need unburdening. 📝 Free domestic shipping. 📦</p>
     <p class="shop-item-price">$0</p>
-    <button class="order-button"
+    <button class="order-button paperback-order-btn"
         data-variant-id="gid://shopify/ProductVariant/48590238417139"
         data-title="Religion Unburdened by Belief — Paperback Collector's Edition"
         data-price="0">
         Add to Cart
     </button>
   </div>
+
+<div id="paperback-local-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
+<div class="blurb-modal-inner">
+<button class="blurb-modal-close" aria-label="Close">✕</button>
+<div class="blurb-modal-content">
+<div class="local-question-view">
+<p class="blurb-modal-text">🌲 <strong>Are you in Southern Oregon?</strong></p>
+<p class="blurb-modal-text">Local bookstores will have this for less—no shipping, just walk in and grab it.</p>
+<div class="local-modal-buttons">
+<button class="order-button local-yes-btn">Yes, I'm local</button>
+<button class="order-button local-no-btn">Ship it to me</button>
+</div>
+</div>
+<div class="local-stores-view" hidden>
+<p class="blurb-modal-text">🌿 <strong>Southern Oregon Bookstores</strong></p>
+<ul class="bookstore-list"></ul>
+<button class="local-back-btn">← Back</button>
+</div>
+</div>
+</div>
+</div>
   <div class="format-card">
     <h3>🎧 Audiobook</h3>
     <p>Experience the full text read by the author—including hymns sung as intended. 🎵

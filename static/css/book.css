@@ -419,3 +419,50 @@
         transform: translateY(-2px);
     }
 }
+
+/* Local Bookstore Modal */
+.local-modal-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.bookstore-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.bookstore-list li {
+    background: rgba(127, 179, 213, 0.08);
+    border-left: 3px solid #7fb3d5;
+    border-radius: 0 6px 6px 0;
+    padding: 0.75rem 1rem;
+    color: #e5e5e5;
+    line-height: 1.5;
+}
+
+.bookstore-list a {
+    color: #7fb3d5;
+    text-decoration: underline;
+}
+
+.local-back-btn {
+    background: none;
+    border: 1px dotted #7fb3d5;
+    color: #7fb3d5;
+    border-radius: 6px;
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.local-back-btn:hover {
+    background-color: rgba(127, 179, 213, 0.15);
+}
