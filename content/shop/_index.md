@@ -1,8 +1,16 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.3.0"
+version: "v1.5.0"
 ---
+
+## Why a Shop? 🛍️
+
+There's a real tension at the heart of this project. I want community around this work. Yet, workshops, retreat programs, video series, guided meditation apps create ongoing personal relationships, financial dependencies, and social pressure to conform. These are exactly the dynamics that written guidance is designed to avoid. 🛡️
+
+So no workshops. No inner circle. No "advanced practitioner" tiers. No mailing list. No social media.
+
+But the desire for connection doesn't disappear. This shop is our attempt to honor that impulse honestly—a way to participate, show solidarity, and support the work without anyone gaining inappropriate influence. You get a water bottle. We get to keep the lights on. Nobody owes anybody anything. ✨
 
 ## Welcome to the Unburdened Shop
 
