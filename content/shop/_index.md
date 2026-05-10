@@ -1,16 +1,18 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.5.0"
+version: "v1.6.0"
 ---
 
 ## Why a Shop? 🛍️
 
 There's a real tension at the heart of this project. I want community around this work. Yet, workshops, retreat programs, video series, guided meditation apps create ongoing personal relationships, financial dependencies, and social pressure to conform. These are exactly the dynamics that written guidance is designed to avoid. 🛡️
 
-So no workshops. No inner circle. No "advanced practitioner" tiers. No mailing list. No social media.
+So no workshops. No "advanced practitioner" tiers. No mailing list. No social media.[^cope]
 
 But the desire for connection doesn't disappear. This shop is our attempt to honor that impulse honestly—a way to participate, show solidarity, and support the work without anyone gaining inappropriate influence. You get a water bottle. We get to keep the lights on. Nobody owes anybody anything. ✨
+
+[^cope]: I am, of course, completely fine with this. Totally fine. Absolutely not refreshing other teachers' retreat sign-up pages at 2am, watching them fill up in minutes, telling myself I could do that too if I just wanted to sell out a little. Nope. Not me. I have *principles*.
 
 ## Welcome to the Unburdened Shop
 
@@ -173,3 +175,5 @@ Interested in ordering journals, water bottles, or magnets in bulk for your comm
 ## Disclaimer
 
 All profits support the author's ongoing daemon possession management expenses, 👻 including emergency Tarot consultations 🔮 with a specialist in Portland who charges $300/hour. Plus, you're bringing us one step closer to renting Stonehenge 🗿 for next year's Way of Open Inquiry Conference (current quote: £63,000 for three days, plus another £8,000 for "historical monument insurance"). 💰 Additional funding goes toward impulsive purchases like limited-edition meditation cushions I'll use exactly once, 🧘 frivolous gifts for book signing attendees ("everyone gets a singing bowl!" 🔔), and expanding my collection of ceremonial robes, sacred geometry harem pants, and handwoven alpaca ponchos. 🦙✨
+
+## Notes
