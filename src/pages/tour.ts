@@ -51,25 +51,12 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
     card.className = 'tour-card';
     card.dataset.id = choice.id;
 
-    const header = document.createElement('div');
-    header.className = 'tour-card-header';
-
     const title = document.createElement('h3');
+    title.className = 'tour-card-title';
     title.textContent = choice.title;
 
-    const toggle = document.createElement('button');
-    toggle.className = 'tour-toggle';
-    toggle.setAttribute('aria-pressed', String(included));
-    toggle.textContent = included ? 'Include' : 'Skip';
-
-    header.appendChild(title);
-    header.appendChild(toggle);
-
-    const wordCount = document.createElement('span');
-    wordCount.className = 'tour-card-words';
-    wordCount.textContent = choice.words.toLocaleString('en-US') + ' words';
-
-    header.insertBefore(wordCount, toggle);
+    const barRow = document.createElement('div');
+    barRow.className = 'tour-bar-row';
 
     const bar = document.createElement('div');
     bar.className = 'tour-bar-track';
@@ -77,12 +64,25 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
     fill.className = 'tour-bar-fill';
     bar.appendChild(fill);
 
+    const wordCount = document.createElement('span');
+    wordCount.className = 'tour-card-words';
+    wordCount.textContent = choice.words.toLocaleString('en-US') + ' words';
+
+    const toggle = document.createElement('button');
+    toggle.className = 'tour-toggle';
+    toggle.setAttribute('aria-pressed', String(included));
+    toggle.textContent = included ? 'Include' : 'Skip';
+
+    barRow.appendChild(bar);
+    barRow.appendChild(wordCount);
+    barRow.appendChild(toggle);
+
     const profile = document.createElement('p');
     profile.className = 'tour-profile';
     profile.textContent = included ? choice.profileOn : choice.profileOff;
 
-    card.appendChild(header);
-    card.appendChild(bar);
+    card.appendChild(title);
+    card.appendChild(barRow);
     card.appendChild(profile);
 
     return card;
@@ -297,6 +297,13 @@ function selectChoicesForTarget(
 }
 
 export function initTour(): void {
+    // On mobile, move the fixed bar to <html> so position:fixed is not
+    // affected by body's flex layout (which breaks fixed in Firefox).
+    if (window.innerWidth <= 767) {
+        const totalBar = document.querySelector('.tour-total-bar');
+        if (totalBar) document.documentElement.appendChild(totalBar);
+    }
+
     loadTourData().then(data => {
         const container = document.getElementById('tour-cards')!;
         const displayEl = document.getElementById('tour-word-display')!;
@@ -417,6 +424,13 @@ export function initTour(): void {
                 const nowIncluded = !included.get(choice.id);
                 applyToggle(choice, nowIncluded);
             });
+
+            barTrack.addEventListener('mouseenter', () => barTrack.classList.add('tour-bar-track--active'));
+            barTrack.addEventListener('mouseleave', () => barTrack.classList.remove('tour-bar-track--active'));
+            barTrack.addEventListener('touchstart', () => {
+                barTrack.classList.add('tour-bar-track--active');
+                setTimeout(() => barTrack.classList.remove('tour-bar-track--active'), 750);
+            }, { passive: true });
 
             barTrack.addEventListener('click', () => {
                 const p = physics.get(choice.id)!;
@@ -549,6 +563,10 @@ export function initTour(): void {
                         if (bolt.active) {
                             const rA = animatingFills[i].getBoundingClientRect();
                             const rB = animatingFills[j].getBoundingClientRect();
+                            const vh = window.innerHeight;
+                            const aOnscreen = rA.bottom >= 0 && rA.top <= vh;
+                            const bOnscreen = rB.bottom >= 0 && rB.top <= vh;
+                            if (!aOnscreen || !bOnscreen) continue;
                             drawLightning(
                                 ctx,
                                 rA.right - containerRect.left, rA.top + rA.height / 2 - containerRect.top,

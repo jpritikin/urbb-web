@@ -122,19 +122,17 @@
     border-color: #52525b;
 }
 
-.tour-card-header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
-}
-
-.tour-card-header h3 {
-    margin: 0;
+.tour-card-title {
+    margin: 0 0 0.75rem;
     font-size: 1.15rem;
     font-weight: 600;
-    flex: 1;
+}
+
+.tour-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
 .tour-toggle {
@@ -166,25 +164,25 @@
 }
 
 .tour-bar-track {
+    flex: 1;
     height: 0.5rem;
     background: #e4e4e7;
     border-radius: 9999px;
     overflow: hidden;
-    margin-bottom: 1rem;
     cursor: pointer;
     transition: transform 0.15s, filter 0.15s;
-}
-
-.tour-bar-track:hover {
-    transform: scaleY(2.5);
-    filter: brightness(0.85);
 }
 
 .dark .tour-bar-track {
     background: #3f3f46;
 }
 
-.dark .tour-bar-track:hover {
+.tour-bar-track--active {
+    transform: scaleY(2.5);
+    filter: brightness(0.85);
+}
+
+.dark .tour-bar-track--active {
     filter: brightness(1.4);
 }
 
@@ -223,14 +221,53 @@
     color: #a1a1aa;
 }
 
-.tour-total {
-    border-top: 2px dotted #a1a1aa;
+.tour-archetype-section {
+    padding-top: 2rem;
+    text-align: center;
+    margin-bottom: 6rem;
+}
+
+/* Bottom bar — inline on desktop, fixed on mobile */
+.tour-total-bar {
     padding-top: 2rem;
     text-align: center;
 }
 
-.dark .tour-total {
-    border-color: #52525b;
+@media (max-width: 767px) {
+    .tour-total-bar {
+        position: fixed;
+        bottom: env(safe-area-inset-bottom, 0);
+        left: 0;
+        right: 0;
+        padding: 0.5rem 1rem;
+        background: #ffffff;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .dark .tour-total-bar {
+        background: #18181b;
+        border-color: #52525b;
+    }
+
+    .tour-total-bar .tour-total-label {
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .tour-total-bar .tour-total-display {
+        margin: 0;
+    }
+
+    .tour-total-bar .tour-word-counter {
+        font-size: 1.5rem;
+    }
+
+    .tour-total-bar .tour-total-unit {
+        font-size: 0.9rem;
+    }
 }
 
 .tour-total-label {

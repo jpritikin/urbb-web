@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     {{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}
     <title>{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}</title>
     {{ partial "favicon.html" . }}
@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/css/shop.css">
     {{ block "head-extra" . }}{{ end }}
 </head>
-<body class="min-h-screen flex flex-col overflow-auto bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
+<body class="min-h-screen flex flex-col bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
     <nav class="bg-green-900 dark:bg-green-950 py-4 sticky top-0 z-50 shadow-lg">
         <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
             <button id="nav-toggle" class="md:hidden flex flex-col bg-transparent border-0 cursor-pointer p-2" aria-label="Toggle navigation">
@@ -70,6 +70,7 @@
         </div>
     </footer>
 
+    {{ block "body-extra" . }}{{ end }}
     <script type="module" src="/js/main.js"></script>
     <script>
         window.__SHOPIFY_DOMAIN__ = 'unburdened-4154.myshopify.com';
