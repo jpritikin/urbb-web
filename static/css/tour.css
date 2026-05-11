@@ -1,0 +1,345 @@
+.tour-page {
+    max-width: 48rem;
+    margin: 0 auto;
+}
+
+.tour-header {
+    margin-bottom: 2.5rem;
+    text-align: center;
+}
+
+.tour-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    color: var(--color-zinc-900, #18181b);
+}
+
+.dark .tour-header h1 {
+    color: var(--color-gray-100, #f3f4f6);
+}
+
+.tour-subtitle {
+    color: #71717a;
+    font-size: 1.1rem;
+}
+
+.dark .tour-subtitle {
+    color: #a1a1aa;
+}
+
+.tour-master-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.tour-master-slider-label {
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: #71717a;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.dark .tour-master-slider-label {
+    color: #a1a1aa;
+}
+
+.tour-master-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: #e4e4e7;
+    outline: none;
+    cursor: pointer;
+}
+
+.dark .tour-master-slider {
+    background: #3f3f46;
+}
+
+.tour-master-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: #16a34a;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.dark .tour-master-slider::-webkit-slider-thumb {
+    background: #4ade80;
+    border-color: #18181b;
+}
+
+.tour-master-slider::-moz-range-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: #16a34a;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.dark .tour-master-slider::-moz-range-thumb {
+    background: #4ade80;
+    border-color: #18181b;
+}
+
+.tour-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.tour-lightning-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.tour-card {
+    border: 2px dotted #a1a1aa;
+    border-radius: 0.5rem;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    transition: border-color 0.3s;
+}
+
+.dark .tour-card {
+    border-color: #52525b;
+}
+
+.tour-card-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.tour-card-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.tour-toggle {
+    flex-shrink: 0;
+    padding: 0.35rem 1rem;
+    border: 2px solid #16a34a;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: #16a34a;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.tour-toggle[aria-pressed="true"] {
+    background: #16a34a;
+    color: white;
+}
+
+.dark .tour-toggle {
+    border-color: #4ade80;
+    color: #4ade80;
+}
+
+.dark .tour-toggle[aria-pressed="true"] {
+    background: #4ade80;
+    color: #18181b;
+}
+
+.tour-bar-track {
+    height: 0.5rem;
+    background: #e4e4e7;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+}
+
+.tour-bar-track:hover {
+    transform: scaleY(2.5);
+    filter: brightness(0.85);
+}
+
+.dark .tour-bar-track {
+    background: #3f3f46;
+}
+
+.dark .tour-bar-track:hover {
+    filter: brightness(1.4);
+}
+
+.tour-bar-fill {
+    height: 100%;
+    background: #16a34a;
+    border-radius: 9999px;
+    width: 0%;
+    transition: none;
+}
+
+.dark .tour-bar-fill {
+    background: #4ade80;
+}
+
+.tour-card-words {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: #a1a1aa;
+    white-space: nowrap;
+}
+
+.dark .tour-card-words {
+    color: #52525b;
+}
+
+.tour-profile {
+    font-size: 0.9rem;
+    color: #52525b;
+    line-height: 1.6;
+    margin: 0;
+    transition: opacity 0.3s;
+}
+
+.dark .tour-profile {
+    color: #a1a1aa;
+}
+
+.tour-total {
+    border-top: 2px dotted #a1a1aa;
+    padding-top: 2rem;
+    text-align: center;
+}
+
+.dark .tour-total {
+    border-color: #52525b;
+}
+
+.tour-total-label {
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #71717a;
+    margin-bottom: 0.5rem;
+}
+
+.tour-total-display {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.tour-word-counter {
+    display: inline-flex;
+    gap: 0;
+    font-size: 3.5rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: #18181b;
+}
+
+.dark .tour-word-counter {
+    color: #f3f4f6;
+}
+
+.tour-digit {
+    display: inline-block;
+    min-width: 0.6em;
+    text-align: center;
+}
+
+.tour-digit-sep {
+    display: inline-block;
+    color: #a1a1aa;
+}
+
+.tour-digit--broken {
+    color: #dc2626;
+    transition: color 0.4s;
+}
+
+.tour-total-unit {
+    font-size: 1.2rem;
+    color: #71717a;
+    font-weight: 500;
+}
+
+.tour-archetype {
+    font-size: 1rem;
+    color: #3f3f46;
+    font-style: italic;
+    line-height: 1.7;
+    max-width: 36rem;
+    margin: 0 auto;
+    transition: opacity 0.3s;
+    min-height: 3rem;
+}
+
+.dark .tour-archetype {
+    color: #a1a1aa;
+}
+
+/* Sticky sidebar counter — desktop only */
+.tour-sidebar-fixed {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .tour-sidebar-fixed {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        position: fixed;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%) rotate(-90deg);
+        transform-origin: center center;
+        z-index: 40;
+        pointer-events: none;
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+.tour-word-counter--sidebar {
+    font-size: 2rem;
+    color: #a1a1aa;
+}
+
+.dark .tour-word-counter--sidebar {
+    color: #52525b;
+}
+
+.tour-sidebar-unit {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a1a1aa;
+    font-weight: 500;
+}
+
+.dark .tour-sidebar-unit {
+    color: #52525b;
+}

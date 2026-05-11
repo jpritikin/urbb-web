@@ -1,0 +1,40 @@
+{{ define "head-extra" }}
+<link rel="stylesheet" href="/css/tour.css">
+{{ end }}
+
+{{ define "main" }}
+<div class="tour-sidebar-fixed" aria-hidden="true">
+    <span id="tour-word-display-sidebar" class="tour-word-counter tour-word-counter--sidebar"></span>
+    <span class="tour-sidebar-unit">words</span>
+</div>
+
+<div class="tour-page">
+    <header class="tour-header">
+        <h1>{{ .Title }}</h1>
+        <p class="tour-subtitle">The book contains optional sections. Toggle them to find your reading commitment.</p>
+    </header>
+
+    <div class="tour-master-slider-container">
+        <span class="tour-master-slider-label" id="tour-slider-min"></span>
+        <input type="range" id="tour-master-slider" class="tour-master-slider" min="0" max="1000" value="500">
+        <span class="tour-master-slider-label" id="tour-slider-max"></span>
+    </div>
+
+    <div id="tour-cards" class="tour-cards">
+        <!-- populated by tour.js -->
+    </div>
+
+    <div class="tour-total">
+        <div class="tour-total-label">Your reading:</div>
+        <div class="tour-total-display">
+            <span id="tour-word-display" class="tour-word-counter"></span>
+            <span class="tour-total-unit">words</span>
+        </div>
+        <div id="tour-archetype" class="tour-archetype"></div>
+    </div>
+</div>
+<script>
+    window.__tourDataUrl = '/data/tour.json';
+</script>
+<script src="/js/pages/tour.js" type="module"></script>
+{{ end }}

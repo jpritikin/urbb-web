@@ -1,0 +1,89 @@
+{
+   "baseWords" : 60648,
+   "choices" : [
+      {
+         "id" : "acknowledgments",
+         "title" : "Acknowledgments",
+         "words" : 582,
+         "profileOn" : "You are the kind of person who reads the liner notes, the colophon, the legal notices, and the dedication page, and considers this the actual beginning of the book. You believe that gratitude is data. You have strong feelings about the acknowledgments sections of other people's books. You once told someone that skipping the acknowledgments is 'like arriving at a dinner party and ignoring the host.' You meant it as a warning.",
+         "profileOff" : "You are a person of magnificent, principled impatience who has never once read an acknowledgments section and considers this a form of integrity. You are here for the ideas, not the pigeon anecdote. You have made peace with not knowing which lunch companion inadvertently sparked this book. You trust that the author is grateful to someone and consider that sufficient."
+      },
+      {
+         "id" : "foreword-by-franco-fabbro",
+         "title" : "Foreword by Franco Fabbro",
+         "words" : 1840,
+         "profileOn" : "You are constitutionally incapable of trusting a book without first checking its credentials. You read forewords the way others read references—as proof that serious people took this seriously. An H-index of 68 is not just a number to you; it is a kind of emotional reassurance. You have, on multiple occasions, read a foreword more carefully than the book itself and considered this the correct allocation of attention.",
+         "profileOff" : "You already decided to read this book. A professor's endorsement, however learned, is not going to change that, and you resent the implication that it might. You respect Professor Fabbro enormously in the abstract and would rather meet his ideas in the text than in a preamble about them. You are not here to be persuaded. You are already persuaded. You find forewords slightly presumptuous on behalf of the reader."
+      },
+      {
+         "id" : "internal-family-systems",
+         "title" : "Internal Family Systems",
+         "words" : 16987,
+         "profileOn" : "You are the person at the dinner party who, when someone mentions they 'tried therapy once,' begins drawing diagrams on a napkin. You have a genuine, almost compulsive need to understand the load-bearing walls of any system before you trust your weight to it. You read primary sources. You have opinions about Dick Schwartz's theoretical revisions across editions. You have probably annotated this section already in your mind before finishing this sentence.",
+         "profileOff" : "You operate on a beautiful and well-tested principle: you do not need to understand how the engine works to drive the car. You have driven many cars. Some of them were metaphorical. You will engage with the practices, notice what happens, and update your model from experience rather than from theory. You find 17,000 words of psychological scaffolding to be a significant commitment for someone who just wants to stop arguing with themselves at 2am."
+      },
+      {
+         "id" : "a-handful-of-moments",
+         "title" : "A Handful of Moments",
+         "words" : 1364,
+         "profileOn" : "You are the kind of person who, upon learning that Göbekli Tepe was built 11,000 years ago, feels something shift in their chest. Deep time is not an abstraction to you—it is a felt reality that makes the present feel both more fragile and more meaningful. You have strong opinions about the Younger Dryas event. You believe that knowing humans were grinding wild barley 23,000 years ago is directly relevant to your spiritual practice.",
+         "profileOff" : "You are a pragmatist who finds the Paleolithic interesting in a general sense but is not prepared to let it delay your arrival at the actual content. You take the antiquity of shamanism as given and do not require a chronological tour of Doggerland to accept it. The cave paintings will have to wait. You have made your peace with not knowing exactly when dogs were domesticated and consider this a form of enlightenment."
+      },
+      {
+         "id" : "amazonia",
+         "title" : "Amazonia",
+         "words" : 1990,
+         "profileOn" : "You believe that context is not optional. You would not use a hammer without knowing something about metallurgy. You read the ethnographic footnotes. You find the Warao dark shaman's proboscidean snare deeply relevant to your understanding of what unattached burdens actually are and where the concept comes from. When the book says 'porosity as a lived reality,' you want to see the evidence, in detail, from multiple Amazonian language groups.",
+         "profileOff" : "You have read the content advisory and made an executive decision. You are here for the IFS exorcism protocol, not the ritual abuse of children accused of witchcraft. This is a reasonable choice that the author himself anticipated. You have made peace with not knowing how the Xinguano kune pot works and trust that the framework will hold without it. You are not incurious—you are selective, which is different."
+      },
+      {
+         "id" : "ifs",
+         "title" : "IFS Exorcism",
+         "words" : 6598,
+         "profileOn" : "You are the reader who, upon encountering the phrase 'unattached burdens,' immediately thought: yes, but what do you actually do about them? You want the full Falconer protocol. You want Emma, age 42, and her nocturnal critic. You are not embarrassed to be interested in exorcism as a legitimate therapeutic modality. You have at some point looked up Janet's pioneering work from the 1890s and considered this productive use of an afternoon.",
+         "profileOff" : "You are comfortable with the existence of unattached burdens as a concept and do not require a seven-step removal protocol to proceed. You noted that the author himself described this section as 'referenced only four times in the remainder of the book' and found that statistically reassuring. You will return here if exorcism becomes indicated. You trust your own judgment about when exorcism is indicated. It has not yet been indicated."
+      },
+      {
+         "id" : "orgasmic-meditation",
+         "title" : "Orgasmic Meditation",
+         "words" : 2166,
+         "profileOn" : "You are the reader who did not flinch at 'Holy Strokes' and finds the Varela-Schwartz constraints diagram for clitoral stimulation to be exactly the kind of rigorous empirical framing that this topic has long deserved. You believe that embodied practices deserve the same systematic analysis as any other consciousness technology. You have probably already read the F1000Research paper. You consider Nicole Daedone's fifteen-minute container a genuinely interesting experimental design.",
+         "profileOff" : "You have decided, in full possession of your faculties, that this is the one section you will not be reading today. This is not prudishness—it is curation. You are making a thoughtful editorial choice about your own reading experience, which is, after all, precisely what this entire page is for. You note, with some satisfaction, that skipping 2,166 words is a non-trivial contribution to your reading efficiency."
+      },
+      {
+         "id" : "exit-through-the-gift-shop",
+         "title" : "Exit Through the Gift Shop",
+         "words" : 7369,
+         "profileOn" : "You finish what you start. You have never once closed a book before its conclusion and you are not going to begin now, even metaphorically, even in a word-count estimator. You want the puppet show. You want the miniature wooden shamans and the dining room table debate between Maya and Dr. Patricia Holloway. You believe that how a book ends is at least as important as how it begins and you have strong feelings about intellectual closure.",
+         "profileOff" : "You are a naughty conclusion-skipper—a term the author coined specifically for people like you, with what you choose to interpret as affection. You have extracted what you came for and feel no particular obligation to watch the curtain call. You note that the book's final chapter is, by its own admission, a review of material you have already read, and you consider this a legitimate reason to stop. You are already thinking about what to read next."
+      },
+      {
+         "id" : "corruption-toolkit",
+         "title" : "Corruption Toolkit",
+         "words" : 2921,
+         "profileOn" : "You have been to enough workshops, retreats, and communities to recognize at least three of the mechanisms in this appendix from personal experience. You read it the way a person reads a field guide to poisonous plants: not because you plan to eat any, but because you believe identification is a survival skill. You have a folder somewhere containing printouts about NXIVM, Scientology, and Werner Erhard's est. You consider this research.",
+         "profileOff" : "You are not currently embedded in a high-control spiritual community and do not anticipate becoming embedded in one, and you have made the pragmatic decision to skip the appendix accordingly. You wish the author well in his anti-corruption efforts. You trust that the Messianic Risk Factor and the Credential Inflation mechanism will remain available for consultation should they become relevant. You hope they do not become relevant."
+      },
+      {
+         "id" : "chakra-system-critique",
+         "title" : "Chakra System Critique",
+         "words" : 3398,
+         "profileOn" : "You have been waiting for someone to apply systematic consciousness-mapping criteria to the chakra system and you were beginning to lose hope. You are not against chakras—you simply believe that Sahasrara deserves the same epistemic scrutiny as any other purported vortex of undifferentiated awareness. You read the ICPCMA content warning and found it charming rather than alarming. You have opinions about Arthur Avalon's interpretive liberties. You may have them still.",
+         "profileOff" : "You have made an executive decision not to spend 3,398 words on a fictional scholar named Dr. Chakraborty and her graduate advisor Professor Emeritus Windbottom critiquing a consciousness map using criteria they also invented. You consider this a defensible allocation of your finite reading time. You are not hostile to the chakra system. You are simply not prepared to read its methodological autopsy today. You wish it a dignified death."
+      },
+      {
+         "id" : "santo-daime-s-history",
+         "title" : "Santo Daime's History",
+         "words" : 2400,
+         "profileOn" : "You are constitutionally incapable of using a tool without first understanding who made it, why, and under what conditions of suffering and inspiration. You would not drink the Daime without knowing something about Mestre Irineu Serra, his vision of the woman in the moon, and the forty armed men who came to arrest him in the early 1940s. You read the liner notes. You watch the bonus features. You find the founding narrative of CEFLURIS directly relevant to your spiritual practice.",
+         "profileOff" : "You have made peace with mystery. You can drink the tea without tracing the entire supply chain of the leaves back to a rubber tapper from Maranhão in 1912. This is not incuriosity—it is a kind of spiritual efficiency. You trust that the mechanism works and reserve your research energy for things that might actually break. Historians would find you frustrating. Practitioners would find you refreshingly unencumbered."
+      },
+      {
+         "id" : "references",
+         "title" : "References",
+         "words" : 12806,
+         "profileOn" : "You are going to read every single one of these 12,806 words of citations and you consider this the most honest response to the question of whether a book is serious. You have pulled an Interlibrary Loan for a reference in another book's bibliography. You know what an H-index is and you have feelings about it. You will verify at least three of these citations, not because you distrust the author, but because you distrust yourself if you don't.",
+         "profileOff" : "You accept, on faith, that the citations exist and are accurate, which is frankly how most people engage with academic apparatus and arguably how it was designed to be used. You are not going to read 12,806 words of formatted bibliography and you feel no guilt about this. The references will be there if you need them. You do not currently need them. You are at peace."
+      }
+   ]
+}
