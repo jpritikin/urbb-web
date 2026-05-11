@@ -392,7 +392,7 @@ export function initTour(): void {
 
         // Shuffle phase state
         let shuffleElapsed = 0;
-        let shuffleDone = false;
+        let shuffleDone = true;
         // Per-card: next scheduled toggle time during shuffle
         const shuffleNextToggle = new Map<string, number>();
 
