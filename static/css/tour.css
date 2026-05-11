@@ -456,8 +456,61 @@
     display: none !important;
 }
 
+.tour-nsw-tile.tour-nsw-mask--hidden {
+    display: flex !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .tour-nsw-profile-wrapper {
     position: relative;
+}
+
+.tour-nsw-tile-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    z-index: 2;
+    border-radius: 0.2em;
+    overflow: hidden;
+}
+
+.tour-nsw-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(26,26,26,0.92),
+        rgba(26,26,26,0.92) 6px,
+        rgba(245,197,24,0.85) 6px,
+        rgba(245,197,24,0.85) 12px
+    );
+    border: 1px solid #f5c518;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s;
+}
+
+.tour-nsw-tile:hover {
+    opacity: 0.8;
+}
+
+.tour-nsw-tile-label {
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: #f5c518;
+    background: rgba(26,26,26,0.85);
+    padding: 0.1em 0.3em;
+    border: 1px solid #f5c518;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: pre-line;
+    text-shadow: 0 0 4px #f5c518;
+    font-family: monospace;
+    line-height: 1.2;
 }
 
 .tour-nsw-profile-mask {

@@ -100,11 +100,21 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
     if (profileWrapper) {
         profileWrapper.className = 'tour-nsw-profile-wrapper';
         profileWrapper.appendChild(profile);
-        const profileMask = document.createElement('div');
-        profileMask.className = 'tour-nsw-profile-mask' + (included ? '' : ' tour-nsw-mask--hidden');
-        profileMask.setAttribute('role', 'button');
-        profileMask.setAttribute('aria-label', 'Click to reveal');
-        profileWrapper.appendChild(profileMask);
+        const tileGrid = document.createElement('div');
+        tileGrid.className = 'tour-nsw-tile-grid' + (included ? '' : ' tour-nsw-mask--hidden');
+        const tileLabels = ['⚠ NSW', 'Not Safe\nfor Work', 'click to\nreveal', '⚠ NSW'];
+        for (let i = 0; i < 4; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'tour-nsw-tile';
+            tile.setAttribute('role', 'button');
+            tile.setAttribute('aria-label', 'Click to reveal');
+            const label = document.createElement('span');
+            label.className = 'tour-nsw-tile-label';
+            label.textContent = tileLabels[i];
+            tile.appendChild(label);
+            tileGrid.appendChild(tile);
+        }
+        profileWrapper.appendChild(tileGrid);
     }
 
     card.appendChild(titleWrapper);
@@ -120,13 +130,16 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
             e.stopPropagation();
             nswMask!.classList.add('tour-nsw-mask--hidden');
         });
-        const profileMaskEl = card.querySelector('.tour-nsw-profile-mask');
-        if (profileMaskEl) {
-            profileMaskEl.addEventListener('click', (e) => {
+        const tiles = card.querySelectorAll('.tour-nsw-tile');
+        tiles.forEach(tile => {
+            tile.addEventListener('click', (e) => {
                 e.stopPropagation();
-                profileMaskEl.classList.add('tour-nsw-mask--hidden');
+                tile.classList.add('tour-nsw-mask--hidden');
+                if (Math.random() < 0.15) {
+                    setTimeout(() => tile.classList.remove('tour-nsw-mask--hidden'), 800 + Math.random() * 1200);
+                }
             });
-        }
+        });
     }
 
     return card;
@@ -406,11 +419,12 @@ export function initTour(): void {
             const profile = card.querySelector('.tour-profile') as HTMLElement;
             profile.textContent = nowIncluded ? choice.profileOn : choice.profileOff;
             if (choice.id === 'orgasmic-meditation') {
-                const profileMask = card.querySelector('.tour-nsw-profile-mask') as HTMLElement | null;
+                const tileGrid = card.querySelector('.tour-nsw-tile-grid') as HTMLElement | null;
                 if (nowIncluded) {
-                    profileMask?.classList.remove('tour-nsw-mask--hidden');
+                    tileGrid?.classList.remove('tour-nsw-mask--hidden');
+                    tileGrid?.querySelectorAll('.tour-nsw-tile').forEach(t => t.classList.remove('tour-nsw-mask--hidden'));
                 } else {
-                    profileMask?.classList.add('tour-nsw-mask--hidden');
+                    tileGrid?.classList.add('tour-nsw-mask--hidden');
                 }
             }
             const p = physics.get(choice.id)!;

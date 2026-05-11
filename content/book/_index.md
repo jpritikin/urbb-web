@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.4"
+version: "v1.5.5"
 ---
 
 ## Watch the Trailer
@@ -138,5 +138,13 @@ Consider this an invitation. Faith optional. Courage required.
 ## For Booksellers
 
 We know you need everything on paper. 📄 [Here's your sell sheet.](/sell-sheet.html?print=1)
+
+## Plan Your Read 🗺️
+
+Ordered your copy? Wonderful. Now the real question: *which* book are you reading? 📚
+
+*Religion Unburdened by Belief* contains optional sections, sidebars, deep dives, and detours. Some readers want every word. Others prefer the lean, essential path. The Reading Planner lets you build your personalized reading journey—toggle sections in and out and watch your word count adjust in real time. ✨
+
+[Plan your reading journey →](/tour/)
 
 ## Notes
