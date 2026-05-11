@@ -51,9 +51,24 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
     card.className = 'tour-card';
     card.dataset.id = choice.id;
 
+    const titleWrapper = document.createElement('div');
+    titleWrapper.className = 'tour-card-title-wrapper';
+
     const title = document.createElement('h3');
     title.className = 'tour-card-title';
     title.textContent = choice.title;
+    titleWrapper.appendChild(title);
+
+    const isNsw = choice.id === 'orgasmic-meditation';
+    let nswMask: HTMLElement | null = null;
+    if (isNsw) {
+        nswMask = document.createElement('div');
+        nswMask.className = 'tour-nsw-mask';
+        nswMask.setAttribute('role', 'button');
+        nswMask.setAttribute('aria-label', 'Click to reveal content');
+        nswMask.innerHTML = `<span class="tour-nsw-badge">⚠ NSW</span><span class="tour-nsw-label">Not Safe for Work<br><small>click to reveal</small></span>`;
+        titleWrapper.appendChild(nswMask);
+    }
 
     const barRow = document.createElement('div');
     barRow.className = 'tour-bar-row';
@@ -81,9 +96,38 @@ function buildCard(choice: TourChoice, included: boolean): HTMLElement {
     profile.className = 'tour-profile';
     profile.textContent = included ? choice.profileOn : choice.profileOff;
 
-    card.appendChild(title);
+    const profileWrapper = isNsw ? document.createElement('div') : null;
+    if (profileWrapper) {
+        profileWrapper.className = 'tour-nsw-profile-wrapper';
+        profileWrapper.appendChild(profile);
+        const profileMask = document.createElement('div');
+        profileMask.className = 'tour-nsw-profile-mask' + (included ? '' : ' tour-nsw-mask--hidden');
+        profileMask.setAttribute('role', 'button');
+        profileMask.setAttribute('aria-label', 'Click to reveal');
+        profileWrapper.appendChild(profileMask);
+    }
+
+    card.appendChild(titleWrapper);
     card.appendChild(barRow);
-    card.appendChild(profile);
+    if (profileWrapper) {
+        card.appendChild(profileWrapper);
+    } else {
+        card.appendChild(profile);
+    }
+
+    if (nswMask) {
+        nswMask.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nswMask!.classList.add('tour-nsw-mask--hidden');
+        });
+        const profileMaskEl = card.querySelector('.tour-nsw-profile-mask');
+        if (profileMaskEl) {
+            profileMaskEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileMaskEl.classList.add('tour-nsw-mask--hidden');
+            });
+        }
+    }
 
     return card;
 }
@@ -361,6 +405,14 @@ export function initTour(): void {
             toggle.textContent = nowIncluded ? 'Include' : 'Skip';
             const profile = card.querySelector('.tour-profile') as HTMLElement;
             profile.textContent = nowIncluded ? choice.profileOn : choice.profileOff;
+            if (choice.id === 'orgasmic-meditation') {
+                const profileMask = card.querySelector('.tour-nsw-profile-mask') as HTMLElement | null;
+                if (nowIncluded) {
+                    profileMask?.classList.remove('tour-nsw-mask--hidden');
+                } else {
+                    profileMask?.classList.add('tour-nsw-mask--hidden');
+                }
+            }
             const p = physics.get(choice.id)!;
             p.target = nowIncluded ? choice.words : 0;
             if (!skipSliderSync) {
