@@ -2,6 +2,7 @@ interface TourChoice {
     id: string;
     title: string;
     words: number;
+    audiobook: boolean;
     profileOn: string;
     profileOff: string;
 }
@@ -353,17 +354,35 @@ function selectChoicesForTarget(
     return result;
 }
 
+function setupMobileFixedBar(): HTMLElement | null {
+    if (window.innerWidth > 767) return null;
+
+    const inlineBar = document.getElementById('tour-total-bar-inline')!;
+    const fixed = document.createElement('div');
+    fixed.className = 'tour-total-bar-fixed';
+    fixed.innerHTML = `
+        <div class="tour-total-label">Your reading:</div>
+        <div class="tour-total-display">
+            <span id="tour-word-display-fixed" class="tour-word-counter"></span>
+            <span class="tour-total-unit">words</span>
+        </div>`;
+    document.documentElement.appendChild(fixed);
+
+    const observer = new IntersectionObserver(
+        ([entry]) => fixed.classList.toggle('tour-total-bar-fixed--hidden', entry.isIntersecting),
+        { threshold: 0.5 }
+    );
+    observer.observe(inlineBar);
+    return fixed;
+}
+
 export function initTour(): void {
-    // On mobile, move the fixed bar to <html> so position:fixed is not
-    // affected by body's flex layout (which breaks fixed in Firefox).
-    if (window.innerWidth <= 767) {
-        const totalBar = document.querySelector('.tour-total-bar');
-        if (totalBar) document.documentElement.appendChild(totalBar);
-    }
+    setupMobileFixedBar();
 
     loadTourData().then(data => {
         const container = document.getElementById('tour-cards')!;
         const displayEl = document.getElementById('tour-word-display')!;
+        const fixedDisplayEl = document.getElementById('tour-word-display-fixed');
         const sidebarEl = document.getElementById('tour-word-display-sidebar')!;
         const archetypeEl = document.getElementById('tour-archetype')!;
         const slider = document.getElementById('tour-master-slider') as HTMLInputElement;
@@ -380,6 +399,20 @@ export function initTour(): void {
         const included: Map<string, boolean> = new Map();
         const minTotal = data.baseWords;
         const maxTotal = data.baseWords + data.choices.reduce((s, c) => s + c.words, 0);
+
+        const audiobookMarker = document.getElementById('tour-audiobook-marker')!;
+        const audiobookBtn = document.getElementById('tour-audiobook-btn') as HTMLButtonElement;
+        const audiobookWords = data.baseWords + data.choices.reduce((s, c) => s + (c.audiobook ? c.words : 0), 0);
+        const audiobookT = (audiobookWords - minTotal) / (maxTotal - minTotal);
+        audiobookMarker.style.left = `${audiobookT * 100}%`;
+
+        audiobookBtn.addEventListener('click', () => {
+            stopShuffle();
+            for (const choice of data.choices) {
+                applyToggle(choice, choice.audiobook, true);
+            }
+            syncSliderToWords(audiobookWords);
+        });
         const WORDS_PER_PAGE = 250;
 
         const minPages = Math.round(minTotal / WORDS_PER_PAGE);
@@ -389,6 +422,7 @@ export function initTour(): void {
 
         const display = new DigitDisplay(displayEl, maxTotal);
         const sidebarDisplay = new DigitDisplay(sidebarEl, maxTotal);
+        const fixedDisplay = fixedDisplayEl ? new DigitDisplay(fixedDisplayEl, maxTotal) : null;
 
         // Shuffle phase state
         let shuffleElapsed = 0;
@@ -518,6 +552,8 @@ export function initTour(): void {
         display.render(latentSum);
         sidebarDisplay.setTarget(latentSum);
         sidebarDisplay.render(latentSum);
+        fixedDisplay?.setTarget(latentSum);
+        fixedDisplay?.render(latentSum);
         displaySum = latentSum;
         updateArchetype(data, latentSum, archetypeEl);
         syncSliderToWords(latentSum);
@@ -647,10 +683,13 @@ export function initTour(): void {
             const roundedLatent = Math.round(latentSum);
             display.setTarget(roundedLatent);
             sidebarDisplay.setTarget(roundedLatent);
+            fixedDisplay?.setTarget(roundedLatent);
             display.tick(dt);
             sidebarDisplay.tick(dt);
+            fixedDisplay?.tick(dt);
             display.render();
             sidebarDisplay.render();
+            fixedDisplay?.render();
 
             const newDisplaySum = display.getCurrentDisplayValue();
             if (newDisplaySum !== displaySum) {
@@ -673,7 +712,7 @@ function updateArchetype(data: TourData, wordCount: number, el: HTMLElement): vo
 
     let text: string;
     if (pct < 0.55) {
-        text = "You are a sleek, purposeful reader. You eat only the meat and leave the bones with practiced efficiency. The author respects this, privately.";
+        text = "You are a sleek, purposeful reader. You extract the essence and leave the residue. The author, who also skips things, nods in solidarity.";
     } else if (pct < 0.75) {
         text = "You have chosen the balanced path—curious enough to wander, wise enough to know when to stop. A sensible human being, which is rarer than it sounds.";
     } else if (pct < 0.92) {

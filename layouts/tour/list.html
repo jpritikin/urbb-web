@@ -16,7 +16,14 @@
 
     <div class="tour-master-slider-container">
         <span class="tour-master-slider-label" id="tour-slider-min"></span>
-        <input type="range" id="tour-master-slider" class="tour-master-slider" min="0" max="1000" value="500">
+        <div class="tour-slider-wrapper">
+            <input type="range" id="tour-master-slider" class="tour-master-slider" min="0" max="1000" value="500">
+            <div class="tour-slider-overlay">
+                <div id="tour-audiobook-marker" class="tour-audiobook-marker">
+                    <button id="tour-audiobook-btn" class="tour-audiobook-btn">📖 Audiobook</button>
+                </div>
+            </div>
+        </div>
         <span class="tour-master-slider-label" id="tour-slider-max"></span>
     </div>
 
@@ -24,7 +31,7 @@
         <!-- populated by tour.js -->
     </div>
 
-    <div class="tour-total-bar">
+    <div class="tour-total-bar" id="tour-total-bar-inline">
         <div class="tour-total-label">Your reading:</div>
         <div class="tour-total-display">
             <span id="tour-word-display" class="tour-word-counter"></span>
