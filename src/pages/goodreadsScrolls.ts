@@ -91,7 +91,7 @@ function perlin2(perm: Uint8Array, x: number, y: number): number {
 
 // ── Scroll state ─────────────────────────────────────────────────────────────
 
-type AnimPhase = 'waiting' | 'drifting' | 'flying-to-center' | 'unrolled' | 'flying-back';
+type AnimPhase = 'waiting' | 'drifting';
 
 const CRITTER_EMOJIS = ['🦋', '🐝', '🐞', '🪰'];
 const CRITTER_OFFSETS: Record<string, number> = { '🦋': -100, '🐝': 180, '🐞': -100, '🪰': -225 };
@@ -117,16 +117,11 @@ interface ScrollState {
     nextDestAt: number;  // ms timestamp — pick next dest only after this
     phase: AnimPhase;
     waitUntil: number;
-    savedX: number;
-    savedPageY: number;  // page-absolute, converted to viewport at render time
-    savedRot: number;
-    animT: number;
 }
 
 const SCROLL_WIDTH_REM = 11;
 const SCROLL_HEIGHT_PX = 90;
 const MAX_ONSCREEN = 5;
-const FLY_DURATION = 0.45;
 const ORIGIN_RADIUS = 100;
 const ACCEL = 40;    // px/s² toward dest
 const FRICTION = 0.5; // velocity multiplied each second (lower = more damping)
@@ -154,15 +149,32 @@ function buildScrollEl(review: Review): { el: HTMLElement; sealEl: HTMLElement; 
         <span class="gr-scroll-date">${review.date}</span>
       </div>
       <div class="gr-scroll-preview">"${preview}"</div>
-      <div class="gr-scroll-full">${review.text}</div>
-      <a class="gr-scroll-source no-underline hover:no-underline"
-         href="https://www.goodreads.com/book/show/249868833-religion-unburdened-by-belief"
-         target="_blank" rel="noopener">
-        via Goodreads ↗
-      </a>
     </div>`;
     const sealEl = el.querySelector('.gr-scroll-seal') as HTMLElement;
     return { el, sealEl, critterEmoji: emoji };
+}
+
+function buildModal(): HTMLElement {
+    const modal = document.createElement('div');
+    modal.className = 'gr-review-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+    <div class="gr-review-modal-inner">
+      <button class="gr-review-modal-close" aria-label="Close">✕</button>
+      <div class="gr-review-modal-content">
+        <div class="gr-review-modal-header">
+          <span class="gr-review-modal-name"></span>
+          <span class="gr-review-modal-stars"></span>
+          <span class="gr-review-modal-date"></span>
+        </div>
+        <p class="gr-review-modal-text"></p>
+        <a class="gr-review-modal-source no-underline hover:no-underline"
+           href="https://www.goodreads.com/book/show/249868833-religion-unburdened-by-belief"
+           target="_blank" rel="noopener">via Goodreads ↗</a>
+      </div>
+    </div>`;
+    return modal;
 }
 
 function remToPx(rem: number): number {
@@ -173,7 +185,6 @@ function randomBetween(a: number, b: number): number {
     return a + Math.random() * (b - a);
 }
 
-function easeInOut(t: number): number { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
 
 // Returns page-absolute Y band spanning the full Acclaim section
 function getPageYBand(anchorEl: HTMLElement, anchorEnd: HTMLElement | null): [number, number] {
@@ -231,10 +242,6 @@ function initScroll(el: HTMLElement, sealEl: HTMLElement, critterEmoji: string, 
         nextDestAt: 0,
         phase: 'waiting',
         waitUntil: performance.now() + stagger,
-        savedX: originX,
-        savedPageY: originPageY,
-        savedRot: 0,
-        animT: 0,
     };
 }
 
@@ -315,20 +322,27 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
         debugCtx = debugCanvas.getContext('2d');
     }
 
-    // Show layer while any part of the Acclaim section is in the viewport
-    const anchorEnd = document.getElementById('goodreads-scrolls-anchor-end');
-    let topVisible = false, botVisible = false;
-    const observer = new IntersectionObserver(entries => {
-        for (const e of entries) {
-            if (e.target === anchorEl) topVisible = e.isIntersecting;
-            else botVisible = e.isIntersecting;
-        }
-        container.classList.toggle('gr-scrolls-layer--visible', topVisible || botVisible);
-    }, { threshold: 0 });
-    observer.observe(anchorEl);
-    if (anchorEnd) observer.observe(anchorEnd);
+    container.classList.add('gr-scrolls-layer--visible');
 
+    const anchorEnd = document.getElementById('goodreads-scrolls-anchor-end');
     const [bandTop, bandBot] = getPageYBand(anchorEl, anchorEnd);
+
+    const modal = buildModal();
+    document.documentElement.appendChild(modal);
+
+    const openModal = (review: Review) => {
+        (modal.querySelector('.gr-review-modal-name') as HTMLElement).textContent = review.reviewer;
+        (modal.querySelector('.gr-review-modal-stars') as HTMLElement).innerHTML = starsHtml(review.stars);
+        (modal.querySelector('.gr-review-modal-date') as HTMLElement).textContent = review.date;
+        (modal.querySelector('.gr-review-modal-text') as HTMLElement).textContent = review.text;
+        modal.classList.add('is-open');
+        (modal.querySelector('.gr-review-modal-close') as HTMLElement).focus();
+    };
+    const closeModal = () => modal.classList.remove('is-open');
+
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    (modal.querySelector('.gr-review-modal-close') as HTMLElement).addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); });
 
     const states: ScrollState[] = capped.map((review, i) => {
         const { el, sealEl, critterEmoji } = buildScrollEl(review);
@@ -336,22 +350,12 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
         container.appendChild(el);
         const state = initScroll(el, sealEl, critterEmoji, bandTop, bandBot, i, capped.length, i * 1337 + 42);
 
-        const toggle = () => {
-            if (state.phase === 'drifting') startFlyToCenter(state, container);
-            else if (state.phase === 'unrolled') startFlyBack(state, container);
-        };
-        el.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+        el.addEventListener('click', e => { e.stopPropagation(); openModal(review); });
         el.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(review); }
         });
 
         return state;
-    });
-
-    // Close unrolled scroll on backdrop click
-    container.addEventListener('click', () => {
-        const open = states.find(s => s.phase === 'unrolled' || s.phase === 'flying-to-center');
-        if (open) startFlyBack(open, container);
     });
 
     let lastTime = performance.now();
@@ -435,40 +439,6 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
                     }
                 } else {
                     state.nextDestAt = 0;
-                }
-
-            } else if (state.phase === 'flying-to-center') {
-                state.animT = Math.min(state.animT + dt / FLY_DURATION, 1);
-                const p = easeInOut(state.animT);
-                const cx = (window.innerWidth - remToPx(18)) / 2;
-                const cy = (window.innerHeight - 300) / 2;
-                const x = state.savedX + (cx - state.savedX) * p;
-                // fly-to-center animates in viewport space
-                const y = pageToViewportY(state.savedPageY) + (cy - pageToViewportY(state.savedPageY)) * p;
-                const rot = state.savedRot * (1 - p);
-                state.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
-
-                if (state.animT >= 1) {
-                    state.phase = 'unrolled';
-                    state.sealEl.style.transform = '';
-                    state.el.classList.add('gr-scroll--unrolled');
-                    state.el.setAttribute('aria-label',
-                        `Review by ${state.el.querySelector('.gr-scroll-name')?.textContent} — click to close`);
-                }
-
-            } else if (state.phase === 'flying-back') {
-                state.animT = Math.min(state.animT + dt / FLY_DURATION, 1);
-                const p = easeInOut(state.animT);
-                const cx = (window.innerWidth - remToPx(18)) / 2;
-                const cy = (window.innerHeight - 300) / 2;
-                const savedViewY = pageToViewportY(state.savedPageY);
-                const x = cx + (state.savedX - cx) * p;
-                const y = cy + (savedViewY - cy) * p;
-                const rot = state.savedRot * p;
-                state.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
-
-                if (state.animT >= 1) {
-                    state.phase = 'drifting';
                 }
             }
         }
@@ -571,20 +541,3 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
     requestAnimationFrame(tick);
 }
 
-function startFlyToCenter(state: ScrollState, container: HTMLElement): void {
-    state.savedX = state.x;
-    state.savedPageY = state.pageY;
-    state.savedRot = state.rot;
-    state.animT = 0;
-    state.phase = 'flying-to-center';
-    state.el.classList.remove('gr-scroll--unrolled');
-    container.classList.add('gr-scrolls-layer--has-open');
-}
-
-function startFlyBack(state: ScrollState, container: HTMLElement): void {
-    if (state.phase === 'flying-back') return;
-    state.el.classList.remove('gr-scroll--unrolled');
-    state.animT = 0;
-    state.phase = 'flying-back';
-    container.classList.remove('gr-scrolls-layer--has-open');
-}

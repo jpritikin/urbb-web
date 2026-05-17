@@ -8,24 +8,10 @@
     pointer-events: none;
     z-index: 10;
     overflow: hidden;
-    opacity: 0;
-    transition: opacity 0.6s ease;
 }
 
-.gr-scrolls-layer--visible {
-    opacity: 1;
-}
-
-.gr-scrolls-layer--visible .gr-scroll {
+.gr-scrolls-layer .gr-scroll {
     pointer-events: all;
-}
-
-/* When a scroll is unrolled, make layer a clickable backdrop */
-.gr-scrolls-layer--has-open {
-    pointer-events: all;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(2px);
-    transition: opacity 0.6s ease, background 0.3s ease;
 }
 
 .gr-scroll {
@@ -52,7 +38,6 @@
     margin-bottom: -0.6rem;
     position: relative;
     z-index: 1;
-    transition: opacity 0.4s;
     text-shadow:
         0 0 3px #fff,
         0 0 6px #fff,
@@ -60,13 +45,6 @@
         -1px -1px 0 #fff,
         1px -1px 0 #fff,
         -1px 1px 0 #fff;
-}
-
-.gr-scroll--unrolled .gr-scroll-seal {
-    opacity: 0;
-    height: 0;
-    margin: 0;
-    overflow: hidden;
 }
 
 .gr-scroll-inner {
@@ -79,9 +57,6 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.1);
     max-height: 3.8rem;
     overflow: hidden;
-    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                padding 0.4s;
 }
 
 .dark .gr-scroll-inner {
@@ -89,12 +64,6 @@
     border-color: #8a6a2a;
     color: #e8d49a;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.3);
-}
-
-.gr-scroll--unrolled .gr-scroll-inner {
-    max-height: 30rem;
-    width: 18rem;
-    padding: 0.8rem 1rem;
 }
 
 .gr-scroll-header {
@@ -114,10 +83,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 8rem;
-}
-
-.gr-scroll--unrolled .gr-scroll-name {
-    max-width: none;
 }
 
 .gr-scroll-stars {
@@ -147,47 +112,124 @@
     overflow: hidden;
 }
 
-.gr-scroll--unrolled .gr-scroll-preview {
-    display: none;
-}
+/* ── Review Modal ── */
 
-.gr-scroll-full {
-    font-size: 0.72rem;
-    line-height: 1.6;
+.gr-review-modal {
     display: none;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 16rem;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    padding: 1.5rem;
+    box-sizing: border-box;
     overflow-y: auto;
-    padding-right: 0.25rem;
+    align-items: flex-start;
 }
 
-.gr-scroll--unrolled .gr-scroll-full {
-    display: block;
+.gr-review-modal.is-open {
+    display: flex;
 }
 
-.gr-scroll-source {
-    display: none;
-    font-size: 0.62rem;
+.gr-review-modal-inner {
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: auto;
+}
+
+.gr-review-modal-content {
+    background: linear-gradient(160deg, #f4e8c1, #e8d49a, #f0e2b6);
+    border: 2px solid #b89a4a;
+    border-radius: 12px;
+    padding: 2.5rem 3rem;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #3a2a0a;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.dark .gr-review-modal-content {
+    background: linear-gradient(160deg, #3a2e10, #4a3a18, #3e3012);
+    border-color: #8a6a2a;
+    color: #e8d49a;
+}
+
+@media (max-width: 640px) {
+    .gr-review-modal-content { padding: 1.5rem; }
+}
+
+.gr-review-modal-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    margin-bottom: 1rem;
+}
+
+.gr-review-modal-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.gr-review-modal-stars {
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+}
+
+.gr-review-modal-date {
+    font-size: 0.85rem;
     opacity: 0.6;
-    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.gr-review-modal-text {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin: 0 0 1.25rem !important;
+}
+
+.gr-review-modal-source {
+    font-size: 0.9rem;
+    opacity: 0.6;
     color: inherit !important;
     text-decoration: none !important;
 }
 
-.gr-scroll--unrolled .gr-scroll-source {
-    display: block;
-}
-
-.gr-scroll-source:hover {
+.gr-review-modal-source:hover {
     opacity: 1;
     text-decoration: underline !important;
 }
 
-@media (max-width: 480px) {
-    .gr-scroll { width: 9rem; }
-    .gr-scroll--unrolled .gr-scroll-inner { width: 14rem; }
+.gr-review-modal-close {
+    align-self: flex-end;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #b89a4a;
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
 }
+
+.gr-review-modal-close:hover {
+    color: #3a2a0a;
+    background-color: rgba(184, 154, 74, 0.2);
+}
+
+.dark .gr-review-modal-close { color: #c8a84a; }
+.dark .gr-review-modal-close:hover { color: #e8d49a; }
 
 /* ── End Drifting Scrolls ── */
 
