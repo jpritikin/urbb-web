@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.5"
+version: "v1.5.6"
 ---
 
 ## Watch the Trailer
@@ -11,7 +11,11 @@ version: "v1.5.5"
 
 ## Acclaim
 
+<div id="goodreads-scrolls-anchor"></div>
+
 <div id="blurbs-grid" class="blurbs-grid"></div>
+
+<div id="goodreads-scrolls-anchor-end"></div>
 
 <div id="blurb-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
 <div class="blurb-modal-inner">

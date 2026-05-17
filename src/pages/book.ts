@@ -1,4 +1,5 @@
 import { initAddToCartButtons } from '../shop/addToCart.js';
+import { initGoodreadsScrolls } from './goodreadsScrolls.js';
 
 interface Blurb {
     full: string;
@@ -231,4 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initBlurbs();
     initHardcoverInfoModal();
     initPaperbackLocalModal();
+    const scrollAnchor = document.getElementById('goodreads-scrolls-anchor');
+    if (scrollAnchor) initGoodreadsScrolls(scrollAnchor);
 });
