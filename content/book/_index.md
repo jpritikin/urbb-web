@@ -70,7 +70,7 @@ Consider this an invitation. Faith optional. Courage required.
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
-    <p>Cloth-bound with dust jacket. ✨ Features a mesmerizing flip-book animation in the
+    <p>Cloth-bound with embossed cover and dust jacket, Smyth sewn for durability. ✨ Features a mesmerizing flip-book animation in the
   margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️ Free domestic shipping. 📦</p>
     <button class="hardcover-info-btn" aria-haspopup="dialog">ℹ️ Print run info</button>
     <p class="shop-item-price">$0</p>
