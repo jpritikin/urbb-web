@@ -5,3 +5,4 @@ public/
 .DS_Store
 static/js/
 static/css/output.css
+data/ifsConversation.json

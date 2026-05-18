@@ -1,0 +1,641 @@
+details table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+}
+
+details table th,
+details table td {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+details table th {
+    font-weight: 600;
+    background: #f0f0f0;
+}
+
+details table tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+.mobile-warning {
+    display: none;
+}
+
+@media screen and (max-width: 56rem) {
+    .mobile-warning {
+        display: block;
+    }
+}
+
+#ifs-conversation-root {
+    font-family: system-ui, sans-serif;
+    font-size: 0.9rem;
+}
+
+.ifs-conv-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.ifs-status-wrap {
+    position: relative;
+}
+
+.ifs-arc-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+}
+
+.ifs-arc-ball {
+    filter: blur(2px);
+}
+
+.ifs-status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+.ifs-part-card {
+    background: #f5f5f5;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.3s;
+}
+
+.ifs-part-card.ifs-speaker {
+    border-color: #3a6ea5;
+    background: #eef3fa;
+}
+
+.ifs-part-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 0.4rem;
+    color: #222;
+}
+
+.ifs-role {
+    font-size: 0.75rem;
+    font-weight: normal;
+    letter-spacing: 0.05em;
+    color: #888;
+}
+
+.ifs-phase, .ifs-stance, .ifs-trust, .ifs-therapist-delta {
+    margin: 0.2rem 0;
+    color: #444;
+}
+
+.ifs-desc {
+    color: #777;
+    font-size: 0.85em;
+}
+
+.ifs-controls {
+    margin-top: 0.6rem;
+    display: flex;
+    gap: 0.4rem;
+}
+
+.ifs-btn {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.ifs-btn:hover {
+    background: #e8e8e8;
+}
+
+.ifs-btn-flash {
+    background: #3a6ea5 !important;
+    color: #fff !important;
+}
+
+.ifs-btn-hint {
+    background: #fff3cd !important;
+    border-color: #d4a017 !important;
+    color: #7a5500 !important;
+}
+
+
+.ifs-card-cols {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.ifs-card-col-trust {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.ifs-trust-val {
+    font-size: 0.85rem;
+}
+
+.ifs-trust-row-speaker {
+    border-radius: 4px;
+    padding: 0.1rem 0.3rem;
+}
+
+.ifs-band {
+    color: #777;
+    font-size: 0.8em;
+}
+
+.ifs-stance-bar-label {
+    color: #888;
+    font-size: 0.75em;
+    margin-top: 0.3rem;
+}
+
+.ifs-stance-bar {
+    width: 100%;
+    min-height: 36px;
+}
+
+.ifs-regulation {
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.ifs-regulated {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ifs-dysregulated {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.ifs-reg-score, .ifs-cycles {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.ifs-log-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ifs-log-label {
+    background: #f0f0f0;
+    padding: 0.3rem 0.75rem;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.ifs-log-label .ifs-regulation {
+    margin-top: 0;
+}
+
+.ifs-log {
+    height: 280px;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: #fafafa;
+}
+
+.ifs-msg {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.ifs-msg-left {
+    justify-content: flex-start;
+}
+
+.ifs-msg-right {
+    justify-content: flex-end;
+}
+
+.ifs-msg-sender {
+    font-weight: bold;
+    color: #3a6ea5;
+    white-space: nowrap;
+}
+
+.ifs-msg-right .ifs-msg-sender {
+    color: #a53a3a;
+}
+
+.ifs-msg-phase {
+    color: #999;
+    font-size: 0.78em;
+    white-space: nowrap;
+}
+
+.ifs-msg-text {
+    color: #333;
+}
+
+.ifs-msg-trust {
+    justify-content: center;
+}
+
+.ifs-msg-trust-text {
+    font-size: 0.75em;
+    color: #777;
+    font-style: italic;
+}
+
+.ifs-msg-trust-cycle-complete .ifs-msg-trust-text {
+    color: #444;
+    font-weight: 600;
+}
+
+.ifs-msg-trust-cycle-complete .ifs-msg-trust-text::before { content: '— '; }
+.ifs-msg-trust-cycle-complete .ifs-msg-trust-text::after  { content: ' —'; }
+
+.ifs-msg-trust-overflow .ifs-msg-trust-text {
+    color: #b04a00;
+}
+
+.ifs-msg-trust-counter-shock .ifs-msg-trust-text {
+    color: #7a3a8c;
+}
+
+.ifs-congrats-banner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    text-align: center;
+    padding: 2rem 2.5rem;
+    background: #fff;
+    border: 2px solid #3a6ea5;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+    max-width: 480px;
+    width: 90%;
+}
+
+.ifs-congrats-banner h2 {
+    margin: 0 0 0.6rem;
+    color: #155724;
+    font-size: 1.4rem;
+}
+
+.ifs-congrats-banner p {
+    margin: 0.4rem 0;
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.ifs-congrats-close {
+    margin-top: 1.2rem;
+    padding: 0.4rem 1.2rem;
+    background: #3a6ea5;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+}
+
+.ifs-congrats-close:hover {
+    background: #2d5a8e;
+}
+
+.ifs-nominate-banner {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    text-align: center;
+    padding: 0.4rem 1.2rem;
+    background: #fff3cd;
+    border: 1px solid #d4a017;
+    border-radius: 6px;
+    color: #7a5500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.ifs-sim-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.ifs-sim-controls button {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.ifs-sim-controls button:hover {
+    background: #e8e8e8;
+}
+
+.ifs-speed-btn.ifs-active {
+    background: #3a6ea5;
+    color: #fff;
+    border-color: #3a6ea5;
+}
+
+.ifs-speed-label {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+/* Setup screen */
+.ifs-setup {
+    max-width: 560px;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.ifs-setup h3 {
+    margin-top: 0;
+}
+
+.ifs-setup p {
+    color: #555;
+    line-height: 1.5;
+}
+
+.ifs-setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.2rem 0;
+}
+
+.ifs-setup-section {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.ifs-setup-section-title {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 0.2rem;
+}
+
+@media (max-width: 560px) {
+    .ifs-setup-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ifs-setup-row label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+}
+
+.ifs-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.ifs-slider-wrap input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+}
+
+.ifs-slider-val {
+    font-variant-numeric: tabular-nums;
+    min-width: 2.8em;
+    color: #3a6ea5;
+    font-weight: bold;
+}
+
+.ifs-trust-hint {
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+    color: #777;
+    min-height: 1.1em;
+}
+
+.ifs-start-btn {
+    padding: 0.5rem 1.4rem;
+    background: #3a6ea5;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.ifs-start-btn:hover {
+    background: #2d5a8e;
+}
+
+@media (max-width: 600px) {
+    .ifs-status-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---- Dark mode ---- */
+.dark details table th,
+.dark details table td {
+    border-color: #444;
+}
+
+.dark details table th {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.dark details table tr:nth-child(even) {
+    background: #222;
+}
+
+.dark .ifs-part-card {
+    background: #1e2530;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.dark .ifs-part-card.ifs-speaker {
+    background: #1a2a3a;
+    border-color: #3a6ea5;
+}
+
+.dark .ifs-part-name {
+    color: #e0e0e0;
+}
+
+.dark .ifs-phase,
+.dark .ifs-stance,
+.dark .ifs-trust,
+.dark .ifs-therapist-delta {
+    color: #c0c0c0;
+}
+
+.dark .ifs-desc {
+    color: #999;
+}
+
+.dark .ifs-role,
+.dark .ifs-band,
+.dark .ifs-stance-bar-label,
+.dark .ifs-reg-score,
+.dark .ifs-cycles,
+.dark .ifs-speed-label {
+    color: #888;
+}
+
+.dark .ifs-btn {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.dark .ifs-btn:hover {
+    background: #333;
+}
+
+.dark .ifs-regulated {
+    background: #1a3a24;
+    color: #6fcf97;
+}
+
+.dark .ifs-dysregulated {
+    background: #3a1a1a;
+    color: #eb5757;
+}
+
+.dark .ifs-log-wrap {
+    border-color: #3a3a3a;
+}
+
+.dark .ifs-log-label {
+    background: #1e1e1e;
+    border-color: #3a3a3a;
+}
+
+.dark .ifs-log {
+    background: #141414;
+}
+
+.dark .ifs-msg-text {
+    color: #c8c8c8;
+}
+
+.dark .ifs-msg-phase {
+    color: #666;
+}
+
+.dark .ifs-msg-trust-text {
+    color: #888;
+}
+
+.dark .ifs-msg-trust-cycle-complete .ifs-msg-trust-text {
+    color: #bbb;
+}
+
+.dark .ifs-msg-trust-overflow .ifs-msg-trust-text {
+    color: #e07040;
+}
+
+.dark .ifs-msg-trust-counter-shock .ifs-msg-trust-text {
+    color: #b07acc;
+}
+
+.dark .ifs-congrats-banner {
+    background: #1e2530;
+    border-color: #3a6ea5;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+.dark .ifs-congrats-banner h2 {
+    color: #6fcf97;
+}
+
+.dark .ifs-congrats-banner p {
+    color: #c0c0c0;
+}
+
+.dark .ifs-nominate-banner {
+    background: #2a2200;
+    border-color: #8a6a00;
+    color: #f0c040;
+}
+
+.dark .ifs-sim-controls button {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.dark .ifs-sim-controls button:hover {
+    background: #333;
+}
+
+.dark .ifs-setup {
+    background: #1a1a1a;
+    border-color: #3a3a3a;
+}
+
+.dark .ifs-setup p {
+    color: #aaa;
+}
+
+.dark .ifs-setup-section {
+    border-color: #3a3a3a;
+}
+
+.dark .ifs-setup-section-title {
+    color: #e0e0e0;
+}
+
+.dark .ifs-trust-hint {
+    color: #888;
+}
+
+.dark .ifs-setup-row label {
+    color: #c0c0c0;
+}
