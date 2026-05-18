@@ -496,8 +496,11 @@ export function initTour(): void {
         let latentSum = data.baseWords;
         let displaySum = data.baseWords;
 
-        for (const choice of data.choices) {
-            const initIncluded = Math.random() < 0.5;
+        // Guarantee at least one excluded so the committed flow can't fire on load
+        const forcedExcludeIdx = Math.floor(Math.random() * data.choices.length);
+
+        for (const [idx, choice] of data.choices.entries()) {
+            const initIncluded = idx === forcedExcludeIdx ? false : Math.random() < 0.5;
             included.set(choice.id, initIncluded);
             const target = initIncluded ? choice.words : 0;
             physics.set(choice.id, {
@@ -557,6 +560,8 @@ export function initTour(): void {
         displaySum = latentSum;
         updateArchetype(data, latentSum, archetypeEl);
         syncSliderToWords(latentSum);
+
+        const commitFlow = initCommitFlow(data, elements, archetypeEl, displayEl, sidebarEl, slider);
 
         const boltStates = new Map<string, BoltState>();
 
@@ -696,6 +701,10 @@ export function initTour(): void {
                 displaySum = newDisplaySum;
                 updateArchetype(data, latentSum, archetypeEl);
             }
+
+            const atMax = data.choices.every(c => included.get(c.id));
+            const fillsSettled = animatingFills.length === 0;
+            tickCommitFlow(commitFlow, atMax, fillsSettled, dt);
         }
 
         container.addEventListener('click', () => { lastTime = null; });
@@ -715,7 +724,7 @@ function updateArchetype(data: TourData, wordCount: number, el: HTMLElement): vo
         text = "You are a sleek, purposeful reader. You extract the essence and leave the residue. The author, who also skips things, nods in solidarity.";
     } else if (pct < 0.75) {
         text = "You have chosen the balanced path—curious enough to wander, wise enough to know when to stop. A sensible human being, which is rarer than it sounds.";
-    } else if (pct < 0.92) {
+    } else if (pct < 1.0) {
         text = "You are thorough. Possibly dangerously so. You have probably re-read things. You circle passages. Your marginalia have marginalia.";
     } else {
         text = "You are reading everything. Every word. Including this one. You cannot be stopped. You are not a reader; you are a force of sustained attention that happens to be wearing a person.";
@@ -727,5 +736,272 @@ function updateArchetype(data: TourData, wordCount: number, el: HTMLElement): vo
             el.textContent = text;
             el.style.opacity = '1';
         }, 300);
+    }
+}
+
+// ── Commitment flow ──────────────────────────────────────────────────────────
+
+type CommitState = 'idle' | 'settling' | 'countdown' | 'confirmation' | 'committed' | 'dismissed';
+
+interface CommitFlow {
+    state: CommitState;
+    wasBelow: boolean;
+    settleTimer: number;
+    overlay: HTMLElement | null;
+    data: TourData;
+    onCommit: () => void;
+}
+
+const SETTLE_DELAY_MS = 1200; // wait for digits to stop moving
+// Countdown: 10 ticks, each 10% longer than the previous
+// tick[i] duration = base * 1.1^i, sum ≈ 10000ms
+const COUNTDOWN_MULTIPLIERS = Array.from({ length: 10 }, (_, i) => Math.pow(1.1, i));
+const COUNTDOWN_SUM = COUNTDOWN_MULTIPLIERS.reduce((a, b) => a + b, 0);
+const COUNTDOWN_BASE_MS = 10000 / COUNTDOWN_SUM;
+const COUNTDOWN_TICKS = COUNTDOWN_MULTIPLIERS.map(f => COUNTDOWN_BASE_MS * f);
+
+function buildModalOverlay(onClick: () => void): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.className = 'tour-modal-overlay';
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) onClick();
+    });
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('tour-modal-overlay--visible'));
+    return overlay;
+}
+
+function removeOverlay(overlay: HTMLElement | null): void {
+    if (!overlay) return;
+    overlay.classList.remove('tour-modal-overlay--visible');
+    setTimeout(() => overlay.remove(), 300);
+}
+
+function showCountdownModal(flow: CommitFlow, data: TourData): void {
+    flow.state = 'countdown';
+
+    const overlay = buildModalOverlay(() => {
+        removeOverlay(flow.overlay);
+        flow.overlay = null;
+        flow.state = 'dismissed';
+        flow.wasBelow = false;
+    });
+    flow.overlay = overlay;
+
+    const cancelLabel = 'CANCEL   CANCEL   CANCEL   CANCEL   CANCEL   CANCEL   CANCEL   ';
+
+    const dismiss = (): void => {
+        removeOverlay(flow.overlay);
+        flow.overlay = null;
+        flow.state = 'dismissed';
+        flow.wasBelow = false;
+    };
+
+    const cancelBorder = document.createElement('div');
+    cancelBorder.className = 'tour-cancel-border';
+    (['top', 'bottom', 'left', 'right'] as const).forEach(side => {
+        const edge = document.createElement('div');
+        edge.className = `tour-cancel-edge tour-cancel-edge--${side}`;
+        edge.textContent = cancelLabel.repeat(4);
+        edge.setAttribute('role', 'button');
+        edge.setAttribute('aria-label', 'Cancel');
+        edge.addEventListener('click', dismiss);
+        cancelBorder.appendChild(edge);
+    });
+
+    const modal = document.createElement('div');
+    modal.className = 'tour-modal';
+
+    const heading = document.createElement('p');
+    heading.className = 'tour-modal-heading';
+    heading.textContent = 'Attention is required';
+    modal.appendChild(heading);
+
+    const countEl = document.createElement('div');
+    countEl.className = 'tour-modal-countdown';
+    countEl.textContent = '10';
+    modal.appendChild(countEl);
+
+    const sub = document.createElement('p');
+    sub.className = 'tour-modal-sub';
+    sub.textContent = 'Something important is about to be asked of you.';
+    modal.appendChild(sub);
+
+    cancelBorder.appendChild(modal);
+    overlay.appendChild(cancelBorder);
+
+    let tick = 0;
+    function nextTick(): void {
+        if (flow.state !== 'countdown') return;
+        tick++;
+        const remaining = 10 - tick;
+        if (remaining > 0) {
+            countEl.textContent = String(remaining);
+            setTimeout(nextTick, COUNTDOWN_TICKS[tick]);
+        } else {
+            removeOverlay(flow.overlay);
+            flow.overlay = null;
+            showConfirmationModal(flow, data);
+        }
+    }
+    setTimeout(nextTick, COUNTDOWN_TICKS[0]);
+}
+
+function showConfirmationModal(flow: CommitFlow, data: TourData): void {
+    flow.state = 'confirmation';
+
+    const total = data.baseWords + data.choices.reduce((s, c) => s + c.words, 0);
+    const sectionCount = data.choices.length;
+    const totalFormatted = total.toLocaleString('en-US');
+
+    const overlay = buildModalOverlay(() => {
+        removeOverlay(flow.overlay);
+        flow.overlay = null;
+        flow.state = 'dismissed';
+        flow.wasBelow = false;
+    });
+    flow.overlay = overlay;
+
+    const modal = document.createElement('div');
+    modal.className = 'tour-modal tour-modal--confirm';
+
+    modal.innerHTML = `
+        <p class="tour-modal-stamp">DECLARATION OF TOTAL READERSHIP</p>
+        <p class="tour-modal-clause"><em>Pursuant to Section 1, Subsection All-Of-It of the Reader's Covenant (Revised Edition, date pending)</em></p>
+        <p class="tour-modal-body">You have indicated intent to consume <strong>${totalFormatted} words</strong> across all ${sectionCount} sections of this document, including but not limited to the orgasmic, the philosophical, the empirical, and the ones where the author argues with himself in footnotes.</p>
+        <p class="tour-modal-body">By proceeding, the undersigned acknowledges that: (a) their attention span exceeds all reasonable projections; (b) the author is moved, possibly to tears, definitely to a second cup of tea; (c) this is legally non-binding but let's pretend.</p>
+        <div class="tour-modal-buttons">
+            <button class="tour-modal-btn tour-modal-btn--commit">I commit</button>
+            <button class="tour-modal-btn tour-modal-btn--decline">Just browsing</button>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+
+    modal.querySelector('.tour-modal-btn--commit')!.addEventListener('click', () => {
+        removeOverlay(flow.overlay);
+        flow.overlay = null;
+        flow.state = 'committed';
+        flow.onCommit();
+    });
+
+    modal.querySelector('.tour-modal-btn--decline')!.addEventListener('click', () => {
+        removeOverlay(flow.overlay);
+        flow.overlay = null;
+        flow.state = 'dismissed';
+        flow.wasBelow = false;
+    });
+}
+
+function applyCommittedState(
+    data: TourData,
+    elements: Map<string, HTMLElement>,
+    archetypeEl: HTMLElement,
+    displayEl: HTMLElement,
+    sidebarEl: HTMLElement,
+    slider: HTMLInputElement
+): void {
+    const total = data.baseWords + data.choices.reduce((s, c) => s + c.words, 0);
+    const totalFormatted = total.toLocaleString('en-US');
+
+    // Lock the slider
+    slider.disabled = true;
+    slider.classList.add('tour-slider--locked');
+
+    // Transform each card
+    for (const choice of data.choices) {
+        const card = elements.get(choice.id)!;
+        card.classList.add('tour-card--committed');
+        const toggle = card.querySelector('.tour-toggle') as HTMLButtonElement;
+        toggle.disabled = true;
+        toggle.textContent = '🔒';
+        toggle.classList.add('tour-toggle--locked');
+    }
+
+    // Word counter badge
+    const badge = document.createElement('div');
+    badge.className = 'tour-committed-badge';
+    badge.textContent = 'every word';
+    displayEl.closest('.tour-total-display')!.after(badge);
+    // Also add near sidebar
+    sidebarEl.closest('.tour-sidebar-fixed')!.classList.add('tour-sidebar--committed');
+
+    // Special archetype text
+    const specialText = "You have committed. The author just felt it: a gentle warmth. You are not just a reader. You are a witness.";
+    archetypeEl.style.opacity = '0';
+    setTimeout(() => {
+        archetypeEl.textContent = specialText;
+        archetypeEl.classList.add('tour-archetype--committed');
+        archetypeEl.style.opacity = '1';
+    }, 300);
+
+    // Author note
+    const noteSection = document.createElement('div');
+    noteSection.className = 'tour-author-note';
+    noteSection.innerHTML = `
+        <p class="tour-author-note-text">A small star has been placed on your reader profile. No further action is required at this time.</p>
+        <p class="tour-author-note-sig">— Administrative Assistant</p>
+    `;
+    noteSection.style.opacity = '0';
+    archetypeEl.closest('.tour-archetype-section')!.appendChild(noteSection);
+    setTimeout(() => { noteSection.style.opacity = '1'; }, 900);
+}
+
+function initCommitFlow(
+    data: TourData,
+    elements: Map<string, HTMLElement>,
+    archetypeEl: HTMLElement,
+    displayEl: HTMLElement,
+    sidebarEl: HTMLElement,
+    slider: HTMLInputElement
+): CommitFlow {
+    const flow: CommitFlow = {
+        state: 'idle',
+        wasBelow: true,
+        settleTimer: 0,
+        overlay: null,
+        data,
+        onCommit: () => applyCommittedState(data, elements, archetypeEl, displayEl, sidebarEl, slider),
+    };
+    return flow;
+}
+
+function tickCommitFlow(flow: CommitFlow, atMax: boolean, digitsSettled: boolean, dt: number): void {
+    if (flow.state === 'committed') return;
+
+    const aboveThreshold = atMax;
+
+    if (!aboveThreshold) {
+        flow.wasBelow = true;
+        if (flow.state === 'settling' || flow.state === 'countdown') {
+            flow.settleTimer = 0;
+            removeOverlay(flow.overlay);
+            flow.overlay = null;
+            flow.state = 'idle';
+        } else if (flow.state === 'dismissed') {
+            flow.state = 'idle';
+        }
+        return;
+    }
+
+    // Above threshold
+    if (flow.state === 'dismissed' && !flow.wasBelow) return;
+
+    if (flow.state === 'idle' || (flow.state === 'dismissed' && flow.wasBelow)) {
+        flow.state = 'settling';
+        flow.settleTimer = 0;
+        flow.wasBelow = false;
+    }
+
+    if (flow.state === 'settling') {
+        if (digitsSettled) {
+            flow.settleTimer += dt;
+            if (flow.settleTimer >= SETTLE_DELAY_MS) {
+                flow.settleTimer = 0;
+                showCountdownModal(flow, flow.data);
+            }
+        } else {
+            flow.settleTimer = 0;
+        }
     }
 }

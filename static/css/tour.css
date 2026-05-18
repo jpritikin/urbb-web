@@ -607,3 +607,351 @@
 .tour-nsw-profile-mask:hover {
     opacity: 0.8;
 }
+
+/* ── Commitment flow ─────────────────────────────────────────────────────── */
+
+.tour-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+    .tour-modal {
+        padding: 1.25rem 1.25rem;
+    }
+}
+
+.tour-modal-overlay--visible {
+    opacity: 1;
+}
+
+.tour-modal {
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 2rem 2.5rem;
+    max-width: 28rem;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+    max-height: 90vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.dark .tour-modal {
+    background: #27272a;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.tour-modal-heading {
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #71717a;
+    margin: 0 0 1.25rem;
+}
+
+.dark .tour-modal-heading {
+    color: #a1a1aa;
+}
+
+.tour-modal-countdown {
+    font-size: 5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #18181b;
+    margin-bottom: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+}
+
+.dark .tour-modal-countdown {
+    color: #f3f4f6;
+}
+
+.tour-modal-sub {
+    font-size: 0.9rem;
+    color: #71717a;
+    margin: 0;
+    font-style: italic;
+}
+
+.dark .tour-modal-sub {
+    color: #a1a1aa;
+}
+
+/* Confirmation modal */
+.tour-modal--confirm {
+    text-align: left;
+}
+
+.tour-modal-stamp {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #16a34a;
+    text-align: center;
+    margin: 0 0 0.5rem;
+    border-bottom: 2px solid #16a34a;
+    padding-bottom: 0.5rem;
+}
+
+.dark .tour-modal-stamp {
+    color: #4ade80;
+    border-color: #4ade80;
+}
+
+.tour-modal-clause {
+    font-size: 0.85rem;
+    color: #71717a;
+    text-align: center;
+    margin: 0 0 1rem;
+}
+
+.dark .tour-modal-clause {
+    color: #a1a1aa;
+}
+
+.tour-modal-body {
+    font-size: 1rem;
+    color: #3f3f46;
+    line-height: 1.7;
+    margin: 0 0 0.85rem;
+}
+
+.dark .tour-modal-body {
+    color: #d4d4d8;
+}
+
+.tour-modal-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.tour-modal-btn {
+    padding: 0.5rem 1.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid #16a34a;
+    transition: background 0.2s, color 0.2s;
+}
+
+.tour-modal-btn--commit {
+    background: #16a34a;
+    color: #fff;
+}
+
+.tour-modal-btn--commit:hover {
+    background: #15803d;
+    border-color: #15803d;
+}
+
+.dark .tour-modal-btn--commit {
+    background: #4ade80;
+    color: #18181b;
+    border-color: #4ade80;
+}
+
+.dark .tour-modal-btn--commit:hover {
+    background: #86efac;
+    border-color: #86efac;
+}
+
+.tour-modal-btn--decline {
+    background: transparent;
+    color: #71717a;
+    border-color: #d4d4d8;
+}
+
+.tour-modal-btn--decline:hover {
+    border-color: #71717a;
+    color: #3f3f46;
+}
+
+.dark .tour-modal-btn--decline {
+    color: #a1a1aa;
+    border-color: #52525b;
+}
+
+.dark .tour-modal-btn--decline:hover {
+    border-color: #a1a1aa;
+    color: #d4d4d8;
+}
+
+/* Cancel border around countdown modal */
+.tour-cancel-border {
+    position: relative;
+    display: inline-block;
+    padding: 1.5rem;
+}
+
+.tour-cancel-edge {
+    position: absolute;
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1;
+}
+
+.tour-cancel-edge--top,
+.tour-cancel-edge--bottom {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    padding: 0 0.25rem;
+}
+
+.tour-cancel-edge--bottom {
+    top: auto;
+    bottom: 0;
+}
+
+.tour-cancel-edge--left,
+.tour-cancel-edge--right {
+    top: 0;
+    bottom: 0;
+    width: 1.5rem;
+    writing-mode: vertical-rl;
+    line-height: 1.5rem;
+    padding: 0.25rem 0;
+}
+
+.tour-cancel-edge--left {
+    left: 0;
+    transform: rotate(180deg);
+}
+
+.tour-cancel-edge--right {
+    right: 0;
+}
+
+/* Committed state */
+@keyframes tour-glow-pulse {
+    0%, 100% { box-shadow: 0 0 6px 1px rgba(202, 138, 4, 0.4); border-color: #ca8a04; }
+    50%       { box-shadow: 0 0 16px 5px rgba(234, 179, 8, 0.6); border-color: #eab308; }
+}
+
+@keyframes tour-glow-pulse-dark {
+    0%, 100% { box-shadow: 0 0 6px 1px rgba(234, 179, 8, 0.35); border-color: #eab308; }
+    50%       { box-shadow: 0 0 18px 6px rgba(250, 204, 21, 0.55); border-color: #facc15; }
+}
+
+.tour-card--committed {
+    border-style: solid;
+    animation: tour-glow-pulse 3s ease-in-out infinite;
+}
+
+.dark .tour-card--committed {
+    animation: tour-glow-pulse-dark 3s ease-in-out infinite;
+}
+
+.tour-toggle--locked {
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    padding: 0.25rem 0.5rem;
+    cursor: default;
+}
+
+.tour-slider--locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.tour-committed-badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ca8a04;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 0.1rem;
+    opacity: 0;
+    animation: tour-fade-in 1s ease forwards 0.3s;
+}
+
+.dark .tour-committed-badge {
+    color: #eab308;
+}
+
+@keyframes tour-fade-in {
+    to { opacity: 1; }
+}
+
+.tour-archetype--committed {
+    color: #ca8a04;
+    font-style: normal;
+    font-weight: 500;
+}
+
+.dark .tour-archetype--committed {
+    color: #eab308;
+}
+
+.tour-sidebar--committed .tour-word-counter--sidebar {
+    color: #ca8a04;
+}
+
+.dark .tour-sidebar--committed .tour-word-counter--sidebar {
+    color: #eab308;
+}
+
+.tour-author-note {
+    margin-top: 2rem;
+    padding: 1.25rem 1.75rem;
+    border-left: 3px solid #ca8a04;
+    text-align: left;
+    max-width: 36rem;
+    margin-left: auto;
+    margin-right: auto;
+    transition: opacity 0.8s ease;
+}
+
+.dark .tour-author-note {
+    border-color: #eab308;
+}
+
+.tour-author-note-text,
+.tour-author-note-sig {
+    font-family: 'Courier New', Courier, monospace;
+    color: #3f3f46;
+    line-height: 1.7;
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+}
+
+.dark .tour-author-note-text,
+.dark .tour-author-note-sig {
+    color: #d4d4d8;
+}
+
+.tour-author-note-sig {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.05em;
+}

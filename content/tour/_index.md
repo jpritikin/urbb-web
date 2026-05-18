@@ -1,4 +1,4 @@
 ---
 title: "Plan Your Reading Journey"
-version: "v1.2.0"
+version: "v1.3.0"
 ---
