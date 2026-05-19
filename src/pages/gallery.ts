@@ -1,9 +1,11 @@
+import { AnimationLoop } from '../utils/animationLoop.js';
+
 document.addEventListener('DOMContentLoaded', () => {
-  const galleryContainer = document.querySelector('.photo-gallery');
+  const galleryContainer = document.querySelector('.photo-gallery') as HTMLElement | null;
   const galleryItems = document.querySelectorAll('.gallery-item');
 
   if (galleryContainer && galleryItems.length > 0) {
-    const itemsArray = Array.from(galleryItems);
+    const itemsArray = Array.from(galleryItems) as HTMLElement[];
     for (let i = itemsArray.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [itemsArray[i], itemsArray[j]] = [itemsArray[j], itemsArray[i]];
@@ -22,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const galleryItemsArray = Array.from(galleryItems);
+  const galleryItemsArray = Array.from(galleryItems) as HTMLElement[];
   let lawsuitIndex = -1;
   let brokenLinkIndex = -1;
 
@@ -53,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedItem.addEventListener('click', () => {
         showLawsuitPopup();
       });
-      (selectedItem as HTMLElement).style.cursor = 'pointer';
+      selectedItem.style.cursor = 'pointer';
     }
   }
 
@@ -102,7 +104,260 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  if (galleryContainer) {
+    initSlidingPuzzle(galleryContainer, galleryItemsArray);
+  }
 });
+
+// ---------------------------------------------------------------------------
+// Sliding puzzle
+// ---------------------------------------------------------------------------
+
+const SLIDE_SPEED_PX_PER_SEC = 300;
+const PAUSE_BETWEEN_SLIDES_SEC = 1.5;
+const DECAY_HALF_LIFE_SEC = 8;
+
+interface TileState {
+  el: HTMLElement;
+  row: number;
+  col: number;
+  // pixel offsets during animation
+  x: number;
+  y: number;
+}
+
+interface PuzzleState {
+  cols: number;
+  rows: number;
+  cellW: number;
+  cellH: number;
+  gap: number;
+  tiles: TileState[];   // index = tile id; position = grid position
+  grid: (number | null)[][]; // grid[row][col] = tile id or null (blank)
+  blankRow: number;
+  blankCol: number;
+  sliding: {
+    tileId: number;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    elapsed: number;
+    duration: number;
+  } | null;
+  pauseElapsed: number;
+  lastMoved: Map<number, number>; // tileId -> time (seconds since epoch)
+  timeAccum: number; // total elapsed seconds since puzzle start
+}
+
+function computeColumns(containerWidth: number, minColWidth: number, gap: number): number {
+  // mirrors grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr))
+  if (containerWidth <= 0) return 1;
+  let cols = Math.floor((containerWidth + gap) / (minColWidth + gap));
+  return Math.max(1, cols);
+}
+
+function tilePixelPos(row: number, col: number, cellW: number, cellH: number, gap: number) {
+  return { x: col * (cellW + gap), y: row * (cellH + gap) };
+}
+
+function initSlidingPuzzle(container: HTMLElement, tiles: HTMLElement[]) {
+  let state: PuzzleState | null = null;
+  let loop: AnimationLoop | null = null;
+
+  function buildState(): PuzzleState | null {
+    const containerWidth = container.clientWidth;
+    const gap = 32; // 2rem at 16px base
+    const minColWidth = 350;
+    const cols = computeColumns(containerWidth, minColWidth, gap);
+
+    console.log(`[puzzle] containerWidth=${containerWidth} cols=${cols} tile0H=${tiles[0]?.offsetHeight}`);
+    if (cols < 2) return null;
+
+    const cellW = Math.floor((containerWidth - gap * (cols - 1)) / cols);
+
+    // Measure max tile height from current DOM (tiles are still in flow at this point)
+    let maxH = 0;
+    tiles.forEach(t => { maxH = Math.max(maxH, t.offsetHeight); });
+    if (maxH === 0) maxH = 400; // fallback
+
+    const cellH = maxH;
+    const n = tiles.length;
+    // Total slots = n + 1 (one blank)
+    const totalSlots = n + 1;
+    const rows = Math.ceil(totalSlots / cols);
+
+    // Build grid: place tiles in row-major order, blank at the end
+    const grid: (number | null)[][] = Array.from({ length: rows }, () => Array(cols).fill(null));
+    const tileStates: TileState[] = tiles.map((el, id) => {
+      const row = Math.floor(id / cols);
+      const col = id % cols;
+      grid[row][col] = id;
+      const pos = tilePixelPos(row, col, cellW, cellH, gap);
+      return { el, row, col, x: pos.x, y: pos.y };
+    });
+
+    const blankSlot = n;
+    const blankRow = Math.floor(blankSlot / cols);
+    const blankCol = blankSlot % cols;
+    // grid[blankRow][blankCol] already null
+
+    return {
+      cols, rows, cellW, cellH, gap,
+      tiles: tileStates,
+      grid,
+      blankRow, blankCol,
+      sliding: null,
+      pauseElapsed: 0,
+      lastMoved: new Map(),
+      timeAccum: 0,
+    };
+  }
+
+  function applyPuzzleLayout(s: PuzzleState) {
+    container.classList.add('puzzle-mode');
+    container.style.height = `${s.rows * s.cellH + (s.rows - 1) * s.gap}px`;
+    s.tiles.forEach(t => {
+      t.el.style.width = `${s.cellW}px`;
+      t.el.style.transform = `translate(${t.x}px, ${t.y}px)`;
+    });
+  }
+
+  function removePuzzleLayout() {
+    container.classList.remove('puzzle-mode');
+    container.style.height = '';
+    tiles.forEach(t => {
+      t.style.width = '';
+      t.style.transform = '';
+    });
+  }
+
+  function candidatesAdjacentToBlank(s: PuzzleState): number[] {
+    const { blankRow, blankCol, rows, cols, grid } = s;
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    const candidates: number[] = [];
+    for (const [dr, dc] of dirs) {
+      const r = blankRow + dr;
+      const c = blankCol + dc;
+      if (r >= 0 && r < rows && c >= 0 && c < cols && grid[r][c] !== null) {
+        candidates.push(grid[r][c] as number);
+      }
+    }
+    return candidates;
+  }
+
+  function pickNextTile(s: PuzzleState): number {
+    const candidates = candidatesAdjacentToBlank(s);
+    if (candidates.length === 0) return -1;
+    if (candidates.length === 1) return candidates[0];
+
+    const now = s.timeAccum;
+    const weights = candidates.map(id => {
+      const last = s.lastMoved.get(id) ?? 0;
+      const age = Math.max(0, now - last);
+      return Math.exp(age / DECAY_HALF_LIFE_SEC * Math.LN2);
+    });
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < candidates.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return candidates[i];
+    }
+    return candidates[candidates.length - 1];
+  }
+
+  function startSlide(s: PuzzleState) {
+    const tileId = pickNextTile(s);
+    if (tileId < 0) return;
+
+    const tile = s.tiles[tileId];
+    const destPos = tilePixelPos(s.blankRow, s.blankCol, s.cellW, s.cellH, s.gap);
+    const dist = Math.hypot(destPos.x - tile.x, destPos.y - tile.y);
+    const duration = dist / SLIDE_SPEED_PX_PER_SEC;
+
+    s.sliding = {
+      tileId,
+      fromX: tile.x, fromY: tile.y,
+      toX: destPos.x, toY: destPos.y,
+      elapsed: 0,
+      duration,
+    };
+  }
+
+  function finishSlide(s: PuzzleState) {
+    if (!s.sliding) return;
+    const { tileId, toX, toY } = s.sliding;
+    const tile = s.tiles[tileId];
+
+    // Update grid
+    s.grid[s.blankRow][s.blankCol] = tileId;
+    s.grid[tile.row][tile.col] = null;
+    const newBlankRow = tile.row;
+    const newBlankCol = tile.col;
+    tile.row = s.blankRow;
+    tile.col = s.blankCol;
+    tile.x = toX;
+    tile.y = toY;
+    tile.el.style.transform = `translate(${toX}px, ${toY}px)`;
+    s.blankRow = newBlankRow;
+    s.blankCol = newBlankCol;
+
+    s.lastMoved.set(tileId, s.timeAccum);
+    s.sliding = null;
+    s.pauseElapsed = 0;
+  }
+
+  function onFrame(dt: number) {
+    if (!state) return;
+    state.timeAccum += dt;
+
+    if (state.sliding) {
+      state.sliding.elapsed += dt;
+      const t = Math.min(state.sliding.elapsed / state.sliding.duration, 1);
+      const tile = state.tiles[state.sliding.tileId];
+      tile.x = state.sliding.fromX + (state.sliding.toX - state.sliding.fromX) * t;
+      tile.y = state.sliding.fromY + (state.sliding.toY - state.sliding.fromY) * t;
+      tile.el.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
+      if (t >= 1) finishSlide(state);
+    } else {
+      state.pauseElapsed += dt;
+      if (state.pauseElapsed >= PAUSE_BETWEEN_SLIDES_SEC) {
+        startSlide(state);
+      }
+    }
+  }
+
+  function start() {
+    state = buildState();
+    if (!state) return;
+    applyPuzzleLayout(state);
+    loop = new AnimationLoop(onFrame);
+    loop.setupVisibilityHandling();
+    loop.start();
+  }
+
+  function restart() {
+    if (loop) { loop.stop(); loop = null; }
+    removePuzzleLayout();
+    state = null;
+    start();
+  }
+
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  const observer = new ResizeObserver(() => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(restart, 200);
+  });
+  observer.observe(container);
+
+  // Delay start until images have had a chance to load so offsetHeight is correct
+  setTimeout(start, 100);
+}
+
+// ---------------------------------------------------------------------------
+// Popups
+// ---------------------------------------------------------------------------
 
 function showImagePopup(img: HTMLImageElement, allowRotation = true) {
   const existingPopup = document.querySelector('.image-popup-overlay');

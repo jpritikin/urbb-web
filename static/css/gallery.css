@@ -14,10 +14,6 @@
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.gallery-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
 
 .image-wrapper {
     position: relative;
@@ -387,6 +383,17 @@ div#sizzle-reel {
     line-height: 1.6;
     font-size: 0.95rem;
     margin: 0;
+}
+
+/* Sliding puzzle mode */
+.photo-gallery.puzzle-mode {
+    position: relative;
+}
+
+.photo-gallery.puzzle-mode .gallery-item {
+    position: absolute;
+    will-change: transform;
+    transition: none;
 }
 
 /* Mobile Responsive */
