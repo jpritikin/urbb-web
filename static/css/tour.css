@@ -49,6 +49,49 @@
     pointer-events: none;
 }
 
+.tour-max-hint {
+    position: absolute;
+    right: 0;
+    top: 0;
+    transform: translateX(50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+}
+
+.tour-max-hint-head {
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 6px solid #16a34a;
+    opacity: 0.7;
+}
+
+.tour-max-hint-stem {
+    display: block;
+    width: 2px;
+    height: 0.6rem;
+    background: #16a34a;
+    opacity: 0.7;
+}
+
+.dark .tour-max-hint-head {
+    border-bottom-color: #4ade80;
+}
+
+.dark .tour-max-hint-stem {
+    background: #4ade80;
+}
+
+.tour-max-hint--flash {
+    opacity: 0.6;
+}
+
 .tour-audiobook-marker {
     position: absolute;
     top: 0;

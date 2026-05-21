@@ -486,6 +486,22 @@ export function initTour(): void {
             applySliderTarget(targetWords);
         });
 
+        const maxHint = document.getElementById('tour-max-hint');
+        if (maxHint) {
+            function scheduleHintFlash(): void {
+                const delay = 3000 + Math.random() * 5000;
+                setTimeout(() => {
+                    if (Number(slider.value) >= 1000) { scheduleHintFlash(); return; }
+                    maxHint!.classList.add('tour-max-hint--flash');
+                    setTimeout(() => {
+                        maxHint!.classList.remove('tour-max-hint--flash');
+                        scheduleHintFlash();
+                    }, 70);
+                }, delay);
+            }
+            scheduleHintFlash();
+        }
+
         // Sync slider position to current word count
         function syncSliderToWords(words: number): void {
             const t = (words - minTotal) / (maxTotal - minTotal);
