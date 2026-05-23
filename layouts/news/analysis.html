@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    {{ with .Params.version }}<meta name="page-version" content="{{ . }}">{{ end }}
+    <title>{{ .Title }} · {{ .Site.Title }}</title>
+    {{ partial "favicon.html" . }}
+    {{ partial "google-analytics.html" . }}
+    <link rel="stylesheet" href="/css/output.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/news-analysis.css">
+    <script>
+      var CONCEPT_DATA = JSON.parse({{ $.Site.Data.interviewConcepts | jsonify }});
+    </script>
+    <script type="module" src="/js/pages/newsAnalysis.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-white dark:bg-zinc-900 text-zinc-900 dark:text-gray-100 transition-colors">
+    <nav class="bg-green-900 dark:bg-green-950 py-3 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 flex items-center gap-4">
+            <a href="/news/" class="text-gray-100 no-underline font-medium hover:text-white transition-colors flex items-center gap-1">
+                &#8592; News
+            </a>
+            <span class="text-green-700 dark:text-green-800 select-none">|</span>
+            <span class="text-gray-300 dark:text-gray-400 text-sm font-mono tracking-widest uppercase">Concept Network</span>
+            <button id="theme-toggle" class="ml-auto p-2 rounded-lg bg-green-800 hover:bg-green-700 transition-colors" aria-label="Toggle theme">
+                <svg class="w-5 h-5 text-gray-100 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <svg class="w-5 h-5 text-gray-100 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 w-full px-4 py-4 max-w-7xl mx-auto">
+        <div class="analysis-layout">
+
+            <div class="analysis-right">
+                <div class="graph-nav-bar">
+                    <button id="nav-back" class="graph-nav-btn" disabled>&#8592; Back</button>
+                    <button id="nav-fwd"  class="graph-nav-btn" disabled>Forward &#8594;</button>
+                </div>
+                <div id="cy"></div>
+            </div>
+
+            <div class="analysis-left">
+                <div class="panel-box hidden" id="context-panel">
+                    <div class="panel-box-inner">
+                        <div class="panel-box-title">NODE CONTEXT</div>
+                        <div id="context-title" class="context-concept-title"></div>
+                        <div id="context-desc" class="context-concept-desc"></div>
+                        <div id="context-snippets"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>

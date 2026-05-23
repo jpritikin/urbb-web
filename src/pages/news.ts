@@ -233,3 +233,196 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ── Teaser: pie chart + dial controls + listbox + enter button ────────────
+
+interface InterviewEntry {
+  id: string;
+  show: string;
+  speakerWords: Record<string, number>;
+}
+
+declare const INTERVIEW_DATA: InterviewEntry[] | undefined;
+
+// Ordered speaker colors matching CSS vars
+const SPEAKER_COLORS: Record<string, { bg: string; fg: string }> = {
+  joshua: { bg: '#92400e', fg: '#fde68a' },
+  dugan:  { bg: '#1e3a5f', fg: '#bfdbfe' },
+  greg:   { bg: '#3b1f6b', fg: '#e9d5ff' },
+};
+
+function speakerKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+// Map value in [min,max] to dial pointer rotation [-135deg, +135deg]
+function valToAngle(val: number, min: number, max: number): number {
+  return -135 + ((val - min) / (max - min)) * 270;
+}
+
+interface PieParams { holeFrac: number; sinAmp: number; }
+
+const SIN_WAVE_FREQ = 8;
+const SIN_SEGMENTS = 180;
+
+function drawPie(canvas: HTMLCanvasElement, interview: InterviewEntry, params: PieParams): void {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.getBoundingClientRect().width || canvas.width;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2;
+  const maxSinMag = (size / 2) * 0.20;
+  const baseOuterR = size / 2 - 2 - maxSinMag;
+  const innerR = baseOuterR * params.holeFrac;
+  const sinMag = baseOuterR * params.sinAmp;
+
+  ctx.clearRect(0, 0, size, size);
+
+  const entries = Object.entries(interview.speakerWords);
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  if (total === 0) return;
+
+  let angle = -Math.PI / 2;
+  for (const [speaker, words] of entries) {
+    const slice = (words / total) * 2 * Math.PI;
+    const key = speakerKey(speaker);
+    const color = SPEAKER_COLORS[key]?.bg ?? '#555';
+
+    const steps = Math.max(4, Math.ceil(SIN_SEGMENTS * slice / (2 * Math.PI)));
+    ctx.beginPath();
+    // outer edge with sin wave
+    for (let i = 0; i <= steps; i++) {
+      const a = angle + (i / steps) * slice;
+      const r = baseOuterR + sinMag * Math.sin(SIN_WAVE_FREQ * a);
+      const x = cx + r * Math.cos(a);
+      const y = cy + r * Math.sin(a);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    // inner edge (straight arc, reversed)
+    for (let i = steps; i >= 0; i--) {
+      const a = angle + (i / steps) * slice;
+      ctx.lineTo(cx + innerR * Math.cos(a), cy + innerR * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    angle += slice;
+  }
+}
+
+function renderPieLegend(container: HTMLElement, interview: InterviewEntry): void {
+  container.innerHTML = '';
+  const total = Object.values(interview.speakerWords).reduce((s, v) => s + v, 0);
+  for (const [speaker, words] of Object.entries(interview.speakerWords)) {
+    const pct = total ? (words / total * 100) : 0;
+    const key = speakerKey(speaker);
+    const colors = SPEAKER_COLORS[key] ?? { bg: '#555', fg: '#fff' };
+    const row = document.createElement('div');
+    row.className = 'pie-legend-row';
+    row.innerHTML = `<span class="pie-legend-swatch" style="background:${colors.bg}"></span>`
+      + `<span>${speaker}</span><span class="pie-legend-pct">${pct.toFixed(0)}%</span>`;
+    container.appendChild(row);
+  }
+}
+
+function initTeaser(): void {
+  const enterBtn = document.getElementById('teaser-enter-btn');
+  if (enterBtn) {
+    enterBtn.addEventListener('click', () => { window.location.href = '/news/analysis/'; });
+  }
+
+  const interviews: InterviewEntry[] = typeof INTERVIEW_DATA !== 'undefined' ? INTERVIEW_DATA : [];
+  if (!interviews.length) return;
+
+  const canvas = document.getElementById('teaser-pie') as HTMLCanvasElement | null;
+  const legend = document.getElementById('teaser-pie-legend');
+  if (!canvas || !legend) return;
+
+  let activeIdx = 0;
+  const pieParams: PieParams = { holeFrac: 0.2, sinAmp: 0.05 };
+
+  function redraw(): void {
+    drawPie(canvas!, interviews[activeIdx], pieParams);
+  }
+
+  function showInterview(idx: number): void {
+    activeIdx = idx;
+    redraw();
+    renderPieLegend(legend!, interviews[idx]);
+    document.querySelectorAll<HTMLElement>('.teaser-listbox-item').forEach((item, i) => {
+      item.classList.toggle('active', i === idx);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('.teaser-listbox-item').forEach((item, i) => {
+    item.addEventListener('click', () => showInterview(i));
+  });
+
+  // Dial definitions for pie style
+  interface PieDialConfig {
+    min: number; max: number; defaultVal: number; step: number;
+    format: (v: number) => string;
+    apply: (v: number) => void;
+  }
+  const dialConfigs: Record<string, PieDialConfig> = {
+    hole: {
+      min: 0, max: 48, defaultVal: 20, step: 1,
+      format: v => `${v}%`,
+      apply: v => { pieParams.holeFrac = v / 100; redraw(); },
+    },
+    glow: {
+      min: 0, max: 20, defaultVal: 5, step: 1,
+      format: v => `${v}%`,
+      apply: v => { pieParams.sinAmp = v / 100; redraw(); },
+    },
+  };
+
+  document.querySelectorAll<HTMLElement>('.sc-dial').forEach(dial => {
+    const name = dial.dataset.dial ?? '';
+    const cfg = dialConfigs[name];
+    if (!cfg) return;
+
+    const stored = localStorage.getItem(`sc-pie-dial-${name}`);
+    let currentVal = stored !== null ? parseFloat(stored) : cfg.defaultVal;
+
+    function applyVal(v: number): void {
+      currentVal = Math.max(cfg.min, Math.min(cfg.max, v));
+      const valEl = document.getElementById(`dial-${name}-val`);
+      if (valEl) valEl.textContent = cfg.format(currentVal);
+      const ptr = document.getElementById(`dial-${name}-ptr`);
+      if (ptr) ptr.style.transform = `translateX(-50%) rotate(${valToAngle(currentVal, cfg.min, cfg.max)}deg)`;
+      cfg.apply(currentVal);
+      localStorage.setItem(`sc-pie-dial-${name}`, String(currentVal));
+    }
+
+    applyVal(currentVal);
+
+    let startY = 0, startVal = currentVal, dragging = false;
+    dial.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragging = true; startY = e.clientY; startVal = currentVal;
+      dial.setPointerCapture(e.pointerId);
+    });
+    dial.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const delta = startY - e.clientY;
+      const raw = startVal + (delta / 80) * (cfg.max - cfg.min);
+      applyVal(Math.round(raw / cfg.step) * cfg.step);
+    });
+    dial.addEventListener('pointerup', () => { dragging = false; });
+    dial.addEventListener('pointercancel', () => { dragging = false; });
+    dial.addEventListener('wheel', e => {
+      e.preventDefault();
+      applyVal(currentVal + (e.deltaY < 0 ? cfg.step : -cfg.step));
+    }, { passive: false });
+  });
+
+  showInterview(0);
+}
+
+document.addEventListener('DOMContentLoaded', initTeaser);

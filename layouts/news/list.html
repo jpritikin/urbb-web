@@ -1,6 +1,10 @@
 {{ define "head-extra" }}
 <link rel="alternate" type="application/rss+xml" title="{{ .Site.Title }} News (RSS)" href="{{ .Permalink }}index.xml">
 <link rel="alternate" type="application/atom+xml" title="{{ .Site.Title }} News (Atom)" href="{{ .Permalink }}atom.xml">
+<link rel="stylesheet" href="/css/news-analysis.css">
+{{ with $.Site.Data.interviewConcepts }}
+<script>var INTERVIEW_DATA = JSON.parse({{ $.Site.Data.interviewConcepts | jsonify }}).interviews;</script>
+{{ end }}
 <script type="module" src="/js/pages/news.js"></script>
 <style>
 #news-calendar {
@@ -168,6 +172,20 @@
 .news-item.future .news-date::after {
   content: ' 🔮';
 }
+
+/* ── Calendar + teaser two-column row ─────────────────── */
+#news-top-row {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+#news-top-row #news-calendar {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
 #future-toggle {
   display: block;
   margin-top: 0.5rem;
@@ -216,19 +234,73 @@
     </p>
   </header>
 
-  <div id="news-calendar">
-    <div class="cal-header">
-      <button class="cal-nav" id="cal-prev">&#8249;</button>
-      <span class="cal-month-label" id="cal-month-label"></span>
-      <button class="cal-nav" id="cal-next">&#8250;</button>
+  <div id="news-top-row">
+    <div id="news-calendar">
+      <div class="cal-header">
+        <button class="cal-nav" id="cal-prev">&#8249;</button>
+        <span class="cal-month-label" id="cal-month-label"></span>
+        <button class="cal-nav" id="cal-next">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-reset" id="cal-reset">✕ show all</div>
     </div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div class="cal-reset" id="cal-reset">✕ show all</div>
+
+    {{ $data := $.Site.Data.interviewConcepts }}
+    {{ if $data }}
+    <div id="analysis-teaser">
+      <div class="teaser-header-strip">
+        <span class="sc-rivet"></span>
+        <span class="teaser-badge">SYS::ANALYSIS</span>
+        <span class="teaser-version">v{{ len $data.interviews }}.{{ len $data.concepts }}.0</span>
+        <span class="teaser-status sc-blink">● LIVE</span>
+        <span class="sc-rivet"></span>
+      </div>
+      <div class="teaser-face">
+        <div class="teaser-title">CONCEPT_NETWORK.graph</div>
+        <div class="teaser-body">
+          <div class="teaser-col-left">
+            <canvas id="teaser-pie" width="96" height="96"></canvas>
+            <div class="teaser-pie-legend" id="teaser-pie-legend"></div>
+            <div class="teaser-dials">
+              <div class="sc-dial-unit">
+                <div class="sc-dial" id="dial-hole" data-dial="hole" data-min="0" data-max="48" data-val="20">
+                  <div class="sc-dial-pointer" id="dial-hole-ptr"></div>
+                </div>
+                <div class="sc-dial-label">HOLE</div>
+                <div class="sc-dial-value" id="dial-hole-val">20%</div>
+              </div>
+              <div class="sc-dial-unit">
+                <div class="sc-dial" id="dial-glow" data-dial="glow" data-min="0" data-max="16" data-val="4">
+                  <div class="sc-dial-pointer" id="dial-glow-ptr"></div>
+                </div>
+                <div class="sc-dial-label">WAVE</div>
+                <div class="sc-dial-value" id="dial-glow-val">4px</div>
+              </div>
+            </div>
+          </div>
+          <div class="teaser-col-right">
+            <div class="teaser-listbox-label">SELECT INTERVIEW</div>
+            <div class="teaser-listbox" id="teaser-listbox">
+              {{ range $i, $iv := $data.interviews }}
+              <div class="teaser-listbox-item{{ if eq $i 0 }} active{{ end }}" data-idx="{{ $i }}">{{ $iv.show }}</div>
+              {{ end }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="teaser-divider"></div>
+      <div class="teaser-cta-strip">
+        <button class="teaser-cta-btn" id="teaser-enter-btn">ENTER GRAPH →</button>
+      </div>
+    </div>
+    {{ end }}
   </div>
+
   <button id="future-toggle">🔮 Pierce the Veil of Time</button>
 
   <div id="news-list">
     {{ range sort (where .Site.RegularPages "Section" "news") "Date" "desc" }}
+    {{ if ne .File.ContentBaseName "analysis" }}
     <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}" id="{{ .File.ContentBaseName }}">
       <div class="news-date">{{ .Date.Format "2 January 2006" }}</div>
       <div class="news-title">{{ .Title }} <a class="news-permalink" href="#{{ .File.ContentBaseName }}" title="Link to this item">¶</a></div>
@@ -238,6 +310,7 @@
         {{ .Content }}
       </div>
     </div>
+    {{ end }}
     {{ end }}
   </div>
   <p id="news-empty">No news items for this date.</p>

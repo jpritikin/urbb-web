@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "npm run gen:simdata && concurrently \"npm run watch:ts\" \"npm run watch:css\" \"hugo server -D\"",
+    "dev": "npm run gen:simdata && concurrently \"npm run watch:ts\" \"npm run watch:bundle\" \"npm run watch:css\" \"hugo server -D\"",
     "watch:ts": "tsc --watch",
+    "watch:bundle": "esbuild src/bundled/newsAnalysis.ts --bundle --outfile=static/js/pages/newsAnalysis.js --platform=browser --target=es2020 --watch",
     "watch:css": "postcss ./static/css/input.css -o ./static/css/output.css --watch",
     "build:ts": "tsc",
+    "build:bundle": "esbuild src/bundled/newsAnalysis.ts --bundle --outfile=static/js/pages/newsAnalysis.js --platform=browser --target=es2020 --minify",
     "build:css": "NODE_ENV=production postcss ./static/css/input.css -o ./static/css/output.css",
     "gen:simdata": "npx tsx scripts/genSimData.ts",
-    "build": "npm run gen:simdata && npm run build:ts && npm run build:css && hugo --minify",
+    "build": "npm run gen:simdata && npm run build:ts && npm run build:bundle && npm run build:css && hugo --minify",
     "start": "hugo server",
     "test": "npx tsx test/runTests.ts",
     "test:conversation": "npx tsx --test test/runConversationTests.ts"
@@ -19,11 +21,17 @@
     "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
     "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "postcss-nesting": "^13.0.2",
     "tailwindcss": "^4.1.16",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@types/cytoscape": "^3.31.0",
+    "cytoscape": "^3.33.4",
+    "cytoscape-cose-bilkent": "^4.1.0"
   }
 }

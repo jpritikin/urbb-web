@@ -1,0 +1,258 @@
+{
+  "concepts": {
+    "belief-reduction": {
+      "label": "Belief Reduction",
+      "desc": "Reducing conviction in beliefs — both beliefs and disbeliefs — rather than eliminating them entirely"
+    },
+    "religious-experience": {
+      "label": "Religious Experience",
+      "desc": "First-hand experiences of awe, presence, or connection with something greater — the core target of the book's practices"
+    },
+    "conviction-reduction": {
+      "label": "Conviction Reduction",
+      "desc": "Holding beliefs with less certainty; the practical mechanism behind belief reduction"
+    },
+    "process-beliefs": {
+      "label": "Process Beliefs",
+      "desc": "Beliefs that enable exploration — e.g. believing meditation is possible — as opposed to content beliefs about outcomes"
+    },
+    "IFS": {
+      "label": "Internal Family Systems",
+      "desc": "Psychological model (Richard Schwartz) treating the psyche as a community of sub-personalities called parts"
+    },
+    "parts": {
+      "label": "Parts / Sub-personalities",
+      "desc": "Internal sub-personalities that can hold conflicting beliefs and emotions simultaneously"
+    },
+    "mystery-belief-spectrum": {
+      "label": "Mystery–Belief Spectrum",
+      "desc": "Analytical tool: traditions range from mystery-focused (questioning, experience) to belief-heavy (memorization, authority)"
+    },
+    "open-inquiry": {
+      "label": "Open Inquiry",
+      "desc": "The subtitle's theme: seeking without predetermined answers; tolerance for uncertainty"
+    },
+    "religion-definition": {
+      "label": "Religion (Definition)",
+      "desc": "Carse's working definition: old community with sustained identity, not necessarily theistic"
+    },
+    "Carse": {
+      "label": "James Carse",
+      "desc": "Author of 'The Religious Case Against Belief' — the direct inspiration for the book"
+    },
+    "altered-states": {
+      "label": "Altered States of Consciousness",
+      "desc": "Any departure from ordinary waking state: sleep, cannabis, meditation flow, psychedelics"
+    },
+    "psychedelics": {
+      "label": "Psychedelics / Entheogens",
+      "desc": "Serotonergic psychedelics (psilocybin, 5-MeO-DMT) used for religious experience and fear-of-death reduction"
+    },
+    "fear-of-death": {
+      "label": "Fear of Death",
+      "desc": "Existential anxiety about the dissolution of the self-boundary at death; addressed by psychedelics and non-duality"
+    },
+    "non-duality": {
+      "label": "Non-Duality / Boundary Dissolution",
+      "desc": "The dissolution of the self/other boundary in deep altered states — experiential precursor to understanding death"
+    },
+    "consciousness": {
+      "label": "Consciousness",
+      "desc": "What is absent under general anesthetic; the hard problem central to AI and religious debates"
+    },
+    "AI": {
+      "label": "AI & Consciousness",
+      "desc": "Whether AI systems are conscious; implications for human dignity and economic displacement"
+    },
+    "Penrose-Godel": {
+      "label": "Penrose–Gödel Argument",
+      "desc": "Roger Penrose's argument that Gödel's incompleteness theorems show humans are categorically beyond formal systems — hence AI cannot be conscious"
+    },
+    "self-leadership": {
+      "label": "Self-Leadership",
+      "desc": "IFS concept: two components — blending/unblending with parts, and mental steering (the skill built in meditation)"
+    },
+    "blending-unblending": {
+      "label": "Blending / Unblending",
+      "desc": "Whether a part takes over behavior (blended) or is felt but held at arm's length (unblended)"
+    },
+    "mental-steering": {
+      "label": "Mental Steering",
+      "desc": "The meditator's skill of choosing which part to attend to and deferring others — developed through IFS-informed meditation"
+    },
+    "meditation": {
+      "label": "Meditation Practice",
+      "desc": "Refined IFS-style technique: note interrupting parts, promise to return to them, build trust and effortlessness"
+    },
+    "political-polarization": {
+      "label": "Political Polarization",
+      "desc": "Politics as downstream of individual spiritual development; empathy/compassion as the upstream lever"
+    },
+    "free-will": {
+      "label": "Free Will",
+      "desc": "The question of whether human agency shapes outcomes — contra Sapolsky's determinism"
+    },
+    "prayer": {
+      "label": "Prayer (Causal Structure)",
+      "desc": "Chapter 6: mapping the causal structure of prayer — the argument between scientific and devotional interpretations of outcome"
+    },
+    "entheogenic-law": {
+      "label": "Entheogenic Law",
+      "desc": "Greg's legal practice defending enthogen-based religious practices under First Amendment religion clauses"
+    },
+    "cultural-appropriation": {
+      "label": "Cultural Appropriation",
+      "desc": "Concern about extractive use of indigenous practices; distinguished from respectful citation"
+    },
+    "inculcated-beliefs": {
+      "label": "Inculcated Beliefs",
+      "desc": "Beliefs absorbed from upbringing rather than chosen — John Fisher's question: are these mine or was I told to have them?"
+    },
+    "evidence-spectrum": {
+      "label": "Evidence Spectrum",
+      "desc": "Some beliefs are confirmable by evidence (temperature), others are not (art preference) — a spectrum not a binary"
+    }
+  },
+  "interviews": [
+    {
+      "id": "dugan",
+      "title": "Rev. Dr. D. Richard Dugan",
+      "show": "Tell Me Your Story",
+      "date": "2026-05-17",
+      "url": "/news/#dugan-interview",
+      "speakerWords": {
+        "Joshua": 3420,
+        "Dugan": 6180
+      },
+      "conceptSequence": [
+        "belief-reduction",
+        "religious-experience",
+        "conviction-reduction",
+        "belief-reduction",
+        "religious-experience",
+        "altered-states",
+        "process-beliefs",
+        "IFS",
+        "parts",
+        "inculcated-beliefs",
+        "mystery-belief-spectrum",
+        "open-inquiry",
+        "religion-definition",
+        "Carse",
+        "evidence-spectrum",
+        "prayer",
+        "AI",
+        "consciousness",
+        "Penrose-Godel",
+        "AI",
+        "free-will",
+        "political-polarization",
+        "religious-experience",
+        "non-duality",
+        "psychedelics",
+        "non-duality",
+        "fear-of-death",
+        "free-will",
+        "conviction-reduction",
+        "political-polarization",
+        "IFS",
+        "parts",
+        "self-leadership",
+        "religious-experience"
+      ],
+      "contextSnippets": {
+        "belief-reduction": "the title is about religion unburdened by belief. In the first chapter, like I clarified it, what I'm really talking about is reducing conviction. So the reason that's relevant is like this person who had an out of body experience, it sounds like people disbelieved him or express their disbeliefs about it. And from my point of view, like I would advocate for reducing a conviction in disbeliefs as well as beliefs.",
+        "religious-experience": "many people have had religious experiences on occasion, maybe by accident, like they feel a sense that they're a presence of something greater or a sense of awe or beauty. And what I'm trying to address here is make those experiences very predictable, like make the odds of having them high so that you can decide when you want to have religious experiences and put it on your calendar",
+        "conviction-reduction": "what I'm really talking about is reducing conviction. So the reason that's relevant is like this person who had an out of body experience, it sounds like people disbelieved him or express their disbeliefs about it. And from my point of view, like I would advocate for reducing a conviction in disbeliefs as well as beliefs. So that's where I'm coming from",
+        "process-beliefs": "you can't avoid some beliefs but there's a difference between beliefs that enable exploration and other beliefs that like color your expectations. So I make a distinction between process beliefs, beliefs that enable exploration. Like if you're going to practice meditation, then you have to believe that sitting quietly for 10 or 15 minutes is possible and that you can direct attention. So those are process beliefs about your self-efficacy",
+        "IFS": "one step is to kind of acknowledge that different parts of us can believe different things. And when I use the word parts, I mean it in a specific way. I do talk therapy using the internal family systems model and in internal family systems, we understand the psyche is made up of a collection of parts.",
+        "parts": "the easiest way to explain that is like if you've ever had mixed feelings, suppose you're late to work and you're driving to work. So you have a one part of you that wants to get there on time. Another part that is afraid of getting in trouble with the law, maybe another part that's frustrated that you left so late from home. So each of these parts can be like understood as its own kind of sub-personality.",
+        "mystery-belief-spectrum": "the example that I like to talk about is in Judaism, there's the ultra-orthodox branch, which is where the rabbis have most of the authority, there's a lot of rules to memorize and then compare that to the reform branch of Judaism that's much more open-ended. And the rabbis are just there for guidance maybe, but everyone is asked to develop their own moral sense.",
+        "open-inquiry": "it takes a position on the spectrum. It advocates for the mystery side, the questioning side of the spectrum.",
+        "religion-definition": "I rely on Carse's definition. And when Carse says that we can recognize, like is it, there isn't really a great definition, but we can recognize religions that are not religious. We can recognize religions that are traditions that have been around a long time.",
+        "Carse": "I rely on Carse's definition. And when Carse says that we can recognize, like is it, there isn't really a great definition, but we can recognize religions that are not religious.",
+        "evidence-spectrum": "I could believe it's hot outside, but then when I check the thermometer, then I can see, oh, it's 85, then it becomes a fact. In some kinds of information, it's the being able to gather evidence and confirm something can move a belief to a fact, but there's different kinds of evidence work in different contexts.",
+        "prayer": "whether you believe or see that as a fact about Noah's Ark, like how does that affect you in your day-to-day life?",
+        "AI": "one is the economic displacement, which is that's a real thing we need to worry about. People have invested a lot in training and suddenly the AI can do the same kind of work that they can do. But the other problem is people worrying about AI being conscious or kind of like an independent self-interested agent.",
+        "consciousness": "what AI is really doing is it's manifesting an externalization in the sense that this is something that therapists that work with children do all the time in play therapy. And so what I see AI doing is being like an externalization of intelligence.",
+        "Penrose-Godel": "Roger Penrose has this argument that relies on Gödel's incompleteness theorems. And just he makes the argument that no matter how sophisticated the computer, human intelligence is just a different kind of category of intelligence because it goes beyond mathematical reasoning.",
+        "free-will": "I think there is some window for free will. I'm not sure how to account for that in terms of physics models, but that's just my intuition that there is some small opportunity for expressing free will and we should make the most of it.",
+        "political-polarization": "politics are kind of downstream of how, where people are at in their self-development and I think religion has a part to play there. And so my thinking is like, if people, if I can revitalize religion and there can be more empathy and compassion among people individually, then that will have the downstream effects of more compassionate and empathetic kind of political environment.",
+        "non-duality": "people who use certain psychedelic drugs, like serotonergic psychedelics, like psilocybin, they also report that sometimes they feel like the boundary between self and other dissolves. And that's, they report it as kind of similar to death in the sense because they, you know, it's when that boundary dissolves, then you're really not an individual anymore.",
+        "psychedelics": "people who use certain psychedelic drugs, like serotonergic psychedelics, like psilocybin, they also report that sometimes they feel like the boundary between self and other dissolves.",
+        "fear-of-death": "the other evidence that speaks to this is that people who use certain psychedelic drugs, like serotonergic psychedelics, like psilocybin, they also report that sometimes they feel like the boundary between self and other dissolves. And that's, they report it as kind of similar to death",
+        "inculcated-beliefs": "Everything you believe right now is what you were taught to believe. How do we shift out of that into knowing that what I believe is what I choose to believe?",
+        "self-leadership": "in internal family systems, we learned that people are composed of a collection of cooperating parts, so I see myself as, you know, in that way, and also in experiences of altered states, I've had experiences where the boundary between self and other dissolves, and I find myself confronted with this larger presence"
+      }
+    },
+    {
+      "id": "greg-lake",
+      "title": "Greg Lake",
+      "show": "EntheoEsq",
+      "date": "2026-05-22",
+      "url": "/news/#greg-lake-interview",
+      "speakerWords": {
+        "Joshua": 2980,
+        "Greg": 2240
+      },
+      "conceptSequence": [
+        "Carse",
+        "belief-reduction",
+        "mystery-belief-spectrum",
+        "open-inquiry",
+        "IFS",
+        "parts",
+        "entheogenic-law",
+        "mystery-belief-spectrum",
+        "religious-experience",
+        "altered-states",
+        "cultural-appropriation",
+        "mystery-belief-spectrum",
+        "open-inquiry",
+        "consciousness",
+        "altered-states",
+        "psychedelics",
+        "self-leadership",
+        "blending-unblending",
+        "mental-steering",
+        "meditation",
+        "self-leadership",
+        "psychedelics",
+        "fear-of-death",
+        "non-duality",
+        "psychedelics",
+        "fear-of-death",
+        "non-duality",
+        "AI",
+        "consciousness",
+        "Penrose-Godel",
+        "consciousness",
+        "religious-experience",
+        "prayer"
+      ],
+      "contextSnippets": {
+        "Carse": "I happened to run into James Carse's book, The Religious Case Against Belief, a couple years ago, and I thought it was very insightful. I was really excited to find it. But then I got about halfway through and I felt like he kind of dropped the ball, and my book is an attempt to finish the job.",
+        "belief-reduction": "The title alone — The Religious Case Against Belief — suggested to me, oh, these two things are different, maybe even adversarial in some ways.",
+        "mystery-belief-spectrum": "This is an analytical tool I introduce early in the book. Basically it's a way of looking at a religious tradition superficially and making some quick judgments about whether it leans more to the mystery side or to the belief-heavy side. A mystery-focused tradition would be more about questioning. A belief-heavy tradition would be more about memorization.",
+        "open-inquiry": "The book is really tailored for people who have seen the religious traditions on offer and feel like they're looking for something more. People who are spiritual but not religious, who are open — or even atheists, because the book doesn't ask you to believe anything.",
+        "IFS": "It's a psychological model developed by Richard Schwartz, who was trained as a family therapist. What he noticed working with individual clients with eating disorders is that they would describe their internal systems in a way that resembled the way Schwartz would work with families.",
+        "parts": "The easiest way to understand parts — what Schwartz called inner subpersonalities — is through mixed feelings. Suppose you're driving to work and you're late. A part of you wants to get there on time. A part of you may be worried about law enforcement.",
+        "entheogenic-law": "I work with a lot of enthogen-based religions who, while they have some written doctrine, the religion is really centered around the ceremony and the ritual. The belief being that we've either come up on specific issues or are just generally looking to figure out more about our place in the universe.",
+        "religious-experience": "A great example is the Moses story with the burning bush. Moses just accidentally encountered the burning bush. He had no plans — it was a total surprise for him — and then he developed this philosophy and tradition around it. It was the experience that came first.",
+        "altered-states": "What is an altered state of consciousness? Our ordinary waking state is what we're enjoying right now. An altered state is anything that's not our ordinary waking state — sleep is an altered state, using cannabis puts you in an altered state.",
+        "cultural-appropriation": "Yeah, I don't claim to be fully insulated. I'm coming from a culture that has a history of taking a very extractive approach to indigenous traditions. But what I'm trying to do is just point out practices and where they come from, and not represent those practices as my own.",
+        "consciousness": "Maybe a quick definition of consciousness: it's what is absent when you're given a general anesthetic — you're not there anymore, you're unconscious.",
+        "psychedelics": "With psychedelics, that boundary can be dissolved before death, and then you can have that experience of being connected with something larger — because when you use psychedelics and that boundary dissolves, you don't disappear.",
+        "self-leadership": "Self-leadership is a concept from internal family systems and it has two components in my mind. One component is whether you're blended or unblended, and the other is mental steering.",
+        "blending-unblending": "If I blended with that part, my mind might go blank and I wouldn't know what to say — it takes over my behavior. If I can be unblended with that part, I still feel its anxiety, I would still be uneasy about being interviewed, but there would be some trust between that part and myself.",
+        "mental-steering": "The other component of self-leadership is mental steering — the skill you develop in meditation. It's about being with parts that are unblended, but having some sense of being able to choose which part you're with, or letting a part know you'll come back to it later.",
+        "meditation": "When a part is requesting your attention, pause for a minute before you return to meditation and note down what that part needs. Maybe you're thinking about what to make for dinner — write that down. Then reassure the part that you're going to come back to that and give it the attention it's asking for before you return your focus to your breath.",
+        "fear-of-death": "As individuals, we have this sense that there's a boundary between self and other. In death, that boundary changes or goes away or dissolves. The prospect of that boundary changing may be part of why people are afraid of death.",
+        "non-duality": "when you use psychedelics and that boundary dissolves, you don't disappear. You see that you still exist after that boundary dissolves, but it's a different — you're in a different altered state where you're still there. That tacit experience may reassure people about what happens after death.",
+        "AI": "That's a — how much time do we have here? No. I don't think so. Roger Penrose has done some work on this and his take appeals to me.",
+        "Penrose-Godel": "He cites Gödel's incompleteness theorems as a reason why computers can never be conscious. Basically the argument is that there are certain statements inside formal systems whose truth cannot be determined from within the system.",
+        "prayer": "My goal in writing the book is to give people more autonomy. Religious experiences — this sense of being connected with something greater than yourself, with some awe and beauty to go with that — are something I've been seeking all my life."
+      }
+    }
+  ]
+}
