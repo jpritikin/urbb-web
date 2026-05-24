@@ -244,15 +244,33 @@ interface InterviewEntry {
 
 declare const INTERVIEW_DATA: InterviewEntry[] | undefined;
 
-// Ordered speaker colors matching CSS vars
-const SPEAKER_COLORS: Record<string, { bg: string; fg: string }> = {
-  joshua: { bg: '#92400e', fg: '#fde68a' },
-  dugan:  { bg: '#1e3a5f', fg: '#bfdbfe' },
-  greg:   { bg: '#3b1f6b', fg: '#e9d5ff' },
-};
-
 function speakerKey(name: string): string {
   return name.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function hsvToHex(h: number, s: number, v: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    const val = v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    return Math.round(val * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(5)}${f(3)}${f(1)}`;
+}
+
+const speakerColorCache = new Map<string, { bg: string; fg: string }>();
+let speakerColorIndex = 0;
+
+function speakerColor(key: string): { bg: string; fg: string } {
+  if (!speakerColorCache.has(key)) {
+    // Golden angle spacing for maximum hue separation; S=0.7, V=0.55 for bg, V=0.92 for fg
+    const hue = (speakerColorIndex * 137.508) % 360;
+    speakerColorIndex++;
+    speakerColorCache.set(key, {
+      bg: hsvToHex(hue, 0.70, 0.55),
+      fg: hsvToHex(hue, 0.30, 0.92),
+    });
+  }
+  return speakerColorCache.get(key)!;
 }
 
 // Map value in [min,max] to dial pointer rotation [-135deg, +135deg]
@@ -290,7 +308,7 @@ function drawPie(canvas: HTMLCanvasElement, interview: InterviewEntry, params: P
   for (const [speaker, words] of entries) {
     const slice = (words / total) * 2 * Math.PI;
     const key = speakerKey(speaker);
-    const color = SPEAKER_COLORS[key]?.bg ?? '#555';
+    const color = speakerColor(key).bg;
 
     const steps = Math.max(4, Math.ceil(SIN_SEGMENTS * slice / (2 * Math.PI)));
     ctx.beginPath();
@@ -321,7 +339,7 @@ function renderPieLegend(container: HTMLElement, interview: InterviewEntry): voi
   for (const [speaker, words] of Object.entries(interview.speakerWords)) {
     const pct = total ? (words / total * 100) : 0;
     const key = speakerKey(speaker);
-    const colors = SPEAKER_COLORS[key] ?? { bg: '#555', fg: '#fff' };
+    const colors = speakerColor(key);
     const row = document.createElement('div');
     row.className = 'pie-legend-row';
     row.innerHTML = `<span class="pie-legend-swatch" style="background:${colors.bg}"></span>`

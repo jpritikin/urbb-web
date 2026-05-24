@@ -111,6 +111,18 @@
     "evidence-spectrum": {
       "label": "Evidence Spectrum",
       "desc": "Some beliefs are confirmable by evidence (temperature), others are not (art preference) — a spectrum not a binary"
+    },
+    "unattached-burdens": {
+      "label": "Unattached Burdens",
+      "desc": "Robert Falconer's extension of IFS: external entities (not internal parts) that attach to a person's system and can be removed via exorcism protocol"
+    },
+    "entheogenic-safety": {
+      "label": "Entheogenic Safety",
+      "desc": "Skepticism of mandatory sober trip-sitters; preference for solitary entheogenic experience to avoid power-dynamic exploitation"
+    },
+    "Greger-parallel": {
+      "label": "Greger Parallel",
+      "desc": "Family connection to Dr. Michael Greger (Nathan Pritikin); both projects aim to give people direct access to health/spiritual resources, bypassing gatekeepers"
     }
   },
   "interviews": [
@@ -183,6 +195,70 @@
         "fear-of-death": "the other evidence that speaks to this is that people who use certain psychedelic drugs, like serotonergic psychedelics, like psilocybin, they also report that sometimes they feel like the boundary between self and other dissolves. And that's, they report it as kind of similar to death",
         "inculcated-beliefs": "Everything you believe right now is what you were taught to believe. How do we shift out of that into knowing that what I believe is what I choose to believe?",
         "self-leadership": "in internal family systems, we learned that people are composed of a collection of cooperating parts, so I see myself as, you know, in that way, and also in experiences of altered states, I've had experiences where the boundary between self and other dissolves, and I find myself confronted with this larger presence"
+      }
+    },
+    {
+      "id": "end-of-road",
+      "title": "Michael Kokal & Lynn",
+      "show": "End of the Road",
+      "date": "2026-05-24",
+      "url": "/news/#end-of-road-interview",
+      "speakerWords": {
+        "Joshua": 2253,
+        "Mike": 1112,
+        "Lynn": 1018
+      },
+      "conceptSequence": [
+        "process-beliefs",
+        "Carse",
+        "process-beliefs",
+        "IFS",
+        "process-beliefs",
+        "meditation",
+        "process-beliefs",
+        "conviction-reduction",
+        "belief-reduction",
+        "inculcated-beliefs",
+        "process-beliefs",
+        "IFS",
+        "parts",
+        "IFS",
+        "parts",
+        "unattached-burdens",
+        "unattached-burdens",
+        "consciousness",
+        "psychedelics",
+        "open-inquiry",
+        "religious-experience",
+        "Greger-parallel",
+        "evidence-spectrum",
+        "consciousness",
+        "Penrose-Godel",
+        "consciousness",
+        "mystery-belief-spectrum",
+        "religious-experience",
+        "altered-states",
+        "entheogenic-safety"
+      ],
+      "contextSnippets": {
+        "process-beliefs": "My book kind of starts where James Carse's book left off. Because beliefs serve different functions—you can have a process belief, which are beliefs that enable you to do certain practices like meditation. That kind of belief makes a practice possible. Other kinds of beliefs—what I call content beliefs—are beliefs about what the outcome should be.",
+        "Carse": "My book kind of starts where James Carse's book left off. His book, The Religious Case Against Belief, was proposing to kind of separate or pry apart religion and belief. It seemed like a good idea to me, but in practice it needed some further refinement.",
+        "IFS": "Internal Family Systems was developed by Richard Schwartz, who was trained as a family therapist. What he noticed working with individual clients with eating disorders is that they would describe their internal systems in a way that was very reminiscent of how Schwartz was used to working with families.",
+        "parts": "An easy way to understand this is to consider an occasion when you have mixed feelings. Suppose you're driving to work late. A part of you really wants to get to work on time. Another part might be afraid of getting pulled over by the police. Internal Family Systems helps pull apart these mixed feelings into their individual components.",
+        "unattached-burdens": "Robert Falconer felt that [the original IFS formulation] wasn't flexible enough. He wanted to accommodate the possibility that we could take in external energies or external entities that would be present in our system without being a part of us. He makes a distinction between entities that are burdensome and those that are guides.",
+        "conviction-reduction": "the degree of conviction you have in [beliefs] should be justified by the evidence. If you believe it's hot outside, you can check the thermometer and that evidence confirms your belief, so that justifies high conviction.",
+        "belief-reduction": "it's important to be context-specific about how much conviction you put in beliefs. If you always hold everything lightly, you won't be able to make the correct decision about the harm of smoking cigarettes.",
+        "inculcated-beliefs": "we arrive in the world and before we're able to really grasp something as a belief and hold it, we're subject to all kinds of things in the environment we grow up in. We don't have the cognitive or emotional ability when we're young to really understand how to stand back from beliefs.",
+        "consciousness": "Are you thinking of Donald Hoffman? Because he definitely has the consciousness-first approach. … Federico Faggin … Bernardo Kastrup advocates for panpsychism—the view that everything is conscious.",
+        "Penrose-Godel": "An important thing to keep in mind when considering these theories of consciousness is the mechanism—there's got to be some way that consciousness contributes to perception and action.",
+        "psychedelics": "consider Bob's exorcism protocol for removing these entities that are not part of your system.",
+        "open-inquiry": "It's for people that are not satisfied with the religious traditions that are on offer—anyone who feels like they're in the spiritual-but-not-religious category. Atheists could be a good candidate because it doesn't ask them to believe anything.",
+        "religious-experience": "My goal in writing the book is to give people more autonomy. Accessing religious experiences—a sense of being connected to something larger than myself, or beauty and awe—was quite haphazard and accidental. I'm trying to give people more autonomy, make it much more predictable and reliable.",
+        "evidence-spectrum": "the degree of conviction you have in them should be justified by the evidence. If you believe it's hot outside, you can check the thermometer.",
+        "meditation": "process beliefs … if you're going to practice meditation, you have to believe that sitting still is possible and that controlling your attention is possible.",
+        "mystery-belief-spectrum": "science and religion … I would suggest that we're becoming more integrated—that there isn't a necessary divide. Science can be reconciled with religion.",
+        "altered-states": "everything in the book is kind of autobiographical in the sense that I've personally experimented with everything I put in it. I continue to attend Santo Daime ceremonies where the ceremonies are training me to be present in challenging situations.",
+        "entheogenic-safety": "I discuss [sober trip sitter requirements] with some skepticism, because having one person sober and one person intoxicated can create power dynamics. My position is that it probably works better if we can approach these experiences in solitude for the most part."
       }
     },
     {
