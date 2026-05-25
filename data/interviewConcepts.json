@@ -2,127 +2,127 @@
   "concepts": {
     "belief-reduction": {
       "label": "Belief Reduction",
-      "desc": "Reducing conviction in beliefs — both beliefs and disbeliefs — rather than eliminating them entirely"
+      "desc": "The radical act of loosening your grip on your own opinions — like releasing a fist without actually dropping anything. Works on disbeliefs too, which is the sneaky part."
     },
     "religious-experience": {
       "label": "Religious Experience",
-      "desc": "First-hand experiences of awe, presence, or connection with something greater — the core target of the book's practices"
+      "desc": "That thing that happens when the universe accidentally forgets to be ordinary — awe, presence, connection with something vastly larger than your to-do list. The book wants to make this schedulable."
     },
     "conviction-reduction": {
       "label": "Conviction Reduction",
-      "desc": "Holding beliefs with less certainty; the practical mechanism behind belief reduction"
+      "desc": "Belief reduction's more technically-minded sibling. Same idea, but now we're adjusting the certainty dial, not deleting the belief entirely. Precision instrument, not a wrecking ball."
     },
     "process-beliefs": {
       "label": "Process Beliefs",
-      "desc": "Beliefs that enable exploration — e.g. believing meditation is possible — as opposed to content beliefs about outcomes"
+      "desc": "The beliefs you need just to get started — like believing you can sit still for 10 minutes before trying meditation. Scaffolding, not dogma. Pull it down once you're inside."
     },
     "IFS": {
       "label": "Internal Family Systems",
-      "desc": "Psychological model (Richard Schwartz) treating the psyche as a community of sub-personalities called parts"
+      "desc": "Richard Schwartz noticed his clients described their inner lives like dysfunctional families. He ran with it. Now your psyche is officially a cast of characters, all with opinions about what you should do for dinner."
     },
     "parts": {
       "label": "Parts / Sub-personalities",
-      "desc": "Internal sub-personalities that can hold conflicting beliefs and emotions simultaneously"
+      "desc": "The committee inside your head. One wants to be on time. One is terrified of speed cameras. One is still annoyed about something from 2011. They all showed up to run your life simultaneously."
     },
     "mystery-belief-spectrum": {
       "label": "Mystery–Belief Spectrum",
-      "desc": "Analytical tool: traditions range from mystery-focused (questioning, experience) to belief-heavy (memorization, authority)"
+      "desc": "A quick-and-dirty ruler for measuring any religious tradition: does it reward questioning or memorization? Reform Judaism vs. ultra-orthodox on one axis; contemplative mystic vs. catechism-reciter on the other."
     },
     "open-inquiry": {
       "label": "Open Inquiry",
-      "desc": "The subtitle's theme: seeking without predetermined answers; tolerance for uncertainty"
+      "desc": "The audacious practice of seeking without knowing what you're looking for. Also: tolerating the discomfort of not having an answer yet. Surprisingly rare. Reportedly uncomfortable. Highly recommended."
     },
     "religion-definition": {
       "label": "Religion (Definition)",
-      "desc": "Carse's working definition: old community with sustained identity, not necessarily theistic"
+      "desc": "Per Carse: an old community with sustained identity — not necessarily God-adjacent. Your local jazz scene might qualify. Your CrossFit gym almost certainly does."
     },
     "Carse": {
       "label": "James Carse",
-      "desc": "Author of 'The Religious Case Against Belief' — the direct inspiration for the book"
+      "desc": "Wrote 'The Religious Case Against Belief,' which made a brilliant argument and then, according to Joshua, kind of dropped the ball halfway through. This book is the second half Carse never wrote."
     },
     "altered-states": {
       "label": "Altered States of Consciousness",
-      "desc": "Any departure from ordinary waking state: sleep, cannabis, meditation flow, psychedelics"
+      "desc": "Any departure from your baseline of staring at screens and wondering what's for lunch: sleep, cannabis, deep meditation, psychedelics, or apparently just a really good Santo Daime ceremony."
     },
     "psychedelics": {
       "label": "Psychedelics / Entheogens",
-      "desc": "Serotonergic psychedelics (psilocybin, 5-MeO-DMT) used for religious experience and fear-of-death reduction"
+      "desc": "Serotonergic compounds (psilocybin, 5-MeO-DMT et al.) that have an impressive track record of dissolving ego-boundaries and incidentally terrifying the FDA. Turns out they also reduce fear of death. Side effects vary."
     },
     "fear-of-death": {
       "label": "Fear of Death",
-      "desc": "Existential anxiety about the dissolution of the self-boundary at death; addressed by psychedelics and non-duality"
+      "desc": "That low-grade existential hum about what happens when the self-boundary finally gives out. Psychedelics offer a preview. Non-duality offers a reframe. The book offers both, with citations."
     },
     "non-duality": {
       "label": "Non-Duality / Boundary Dissolution",
-      "desc": "The dissolution of the self/other boundary in deep altered states — experiential precursor to understanding death"
+      "desc": "When the line between 'me' and 'everything else' goes soft or disappears entirely — reported in deep meditation, psychedelic states, and occasionally near-death experiences. Spoiler: you don't disappear. You just get bigger."
     },
     "consciousness": {
       "label": "Consciousness",
-      "desc": "What is absent under general anesthetic; the hard problem central to AI and religious debates"
+      "desc": "The thing that's definitely there when you're reading this and definitely not there when you're under general anesthesia. What exactly it is, where it lives, and whether your AI assistant has it: genuinely unsettled questions."
     },
     "AI": {
       "label": "AI & Consciousness",
-      "desc": "Whether AI systems are conscious; implications for human dignity and economic displacement"
+      "desc": "Is your chatbot home? The economic displacement is real and tractable. The consciousness question is thornier — and has surprisingly high stakes for human dignity, religious experience, and who gets moral consideration."
     },
     "Penrose-Godel": {
       "label": "Penrose–Gödel Argument",
-      "desc": "Roger Penrose's argument that Gödel's incompleteness theorems show humans are categorically beyond formal systems — hence AI cannot be conscious"
+      "desc": "Roger Penrose recruited Gödel's incompleteness theorems to argue that human minds transcend formal systems — and therefore no computer, however sophisticated, can be conscious. Mathematically spicy. Hotly contested."
     },
     "self-leadership": {
       "label": "Self-Leadership",
-      "desc": "IFS concept: two components — blending/unblending with parts, and mental steering (the skill built in meditation)"
+      "desc": "The IFS answer to 'who's actually driving?' Two components: whether you're fused with a part or holding it at arm's length (blending), and whether you can choose which part gets the steering wheel (mental steering)."
     },
     "blending-unblending": {
       "label": "Blending / Unblending",
-      "desc": "Whether a part takes over behavior (blended) or is felt but held at arm's length (unblended)"
+      "desc": "Blended: a part has taken the wheel and you are now a passenger in your own behavior. Unblended: you can feel the part's feelings without becoming them. Meditation is basically a blending/unblending gym."
     },
     "mental-steering": {
       "label": "Mental Steering",
-      "desc": "The meditator's skill of choosing which part to attend to and deferring others — developed through IFS-informed meditation"
+      "desc": "The actual skill meditation is building: choosing which part of your inner committee gets the floor right now, and gracefully telling the others you'll get to them later. Surprisingly negotiable once you try it."
     },
     "meditation": {
       "label": "Meditation Practice",
-      "desc": "Refined IFS-style technique: note interrupting parts, promise to return to them, build trust and effortlessness"
+      "desc": "IFS-flavored version: when a distracting part shows up, don't fight it — write down what it needs, promise to return, then go back to your breath. It's less about emptying the mind and more about learning to manage a very loud staff meeting."
     },
     "political-polarization": {
       "label": "Political Polarization",
-      "desc": "Politics as downstream of individual spiritual development; empathy/compassion as the upstream lever"
+      "desc": "Joshua's bet: politics is downstream of inner development. Fix the inner committee, grow more empathy, and the political climate might follow. Ambitious. Possibly correct. Definitely a longer timeline than anyone wants."
     },
     "free-will": {
       "label": "Free Will",
-      "desc": "The question of whether human agency shapes outcomes — contra Sapolsky's determinism"
+      "desc": "Sapolsky says no. Joshua says maybe a little. The window might be small, but the argument is: we should use whatever agency exists rather than shrug and blame determinism. Practical optimism in the face of physics."
     },
     "prayer": {
       "label": "Prayer (Causal Structure)",
-      "desc": "Chapter 6: mapping the causal structure of prayer — the argument between scientific and devotional interpretations of outcome"
+      "desc": "Chapter 6 asks: what's actually happening when prayer seems to work? Maps the causal plumbing — placebo, meaning-making, coincidence, or something weirder — without requiring you to settle the metaphysics first."
     },
     "entheogenic-law": {
       "label": "Entheogenic Law",
-      "desc": "Greg's legal practice defending enthogen-based religious practices under First Amendment religion clauses"
+      "desc": "Greg Lake's specialty: defending enthogen-based religious communities in court under First Amendment protections. Where pharmacology meets constitutional law and everybody's reading tea leaves — sometimes literally."
     },
     "cultural-appropriation": {
       "label": "Cultural Appropriation",
-      "desc": "Concern about extractive use of indigenous practices; distinguished from respectful citation"
+      "desc": "The extractive tourism problem: taking indigenous practices without acknowledgment or reciprocity. Joshua's position: cite your sources, don't claim ownership, and recognize the colonial history in the room."
     },
     "inculcated-beliefs": {
       "label": "Inculcated Beliefs",
-      "desc": "Beliefs absorbed from upbringing rather than chosen — John Fisher's question: are these mine or was I told to have them?"
+      "desc": "Beliefs you absorbed before you were old enough to have an opinion about them. John Fisher's question: are these actually mine, or did someone just leave them in the crib? Harder to answer than it sounds."
     },
     "evidence-spectrum": {
       "label": "Evidence Spectrum",
-      "desc": "Some beliefs are confirmable by evidence (temperature), others are not (art preference) — a spectrum not a binary"
+      "desc": "A continuum, not a switch. Outdoor temperature: checkable. Whether a painting is beautiful: not so much. Most beliefs live somewhere in the middle, which is exactly where the interesting arguments happen."
     },
     "unattached-burdens": {
       "label": "Unattached Burdens",
-      "desc": "Robert Falconer's extension of IFS: external entities (not internal parts) that attach to a person's system and can be removed via exorcism protocol"
+      "desc": "Robert Falconer's rogue extension of IFS: external entities that hitch a ride on your system without being actual parts. They can be guides or trouble. Removal protocol: exorcism. Yes, really. Yes, it's in the literature."
     },
     "entheogenic-safety": {
       "label": "Entheogenic Safety",
-      "desc": "Skepticism of mandatory sober trip-sitters; preference for solitary entheogenic experience to avoid power-dynamic exploitation"
+      "desc": "Mandatory sober trip-sitters sound sensible until you notice the power dynamics. Joshua's heterodox take: solitude may actually be safer than having one sober person watch one intoxicated person in an intimate setting."
     },
     "Greger-parallel": {
       "label": "Greger Parallel",
-      "desc": "Family connection to Dr. Michael Greger (Nathan Pritikin); both projects aim to give people direct access to health/spiritual resources, bypassing gatekeepers"
+      "desc": "Nathan Pritikin → Dr. Michael Greger: democratize nutrition, cut out the gatekeepers. Joshua → this book: same move, different domain. Give people direct access to their own spiritual health without requiring a priest, guru, or subscription."
     }
   },
   "interviews": [
