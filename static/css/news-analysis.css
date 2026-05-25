@@ -552,7 +552,10 @@ body:has(#cy) {
   padding: 0.45rem 1.4rem;
   cursor: pointer;
   transition: color 0.15s, box-shadow 0.15s, opacity 0.15s;
-  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .graph-nav-btn { padding: 0.45rem 0.75rem; }
 }
 
 .graph-nav-btn:hover:not(:disabled) {

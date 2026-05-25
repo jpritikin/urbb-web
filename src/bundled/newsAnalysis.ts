@@ -549,7 +549,20 @@ declare global {
     }
 }
 
+function initNavLabels(): void {
+    const backBtn = document.getElementById('nav-back') as HTMLButtonElement;
+    const fwdBtn  = document.getElementById('nav-fwd')  as HTMLButtonElement;
+    const mq = window.matchMedia('(max-width: 480px)');
+    const apply = (compact: boolean) => {
+        backBtn.textContent = compact ? '←' : '← Back';
+        fwdBtn.textContent  = compact ? '→' : 'Forward →';
+    };
+    apply(mq.matches);
+    mq.addEventListener('change', e => apply(e.matches));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    initNavLabels();
     const cy = initGraph(CONCEPT_DATA);
     globalCy = cy;
     globalData = CONCEPT_DATA;
