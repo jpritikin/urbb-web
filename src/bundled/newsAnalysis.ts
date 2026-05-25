@@ -80,15 +80,15 @@ function buildEdges(data: ConceptGraphData): Map<string, number> {
     return edges;
 }
 
-// BFS over undirected edges; returns ordered node ID array or null.
-function findShortestPath(cy: Core, fromId: string, toId: string): string[] | null {
+// Directed BFS following arrow direction only; returns ordered node ID array or null.
+function findDirectedPath(cy: Core, fromId: string, toId: string): string[] | null {
     if (fromId === toId) return [fromId];
     const prev = new Map<string, string>();
     const visited = new Set<string>([fromId]);
     const queue: string[] = [fromId];
     while (queue.length > 0) {
         const curr = queue.shift()!;
-        const neighbors = (cy.getElementById(curr) as NodeSingular).connectedEdges().connectedNodes();
+        const neighbors = (cy.getElementById(curr) as NodeSingular).outgoers('node');
         for (let i = 0; i < neighbors.length; i++) {
             const nbId = neighbors[i].id();
             if (!visited.has(nbId)) {
@@ -107,7 +107,7 @@ function findShortestPath(cy: Core, fromId: string, toId: string): string[] | nu
     return null;
 }
 
-// Pick two nodes that share at least one edge.
+// Pick two nodes connected by a directed edge.
 function pickStartingPair(cy: Core): [string, string] {
     const allEdges = cy.edges();
     const idx = Math.floor(Math.random() * allEdges.length);
@@ -144,7 +144,7 @@ function render(cy: Core): void {
         for (const id of activePath) cy.getElementById(id).removeClass('dimmed');
         for (let i = 0; i < activePath.length - 1; i++) {
             const a = activePath[i], b = activePath[i + 1];
-            cy.edges(`[source="${a}"][target="${b}"], [source="${b}"][target="${a}"]`)
+            cy.edges(`[source="${a}"][target="${b}"]`)
                 .removeClass('dimmed').addClass('path-edge');
         }
     }
@@ -196,6 +196,32 @@ function setPath(cy: Core, path: string[], cursor: number): void {
     selectedPair = [path[0], path[cursor]];
     render(cy);
     if (globalData) renderContextPanel(globalData, selectedPair[1]);
+}
+
+// ── Apology modal ─────────────────────────────────────────────────────────────
+
+const APOLOGY_MESSAGES = [
+    { title: '✦ DEEPLY SORRY ✦', body: 'The arrows have conspired against you. There is simply no directed path between these two concepts—the universe has aligned its arrows in cruel opposition. We are profusely, embarrassingly, cosmically sorry.' },
+    { title: '⚠ PROFOUND REGRETS ⚠', body: 'We searched every directed edge. We begged the arrows. We tried reversing polarity. Nothing. No path exists. Please accept our most abject, groveling, floor-kissing apologies.' },
+    { title: '∅ PATH NOT FOUND ∅', body: 'These nodes exist in separate arrow-kingdoms, and the bridges only go the wrong way. We apologize from the bottom of our directed acyclic hearts. Truly. Deeply. Mortifyingly sorry.' },
+    { title: '✗ ARROWS UNALIGNED ✗', body: 'The directed graph has spoken: no route exists following only the arrow flow. We are so, so, so sorry. The daemon tried everything. It did not work. It weeps for you.' },
+    { title: '☹ DIRECTIONAL DOOM ☹', body: 'Every arrow between here and there points the wrong way. We have checked. Twice. Then again. No directed path. Our apologies are boundless, effusive, and completely sincere.' },
+];
+
+function showApologyModal(): void {
+    const { title, body } = APOLOGY_MESSAGES[Math.floor(Math.random() * APOLOGY_MESSAGES.length)];
+    const overlay = document.createElement('div');
+    overlay.id = 'apology-overlay';
+    overlay.innerHTML = `
+        <div class="apology-inner">
+            <div class="apology-title">${title}</div>
+            <div class="apology-body">${body}</div>
+            <button class="apology-close graph-nav-btn">Dismiss</button>
+        </div>`;
+    document.body.appendChild(overlay);
+    const dismiss = () => overlay.remove();
+    overlay.querySelector('.apology-close')!.addEventListener('click', dismiss);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
 }
 
 // ── Celebration ───────────────────────────────────────────────────────────────
@@ -318,13 +344,11 @@ function attachNodeHandlers(cy: Core, data: ConceptGraphData): void {
     document.getElementById('set-path')!.addEventListener('click', () => {
         const [a, b] = selectedPair;
         if (!a || !b) return;
-        const path = findShortestPath(cy, a, b);
+        const path = findDirectedPath(cy, a, b);
         if (path) {
             setPath(cy, path, path.length - 1);
         } else {
-            const statusEl = document.getElementById('path-status')!;
-            statusEl.textContent = '⚠ no path between these nodes';
-            statusEl.classList.remove('hidden');
+            showApologyModal();
         }
     });
 
@@ -421,6 +445,16 @@ function initGraph(data: ConceptGraphData): Core {
                     'border-color': '#c4b5fd',
                     'border-width': '2px',
                     'border-opacity': 0.9,
+                },
+            },
+            {
+                selector: 'node.bookmarked.active-node, node.bookmarked.prev-node',
+                style: {
+                    'border-color': '#ef4444',
+                    'border-width': '6px',
+                    'border-opacity': 1,
+                    'width': 30,
+                    'height': 30,
                 },
             },
             {
@@ -571,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachNodeHandlers(cy, CONCEPT_DATA);
 
     const [idA, idB] = pickStartingPair(cy);
-    const initPath = findShortestPath(cy, idA, idB)!;
+    const initPath = findDirectedPath(cy, idA, idB)!;
     setPath(cy, initPath, initPath.length - 1);
 
     window.debugStarAll = () => {
