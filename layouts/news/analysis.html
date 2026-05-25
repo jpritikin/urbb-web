@@ -40,15 +40,18 @@
             <div class="analysis-right">
                 <div class="graph-nav-bar">
                     <button id="nav-back" class="graph-nav-btn" disabled>&#8592; Back</button>
+                    <button id="set-path" class="graph-nav-btn set-path-btn">Set Path</button>
                     <button id="nav-fwd"  class="graph-nav-btn" disabled>Forward &#8594;</button>
+                    <div id="bookmark-counter" class="bookmark-counter"><span id="bookmark-mood"></span> ★ <span id="bookmark-count">0</span>/{{ len $.Site.Data.interviewConcepts.concepts }}</div>
                 </div>
+                <div id="path-status" class="path-status"></div>
                 <div id="cy"></div>
             </div>
 
             <div class="analysis-left">
                 <div class="panel-box hidden" id="context-panel">
                     <div class="panel-box-inner">
-                        <div class="panel-box-title">NODE CONTEXT</div>
+                        <div class="panel-box-title">NODE CONTEXT<span id="context-star"></span></div>
                         <div id="context-title" class="context-concept-title"></div>
                         <div id="context-desc" class="context-concept-desc"></div>
                         <div id="context-snippets"></div>

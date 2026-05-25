@@ -419,6 +419,9 @@ body:has(#cy) {
   margin-bottom: 0.55rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--sc-bezel-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .balance-seg {
@@ -560,6 +563,137 @@ body:has(#cy) {
 .graph-nav-btn:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+/* ── Bookmark counter ───────────────────────────────── */
+.bookmark-counter {
+  font-family: var(--sc-mono);
+  font-size: 0.8rem;
+  color: var(--sc-ink-dim);
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.bookmark-counter.all-starred {
+  color: #c4b5fd;
+  text-shadow: 0 0 8px rgba(196, 181, 253, 0.5);
+}
+
+/* ── Set Path button accent ─────────────────────────── */
+.set-path-btn {
+  color: #34d399;
+  text-shadow: 0 0 calc(8px * var(--sc-glow)) rgba(52, 211, 153, 0.4);
+}
+.set-path-btn:hover:not(:disabled) {
+  color: #6ee7b7;
+  box-shadow: 0 0 calc(12px * var(--sc-glow)) rgba(52, 211, 153, 0.35);
+}
+
+/* ── Path status bar ────────────────────────────────── */
+.path-status {
+  font-family: var(--sc-mono);
+  font-size: 0.75rem;
+  color: var(--sc-text);
+  background: var(--sc-panel);
+  border-top:    1px solid var(--sc-bezel-light);
+  border-left:   1px solid var(--sc-bezel-light);
+  border-right:  1px solid var(--sc-bezel-shadow);
+  border-bottom: 2px solid var(--sc-bezel-shadow);
+  border-radius: var(--sc-radius);
+  padding: 0.3rem 0.7rem;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+@keyframes star-flutter {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  20%  { transform: rotate(-12deg) scale(1.15); }
+  40%  { transform: rotate(10deg)  scale(0.9);  }
+  60%  { transform: rotate(-8deg)  scale(1.1);  }
+  80%  { transform: rotate(6deg)   scale(0.95); }
+  100% { transform: rotate(0deg)   scale(1);    }
+}
+
+/* ── Bookmark star button ───────────────────────────── */
+.bookmark-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 2rem;
+  color: var(--sc-ink-dim);
+  line-height: 1;
+  transition: color 0.15s, text-shadow 0.15s;
+  padding: 0;
+  animation: star-flutter 12s ease-in-out infinite;
+  transform-origin: center;
+}
+.bookmark-star:hover { color: var(--sc-ink); }
+.bookmark-star.bookmarked {
+  color: #c4b5fd;
+  text-shadow: 0 0 8px rgba(196, 181, 253, 0.6);
+}
+
+/* ── Celebration overlay ────────────────────────────── */
+#celebration-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fade-in 0.4s ease;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.celebration-inner {
+  font-family: var(--sc-mono);
+  text-align: center;
+  background: var(--sc-panel);
+  border-top:    1px solid var(--sc-bezel-light);
+  border-left:   1px solid var(--sc-bezel-light);
+  border-right:  1px solid var(--sc-bezel-shadow);
+  border-bottom: 2px solid var(--sc-bezel-shadow);
+  border-radius: var(--sc-radius);
+  padding: 2.5rem 3rem;
+  max-width: 460px;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 40px rgba(196, 181, 253, 0.2);
+}
+.celebration-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #c4b5fd;
+  text-shadow: 0 0 20px rgba(196, 181, 253, 0.7);
+  margin-bottom: 1rem;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 20px rgba(196, 181, 253, 0.7); }
+  50%       { text-shadow: 0 0 40px rgba(196, 181, 253, 1); }
+}
+.celebration-sub {
+  font-size: 0.9rem;
+  color: var(--sc-text);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+.celebration-count {
+  font-size: 0.8rem;
+  color: var(--sc-ink-dim);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.1em;
+}
+.celebration-close {
+  margin: 0 auto;
+  display: block;
 }
 
 @media (max-width: 480px) {
