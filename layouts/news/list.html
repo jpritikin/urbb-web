@@ -304,7 +304,7 @@
     <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}" id="{{ .File.ContentBaseName }}">
       <div class="news-date">{{ .Date.Format "2 January 2006" }}</div>
       <div class="news-title">{{ .Title }} <a class="news-permalink" href="#{{ .File.ContentBaseName }}" title="Link to this item">¶</a></div>
-      <div class="prose dark:prose-invert prose-sm max-w-none
+      <div class="prose dark:prose-invert prose-lg max-w-none
         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-2
         prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline">
         {{ .Content }}

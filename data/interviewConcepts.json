@@ -123,9 +123,82 @@
     "Greger-parallel": {
       "label": "Greger Parallel",
       "desc": "Nathan Pritikin → Dr. Michael Greger: democratize nutrition, cut out the gatekeepers. Joshua → this book: same move, different domain. Give people direct access to their own spiritual health without requiring a priest, guru, or subscription."
+    },
+    "knowing-vs-belief": {
+      "label": "Knowing vs. Belief",
+      "desc": "Ti0's central distinction: skeptics and believers are actually the same—both operating from belief. Knowing is different: the laws of reality operate whether you believe them or not, just like gravity. You don't need to believe the law of gravity. Same goes for the laws of consciousness."
+    },
+    "trinity-consciousness": {
+      "label": "Trinity Consciousness",
+      "desc": "Ti0's alternative to non-duality: rather than choosing dissolution over individuality, hold both realities simultaneously. The self exists. The larger unity exists. Picking one over the other is itself a form of duality. Totality means carrying both."
+    },
+    "ayahuasca-shamanism": {
+      "label": "Ayahuasca Shamanism",
+      "desc": "Ti0's domain: 12 years working with ayahuasca, 600+ personal experiences, 5,000+ doses facilitated. His finding: awakening isn't guaranteed by the substance—it depends on whether the ego-mind gets out of the way enough for the soul to actually know something."
+    },
+    "guru-dispels-darkness": {
+      "label": "Guru (Original Meaning)",
+      "desc": "The Sanskrit root: one who dispels darkness, not one who fills your head with descriptions. Western spirituality got it backwards—adding more elaborate ideas about the divine instead of clearing the noise so the light becomes visible on its own."
+    },
+    "noise-clearing": {
+      "label": "Noise Clearing",
+      "desc": "Ti0's framing of all therapeutic and spiritual work: anxiety, trauma, rage, addiction—it's all just noise. The specific label doesn't matter. Clear the interference and clarity about reality reveals itself. The guru's only real job."
     }
   },
   "interviews": [
+    {
+      "id": "ti0",
+      "title": "Ti0 Rohan",
+      "show": "The Infinite Zero Experience",
+      "date": "2026-05-26",
+      "url": "/news/#ti0-interview",
+      "speakerWords": {
+        "Joshua": 1650,
+        "Ti0": 2800
+      },
+      "conceptSequence": [
+        "belief-reduction",
+        "knowing-vs-belief",
+        "evidence-spectrum",
+        "ayahuasca-shamanism",
+        "knowing-vs-belief",
+        "consciousness",
+        "non-duality",
+        "noise-clearing",
+        "guru-dispels-darkness",
+        "IFS",
+        "blending-unblending",
+        "trinity-consciousness",
+        "non-duality",
+        "trinity-consciousness",
+        "blending-unblending",
+        "religious-experience",
+        "meditation",
+        "blending-unblending",
+        "parts",
+        "self-leadership",
+        "ayahuasca-shamanism",
+        "altered-states"
+      ],
+      "contextSnippets": {
+        "belief-reduction": "we both see beliefs as something to hold carefully—or even as an obstacle.",
+        "knowing-vs-belief": "Knowing is: these are the laws of reality and you operate by them. But skeptics and believers are both operating from the level of rules—man-made impositions and limitations—rather than the laws of reality itself. I don't need to believe the law of gravity. I don't need to believe the laws of consciousness. They are real whether I believe them or not.",
+        "evidence-spectrum": "Usually the path from belief to knowledge requires evidence. In mathematics, you need to check a proof. In history, you look for corroborating accounts. In weather forecasting, a 30% probability is still better than a guess.",
+        "ayahuasca-shamanism": "I've been working with ayahuasca for 12 years now and I've facilitated over a thousand people. I've had over 600 experiences myself. I have served over 5,000 doses to other people. It's not a guarantee that you'll drink ayahuasca and know the divine.",
+        "consciousness": "The ego and the rational mind can learn everything about the world. They can describe the function and appearance of a tree. But they cannot know anything. They can only have information about things—descriptions. We've mistaken information and descriptions for knowing.",
+        "non-duality": "As individuals, we have this sense that there's a boundary between self and other. In those non-dual experiences, you no longer really feel like an individual.",
+        "noise-clearing": "Each person has their noise. Some might call it anxiety. Some might call it trauma. Some might call it rage. Some might call it alcoholism. It doesn't matter what the noise is. All of it is noise and interference standing in the way of clarity about reality.",
+        "guru-dispels-darkness": "The word guru in its original Sanskrit context means 'the one who dispels darkness.' That's all. They dispel the darkness and the light becomes clear. What Western religion does instead is try to fill your head with descriptions of the mystical and the divine, adding more noise.",
+        "IFS": "I definitely do parts work. IFS is something I've come across and I've done a lot of it myself. I simply see it as one tool. The risk is that people get too attached to one system—they get captured by the tool rather than using it and setting it aside.",
+        "blending-unblending": "When you're identified with a part, it dictates your possibility. The moment you disidentify, a new reality opens up. When you unblend or disidentify from all the things, you accidentally step into the mystical divine experience.",
+        "trinity-consciousness": "I call it trinity consciousness—you can hold the duality of non-duality and duality itself, because both realities are true at different levels. There is self and other, and there is a reality where that division collapses. The totality of our being is to hold both, not choose one over the other.",
+        "religious-experience": "My work is a preparation to meet the divine. It's doing all of the inner work—emotional, psychological—before that encounter.",
+        "meditation": "When your mind wanders, instead of immediately returning to your breath, write down what took you away. After the meditation, take time with that piece of paper and actually address those issues. You're training your parts to be patient, and building trust with them.",
+        "parts": "There is you, and there are your parts—the angry one, the sad one, the one who had a fight with the boss. None of that is you. All of those are happenings happening within you. And who you are is the one who gets to experience that, navigate that, release that, and be more than that.",
+        "self-leadership": "In Santo Daime, staying with the group—keeping track of the lyrics, the melody, the rhythm—develops firmeza, firmness. It's the same dynamic as unblending: you can feel the inner experience without being pulled into it.",
+        "altered-states": "Just to clarify that ayahuasca holds infinite possible experiences with infinite intentions. There's no box for it. A lot of it is about the intention you hold, and then finding the right guide for that intention."
+      }
+    },
     {
       "id": "dugan",
       "title": "Rev. Dr. D. Richard Dugan",
