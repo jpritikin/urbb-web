@@ -295,13 +295,15 @@ export function initGoodreadsScrolls(anchorEl: HTMLElement): void {
     const debug = isDebugMode();
     fetch('https://data.unburdened.biz/reviews.json')
         .then(r => r.json())
-        .then((data: { reviews: Review[] }) => {
+        .then((data: { reviews: Review[]; fetchedAt?: string }) => {
             const reviews = [...(data.reviews ?? [])];
+            console.log(`[grScrolls] R2 returned ${reviews.length} review(s), fetchedAt=${data.fetchedAt ?? 'unknown'}`);
             if (debug) reviews.push(...PARODY_REVIEWS);
             if (!reviews.length) return;
             spawnScrolls(reviews, anchorEl, debug);
         })
-        .catch(() => {
+        .catch((err) => {
+            console.warn('[grScrolls] fetch failed:', err);
             if (debug) spawnScrolls([...PARODY_REVIEWS], anchorEl, debug);
         });
 }
@@ -537,6 +539,30 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
 
         requestAnimationFrame(tick);
     }
+
+    (window as any).__grScrolls = {
+        states,
+        reviews: capped,
+        /** Print a summary of each scroll's current position and phase */
+        status() {
+            states.forEach((s, i) => {
+                const r = capped[i];
+                console.log(`[${i}] ${r.reviewer} | phase=${s.phase} x=${s.x.toFixed(0)} pageY=${s.pageY.toFixed(0)} vx=${s.vx.toFixed(1)} vy=${s.vy.toFixed(1)}`);
+            });
+        },
+        /** Force-open the modal for scroll index i (0-based) */
+        open(i: number) { states[i]?.el.click(); },
+        /** Teleport scroll i to viewport centre */
+        center(i: number) {
+            const s = states[i];
+            if (!s) return;
+            s.x = window.innerWidth / 2;
+            s.pageY = window.scrollY + window.innerHeight / 2;
+            s.vx = s.vy = 0;
+        },
+        /** Dump the raw review objects */
+        dump() { console.table(capped); },
+    };
 
     requestAnimationFrame(tick);
 }
