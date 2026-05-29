@@ -113,7 +113,7 @@
 .news-item {
   border-left: 3px solid rgba(134, 239, 172, 0.4);
   padding-left: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3.5rem;
 }
 .dark .news-item { border-color: rgba(134, 239, 172, 0.25); }
 .news-item.hidden { display: none; }
@@ -166,6 +166,27 @@
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
+
+.news-preview {
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+.dark .news-preview { color: #d1d5db; }
+.news-preview .preview-text { display: inline; }
+.news-preview .read-more {
+  display: inline;
+  margin-left: 0.4em;
+  font-size: 0.85em;
+  color: #15803d;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.dark .news-preview .read-more { color: #86efac; }
+.news-body { display: none; }
+.news-item.expanded .news-preview { display: none; }
+.news-item.expanded .news-body { display: block; }
 
 .news-item.future { display: none; }
 .news-item.future.future-visible { display: block; }
@@ -304,7 +325,8 @@
     <div class="news-item{{ if .Date.After now }} future{{ end }}" data-date="{{ .Date.Format "2006-01-02" }}" id="{{ .File.ContentBaseName }}">
       <div class="news-date">{{ .Date.Format "2 January 2006" }}</div>
       <div class="news-title">{{ .Title }} <a class="news-permalink" href="#{{ .File.ContentBaseName }}" title="Link to this item">¶</a></div>
-      <div class="prose dark:prose-invert prose-lg max-w-none
+      <div class="news-preview"></div>
+      <div class="news-body prose dark:prose-invert prose-lg max-w-none
         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:mb-2
         prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline">
         {{ .Content }}

@@ -74,6 +74,23 @@ function renderCalendar(
   }
 }
 
+const PREVIEW_LENGTH = 200;
+
+function buildPreview(item: HTMLElement): void {
+  const preview = item.querySelector<HTMLElement>('.news-preview');
+  const body = item.querySelector<HTMLElement>('.news-body');
+  if (!preview || !body) return;
+
+  const firstPara = body.querySelector('p');
+  const rawText = firstPara ? firstPara.textContent ?? '' : body.textContent ?? '';
+  const trimmed = rawText.trim();
+  const needsTruncation = trimmed.length > PREVIEW_LENGTH;
+  const previewText = needsTruncation ? trimmed.slice(0, PREVIEW_LENGTH).replace(/\s+\S*$/, '') + '…' : trimmed;
+
+  preview.innerHTML = `<span class="preview-text">${previewText}</span>`
+    + (needsTruncation ? ' <span class="read-more">Read more ▾</span>' : '');
+}
+
 function applyFilter(dateStr: string | null, showFuture: boolean) {
   const items = document.querySelectorAll<HTMLElement>('.news-item');
   const empty = document.getElementById('news-empty')!;
@@ -150,23 +167,28 @@ function init() {
   });
 
   document.querySelectorAll<HTMLElement>('.news-item').forEach(item => {
+    buildPreview(item);
     const dateStr = item.dataset.date;
     if (dateStr) {
       item.querySelector('.news-date')?.addEventListener('click', () => selectDate(dateStr));
     }
   });
 
-  function clearHighlight() {
-    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => {
-      el.classList.remove('highlighted', 'highlight-adjacent');
-    });
+  function collapseItem(item: HTMLElement) {
+    item.classList.remove('expanded', 'highlighted', 'highlight-adjacent');
+    const next = item.nextElementSibling as HTMLElement | null;
+    const prev = item.previousElementSibling as HTMLElement | null;
+    if (next?.classList.contains('news-item')) next.classList.remove('highlight-adjacent');
+    if (prev?.classList.contains('news-item')) prev.classList.remove('highlight-adjacent');
+  }
+
+  function collapseAll() {
+    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => collapseItem(el));
     history.replaceState(null, '', location.pathname + location.search);
   }
 
-  function highlightItem(id: string, scrollBehavior: ScrollBehavior = 'smooth') {
-    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => {
-      el.classList.remove('highlighted', 'highlight-adjacent');
-    });
+  function expandItem(id: string, scrollBehavior: ScrollBehavior = 'smooth') {
+    document.querySelectorAll<HTMLElement>('.news-item').forEach(el => collapseItem(el));
     const target = document.getElementById(id);
     if (!target) return;
     const isFuture = target.classList.contains('future');
@@ -176,7 +198,7 @@ function init() {
     }
     applyFilter(null, showFuture);
     render();
-    target.classList.add('highlighted');
+    target.classList.add('expanded', 'highlighted');
     const prev = target.previousElementSibling as HTMLElement | null;
     const next = target.nextElementSibling as HTMLElement | null;
     if (prev?.classList.contains('news-item')) prev.classList.add('highlight-adjacent');
@@ -185,20 +207,19 @@ function init() {
       const navHeight = (document.querySelector('nav') as HTMLElement | null)?.offsetHeight ?? 0;
       const rect = target.getBoundingClientRect();
       const top = rect.top + window.scrollY - navHeight - 24;
-      console.log('[news] highlightItem scroll:', { id, rectTop: rect.top, scrollY: window.scrollY, navHeight, top });
       window.scrollTo({ top, behavior: scrollBehavior });
     }));
   }
 
   function navigateTo(id: string) {
     history.pushState(null, '', '#' + id);
-    highlightItem(id);
+    expandItem(id);
   }
 
   window.addEventListener('hashchange', () => {
     const id = location.hash.slice(1);
-    if (id) highlightItem(id);
-    else clearHighlight();
+    if (id) expandItem(id);
+    else collapseAll();
   });
 
   document.querySelectorAll<HTMLElement>('.news-title').forEach(titleEl => {
@@ -208,23 +229,31 @@ function init() {
       if (link) e.preventDefault();
       const item = titleEl.closest<HTMLElement>('.news-item');
       if (!item) return;
-      if (item.classList.contains('highlighted')) {
-        clearHighlight();
+      if (item.classList.contains('expanded')) {
+        collapseAll();
       } else {
         navigateTo(item.id);
       }
     });
   });
 
+  document.querySelectorAll<HTMLElement>('.news-preview').forEach(previewEl => {
+    previewEl.addEventListener('click', () => {
+      const item = previewEl.closest<HTMLElement>('.news-item');
+      if (!item) return;
+      navigateTo(item.id);
+    });
+  });
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.querySelector('.news-item.highlighted')) {
-      clearHighlight();
+    if (e.key === 'Escape' && document.querySelector('.news-item.expanded')) {
+      collapseAll();
     }
   });
 
   const hash = location.hash.slice(1);
   if (hash) {
-    highlightItem(hash, 'instant');
+    expandItem(hash, 'instant');
     return;
   }
 
