@@ -10,6 +10,6 @@ A wide-ranging conversation exploring community formation, transcendence, and se
 - Institutional abuse, rigid hierarchies, and power dynamics in religious contexts
 - Self-leadership through Internal Family Systems and the distinction between blended and unblended states
 
-**About Irini Hara:** Irini has a background in Orthodox Christianity, paganism, and shamanism, with academic interest in religious studies and the work of Mircea Eliade. She explores how different religious traditions address the human need for transcendence and meaning. Her professional website is https://www.palomablanca.ro/
+**About Irini Hara:** Irini has a keen interest in religious studies and the work of Mircea Eliade, his writings inspired her youth years and motivated to search for a spiritual practice for herself later in adult life, that she found in shamanism. She blends several methods and approaches as therapist, educator, writer, Magdalene priestess and space holder of transformational processes of exploration and healing.  Her professional website is https://www.palomablanca.ro/ and you can also access her writings on Substack: https://substack.com/@irinihara.
 
 {{< youtube 5FQnDxo-hH0 >}}
