@@ -113,6 +113,7 @@ interface ScrollState {
     originX: number;
     originPageY: number;
     driftDirX: -1 | 1;
+    driftAngle: number;  // radians, ±15° off horizontal
     driftSpeed: number;
     nextDestAt: number;  // ms timestamp — pick next dest only after this
     phase: AnimPhase;
@@ -212,6 +213,13 @@ function pageToViewportY(pageY: number): number {
     return pageY - window.scrollY;
 }
 
+const MAX_DRIFT_ANGLE = 15 * Math.PI / 180;
+
+function randomDriftAngle(driftDirX: -1 | 1): number {
+    const angle = randomBetween(-MAX_DRIFT_ANGLE, MAX_DRIFT_ANGLE);
+    return driftDirX === 1 ? angle : Math.PI + angle;
+}
+
 function initScroll(el: HTMLElement, sealEl: HTMLElement, critterEmoji: string, bandTop: number, bandBot: number, index: number, total: number, seed: number): ScrollState {
     const driftDirX: -1 | 1 = Math.random() < 0.5 ? 1 : -1;
     const scrollWidthPx = remToPx(SCROLL_WIDTH_REM);
@@ -238,6 +246,7 @@ function initScroll(el: HTMLElement, sealEl: HTMLElement, critterEmoji: string, 
         originX,
         originPageY,
         driftDirX,
+        driftAngle: randomDriftAngle(driftDirX),
         driftSpeed: randomBetween(8, 16),
         nextDestAt: 0,
         phase: 'waiting',
@@ -386,8 +395,17 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
             if (state.phase === 'drifting') {
                 state.t += dt;
 
-                // Drift the circle origin horizontally
-                state.originX += state.driftDirX * state.driftSpeed * dt;
+                // Drift the circle origin along its angled trajectory
+                state.originX += Math.cos(state.driftAngle) * state.driftSpeed * dt;
+                state.originPageY += Math.sin(state.driftAngle) * state.driftSpeed * dt;
+                // Bounce off top/bottom band walls
+                if (state.originPageY < bt) {
+                    state.originPageY = bt;
+                    state.driftAngle = -state.driftAngle;
+                } else if (state.originPageY > bb - SCROLL_HEIGHT_PX) {
+                    state.originPageY = bb - SCROLL_HEIGHT_PX;
+                    state.driftAngle = -state.driftAngle;
+                }
 
                 // Respawn origin on opposite side when scroll is fully off-screen
                 const scrollWidthPx = remToPx(SCROLL_WIDTH_REM);
@@ -396,11 +414,13 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
                     state.originX = -ORIGIN_RADIUS - scrollWidthPx;
                     state.originPageY = randomBetween(bt, bb - SCROLL_HEIGHT_PX);
                     state.driftSpeed = randomBetween(8, 16);
+                    state.driftAngle = randomDriftAngle(1);
                     respawned = true;
                 } else if (state.originX < -ORIGIN_RADIUS - scrollWidthPx) {
                     state.originX = window.innerWidth + ORIGIN_RADIUS + scrollWidthPx;
                     state.originPageY = randomBetween(bt, bb - SCROLL_HEIGHT_PX);
                     state.driftSpeed = randomBetween(8, 16);
+                    state.driftAngle = randomDriftAngle(-1);
                     respawned = true;
                 }
                 if (respawned) {
