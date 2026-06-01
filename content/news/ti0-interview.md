@@ -12,6 +12,8 @@ The conversation explores the parallels between their work:
 
 {{< youtube vRKwlLNsFfU >}}
 
+[Read Ti0's write-up on Substack](https://ti0x.substack.com/p/the-step-before-you-step-into-the)
+
 ---
 
 ## Transcript
