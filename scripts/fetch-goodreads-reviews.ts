@@ -93,7 +93,7 @@ function parseReviews(html: string): Review[] {
             /<span class="Formatted">([\s\S]*?)<\/span>/
         );
         const text = textMatch
-            ? textMatch[1].replace(/<[^>]+>/g, "").trim()
+            ? textMatch[1].replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim()
             : "";
 
         reviews.push({ reviewer, reviewerUrl, stars, date, reviewUrl, text });
@@ -148,6 +148,7 @@ async function uploadToR2(json: string): Promise<void> {
 async function main() {
     const dryRun = process.argv.includes("--dry-run");
     const listStored = process.argv.includes("--list");
+    const force = process.argv.includes("--force");
 
     if (listStored) {
         const existing = await fetchFromR2();
@@ -173,9 +174,13 @@ async function main() {
     const existingUrls = new Set(existing.map((r) => r.reviewUrl));
     const newReviews = filtered.filter((r) => !existingUrls.has(r.reviewUrl));
 
-    if (newReviews.length === 0) return;
+    if (newReviews.length === 0 && !force) return;
 
-    console.log(`${newReviews.length} new review(s): ${newReviews.map((r) => r.reviewer).join(", ")}`);
+    if (force) {
+        console.log(`Force uploading ${filtered.length} review(s).`);
+    } else {
+        console.log(`${newReviews.length} new review(s): ${newReviews.map((r) => r.reviewer).join(", ")}`);
+    }
     const output = JSON.stringify({ reviews: filtered, fetchedAt: new Date().toISOString() }, null, 2);
     await uploadToR2(output);
 }

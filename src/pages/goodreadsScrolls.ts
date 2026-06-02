@@ -345,7 +345,8 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
         (modal.querySelector('.gr-review-modal-name') as HTMLElement).textContent = review.reviewer;
         (modal.querySelector('.gr-review-modal-stars') as HTMLElement).innerHTML = starsHtml(review.stars);
         (modal.querySelector('.gr-review-modal-date') as HTMLElement).textContent = review.date;
-        (modal.querySelector('.gr-review-modal-text') as HTMLElement).textContent = review.text;
+        const textEl = modal.querySelector('.gr-review-modal-text') as HTMLElement;
+        textEl.innerHTML = review.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
         modal.classList.add('is-open');
         (modal.querySelector('.gr-review-modal-close') as HTMLElement).focus();
     };
@@ -395,9 +396,18 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
             if (state.phase === 'drifting') {
                 state.t += dt;
 
-                // Drift the circle origin along its angled trajectory
-                state.originX += Math.cos(state.driftAngle) * state.driftSpeed * dt;
-                state.originPageY += Math.sin(state.driftAngle) * state.driftSpeed * dt;
+                // Drift the circle origin along its angled trajectory.
+                // Lerp speed 2x→1x as origin moves from fully offscreen to fully onscreen.
+                const scrollWidthPxDrift = remToPx(SCROLL_WIDTH_REM);
+                const offscreenDist = Math.max(0,
+                    state.originX < 0
+                        ? -(state.originX + scrollWidthPxDrift)
+                        : (state.originX - window.innerWidth + scrollWidthPxDrift)
+                );
+                const offscreenT = Math.min(1, offscreenDist / (ORIGIN_RADIUS + scrollWidthPxDrift));
+                const effectiveSpeed = state.driftSpeed * (1 + offscreenT);
+                state.originX += Math.cos(state.driftAngle) * effectiveSpeed * dt;
+                state.originPageY += Math.sin(state.driftAngle) * effectiveSpeed * dt;
                 // Bounce off top/bottom band walls
                 if (state.originPageY < bt) {
                     state.originPageY = bt;
@@ -408,16 +418,15 @@ function spawnScrolls(reviews: Review[], anchorEl: HTMLElement, debug = false): 
                 }
 
                 // Respawn origin on opposite side when scroll is fully off-screen
-                const scrollWidthPx = remToPx(SCROLL_WIDTH_REM);
                 let respawned = false;
-                if (state.originX > window.innerWidth + ORIGIN_RADIUS + scrollWidthPx) {
-                    state.originX = -ORIGIN_RADIUS - scrollWidthPx;
+                if (state.originX > window.innerWidth + ORIGIN_RADIUS + scrollWidthPxDrift) {
+                    state.originX = -ORIGIN_RADIUS - scrollWidthPxDrift;
                     state.originPageY = randomBetween(bt, bb - SCROLL_HEIGHT_PX);
                     state.driftSpeed = randomBetween(8, 16);
                     state.driftAngle = randomDriftAngle(1);
                     respawned = true;
-                } else if (state.originX < -ORIGIN_RADIUS - scrollWidthPx) {
-                    state.originX = window.innerWidth + ORIGIN_RADIUS + scrollWidthPx;
+                } else if (state.originX < -ORIGIN_RADIUS - scrollWidthPxDrift) {
+                    state.originX = window.innerWidth + ORIGIN_RADIUS + scrollWidthPxDrift;
                     state.originPageY = randomBetween(bt, bb - SCROLL_HEIGHT_PX);
                     state.driftSpeed = randomBetween(8, 16);
                     state.driftAngle = randomDriftAngle(-1);
