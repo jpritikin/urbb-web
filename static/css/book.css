@@ -404,6 +404,29 @@
     background-color: rgba(127, 179, 213, 0.2);
 }
 
+:root:not(.dark) .blurb-modal-content {
+    background: #ffffff;
+    border-color: #4a7fa5;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2), 0 0 60px rgba(74, 127, 165, 0.1);
+}
+
+:root:not(.dark) .blurb-modal-text {
+    color: #1a1a1a;
+}
+
+:root:not(.dark) .blurb-modal-attr {
+    color: #4a7fa5;
+}
+
+:root:not(.dark) .blurb-modal-close {
+    color: #4a7fa5;
+}
+
+:root:not(.dark) .blurb-modal-close:hover {
+    color: #1a1a1a;
+    background-color: rgba(74, 127, 165, 0.15);
+}
+
 /* Blockquotes */
 .book-page .prose blockquote {
     background-color: rgba(14, 165, 233, 0.1);
