@@ -138,7 +138,7 @@ async function uploadToR2(json: string): Promise<void> {
     fs.writeFileSync(tmpFile, json);
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
     execSync(
-        `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} ` +
+        `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_DEFAULT_REGION=auto ` +
         `aws s3 cp ${tmpFile} s3://${R2_BUCKET}/${R2_OBJECT_KEY} ` +
         `--endpoint-url ${endpoint} --region auto`,
         { stdio: "pipe" }
