@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.7"
+version: "v1.5.8"
 ---
 
 ## Watch the Trailer
@@ -70,8 +70,9 @@ Consider this an invitation. Faith optional. Courage required.
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
-    <p>Cloth-bound with embossed cover and dust jacket, Smyth sewn for durability. ✨ Features a mesmerizing flip-book animation in the
+    <p>A ritual object as unique as your own practice. ✨ Features a mesmerizing flip-book animation in the
   margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️ Free domestic shipping. 📦</p>
+    <button class="hardcover-info-btn" aria-haspopup="dialog">ℹ️ Print info</button>
     <p class="shop-item-price">$0</p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590233764083"
@@ -80,6 +81,16 @@ Consider this an invitation. Faith optional. Courage required.
         Add to Cart
     </button>
   </div>
+
+<div id="hardcover-info-modal" class="blurb-modal" aria-modal="true" role="dialog" aria-hidden="true">
+<div class="blurb-modal-inner">
+<button class="blurb-modal-close" aria-label="Close">✕</button>
+<div class="blurb-modal-content">
+<p class="blurb-modal-text">🎨 Each copy of the Hardcover Collector's Edition is printed with <strong>unique generative artwork</strong> that appears in this single copy alone—no two books are identical.</p>
+<p class="blurb-modal-text">🖨️ Because every book is individually rendered and printed on demand, please allow approximately <strong>30 days</strong> for delivery.</p>
+</div>
+</div>
+</div>
   <div class="format-card">
     <h3>📄 Paperback Collector's Edition</h3>
     <p>The complete text in a lightweight format. ✨ Features the same
