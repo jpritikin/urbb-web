@@ -2,12 +2,16 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.8"
+version: "v1.5.9"
 ---
+
+<div id="publisher-teasers-anchor"></div>
 
 ## Watch the Trailer
 
 <div class="video-embed"><iframe src="https://www.youtube-nocookie.com/embed/2gZdan1dZFA?si=Q_QjHotJd3EIqrQD" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+
+<div id="publisher-teasers-anchor-end"></div>
 
 ## Acclaim
 

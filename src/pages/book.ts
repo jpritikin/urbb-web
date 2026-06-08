@@ -1,5 +1,6 @@
 import { initAddToCartButtons } from '../shop/addToCart.js';
 import { initGoodreadsScrolls } from './goodreadsScrolls.js';
+import { initPublisherTeasers } from './publisherTeasers.js';
 
 interface Blurb {
     full: string;
@@ -228,4 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initPaperbackLocalModal();
     const scrollAnchor = document.getElementById('goodreads-scrolls-anchor');
     if (scrollAnchor) initGoodreadsScrolls(scrollAnchor);
+    const teaserAnchor = document.getElementById('publisher-teasers-anchor');
+    if (teaserAnchor) initPublisherTeasers(teaserAnchor);
 });
