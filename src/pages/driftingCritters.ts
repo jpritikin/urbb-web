@@ -63,6 +63,8 @@ export interface Critter {
     buildCard(emoji: string): HTMLElement;
     /** Populate the shared modal with this critter's content and open it. */
     openModal(modal: HTMLElement): void;
+    /** Called when the shared modal closes, regardless of which critter opened it. */
+    onModalClose?(modal: HTMLElement): void;
 }
 
 export interface CritterLayerOptions {
@@ -274,7 +276,10 @@ export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions
 
     const modal = buildModal();
     document.documentElement.appendChild(modal);
-    const closeModal = () => modal.classList.remove('is-open');
+    const closeModal = () => {
+        modal.classList.remove('is-open');
+        for (const item of items) item.onModalClose?.(modal);
+    };
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
     modal.querySelector('.gr-review-modal-close, .blurb-modal-close')?.addEventListener('click', closeModal);
     document.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); });

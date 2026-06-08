@@ -1,4 +1,5 @@
 import { Critter, spawnCritterLayer } from './driftingCritters.js';
+import { SpotlightHandle, startSpotlight } from './spotlight.js';
 
 interface Teaser {
     emoji: string;
@@ -54,6 +55,7 @@ function buildModal(): HTMLElement {
       <button class="gr-review-modal-close" aria-label="Close">✕</button>
       <div class="publisher-teaser-frame">
         <img class="publisher-teaser-image" alt="">
+        <canvas class="publisher-teaser-spotlight" aria-hidden="true"></canvas>
         <span class="publisher-teaser-count"></span>
         <p class="publisher-teaser-quote"></p>
       </div>
@@ -62,6 +64,7 @@ function buildModal(): HTMLElement {
 }
 
 function teaserToCritter(teaser: Teaser, index: number, total: number): Critter {
+    let spotlight: SpotlightHandle | null = null;
     return {
         emoji: teaser.emoji,
         buildCard(emoji: string): HTMLElement {
@@ -79,6 +82,15 @@ function teaserToCritter(teaser: Teaser, index: number, total: number): Critter 
             (modal.querySelector('.publisher-teaser-count') as HTMLElement).textContent = `${index + 1} / ${total}`;
             (modal.querySelector('.publisher-teaser-quote') as HTMLElement).innerHTML = teaser.quote;
             (modal.querySelector('.gr-review-modal-close') as HTMLElement).focus();
+
+            spotlight?.stop();
+            const frame = modal.querySelector('.publisher-teaser-frame') as HTMLElement;
+            const canvas = modal.querySelector('.publisher-teaser-spotlight') as HTMLCanvasElement;
+            spotlight = startSpotlight(canvas, frame, index * 1337 + 42);
+        },
+        onModalClose(): void {
+            spotlight?.stop();
+            spotlight = null;
         },
     };
 }
