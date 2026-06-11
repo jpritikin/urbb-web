@@ -73,30 +73,57 @@ function buildModal(): HTMLElement {
     return modal;
 }
 
-function reviewToCritter(review: Review): Critter {
+function cardContentHtml(review: Review, emoji: string): string {
+    const preview = review.text.slice(0, 80) + (review.text.length > 80 ? '…' : '');
+    return `
+    <div class="gr-scroll-seal">${emoji}</div>
+    <div class="gr-scroll-inner">
+      <div class="gr-scroll-header">
+        <span class="gr-scroll-name">${review.reviewer}</span>
+        <span class="gr-scroll-stars">${starsHtml(review.stars)}</span>
+        <span class="gr-scroll-date">${review.date}</span>
+      </div>
+      <div class="gr-scroll-preview">"${preview}"</div>
+    </div>`;
+}
+
+/** Hands out reviews at random while ensuring no two critters carry the same one
+ * (unless the pool is too small to avoid it). */
+class ReviewAllocator {
+    private held = new Set<Review>();
+
+    constructor(private pool: Review[]) {}
+
+    take(previous?: Review): Review {
+        if (previous) this.held.delete(previous);
+        const available = this.pool.filter(r => !this.held.has(r));
+        const choices = available.length > 0 ? available : this.pool;
+        const choice = choices[Math.floor(Math.random() * choices.length)];
+        this.held.add(choice);
+        return choice;
+    }
+}
+
+function reviewToCritter(allocator: ReviewAllocator): Critter {
+    let current = allocator.take();
     return {
         buildCard(emoji: string): HTMLElement {
             const el = document.createElement('div');
-            el.setAttribute('aria-label', `Review by ${review.reviewer} — click to read`);
-            const preview = review.text.slice(0, 80) + (review.text.length > 80 ? '…' : '');
-            el.innerHTML = `
-            <div class="gr-scroll-seal">${emoji}</div>
-            <div class="gr-scroll-inner">
-              <div class="gr-scroll-header">
-                <span class="gr-scroll-name">${review.reviewer}</span>
-                <span class="gr-scroll-stars">${starsHtml(review.stars)}</span>
-                <span class="gr-scroll-date">${review.date}</span>
-              </div>
-              <div class="gr-scroll-preview">"${preview}"</div>
-            </div>`;
+            el.setAttribute('aria-label', `Review by ${current.reviewer} — click to read`);
+            el.innerHTML = cardContentHtml(current, emoji);
             return el;
         },
+        onRespawn(card: HTMLElement, emoji: string): void {
+            current = allocator.take(current);
+            card.setAttribute('aria-label', `Review by ${current.reviewer} — click to read`);
+            card.innerHTML = cardContentHtml(current, emoji);
+        },
         openModal(modal: HTMLElement): void {
-            (modal.querySelector('.gr-review-modal-name') as HTMLElement).textContent = review.reviewer;
-            (modal.querySelector('.gr-review-modal-stars') as HTMLElement).innerHTML = starsHtml(review.stars);
-            (modal.querySelector('.gr-review-modal-date') as HTMLElement).textContent = review.date;
+            (modal.querySelector('.gr-review-modal-name') as HTMLElement).textContent = current.reviewer;
+            (modal.querySelector('.gr-review-modal-stars') as HTMLElement).innerHTML = starsHtml(current.stars);
+            (modal.querySelector('.gr-review-modal-date') as HTMLElement).textContent = current.date;
             const textEl = modal.querySelector('.gr-review-modal-text') as HTMLElement;
-            textEl.innerHTML = review.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            textEl.innerHTML = current.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
             (modal.querySelector('.gr-review-modal-close') as HTMLElement).focus();
         },
     };
@@ -121,7 +148,10 @@ export function initGoodreadsScrolls(anchorEl: HTMLElement): void {
 
 function spawnReviewScrolls(reviews: Review[], anchorEl: HTMLElement): void {
     const anchorEndEl = document.getElementById('goodreads-scrolls-anchor-end');
-    spawnCritterLayer(reviews.slice(0, MAX_ONSCREEN).map(reviewToCritter), {
+    const allocator = new ReviewAllocator(reviews);
+    const critterCount = Math.min(reviews.length, MAX_ONSCREEN);
+    const critters = Array.from({ length: critterCount }, () => reviewToCritter(allocator));
+    spawnCritterLayer(critters, {
         anchorEl,
         anchorEndEl,
         buildModal,

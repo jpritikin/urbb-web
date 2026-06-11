@@ -112,6 +112,8 @@ async function fetchFromR2(): Promise<Review[]> {
     return data.reviews ?? [];
 }
 
+const CACHE_MAX_AGE_SECONDS = 12 * 60 * 60; // 12 hours
+
 async function uploadToR2(json: string): Promise<void> {
     const creds = r2Env();
     if (!creds) throw new Error("Missing R2 credentials: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY");
@@ -122,7 +124,8 @@ async function uploadToR2(json: string): Promise<void> {
     execSync(
         `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_DEFAULT_REGION=auto AWS_REQUEST_CHECKSUM_CALCULATION=when_required ` +
         `aws s3 cp ${tmpFile} s3://${R2_BUCKET}/${R2_OBJECT_KEY} ` +
-        `--endpoint-url ${endpoint} --region auto`,
+        `--endpoint-url ${endpoint} --region auto ` +
+        `--content-type application/json --cache-control "public, max-age=${CACHE_MAX_AGE_SECONDS}"`,
         { stdio: "pipe" }
     );
 }

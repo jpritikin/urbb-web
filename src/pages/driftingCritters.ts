@@ -65,6 +65,8 @@ export interface Critter {
     openModal(modal: HTMLElement): void;
     /** Called when the shared modal closes, regardless of which critter opened it. */
     onModalClose?(modal: HTMLElement): void;
+    /** Called when the critter respawns off-screen, letting it swap to new content in place. */
+    onRespawn?(card: HTMLElement, emoji: string): void;
 }
 
 export interface CritterLayerOptions {
@@ -377,6 +379,8 @@ export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions
                     state.vx = 0;
                     state.vy = 0;
                     state.nextDestAt = 0;
+                    capped[i].onRespawn?.(state.el, state.critterEmoji);
+                    state.sealEl = state.el.querySelector('.gr-scroll-seal') as HTMLElement;
                 }
 
                 // Accelerate toward dest, friction, integrate
