@@ -6,10 +6,9 @@
 //   --list     print currently stored reviews from R2 (or view https://data.unburdened.biz/reviews.json)
 // Env vars: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 
-import * as https from "https";
-import * as http from "http";
 import * as fs from "fs";
 import { execSync } from "child_process";
+import { chromium } from "playwright";
 
 const BOOK_URL =
     "https://www.goodreads.com/book/show/249868833-religion-unburdened-by-belief";
@@ -26,38 +25,19 @@ interface Review {
     text: string;
 }
 
-function fetch(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const lib = url.startsWith("https") ? https : http;
-        lib
-            .get(
-                url,
-                {
-                    headers: {
-                        "User-Agent":
-                            "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
-                        Accept:
-                            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    },
-                },
-                (res) => {
-                    if (
-                        res.statusCode &&
-                        res.statusCode >= 300 &&
-                        res.statusCode < 400 &&
-                        res.headers.location
-                    ) {
-                        fetch(res.headers.location).then(resolve).catch(reject);
-                        return;
-                    }
-                    const chunks: Buffer[] = [];
-                    res.on("data", (c: Buffer) => chunks.push(c));
-                    res.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
-                    res.on("error", reject);
-                }
-            )
-            .on("error", reject);
-    });
+async function fetch(url: string): Promise<string> {
+    const browser = await chromium.launch();
+    try {
+        const page = await browser.newPage({
+            userAgent:
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        });
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+        await page.waitForSelector("article.ReviewCard", { timeout: 60000 });
+        return await page.content();
+    } finally {
+        await browser.close();
+    }
 }
 
 function parseReviews(html: string): Review[] {
@@ -118,16 +98,18 @@ async function fetchFromR2(): Promise<Review[]> {
     const tmpFile = `/tmp/${R2_OBJECT_KEY}.current`;
     try {
         execSync(
-            `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} ` +
+            `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_REQUEST_CHECKSUM_CALCULATION=when_required ` +
             `aws s3 cp s3://${R2_BUCKET}/${R2_OBJECT_KEY} ${tmpFile} ` +
             `--endpoint-url ${endpoint} --region auto`,
             { stdio: "pipe" }
         );
-        const data = JSON.parse(fs.readFileSync(tmpFile, "utf-8"));
-        return data.reviews ?? [];
-    } catch {
-        return [];
+    } catch (e) {
+        const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
+        if (stderr.includes("does not exist")) return [];
+        throw e;
     }
+    const data = JSON.parse(fs.readFileSync(tmpFile, "utf-8"));
+    return data.reviews ?? [];
 }
 
 async function uploadToR2(json: string): Promise<void> {
@@ -138,7 +120,7 @@ async function uploadToR2(json: string): Promise<void> {
     fs.writeFileSync(tmpFile, json);
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
     execSync(
-        `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_DEFAULT_REGION=auto ` +
+        `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_DEFAULT_REGION=auto AWS_REQUEST_CHECKSUM_CALCULATION=when_required ` +
         `aws s3 cp ${tmpFile} s3://${R2_BUCKET}/${R2_OBJECT_KEY} ` +
         `--endpoint-url ${endpoint} --region auto`,
         { stdio: "pipe" }
