@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npm run gen:simdata && concurrently \"npm run watch:ts\" \"npm run watch:bundle\" \"npm run watch:css\" \"hugo server -D\"",
-    "watch:ts": "tsc --watch",
+    "watch:ts": "tsc --watch --preserveWatchOutput",
     "watch:bundle": "esbuild src/bundled/newsAnalysis.ts --bundle --outfile=static/js/pages/newsAnalysis.js --platform=browser --target=es2020 --watch",
     "watch:css": "postcss ./static/css/input.css -o ./static/css/output.css --watch",
     "build:ts": "tsc",
