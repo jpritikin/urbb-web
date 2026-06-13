@@ -92,6 +92,7 @@ Consider this an invitation. Faith optional. Courage required.
 <div class="blurb-modal-content">
 <p class="blurb-modal-text">🎨 Each copy of the Hardcover Collector's Edition is printed with <strong>unique generative artwork</strong> that appears in this single copy alone—no two books are identical.</p>
 <p class="blurb-modal-text">🖨️ Because every book is individually rendered and printed on demand, please allow approximately <strong>30 days</strong> for delivery.</p>
+<p class="blurb-modal-text">🔬 The print fidelity is so high that I spotted a few tiny artwork glitches in my hardcover proof—since corrected—that are completely imperceptible in the softcover edition. ✨</p>
 </div>
 </div>
 </div>
