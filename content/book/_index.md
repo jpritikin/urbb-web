@@ -75,7 +75,7 @@ Consider this an invitation. Faith optional. Courage required.
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
     <p>A ritual object as unique as your own practice. ✨ Features a mesmerizing flip-book animation in the
-  margins and index of terms. 🔍 Substantial enough to anchor your ceremonial altar — or serve as one. 🕯️ Free domestic shipping. 📦</p>
+  margins and index of terms. 🔍 Intimidating thickness. Substantial enough to anchor your ceremonial altar—or serve as one. 🕯️ Free domestic shipping. 📦</p>
     <button class="hardcover-info-btn" aria-haspopup="dialog">ℹ️ Print info</button>
     <p class="shop-item-price">$0</p>
     <button class="order-button"
