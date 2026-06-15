@@ -67,10 +67,6 @@ Consider this an invitation. Faith optional. Courage required.
 
 ## Order Your Copy
 
-<div class="preorder-banner">
-    🚀 <strong>Available June 15, 2026</strong> — Orders placed now are <strong>preorders</strong> and will ship on release day. 📦
-</div>
-
 <div class="book-formats">
   <div class="format-card">
     <h3>📖 Hardcover Collector's Edition</h3>
