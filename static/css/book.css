@@ -767,6 +767,14 @@
     color: #a8cde0;
 }
 
+:root:not(.dark) .local-stores-link {
+    color: #4a7fa5;
+}
+
+:root:not(.dark) .local-stores-link:hover {
+    color: #2a5f85;
+}
+
 /* Local Bookstore Modal */
 .local-modal-buttons {
     display: flex;
@@ -794,9 +802,18 @@
     line-height: 1.5;
 }
 
+:root:not(.dark) .bookstore-list li {
+    color: #1a1a1a;
+    border-left-color: #4a7fa5;
+}
+
 .bookstore-list a {
     color: #7fb3d5;
     text-decoration: underline;
+}
+
+:root:not(.dark) .bookstore-list a {
+    color: #4a7fa5;
 }
 
 .local-back-btn {
@@ -812,4 +829,13 @@
 
 .local-back-btn:hover {
     background-color: rgba(127, 179, 213, 0.15);
+}
+
+:root:not(.dark) .local-back-btn {
+    border-color: #4a7fa5;
+    color: #4a7fa5;
+}
+
+:root:not(.dark) .local-back-btn:hover {
+    background-color: rgba(74, 127, 165, 0.15);
 }
