@@ -804,3 +804,100 @@
 .local-back-btn:hover {
     background-color: var(--book-accent-glow);
 }
+
+.map-hint {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem !important;
+}
+
+.region-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+.region-btn {
+    width: 100%;
+    max-width: 20rem;
+}
+
+.bookstore-map-container {
+    position: relative;
+    width: 100%;
+    max-width: 28rem;
+    margin: 0 auto;
+}
+
+.bookstore-map-img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 2px solid var(--book-accent);
+    display: block;
+}
+
+.bookstore-pins {
+    position: absolute;
+    inset: 0;
+}
+
+.map-pin {
+    position: absolute;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: #dc2626;
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.map-pin::after {
+    content: '';
+    position: absolute;
+    inset: -0.5rem;
+    border-radius: 50%;
+}
+
+.map-pin:hover, .map-pin.active {
+    transform: translate(-50%, -50%) scale(1.4);
+    box-shadow: 0 0 0 3px var(--book-accent), 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 1;
+}
+
+.bookstore-info-card {
+    background: var(--book-accent-glow);
+    border-left: 3px solid var(--book-accent);
+    border-radius: 0 6px 6px 0;
+    padding: 0.75rem 1rem;
+    color: var(--book-text);
+    line-height: 1.6;
+    margin-top: 0.75rem;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.map-directions-link {
+    color: var(--book-accent);
+    text-decoration: underline;
+    font-size: 0.9rem;
+}
+
+.map-attribution {
+    font-size: 0.7rem;
+    opacity: 0.5;
+    text-align: center;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0 !important;
+}
+
+.map-attribution a {
+    color: inherit;
+}

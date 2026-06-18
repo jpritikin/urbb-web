@@ -1,0 +1,104 @@
+{
+  "regions": [
+    {
+      "id": "central",
+      "label": "\ud83c\udf3f Rogue Valley",
+      "image": "/images/local-bookstores-map-central.webp",
+      "width": 623,
+      "height": 584
+    },
+    {
+      "id": "north",
+      "label": "\ud83c\udf32 Cottage Grove / Roseburg",
+      "image": "/images/local-bookstores-map-north.webp",
+      "width": 679,
+      "height": 937
+    },
+    {
+      "id": "south",
+      "label": "\ud83c\udfd4\ufe0f Ashland / Klamath Falls",
+      "image": "/images/local-bookstores-map-south.webp",
+      "width": 1118,
+      "height": 236
+    }
+  ],
+  "pins": [
+    {
+      "name": "Book-N-More",
+      "address": "21891 OR-62, Shady Cove, OR 97539",
+      "region": "central",
+      "x": 487,
+      "y": 109
+    },
+    {
+      "name": "Aquarius Books & Gifts",
+      "address": "528 NE E St, Grants Pass, OR 97526",
+      "region": "central",
+      "x": 116,
+      "y": 284
+    },
+    {
+      "name": "Stone & Quill Bookstore",
+      "address": "35 Stevens St C, Medford, OR 97504",
+      "region": "central",
+      "x": 449,
+      "y": 388
+    },
+    {
+      "name": "Village Books of Southern Oregon",
+      "address": "2382 W Main St STE I, Medford, OR 97501",
+      "region": "central",
+      "x": 430,
+      "y": 399
+    },
+    {
+      "name": "Rebel Heart Books",
+      "address": "157 W California St, Jacksonville, OR 97530",
+      "region": "central",
+      "x": 373,
+      "y": 408
+    },
+    {
+      "name": "Wren's Nest Quality Books",
+      "address": "115 N Pacific Hwy, Talent, OR 97540",
+      "region": "central",
+      "x": 506,
+      "y": 475
+    },
+    {
+      "name": "Bookmine",
+      "address": "702 E Main St, Cottage Grove, OR 97424",
+      "region": "north",
+      "x": 448,
+      "y": 176
+    },
+    {
+      "name": "Books Gallery",
+      "address": "220 W Central Ave, Sutherlin, OR 97479",
+      "region": "north",
+      "x": 263,
+      "y": 586
+    },
+    {
+      "name": "While Away Books and Espresso",
+      "address": "932 W Harvard Ave, Roseburg, OR 97471",
+      "region": "north",
+      "x": 230,
+      "y": 762
+    },
+    {
+      "name": "Book Exchange",
+      "address": "90 N Pioneer St, Ashland, OR 97520",
+      "region": "south",
+      "x": 209,
+      "y": 124
+    },
+    {
+      "name": "Basin Book Trader",
+      "address": "5507 S 6th St, Klamath Falls, OR 97603",
+      "region": "south",
+      "x": 908,
+      "y": 111
+    }
+  ]
+}

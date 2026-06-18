@@ -1,14 +1,55 @@
-- name: Village Books of Southern Oregon
-  address: 2382 W Main St STE I, Medford, OR 97501
-- name: Stone & Quill Bookstore
-  address: 35 Stevens St C, Medford, OR 97504
-- name: Rebel Heart Books
-  address: 157 W California St, Jacksonville, OR 97530
-- name: Book-N-More
-  address: 21891 OR-62, Shady Cove, OR 97539
-- name: Wren's Nest Quality Books
-  address: 115 N Pacific Hwy, Talent, OR 97540
-- name: Aquarius Books & Gifts
-  address: 528 NE E St, Grants Pass, OR 97526
+- name: Bookmine
+  address: 702 E Main St, Cottage Grove, OR 97424
+  lat: 43.7974
+  lon: -123.0608
+  region: north
+- name: Books Gallery
+  address: 220 W Central Ave, Sutherlin, OR 97479
+  lat: 43.3896
+  lon: -123.3155
+  region: north
 - name: While Away Books and Espresso
   address: 932 W Harvard Ave, Roseburg, OR 97471
+  lat: 43.2140
+  lon: -123.3598
+  region: north
+- name: Book-N-More
+  address: 21891 OR-62, Shady Cove, OR 97539
+  lat: 42.6165
+  lon: -122.8114
+  region: central
+- name: Aquarius Books & Gifts
+  address: 528 NE E St, Grants Pass, OR 97526
+  lat: 42.4395
+  lon: -123.3207
+  region: central
+- name: Stone & Quill Bookstore
+  address: 35 Stevens St C, Medford, OR 97504
+  lat: 42.3346
+  lon: -122.8642
+  region: central
+- name: Village Books of Southern Oregon
+  address: 2382 W Main St STE I, Medford, OR 97501
+  lat: 42.3237
+  lon: -122.8901
+  region: central
+- name: Rebel Heart Books
+  address: 157 W California St, Jacksonville, OR 97530
+  lat: 42.3143
+  lon: -122.9684
+  region: central
+- name: "Wren's Nest Quality Books"
+  address: 115 N Pacific Hwy, Talent, OR 97540
+  lat: 42.2463
+  lon: -122.7860
+  region: central
+- name: Book Exchange
+  address: 90 N Pioneer St, Ashland, OR 97520
+  lat: 42.1972
+  lon: -122.7135
+  region: south
+- name: Basin Book Trader
+  address: 5507 S 6th St, Klamath Falls, OR 97603
+  lat: 42.2097
+  lon: -121.7535
+  region: south

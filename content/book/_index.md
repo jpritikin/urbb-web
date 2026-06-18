@@ -120,7 +120,14 @@ Consider this an invitation. Faith optional. Courage required.
 </div>
 <div class="local-stores-view" hidden>
 <p class="blurb-modal-text">🌿 <strong>Southern Oregon Bookstores</strong></p>
-<ul class="bookstore-list"></ul>
+<p class="blurb-modal-text map-hint">Choose a region to find nearby stores</p>
+<div class="bookstore-map-container">
+<div class="region-picker"></div>
+<img class="bookstore-map-img" src="" alt="Map of bookstores" hidden>
+<div class="bookstore-pins" hidden></div>
+</div>
+<div class="bookstore-info-card" hidden></div>
+<p class="map-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
 <button class="local-back-btn">← Back</button>
 </div>
 </div>

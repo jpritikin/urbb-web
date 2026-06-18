@@ -120,43 +120,96 @@ function initHardcoverInfoModal(): void {
     }
 }
 
-interface Bookstore {
+interface MapPin {
     name: string;
-    city: string;
     address: string;
-    url?: string;
+    region: string;
+    x: number;
+    y: number;
 }
 
-async function loadBookstores(): Promise<Bookstore[]> {
-    const res = await fetch('/data/bookstores.yaml');
-    const text = await res.text();
-    // Minimal YAML parser for a flat list of simple string-valued objects
-    const stores: Bookstore[] = [];
-    let current: Partial<Bookstore> | null = null;
-    for (const raw of text.split('\n')) {
-        const line = raw.trimEnd();
-        if (line.startsWith('- ')) {
-            if (current) stores.push(current as Bookstore);
-            current = {};
-            const rest = line.slice(2);
-            const colon = rest.indexOf(':');
-            if (colon !== -1) (current as Record<string,string>)[rest.slice(0,colon).trim()] = rest.slice(colon+1).trim();
-        } else if (current && line.match(/^\s+\w/)) {
-            const colon = line.indexOf(':');
-            if (colon !== -1) (current as Record<string,string>)[line.slice(0,colon).trim()] = line.slice(colon+1).trim();
-        }
+interface MapRegion {
+    id: string;
+    label: string;
+    image: string;
+    width: number;
+    height: number;
+}
+
+interface MapData {
+    regions: MapRegion[];
+    pins: MapPin[];
+}
+
+async function loadMapData(): Promise<MapData> {
+    const res = await fetch('/data/bookstores-map.json');
+    return res.json();
+}
+
+interface RegionPickerState {
+    showPicker: () => void;
+    isShowingMap: () => boolean;
+}
+
+function renderRegionPicker(mapData: MapData, container: HTMLElement, infoCard: HTMLElement): RegionPickerState {
+    const pickerEl = container.querySelector<HTMLElement>('.region-picker')!;
+    const mapImg = container.querySelector<HTMLImageElement>('.bookstore-map-img')!;
+    const pinsEl = container.querySelector<HTMLElement>('.bookstore-pins')!;
+    let showingMap = false;
+
+    pickerEl.innerHTML = '';
+    for (const region of mapData.regions) {
+        const btn = document.createElement('button');
+        btn.className = 'order-button region-btn';
+        btn.textContent = region.label;
+        btn.addEventListener('click', () => showRegion(region));
+        pickerEl.appendChild(btn);
     }
-    if (current) stores.push(current as Bookstore);
-    return stores;
+
+    const showPicker = () => {
+        pickerEl.hidden = false;
+        mapImg.hidden = true;
+        pinsEl.hidden = true;
+        infoCard.hidden = true;
+        showingMap = false;
+    };
+
+    const showRegion = (region: MapRegion) => {
+        pickerEl.hidden = true;
+        mapImg.src = region.image;
+        mapImg.hidden = false;
+        pinsEl.hidden = false;
+        infoCard.hidden = true;
+        showingMap = true;
+        renderMapPins(mapData, region, container, infoCard);
+    };
+
+    showPicker();
+    return { showPicker, isShowingMap: () => showingMap };
 }
 
-function renderBookstores(stores: Bookstore[], list: HTMLUListElement): void {
-    list.innerHTML = stores.map(s => {
-        const link = s.url
-            ? `<a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`
-            : s.name;
-        return `<li><strong>${link}</strong><br><small>${s.address}</small></li>`;
-    }).join('');
+function renderMapPins(mapData: MapData, region: MapRegion, container: HTMLElement, infoCard: HTMLElement): void {
+    const pinsEl = container.querySelector<HTMLElement>('.bookstore-pins')!;
+    pinsEl.innerHTML = '';
+
+    for (const pin of mapData.pins.filter(p => p.region === region.id)) {
+        const el = document.createElement('button');
+        el.className = 'map-pin';
+        el.setAttribute('aria-label', pin.name);
+        el.style.left = `${(pin.x / region.width) * 100}%`;
+        el.style.top = `${(pin.y / region.height) * 100}%`;
+        el.addEventListener('click', () => {
+            pinsEl.querySelectorAll('.map-pin').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            const query = encodeURIComponent(pin.name + ', ' + pin.address);
+            infoCard.innerHTML = `<strong>${pin.name}</strong><br>` +
+                `<small>${pin.address}</small><br>` +
+                `<a href="https://www.google.com/maps/search/?api=1&query=${query}" ` +
+                `target="_blank" rel="noopener" class="map-directions-link">📍 Directions</a>`;
+            infoCard.hidden = false;
+        });
+        pinsEl.appendChild(el);
+    }
 }
 
 function initPaperbackLocalModal(): void {
@@ -166,10 +219,11 @@ function initPaperbackLocalModal(): void {
 
     const questionView = modal.querySelector<HTMLElement>('.local-question-view')!;
     const storesView = modal.querySelector<HTMLElement>('.local-stores-view')!;
-    const list = modal.querySelector<HTMLUListElement>('.bookstore-list')!;
+    const mapContainer = modal.querySelector<HTMLElement>('.bookstore-map-container')!;
+    const infoCard = modal.querySelector<HTMLElement>('.bookstore-info-card')!;
 
     const SESSION_KEY = 'paperback-local-asked';
-    let storesLoaded = false;
+    let regionState: RegionPickerState | null = null;
 
     const open = () => {
         questionView.hidden = false;
@@ -184,11 +238,11 @@ function initPaperbackLocalModal(): void {
     };
 
     const showStores = async () => {
-        if (!storesLoaded) {
-            const stores = await loadBookstores();
-            renderBookstores(stores, list);
-            storesLoaded = true;
+        if (!regionState) {
+            const mapData = await loadMapData();
+            regionState = renderRegionPicker(mapData, mapContainer, infoCard);
         }
+        regionState.showPicker();
         questionView.hidden = true;
         storesView.hidden = false;
     };
@@ -213,8 +267,12 @@ function initPaperbackLocalModal(): void {
         paperbackBtn.click();
     });
     modal.querySelector('.local-back-btn')!.addEventListener('click', () => {
-        questionView.hidden = false;
-        storesView.hidden = true;
+        if (regionState?.isShowingMap()) {
+            regionState.showPicker();
+        } else {
+            questionView.hidden = false;
+            storesView.hidden = true;
+        }
     });
     modal.querySelector('.blurb-modal-close')!.addEventListener('click', close);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
