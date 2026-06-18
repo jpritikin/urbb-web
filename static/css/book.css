@@ -1,5 +1,61 @@
 /* Book Page Specific Styles */
 
+/* ── Theme Tokens ── */
+
+:root {
+    --book-accent: #4a7fa5;
+    --book-accent-light: #7ab3d0;
+    --book-accent-hover: #2a5f85;
+    --book-accent-glow: rgba(74, 127, 165, 0.15);
+    --book-accent-glow-strong: rgba(74, 127, 165, 0.1);
+    --book-text: #1a1a1a;
+    --book-text-muted: #555;
+    --book-surface: #ffffff;
+    --book-surface-alt: rgba(14, 165, 233, 0.1);
+    --book-surface-alt-hover: rgba(14, 165, 233, 0.18);
+    --book-border: rgba(74, 127, 165, 0.3);
+    --book-shadow: rgba(0, 0, 0, 0.2);
+    --book-nav-bg: rgba(240, 245, 250, 0.95);
+    --book-nav-link: #333;
+    --book-nav-link-hover: #000;
+    --book-card-bg: #f0f4f8;
+    --book-card-text: #1a1a1a;
+    --book-card-text-muted: #444;
+    --book-scroll-bg: linear-gradient(160deg, #f4e8c1, #e8d49a, #f0e2b6);
+    --book-scroll-border: #b89a4a;
+    --book-scroll-text: #3a2a0a;
+    --book-scroll-star: #b87a00;
+    --book-scroll-shadow: rgba(255,255,255,0.4);
+    --book-scroll-shadow2: rgba(0,0,0,0.1);
+}
+
+.dark {
+    --book-accent: #7fb3d5;
+    --book-accent-light: #9fc5e5;
+    --book-accent-hover: #a8cde0;
+    --book-accent-glow: rgba(127, 179, 213, 0.15);
+    --book-accent-glow-strong: rgba(127, 179, 213, 0.1);
+    --book-text: #e5e5e5;
+    --book-text-muted: #aaa;
+    --book-surface: #1e1e1e;
+    --book-surface-alt: rgba(51, 51, 51, 0.5);
+    --book-surface-alt-hover: rgba(80, 80, 80, 0.6);
+    --book-border: rgba(127, 179, 213, 0.3);
+    --book-shadow: rgba(0, 0, 0, 0.6);
+    --book-nav-bg: rgba(42, 42, 42, 0.95);
+    --book-nav-link: #d5d5d5;
+    --book-nav-link-hover: #fff;
+    --book-card-bg: #333;
+    --book-card-text: #f5f5f5;
+    --book-card-text-muted: #d5d5d5;
+    --book-scroll-bg: linear-gradient(160deg, #3a2e10, #4a3a18, #3e3012);
+    --book-scroll-border: #8a6a2a;
+    --book-scroll-text: #e8d49a;
+    --book-scroll-star: #e0a030;
+    --book-scroll-shadow: rgba(255,255,255,0.08);
+    --book-scroll-shadow2: rgba(0,0,0,0.3);
+}
+
 /* ── Drifting Goodreads Scrolls ── */
 
 .gr-scrolls-layer {
@@ -48,22 +104,15 @@
 }
 
 .gr-scroll-inner {
-    background: linear-gradient(160deg, #f4e8c1, #e8d49a, #f0e2b6);
-    border: 1px solid #b89a4a;
+    background: var(--book-scroll-bg);
+    border: 1px solid var(--book-scroll-border);
     border-radius: 6px 6px 8px 8px;
     padding: 0.6rem 0.7rem 0.5rem;
     font-family: Georgia, 'Times New Roman', serif;
-    color: #3a2a0a;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.1);
+    color: var(--book-scroll-text);
+    box-shadow: inset 0 1px 0 var(--book-scroll-shadow), inset 0 -1px 0 var(--book-scroll-shadow2);
     max-height: 3.8rem;
     overflow: hidden;
-}
-
-.dark .gr-scroll-inner {
-    background: linear-gradient(160deg, #3a2e10, #4a3a18, #3e3012);
-    border-color: #8a6a2a;
-    color: #e8d49a;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.3);
 }
 
 .gr-scroll-header {
@@ -92,8 +141,7 @@
 }
 
 .gr-scroll-star { opacity: 0.3; }
-.gr-scroll-star.lit { opacity: 1; color: #b87a00; }
-.dark .gr-scroll-star.lit { color: #e0a030; }
+.gr-scroll-star.lit { opacity: 1; color: var(--book-scroll-star); }
 
 .gr-scroll-date {
     font-size: 0.6rem;
@@ -142,22 +190,16 @@
 }
 
 .gr-review-modal-content {
-    background: linear-gradient(160deg, #f4e8c1, #e8d49a, #f0e2b6);
-    border: 2px solid #b89a4a;
+    background: var(--book-scroll-bg);
+    border: 2px solid var(--book-scroll-border);
     border-radius: 12px;
     padding: 2.5rem 3rem;
     overflow-y: auto;
     width: 100%;
     box-sizing: border-box;
     font-family: Georgia, 'Times New Roman', serif;
-    color: #3a2a0a;
+    color: var(--book-scroll-text);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.dark .gr-review-modal-content {
-    background: linear-gradient(160deg, #3a2e10, #4a3a18, #3e3012);
-    border-color: #8a6a2a;
-    color: #e8d49a;
 }
 
 @media (max-width: 640px) {
@@ -213,7 +255,7 @@
     flex-shrink: 0;
     background: none;
     border: none;
-    color: #b89a4a;
+    color: var(--book-scroll-border);
     font-size: 1.25rem;
     cursor: pointer;
     line-height: 1;
@@ -224,12 +266,9 @@
 }
 
 .gr-review-modal-close:hover {
-    color: #3a2a0a;
+    color: var(--book-scroll-text);
     background-color: rgba(184, 154, 74, 0.2);
 }
-
-.dark .gr-review-modal-close { color: #c8a84a; }
-.dark .gr-review-modal-close:hover { color: #e8d49a; }
 
 /* ── End Drifting Scrolls ── */
 
@@ -253,12 +292,8 @@
 .publisher-teaser-frame {
     position: relative;
     overflow: hidden;
-    border: 2px solid #b89a4a;
+    border: 2px solid var(--book-scroll-border);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.dark .publisher-teaser-frame {
-    border-color: #8a6a2a;
 }
 
 .publisher-teaser-image {
@@ -294,19 +329,15 @@
     right: 1.25rem;
     bottom: 1.25rem;
     max-width: min(60%, 28rem);
-    background: rgba(244, 232, 193, 0.88);
-    color: #3a2a0a;
+    background: var(--book-scroll-bg);
+    color: var(--book-scroll-text);
     border-radius: 8px;
     padding: 1rem 1.25rem;
     font-size: 0.95rem;
     line-height: 1.6;
     margin: 0 !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-
-.dark .publisher-teaser-quote {
-    background: rgba(58, 46, 16, 0.88);
-    color: #e8d49a;
+    opacity: 0.88;
 }
 
 @media (max-width: 640px) {
@@ -358,8 +389,8 @@
 
 /* Blurb Tiles */
 .book-page .prose .blurb-tile {
-    background-color: rgba(14, 165, 233, 0.1);
-    border-left: 4px solid #7fb3d5;
+    background-color: var(--book-surface-alt);
+    border-left: 4px solid var(--book-accent);
     border-radius: 0 8px 8px 0;
     padding: 1.25rem 1.5rem;
     cursor: pointer;
@@ -368,16 +399,8 @@
 }
 
 .book-page .prose .blurb-tile:hover {
-    background-color: rgba(14, 165, 233, 0.18);
+    background-color: var(--book-surface-alt-hover);
     transform: translateY(-2px);
-}
-
-.dark .book-page .prose .blurb-tile {
-    background-color: rgba(51, 51, 51, 0.5);
-}
-
-.dark .book-page .prose .blurb-tile:hover {
-    background-color: rgba(80, 80, 80, 0.6);
 }
 
 .book-page .prose .blurb-tile .blurb-preview {
@@ -387,12 +410,8 @@
 .book-page .prose .blurb-tile .blurb-attr {
     font-style: italic;
     font-size: 0.9rem;
-    color: #0c7fb3;
+    color: var(--book-accent);
     margin: 0 !important;
-}
-
-.dark .book-page .prose .blurb-tile .blurb-attr {
-    color: #7fb3d5;
 }
 
 /* Blurb Modal */
@@ -424,8 +443,8 @@
 }
 
 .blurb-modal-content {
-    background: #1e1e1e;
-    border: 2px solid #7fb3d5;
+    background: var(--book-surface);
+    border: 2px solid var(--book-accent);
     border-radius: 12px;
     padding: 2.5rem 3rem;
     overflow-y: auto;
@@ -434,7 +453,7 @@
     max-width: 100%;
     box-sizing: border-box;
     word-break: break-word;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(127, 179, 213, 0.15);
+    box-shadow: 0 8px 40px var(--book-shadow), 0 0 60px var(--book-accent-glow-strong);
 }
 
 @media (max-width: 640px) {
@@ -447,13 +466,13 @@
     font-size: 1.05rem;
     line-height: 1.7;
     margin: 0 0 1.25rem !important;
-    color: #e5e5e5;
+    color: var(--book-text);
 }
 
 .blurb-modal-attr {
     font-style: italic;
     font-size: 0.95rem;
-    color: #7fb3d5;
+    color: var(--book-accent);
     margin: 0 !important;
 }
 
@@ -462,7 +481,7 @@
     flex-shrink: 0;
     background: none;
     border: none;
-    color: #7fb3d5;
+    color: var(--book-accent);
     font-size: 1.25rem;
     cursor: pointer;
     line-height: 1;
@@ -473,44 +492,17 @@
 }
 
 .blurb-modal-close:hover {
-    color: #fff;
-    background-color: rgba(127, 179, 213, 0.2);
-}
-
-:root:not(.dark) .blurb-modal-content {
-    background: #ffffff;
-    border-color: #4a7fa5;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2), 0 0 60px rgba(74, 127, 165, 0.1);
-}
-
-:root:not(.dark) .blurb-modal-text {
-    color: #1a1a1a;
-}
-
-:root:not(.dark) .blurb-modal-attr {
-    color: #4a7fa5;
-}
-
-:root:not(.dark) .blurb-modal-close {
-    color: #4a7fa5;
-}
-
-:root:not(.dark) .blurb-modal-close:hover {
-    color: #1a1a1a;
-    background-color: rgba(74, 127, 165, 0.15);
+    color: var(--book-nav-link-hover);
+    background-color: var(--book-accent-glow);
 }
 
 /* Blockquotes */
 .book-page .prose blockquote {
-    background-color: rgba(14, 165, 233, 0.1);
-    border-left: 4px solid #7fb3d5 !important;
+    background-color: var(--book-surface-alt);
+    border-left: 4px solid var(--book-accent) !important;
     padding: 1.5rem !important;
     margin: 1.5rem 0 !important;
     border-radius: 0 8px 8px 0;
-}
-
-.dark .book-page .prose blockquote {
-    background-color: rgba(51, 51, 51, 0.5);
 }
 
 .book-page .prose blockquote p {
@@ -526,7 +518,7 @@
 }
 
 .book-page .prose .format-card {
-    background-color: #333;
+    background-color: var(--book-card-bg);
     padding: 2rem;
     border-radius: 8px;
     text-align: center;
@@ -534,22 +526,22 @@
 
 .book-page .prose .format-card h3 {
     margin-top: 0 !important;
-    color: #f5f5f5 !important;
+    color: var(--book-card-text) !important;
 }
 
 .book-page .prose .format-card p {
-    color: #d5d5d5 !important;
+    color: var(--book-card-text-muted) !important;
 }
 
 .book-page .prose .format-card .price {
     font-size: 1.75rem;
     font-weight: 700;
-    color: #7fb3d5 !important;
+    color: var(--book-accent) !important;
     margin: 1rem 0;
 }
 
 .book-page .prose .order-button {
-    background-color: #7fb3d5;
+    background-color: var(--book-accent);
     color: #1a1a1a !important;
     padding: 0.75rem 1.5rem;
     border: none;
@@ -563,14 +555,14 @@
 }
 
 .book-page .prose .order-button:hover {
-    background-color: #9fc5e5;
+    background-color: var(--book-accent-light);
     transform: translateY(-2px);
 }
 
 .book-page .prose .hardcover-info-btn {
     background: none;
-    border: 1px dotted #7fb3d5;
-    color: #7fb3d5;
+    border: 1px dotted var(--book-accent);
+    color: var(--book-accent);
     border-radius: 6px;
     padding: 0.3rem 0.75rem;
     font-size: 0.85rem;
@@ -580,7 +572,7 @@
 }
 
 .book-page .prose .hardcover-info-btn:hover {
-    background-color: rgba(127, 179, 213, 0.15);
+    background-color: var(--book-accent-glow);
 }
 
 .book-page .prose .format-card--disabled {
@@ -613,11 +605,11 @@
     height: fit-content;
     max-height: calc(100vh - 140px);
     overflow-y: auto;
-    background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(35, 35, 35, 0.95));
-    border: 2px solid #7fb3d5;
+    background: linear-gradient(135deg, var(--book-nav-bg), var(--book-nav-bg));
+    border: 2px solid var(--book-accent);
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 40px rgba(127, 179, 213, 0.2);
+    box-shadow: 0 8px 24px var(--book-shadow), 0 0 40px var(--book-accent-glow);
     backdrop-filter: blur(10px);
 }
 
@@ -626,7 +618,7 @@
         width: 6px;
     }
     .book-nav::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(127, 179, 213, 0.05);
         border-radius: 3px;
     }
     .book-nav::-webkit-scrollbar-thumb {
@@ -650,7 +642,7 @@
 .book-nav .nav-link {
     display: block;
     padding: 0.75rem 1rem;
-    color: #d5d5d5;
+    color: var(--book-nav-link);
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -668,15 +660,15 @@
     top: 0;
     height: 100%;
     width: 3px;
-    background: #7fb3d5;
+    background: var(--book-accent);
     transform: scaleY(0);
     transition: transform 0.3s ease;
 }
 
 .book-nav .nav-link:hover {
-    background-color: rgba(127, 179, 213, 0.15);
-    color: #fff;
-    border-color: rgba(127, 179, 213, 0.3);
+    background-color: var(--book-accent-glow);
+    color: var(--book-nav-link-hover);
+    border-color: var(--book-border);
     transform: translateX(-2px);
 }
 
@@ -685,10 +677,10 @@
 }
 
 .book-nav .nav-link.active {
-    background: linear-gradient(135deg, #7fb3d5, #9fc5e5);
+    background: linear-gradient(135deg, var(--book-accent), var(--book-accent-light));
     color: #1a1a1a;
-    border-color: #7fb3d5;
-    box-shadow: 0 4px 12px rgba(127, 179, 213, 0.4);
+    border-color: var(--book-accent);
+    box-shadow: 0 4px 12px var(--book-accent-glow);
     font-weight: 700;
 }
 
@@ -709,11 +701,10 @@
         height: auto;
         border-radius: 0;
         border: none;
-        border-top: 2px solid #7fb3d5;
+        border-top: 2px solid var(--book-accent);
         padding: 1rem;
         z-index: 90;
-        background: linear-gradient(to top, rgba(42, 42, 42, 0.98), rgba(35, 35, 35, 0.98));
-        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5), 0 0 40px rgba(127, 179, 213, 0.15);
+        box-shadow: 0 -4px 16px var(--book-shadow), 0 0 40px var(--book-accent-glow);
     }
 
     .book-nav ul {
@@ -749,10 +740,11 @@
     }
 }
 
+/* Local Bookstore */
 .local-stores-link {
     background: none;
     border: none;
-    color: #7fb3d5;
+    color: var(--book-accent);
     font-size: 0.85rem;
     cursor: pointer;
     padding: 0.25rem 0;
@@ -764,18 +756,9 @@
 }
 
 .local-stores-link:hover {
-    color: #a8cde0;
+    color: var(--book-accent-hover);
 }
 
-:root:not(.dark) .local-stores-link {
-    color: #4a7fa5;
-}
-
-:root:not(.dark) .local-stores-link:hover {
-    color: #2a5f85;
-}
-
-/* Local Bookstore Modal */
 .local-modal-buttons {
     display: flex;
     gap: 1rem;
@@ -794,32 +777,23 @@
 }
 
 .bookstore-list li {
-    background: rgba(127, 179, 213, 0.08);
-    border-left: 3px solid #7fb3d5;
+    background: var(--book-accent-glow);
+    border-left: 3px solid var(--book-accent);
     border-radius: 0 6px 6px 0;
     padding: 0.75rem 1rem;
-    color: #e5e5e5;
+    color: var(--book-text);
     line-height: 1.5;
 }
 
-:root:not(.dark) .bookstore-list li {
-    color: #1a1a1a;
-    border-left-color: #4a7fa5;
-}
-
 .bookstore-list a {
-    color: #7fb3d5;
+    color: var(--book-accent);
     text-decoration: underline;
-}
-
-:root:not(.dark) .bookstore-list a {
-    color: #4a7fa5;
 }
 
 .local-back-btn {
     background: none;
-    border: 1px dotted #7fb3d5;
-    color: #7fb3d5;
+    border: 1px dotted var(--book-accent);
+    color: var(--book-accent);
     border-radius: 6px;
     padding: 0.4rem 1rem;
     font-size: 0.9rem;
@@ -828,14 +802,5 @@
 }
 
 .local-back-btn:hover {
-    background-color: rgba(127, 179, 213, 0.15);
-}
-
-:root:not(.dark) .local-back-btn {
-    border-color: #4a7fa5;
-    color: #4a7fa5;
-}
-
-:root:not(.dark) .local-back-btn:hover {
-    background-color: rgba(74, 127, 165, 0.15);
+    background-color: var(--book-accent-glow);
 }
