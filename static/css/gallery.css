@@ -7,19 +7,34 @@
 }
 
 .gallery-item {
-    background-color: #333;
+    background-color: #f4f4f5;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
+.dark .gallery-item {
+    background-color: #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
 
 .image-wrapper {
     position: relative;
     width: 100%;
     height: 300px;
-    border-bottom: 2px dotted #444;
+    border-bottom: 2px dotted #d4d4d8;
+    background: repeating-linear-gradient(
+        45deg,
+        #e4e4e7,
+        #e4e4e7 10px,
+        #d4d4d8 10px,
+        #d4d4d8 20px
+    );
+}
+
+.dark .image-wrapper {
+    border-bottom-color: #444;
     background: repeating-linear-gradient(
         45deg,
         #2a2a2a,
@@ -52,12 +67,17 @@
     justify-content: center;
     text-align: center;
     padding: 1rem;
-    color: #888;
+    color: #71717a;
     font-size: 0.9rem;
     font-style: italic;
-    border: 3px dashed #444;
+    border: 3px dashed #d4d4d8;
     box-sizing: border-box;
     z-index: 2;
+}
+
+.dark .image-wrapper::after {
+    color: #888;
+    border-color: #444;
 }
 
 .gallery-item img {
@@ -71,10 +91,14 @@
 
 .gallery-item .caption {
     padding: 1.5rem;
-    color: #d5d5d5;
+    color: #3f3f46;
     line-height: 1.6;
     font-size: 0.95rem;
     margin: 0;
+}
+
+.dark .gallery-item .caption {
+    color: #d5d5d5;
 }
 
 /* Lawsuit overlay */
@@ -88,12 +112,16 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(255, 255, 255, 0.9);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 10;
+}
+
+.dark .lawsuit-overlay {
+    background: rgba(0, 0, 0, 0.85);
 }
 
 .lawsuit-icon {
@@ -103,16 +131,24 @@
 }
 
 .lawsuit-text {
-    color: #ff6b6b;
+    color: #dc2626;
     font-size: 1.2rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
+.dark .lawsuit-text {
+    color: #ff6b6b;
+}
+
 .lawsuit-subtext {
-    color: #aaa;
+    color: #71717a;
     font-size: 0.9rem;
     font-style: italic;
+}
+
+.dark .lawsuit-subtext {
+    color: #aaa;
 }
 
 /* Broken link overlay */
@@ -126,12 +162,16 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(255, 255, 255, 0.9);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 10;
+}
+
+.dark .broken-link-overlay {
+    background: rgba(0, 0, 0, 0.85);
 }
 
 .broken-link-icon {
@@ -140,16 +180,24 @@
 }
 
 .broken-link-text {
-    color: #ffa500;
+    color: #d97706;
     font-size: 1.2rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
+.dark .broken-link-text {
+    color: #ffa500;
+}
+
 .broken-link-subtext {
-    color: #aaa;
+    color: #71717a;
     font-size: 0.9rem;
     font-style: italic;
+}
+
+.dark .broken-link-subtext {
+    color: #aaa;
 }
 
 /* Lawsuit popup */
@@ -159,7 +207,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -167,13 +215,23 @@
     padding: 1rem;
 }
 
+.dark .lawsuit-popup-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
 .lawsuit-popup {
-    background: #2a2a2a;
-    border: 3px solid #444;
+    background: #fff;
+    border: 3px solid #d4d4d8;
     border-radius: 8px;
     max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dark .lawsuit-popup {
+    background: #2a2a2a;
+    border-color: #444;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -181,11 +239,16 @@
     display: flex;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 2px dotted #444;
-    background: #1a1a1a;
+    border-bottom: 2px dotted #d4d4d8;
+    background: #f4f4f5;
     position: sticky;
     top: 0;
     z-index: 10;
+}
+
+.dark .lawsuit-popup-header {
+    border-bottom-color: #444;
+    background: #1a1a1a;
 }
 
 .lawsuit-popup-icon {
@@ -196,14 +259,18 @@
 .lawsuit-popup-header h3 {
     flex: 1;
     margin: 0;
-    color: #ff6b6b;
+    color: #dc2626;
     font-size: 1.5rem;
+}
+
+.dark .lawsuit-popup-header h3 {
+    color: #ff6b6b;
 }
 
 .lawsuit-popup-close {
     background: none;
     border: none;
-    color: #999;
+    color: #71717a;
     font-size: 2rem;
     cursor: pointer;
     padding: 0;
@@ -215,14 +282,26 @@
     transition: color 0.2s;
 }
 
+.dark .lawsuit-popup-close {
+    color: #999;
+}
+
 .lawsuit-popup-close:hover {
+    color: #18181b;
+}
+
+.dark .lawsuit-popup-close:hover {
     color: #fff;
 }
 
 .lawsuit-popup-content {
     padding: 1.5rem;
-    color: #d5d5d5;
+    color: #3f3f46;
     line-height: 1.6;
+}
+
+.dark .lawsuit-popup-content {
+    color: #d5d5d5;
 }
 
 .lawsuit-popup-content p {
@@ -230,6 +309,10 @@
 }
 
 .lawsuit-popup-content strong {
+    color: #dc2626;
+}
+
+.dark .lawsuit-popup-content strong {
     color: #ff6b6b;
 }
 
@@ -246,8 +329,13 @@
 .lawsuit-footer {
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px dotted #444;
+    border-top: 1px dotted #d4d4d8;
     font-size: 0.9rem;
+    color: #71717a;
+}
+
+.dark .lawsuit-footer {
+    border-top-color: #444;
     color: #999;
 }
 
@@ -282,7 +370,12 @@
     width: auto;
     height: auto;
     object-fit: contain;
-    border: 3px solid #444;
+    border: 3px solid #d4d4d8;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .image-popup-img {
+    border-color: #444;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
 }
 
@@ -290,9 +383,9 @@
     position: absolute;
     top: -1rem;
     right: -1rem;
-    background: #2a2a2a;
-    border: 2px solid #444;
-    color: #fff;
+    background: #f4f4f5;
+    border: 2px solid #d4d4d8;
+    color: #18181b;
     font-size: 2rem;
     width: 3rem;
     height: 3rem;
@@ -305,10 +398,22 @@
     z-index: 1001;
 }
 
+.dark .image-popup-close {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+}
+
 .image-popup-close:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+    transform: rotate(90deg);
+}
+
+.dark .image-popup-close:hover {
     background: #ff6b6b;
     border-color: #ff6b6b;
-    transform: rotate(90deg);
 }
 
 @keyframes yogaBorderPulse {
@@ -352,22 +457,35 @@ div#sizzle-reel {
 }
 
 .yoga-item {
-    background-color: #333;
+    background-color: #f4f4f5;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.dark .yoga-item {
+    background-color: #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .yoga-item:hover {
     transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.dark .yoga-item:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .yoga-image-wrapper {
     width: 100%;
     height: 300px;
-    border-bottom: 2px dotted #444;
+    border-bottom: 2px dotted #d4d4d8;
+}
+
+.dark .yoga-image-wrapper {
+    border-bottom-color: #444;
 }
 
 .yoga-image-wrapper img {
@@ -379,10 +497,14 @@ div#sizzle-reel {
 
 .yoga-item .caption {
     padding: 1.5rem;
-    color: #d5d5d5;
+    color: #3f3f46;
     line-height: 1.6;
     font-size: 0.95rem;
     margin: 0;
+}
+
+.dark .yoga-item .caption {
+    color: #d5d5d5;
 }
 
 /* Sliding puzzle mode */
@@ -444,5 +566,155 @@ div#sizzle-reel {
         width: 2.5rem;
         height: 2.5rem;
         font-size: 1.5rem;
+    }
+}
+
+/* Fractal Playground */
+#fractal-playground {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+#fractal-playground canvas {
+    height: auto !important;
+}
+
+.fractal-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 14rem;
+    flex: 0 1 auto;
+}
+
+.fractal-control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fractal-control-row label {
+    min-width: 5.5rem;
+    color: #3f3f46;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.dark .fractal-control-row label {
+    color: #d4d4d8;
+}
+
+.fractal-control-row input[type="range"] {
+    flex: 1;
+    accent-color: #7c3aed;
+    min-width: 6rem;
+}
+
+.dark .fractal-control-row input[type="range"] {
+    accent-color: #8b5cf6;
+}
+
+.fractal-control-value {
+    min-width: 2.5rem;
+    text-align: right;
+    color: #71717a;
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+.dark .fractal-control-value {
+    color: #a1a1aa;
+}
+
+.fractal-knob-row {
+    justify-content: flex-start;
+}
+
+.fractal-knob-wrap {
+    width: 3.5rem;
+    height: 3.5rem;
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+.fractal-knob-wrap:active {
+    cursor: grabbing;
+}
+
+.fractal-knob {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    touch-action: none;
+}
+
+.fractal-knob-track {
+    stroke: #d4d4d8;
+}
+
+.dark .fractal-knob-track {
+    stroke: #444;
+}
+
+.fractal-knob-arc {
+    stroke: #7c3aed;
+}
+
+.dark .fractal-knob-arc {
+    stroke: #8b5cf6;
+}
+
+.fractal-knob-indicator {
+    stroke: #3f3f46;
+}
+
+.dark .fractal-knob-indicator {
+    stroke: #d4d4d8;
+}
+
+.fractal-seed-btn {
+    background: #f4f4f5;
+    border: 2px dotted #d4d4d8;
+    color: #3f3f46;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.dark .fractal-seed-btn {
+    background: #333;
+    border-color: #555;
+    color: #d4d4d8;
+}
+
+.fractal-seed-btn:hover {
+    background: #e4e4e7;
+    border-color: #7c3aed;
+}
+
+.dark .fractal-seed-btn:hover {
+    background: #444;
+    border-color: #8b5cf6;
+}
+
+@media (max-width: 768px) {
+    #fractal-playground {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #fractal-playground canvas {
+        width: min(100%, 400px) !important;
+    }
+
+    .fractal-controls {
+        width: 100%;
+        max-width: 400px;
     }
 }

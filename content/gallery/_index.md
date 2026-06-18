@@ -1,7 +1,7 @@
 ---
 title: "Gallery"
 subtitle: "Moments with Luminaries"
-version: "v1.1.0"
+version: "v1.2.0"
 ---
 
 ## Book Sizzle Reel
@@ -13,6 +13,12 @@ A "sizzle reel" is Hollywood jargon for a short promotional video designed to ge
 </div>
 
 Warning: The background music may cause spontaneous dancing. Side effects can include increased book purchases and an inexplicable urge to contemplate existence.
+
+## The Art of Bleed Tabs
+
+I've tried to infuse every detail of the print layout of *Unburdened* with exquisite art, down to the bleed tabs along the fore edge. 📐 Standard bleed tabs are functional but bland: flat rectangles that mark chapter boundaries. So I wrote a bespoke fractal noise algorithm to give them an embossed, organic texture.
+
+<div id="fractal-playground"></div>
 
 ## A Life Among the Influential
 

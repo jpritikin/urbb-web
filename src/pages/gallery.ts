@@ -1,6 +1,8 @@
 import { AnimationLoop } from '../utils/animationLoop.js';
+import { initFractalPlayground } from './fractalPlayground.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  initFractalPlayground();
   const galleryContainer = document.querySelector('.photo-gallery') as HTMLElement | null;
   const galleryItems = document.querySelectorAll('.gallery-item');
 
