@@ -703,6 +703,42 @@ div#sizzle-reel {
     border-color: #8b5cf6;
 }
 
+.fractal-levels-check {
+    accent-color: #7c3aed;
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+}
+
+.dark .fractal-levels-check {
+    accent-color: #8b5cf6;
+}
+
+.fractal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: 0.8rem;
+    color: #71717a;
+}
+
+.dark .fractal-legend {
+    color: #a1a1aa;
+}
+
+.fractal-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.fractal-legend-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+}
+
 @media (max-width: 768px) {
     #fractal-playground {
         flex-direction: column;

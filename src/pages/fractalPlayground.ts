@@ -2,6 +2,14 @@ const CANVAS_SIZE = 400;
 const ROOT_CELL_SCALE = 8;
 const NOISE_ALPHA = 120;
 
+const LEVEL_COLORS: Record<number, string> = {
+  8: 'rgba(220, 38, 38, 0.7)',
+  4: 'rgba(234, 88, 12, 0.7)',
+  2: 'rgba(22, 163, 74, 0.7)',
+  1: 'rgba(37, 99, 235, 0.7)',
+  0: 'rgba(120, 120, 120, 0.4)',
+};
+
 const UNCLAIMED = 0, CLAIMED = 1, MID = 2, MID_GAP = 3, GAP = 4;
 
 interface FractalParams {
@@ -41,7 +49,7 @@ function latticeToPixel(
 }
 
 // Segment stored as lattice index pairs (drift-independent topology)
-interface IndexSegment { ai: number; aj: number; bi: number; bj: number }
+interface IndexSegment { ai: number; aj: number; bi: number; bj: number; scale: number }
 
 interface GapEntry {
   gpoint: [number, number]; angle: number;
@@ -130,7 +138,7 @@ function buildLattice(
 
     const isAxisEdge = (gstart[0] === gend[0] && gstart[0] === 0) || (gstart[1] === gend[1] && gstart[1] === 0);
     if (!isAxisEdge) {
-      segments.push({ ai: gstart[0], aj: gstart[1], bi: gend[0], bj: gend[1] });
+      segments.push({ ai: gstart[0], aj: gstart[1], bi: gend[0], bj: gend[1], scale: cellScale });
     }
 
     const t = cellScale > 1 ? Math.log2(cellScale) / Math.log2(ROOT_CELL_SCALE) : 0;
@@ -276,7 +284,7 @@ function generateTopology(params: FractalParams, size: number): FractalTopology 
       const aj = fixedAxis === 0 ? m : 0;
       const bi = fixedAxis === 0 ? 0 : m + 1;
       const bj = fixedAxis === 0 ? m + 1 : 0;
-      segments.push({ ai, aj, bi, bj });
+      segments.push({ ai, aj, bi, bj, scale: 0 });
     }
   }
 
@@ -315,6 +323,7 @@ export function initFractalPlayground() {
   let drawCursor = 0;
   let animRunning = false;
   let lastFrameTime = 0;
+  let showLevels = false;
 
   function setupStroke() {
     const dark = isDarkMode();
@@ -330,20 +339,46 @@ export function initFractalPlayground() {
     ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
   }
 
+  function drawSegmentsBatch(segments: IndexSegment[], start: number, end: number, driftRate: number) {
+    if (!showLevels) {
+      setupStroke();
+      ctx.beginPath();
+      for (let i = start; i < end; i++) {
+        const s = segments[i];
+        const [ax, ay] = latticeToPixel(s.ai, s.aj, currentTopo!.geo, driftRate);
+        const [bx, by] = latticeToPixel(s.bi, s.bj, currentTopo!.geo, driftRate);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      return;
+    }
+    const byScale = new Map<number, [number, number, number, number][]>();
+    for (let i = start; i < end; i++) {
+      const s = segments[i];
+      const [ax, ay] = latticeToPixel(s.ai, s.aj, currentTopo!.geo, driftRate);
+      const [bx, by] = latticeToPixel(s.bi, s.bj, currentTopo!.geo, driftRate);
+      let list = byScale.get(s.scale);
+      if (!list) { list = []; byScale.set(s.scale, list); }
+      list.push([ax, ay, bx, by]);
+    }
+    ctx.lineWidth = 1;
+    for (const [scale, lines] of byScale) {
+      ctx.strokeStyle = LEVEL_COLORS[scale] ?? LEVEL_COLORS[0];
+      ctx.beginPath();
+      for (const [ax, ay, bx, by] of lines) {
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+    }
+  }
+
   function redrawUpTo(n: number) {
     if (!currentTopo) return;
     clearCanvas();
-    setupStroke();
     const driftRate = params.drift * Math.PI / 180;
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const s = currentTopo.segments[i];
-      const [ax, ay] = latticeToPixel(s.ai, s.aj, currentTopo.geo, driftRate);
-      const [bx, by] = latticeToPixel(s.bi, s.bj, currentTopo.geo, driftRate);
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-    }
-    ctx.stroke();
+    drawSegmentsBatch(currentTopo.segments, 0, n, driftRate);
   }
 
   function rerenderDrift() {
@@ -393,15 +428,7 @@ export function initFractalPlayground() {
       const end = Math.min(drawCursor + batch, currentTopo.segments.length);
       const driftRate = params.drift * Math.PI / 180;
 
-      ctx.beginPath();
-      for (let i = drawCursor; i < end; i++) {
-        const s = currentTopo.segments[i];
-        const [ax, ay] = latticeToPixel(s.ai, s.aj, currentTopo.geo, driftRate);
-        const [bx, by] = latticeToPixel(s.bi, s.bj, currentTopo.geo, driftRate);
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-      }
-      ctx.stroke();
+      drawSegmentsBatch(currentTopo.segments, drawCursor, end, driftRate);
       drawCursor = end;
 
       if (drawCursor < currentTopo.segments.length) {
@@ -612,6 +639,37 @@ export function initFractalPlayground() {
     regenerate();
   });
   seedRow.appendChild(seedBtn);
+
+  const levelsRow = document.createElement('div');
+  levelsRow.className = 'fractal-control-row';
+  const levelsLabel = document.createElement('label');
+  levelsLabel.textContent = 'Show Levels';
+  const levelsCheck = document.createElement('input');
+  levelsCheck.type = 'checkbox';
+  levelsCheck.className = 'fractal-levels-check';
+  const legend = document.createElement('div');
+  legend.className = 'fractal-legend';
+  legend.style.display = 'none';
+  for (const [scale, color] of [[8, LEVEL_COLORS[8]], [4, LEVEL_COLORS[4]], [2, LEVEL_COLORS[2]], [1, LEVEL_COLORS[1]], [0, LEVEL_COLORS[0]]] as [number, string][]) {
+    const item = document.createElement('span');
+    item.className = 'fractal-legend-item';
+    const swatch = document.createElement('span');
+    swatch.className = 'fractal-legend-swatch';
+    swatch.style.background = color;
+    item.appendChild(swatch);
+    item.appendChild(document.createTextNode(scale === 0 ? 'axis' : `${scale}`));
+    legend.appendChild(item);
+  }
+
+  levelsCheck.addEventListener('change', () => {
+    showLevels = levelsCheck.checked;
+    legend.style.display = showLevels ? 'flex' : 'none';
+    redrawUpTo(drawCursor);
+  });
+  levelsRow.appendChild(levelsLabel);
+  levelsRow.appendChild(levelsCheck);
+  controls.appendChild(levelsRow);
+  controls.appendChild(legend);
   controls.appendChild(seedRow);
 
   container.appendChild(canvas);
