@@ -16,9 +16,11 @@ Warning: The background music may cause spontaneous dancing. Side effects can in
 
 ## The Art of Bleed Tabs
 
-I've tried to infuse every detail of the print layout of *Unburdened* with exquisite art, down to the bleed tabs along the fore edge. 📐 Standard bleed tabs are functional but bland: flat rectangles that mark chapter boundaries. So I wrote a bespoke fractal noise algorithm to give them an embossed, organic texture.
+I've tried to infuse every detail of the print layout of *Unburdened* with exquisite art, down to the bleed tabs along the fore edge. 📐 Standard bleed tabs are functional but bland: flat rectangles that mark chapter boundaries. So I wrote a bespoke fractal noise algorithm to give them an embossed, organic texture.[^bleed-tabs]
 
 <div id="fractal-playground"></div>
+
+[^bleed-tabs]: Unfortunately, the paperback collector's edition was printed before this texture was added. The same obsessive attention to detail that insists every therapy dialogue is a word-for-word transcript of actual recorded sessions also demands artwork for page furniture that nobody notices, a month past the printer's deadline. Readers who know the author are encouraged to reach out and confirm he is okay. On the bright side, copies of the paperback collector's edition—with their plain, pre-fractal tabs—may one day be recognized as the *real* collector's items: the rare edition that lacks the texture.
 
 ## A Life Among the Influential
 
@@ -245,3 +247,5 @@ The antidote to meaninglessness is presence. I dropped the check off that aftern
 ### A Note on Production
 
 The yoga photographs featured in this section were performed by a professional stunt double engaged to portray the author. All sessions were conducted under the supervision of a licensed intimacy coordinator. The double was fairly and generously compensated, and has since expressed no (serious) regrets.
+
+## Notes
