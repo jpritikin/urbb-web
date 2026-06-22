@@ -35,5 +35,5 @@ Joshua offers counseling in Oregon under [ORS 675.825(4)(a)](https://oregon.publ
 
 No spam please
 
-- [bro (at) estrelacounseling.com](mailto:bro@estrelacounseling.com)
-- [jpritikin (at) pobox.com](mailto:jpritikin@pobox.com)
+- [bro (at) estrelacounseling (dot) com](mailto:bro@estrelacounseling.com)
+- [jpritikin (at) pobox (dot) com](mailto:jpritikin@pobox.com)
