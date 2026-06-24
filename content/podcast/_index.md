@@ -1,6 +1,6 @@
 ---
 title: "Podcast"
-version: "v1.0.1"
+version: "v1.0.2"
 ---
 
 ## 🎙️ The Podcast That Doesn't Exist (Yet)
@@ -53,6 +53,10 @@ Not a philosophy of consciousness. Not a neuroscience of consciousness. A *user'
 
 No promises. But enough interest might summon this podcast into existence. 👻✨
 
-## Notes
+## FAQ
 
-[^1]: In Internal Family Systems therapy, *unblending* is the process of creating a little separation between you and your emotions. When you're *blended*, you *are* the anger, the fear, the shame. Unblending lets you feel these feelings without being consumed by them. Try the [IFS Simulator](/ifs/) to learn more about IFS. 🌟
+**Q: What inspired you to write this book?**
+
+James Carse's *The Religious Case Against Belief* (2012) diagnosed the tension between religion and belief beautifully—but stopped short. It laid out the problem without fully developing an alternative. I wrote my book to finish the job: here is how you reduce belief, here are the practices, here is the progression.
+
+I didn't encounter Carse's book until 12 years after it was published, through a [Conspirituality podcast episode](https://www.conspirituality.net/episodes/brief-religion-is-not-belief-blair-hodges) (May 4, 2024). A book that important, nearly forgotten! That alarmed me enough to put together a [revised edition](https://carse-2025.pritikin.eth.limo/), intending only to polish and extend Carse's idea. It was in the process of doing that work that I realized I had enough to say to write my own book.
