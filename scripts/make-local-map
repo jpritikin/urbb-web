@@ -37,7 +37,6 @@ MAX_DIMENSION = 1200
 REGION_LABELS = {
     "north": "🌲 Cottage Grove / Roseburg",
     "central": "🌿 Rogue Valley",
-    "south": "🏔️ Ashland / Klamath Falls",
 }
 
 

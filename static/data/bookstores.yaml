@@ -47,9 +47,4 @@
   address: 90 N Pioneer St, Ashland, OR 97520
   lat: 42.1972
   lon: -122.7135
-  region: south
-- name: Basin Book Trader
-  address: 5507 S 6th St, Klamath Falls, OR 97603
-  lat: 42.2097
-  lon: -121.7535
-  region: south
+  region: central
