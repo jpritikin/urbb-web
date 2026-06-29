@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.5.0"
+version: "v1.6.0"
 ---
 
 ## What is This?
@@ -163,4 +163,51 @@ We've done the work. We've tracked down the actual papers. We dare you to click 
 
 <div id="bibliography-container">
   <p style="font-style: italic; color: #888;">Bibliography loading...</p>
+</div>
+
+<div id="cover-browser-section">
+
+## Making of the Hardcover
+
+  <div id="peacock-montage">
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-1.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-2.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-3.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-4.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-5.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-6.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-7.webp" alt="" loading="lazy"></div>
+    <div class="peacock-tile"><img src="/images/supplement/peacock/peacock-8.webp" alt="" loading="lazy"></div>
+  </div>
+  <div id="cover-section-content">
+
+The text is identical across all copies—same words, same positions, same page breaks. But the decorative elements surrounding that text are procedurally generated per copy: unique flipbook animations in the margins, unique tree-and-vine layouts for the epigraphs, unique cloud shapes, and unique bleed tab textures. I didn't only write a book; I wrote a book generator. Your copy's interior art has never existed before and will never be printed again.
+
+Now, ISBNs. Strictly speaking, an ISBN identifies an edition—same content, same format. Could we use one ISBN for all copies since the text is identical? Publishers sometimes reuse ISBNs across cover variants—updated art on a reprint, a retailer-exclusive cover. Our covers are similar in spirit—clearly the same book, but each has a different composite of two images masked through procedurally-generated voronoi + noise textures seeded by the ISBN. An ISBN should tell you what the physical object looks like, so we gave each its own ISBN. (Yes, this means a single book title has 50 hardcover ISBNs. Yes, this may confuse sales tracking. 🤷)
+
+But I couldn't leave well enough alone. The cotton candy puffs behind the word "Unburdened" are *not* seeded by the ISBN, so even two copies sharing the same ISBN will have subtly different covers. The result: 50 cover families (mapped to 50 ISBNs), but within each family, subtle variations make every single copy one-of-a-kind. And the interior art still varies per copy too. The ISBN tracks which cover family you got.
+
+Browse all 50 covers below 🎨. Try not to want them all.
+
+<div id="cover-browser">
+  <img id="cover-display" src="" alt="Book cover">
+  <div class="cover-slider-wrap">
+    <input type="range" id="cover-slider">
+    <div id="isbn-label"></div>
+  </div>
+</div>
+
+<p style="text-align: center; margin-top: 0.5rem; font-size: 0.75rem; opacity: 0.5;">
+  <a href="/data/hard-isbns.txt" download>isbn list</a>
+</p>
+
+Feeling a strange compulsion to own more than one? That's normal. Probably. We built a short diagnostic just in case.
+
+<div id="collector-quiz-gate" style="text-align: center; margin: 1.5rem 0;">
+  <button id="reveal-quiz-btn" class="quiz-reveal-button">🧪 Assess My Collector Risk</button>
+</div>
+
+<div id="collector-quiz" style="display: none;"></div>
+
+  </div>
 </div>
