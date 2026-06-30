@@ -11,6 +11,12 @@ const WATERMARKS = [
     'PROOF ONLY', 'NOT LICENSED', 'STOCK PHOTO'
 ];
 
+const WATERMARK_STYLES = [
+    'watermark-overlay--mono-dark', 'watermark-overlay--mono-light',
+    'watermark-overlay--outline', 'watermark-overlay--diagonal-strip',
+    'watermark-overlay--santo-daime'
+];
+
 const PEACOCK_COUNT = 8;
 
 interface QuizQuestion {
@@ -192,8 +198,9 @@ function initPeacockWatermarks(): void {
 
     tiles.forEach(tile => {
         const mark = WATERMARKS[Math.floor(Math.random() * WATERMARKS.length)];
+        const style = WATERMARK_STYLES[Math.floor(Math.random() * WATERMARK_STYLES.length)];
         const overlay = document.createElement('div');
-        overlay.className = 'watermark-overlay';
+        overlay.className = `watermark-overlay ${style}`;
         overlay.textContent = mark;
         const askew = -8 + Math.random() * 16;
         overlay.style.transform = `translate(-50%, -50%) rotate(${askew}deg)`;

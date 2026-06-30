@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.6.0"
+version: "v1.7.0"
 ---
 
 ## What is This?

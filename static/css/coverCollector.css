@@ -33,13 +33,43 @@
   left: 50%;
   font-size: 1rem;
   font-weight: 700;
-  color: white;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   pointer-events: none;
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.35);
   padding: 0.15em 0.4em;
+}
+
+.watermark-overlay--mono-dark {
+  color: white;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.watermark-overlay--mono-light {
+  color: black;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.watermark-overlay--outline {
+  color: transparent;
+  -webkit-text-stroke: 1px white;
+  background: transparent;
+}
+
+.watermark-overlay--diagonal-strip {
+  color: white;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.55),
+    rgba(0, 0, 0, 0.55) 6px,
+    rgba(0, 0, 0, 0.2) 6px,
+    rgba(0, 0, 0, 0.2) 12px
+  );
+}
+
+.watermark-overlay--santo-daime {
+  color: #ffe26a;
+  background: rgba(0, 70, 40, 0.5);
 }
 
 #cover-section-content {
