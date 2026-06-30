@@ -7,6 +7,13 @@ Published an article on The Gentle Law Substack exploring what meditation is act
 
 [Read the article](https://thegentlelaw.substack.com/p/what-is-the-goal-in-meditation)
 
+🎧 Prefer to listen? Here's my audio reading of the piece.
+
+<audio controls preload="metadata" style="width: 100%;">
+  <source src="/audio/gentle-law-meditation-reading.mp3" type="audio/mpeg">
+  Your browser doesn't support the audio element. <a href="/audio/gentle-law-meditation-reading.mp3">Download the recording</a> instead.
+</audio>
+
 ---
 
 ## What Is the Goal in Meditation?
@@ -43,7 +50,7 @@ The conventional instruction is to notice this and return to the breath. IFS sug
 
 Write it down. A brief note, "Anxious part, work meeting" or "Sad part, missing Dad", takes ten seconds. Then return to your focus.
 
-This is a modification so small it barely seems to matter. In practice, it changes the entire character of the practice.
+This is a modification so small it barely seems to matter. In practice, it changes the entire character of the session.
 
 ### From Suppression to Dialogue
 
@@ -75,10 +82,6 @@ Here is the simplest version of this approach.
 
 When you sit down to meditate, choose a focus, the breath, a sound, whatever feels natural. When your attention wanders, pause before returning. Ask: Which part just pulled my attention away? Note it briefly. Thank the part for showing up. Return to your focus.
 
-After the session, review your notes. Which parts appeared? What are they concerned about? Schedule time to be with them, not to fix them, not to argue with them out of existence, but to listen.
+After the session, review your notes. Which parts appeared? What are they concerned about? Schedule time with them, not to fix them, not to argue them out of existence, but to listen.
 
-Over time, parts learn that the meditation session is not a place where their concerns are dismissed. They begin to arrive less urgently. The practice grows quieter. Not because you've gotten better at forcing it, but because you've built trust.
-
-This is the difference between a meditator who has learned to concentrate and a meditator who has learned to work with their mind's whole community. The first achieves concentration. The second builds trust.
-
-Effortlessness is what becomes available once the parts who have been working so hard finally feel safe enough.
+Over time, parts learn that the meditation session is not a place where their concerns are dismissed. They begin to arrive less urgently. The practice grows quieter, not because you've gotten better at forcing it, but because you've learned to work with your mind's whole community: you've built trust.
