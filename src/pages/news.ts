@@ -110,8 +110,11 @@ function applyFilter(dateStr: string | null, showFuture: boolean) {
   empty.style.display = anyVisible ? 'none' : 'block';
 }
 
+const FUTURE_TOGGLE_ON = '🙈 Hide What\'s Coming';
+const FUTURE_TOGGLE_OFF = '🎉 What\'s Coming Up?';
+
 function init() {
-  let showFuture = false;
+  let showFuture = true;
   let activeDate: string | null = null;
 
   let viewYear: number;
@@ -159,9 +162,10 @@ function init() {
   });
 
   const futureToggle = document.getElementById('future-toggle')!;
+  futureToggle.textContent = FUTURE_TOGGLE_ON;
   futureToggle.addEventListener('click', () => {
     showFuture = !showFuture;
-    futureToggle.textContent = showFuture ? '🙈 Seal the Veil' : '🔮 Pierce the Veil of Time';
+    futureToggle.textContent = showFuture ? FUTURE_TOGGLE_ON : FUTURE_TOGGLE_OFF;
     applyFilter(activeDate, showFuture);
     render();
   });
@@ -194,7 +198,7 @@ function init() {
     const isFuture = target.classList.contains('future');
     if (isFuture) {
       showFuture = true;
-      futureToggle.textContent = '🙈 Seal the Veil';
+      futureToggle.textContent = FUTURE_TOGGLE_ON;
     }
     applyFilter(null, showFuture);
     render();
