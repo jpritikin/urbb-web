@@ -1,4 +1,3 @@
-import { initMetaPixelTracking } from '../tracking/metaPixel.js';
 import { initAddToCartButtons } from '../shop/addToCart.js';
 
 interface Ghost {
@@ -76,7 +75,6 @@ function animateGhosts(ghosts: Ghost[], container: HTMLElement) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initMetaPixelTracking();
     initAddToCartButtons();
 
     const spiritGuideBtn = document.querySelector('.spirit-guide-btn');
