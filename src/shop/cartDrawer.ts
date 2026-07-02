@@ -1,5 +1,45 @@
 import { getCart, removeItem, updateQuantity, totalItems, totalPrice, onCartChange, CartState } from './cart.js';
-import { createCheckout } from './shopifyClient.js';
+import { createCheckout } from './activeClient.js';
+
+// Mirrors functions/config/shippingRates.ts ALL_SUPPORTED_COUNTRIES
+const SHIPPING_COUNTRIES = [
+    { code: 'US', name: 'United States' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'AT', name: 'Austria' },
+    { code: 'BE', name: 'Belgium' },
+    { code: 'CZ', name: 'Czechia' },
+    { code: 'DK', name: 'Denmark' },
+    { code: 'FI', name: 'Finland' },
+    { code: 'FR', name: 'France' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'GH', name: 'Ghana' },
+    { code: 'HK', name: 'Hong Kong SAR' },
+    { code: 'IN', name: 'India' },
+    { code: 'IE', name: 'Ireland' },
+    { code: 'IL', name: 'Israel' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'JM', name: 'Jamaica' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'KE', name: 'Kenya' },
+    { code: 'MY', name: 'Malaysia' },
+    { code: 'NL', name: 'Netherlands' },
+    { code: 'NZ', name: 'New Zealand' },
+    { code: 'NG', name: 'Nigeria' },
+    { code: 'NO', name: 'Norway' },
+    { code: 'PK', name: 'Pakistan' },
+    { code: 'PH', name: 'Philippines' },
+    { code: 'PL', name: 'Poland' },
+    { code: 'PT', name: 'Portugal' },
+    { code: 'SG', name: 'Singapore' },
+    { code: 'ZA', name: 'South Africa' },
+    { code: 'KR', name: 'South Korea' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'SE', name: 'Sweden' },
+    { code: 'CH', name: 'Switzerland' },
+    { code: 'AE', name: 'United Arab Emirates' },
+].sort((a, b) => a.name.localeCompare(b.name));
 
 let drawer: HTMLElement | null = null;
 let overlay: HTMLElement | null = null;
@@ -98,6 +138,10 @@ export function initCartDrawer() {
         </div>
         <div class="cart-items"></div>
         <div class="cart-footer">
+            <label class="cart-country-label" for="cart-country-select">Ship to</label>
+            <select class="cart-country-select" id="cart-country-select">${SHIPPING_COUNTRIES.map(c =>
+                `<option value="${c.code}"${c.code === 'US' ? ' selected' : ''}>${c.name}</option>`
+            ).join('')}</select>
             <div class="cart-total">
                 <span>Total</span>
                 <span class="cart-total-amount">$0.00</span>
@@ -115,15 +159,19 @@ export function initCartDrawer() {
         btn.textContent = 'Loading...';
         btn.disabled = true;
         try {
+            const country = (drawer!.querySelector('.cart-country-select') as HTMLSelectElement).value;
             const url = await createCheckout(state.items.map(i => ({
                 variantId: i.variantId,
+                productKey: i.productKey,
                 quantity: i.quantity,
-            })));
+            })), country);
             window.location.href = url;
         } catch (e) {
-            btn.textContent = 'Error — try again';
+            console.error('[shop] Checkout failed:', e);
+            const message = e instanceof Error ? e.message : 'Error — try again';
+            btn.textContent = message;
             btn.disabled = false;
-            setTimeout(() => { btn.textContent = 'Checkout →'; btn.disabled = false; }, 3000);
+            setTimeout(() => { btn.textContent = 'Checkout →'; btn.disabled = false; }, 5000);
         }
     });
 
