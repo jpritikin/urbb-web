@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.7.0"
+version: "v1.7.1"
 ---
 
 ## What is This?
@@ -187,7 +187,7 @@ Now, ISBNs. Strictly speaking, an ISBN identifies an edition—same content, sam
 
 But I couldn't leave well enough alone. The cotton candy puffs behind the word "Unburdened" are *not* seeded by the ISBN, so even two copies sharing the same ISBN will have subtly different covers. The result: 50 cover families (mapped to 50 ISBNs), but within each family, subtle variations make every single copy one-of-a-kind. And the interior art still varies per copy too. The ISBN tracks which cover family you got.
 
-Browse all 50 covers below 🎨. Try not to want them all.
+Browse all 50 covers below 🎨. Try not to want them all.[^personal-collection]
 
 <div id="cover-browser">
   <img id="cover-display" src="" alt="Book cover">
@@ -211,3 +211,7 @@ Feeling a strange compulsion to own more than one? That's normal. Probably. We b
 
   </div>
 </div>
+
+## Notes
+
+[^personal-collection]: I own two hardcover copies myself, strictly for professional reasons: At book signings, I keep the "every copy is unique" spiel short and just hand attendees two copies to compare side by side. Watching someone's eyes widen when they flip to the same epigraph in both copies and realize the tree-and-vine decorations are subtly different—that's a rush I will not apologize for. I am, unquestionably, the guy with the props, and I have made peace with how good that feels. 😎 That I also enjoy comparing them at home is a completely unrelated fact that I refuse to examine further.
