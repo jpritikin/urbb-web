@@ -6,3 +6,5 @@ public/
 static/js/
 static/css/output.css
 data/ifsConversation.json
+.env
+.env.*

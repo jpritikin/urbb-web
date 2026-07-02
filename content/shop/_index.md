@@ -30,6 +30,7 @@ Each chapter of *Unburdened* begins with an epigraph hidden in simple substituti
 
 <button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590214201587"
+    data-product-key="cipher-lottery-ticket"
     data-title="Cipher Lottery Ticket"
     data-price="0">
     Add to Cart
@@ -49,6 +50,7 @@ High-quality paper, durable binding, 140 dotted pages. ✍️
 
 <button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590210138355"
+    data-product-key="inquiry-journal"
     data-title="Official Way of Open Inquiry Journal"
     data-price="0">
     Add to Cart
@@ -68,6 +70,8 @@ Stay hydrated during your practice with this premium insulated water bottle. �
 
 <button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590211318003"
+    data-product-key="ceremonial-water-bottle"
+    data-variant="17oz"
     data-title="Ceremonial Water Bottle 17oz"
     data-price="0">
     Add to Cart
@@ -87,6 +91,8 @@ The full ceremony experience. 💧 Wide-mouth foldable straw, rotating handle, p
 
 <button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590212006131"
+    data-product-key="ceremonial-water-bottle"
+    data-variant="32oz"
     data-title="Ceremonial Water Bottle 32oz"
     data-price="0">
     Add to Cart
@@ -106,6 +112,7 @@ Printed on archival-quality paper. ✨
 
 <button class="add-to-cart-btn sale-hint"
     data-variant-id="gid://shopify/ProductVariant/48590210433267"
+    data-product-key="membership-certificate"
     data-title="Lifetime Membership Certificate"
     data-price="0">
     Add to Cart
@@ -152,6 +159,7 @@ Weather-resistant, perfect for cars, fridges, or filing cabinets. 🚙🧲
 
 <button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590209286387"
+    data-product-key="conviction-minimization-magnet"
     data-title="Conviction Minimization Car Magnet"
     data-price="0">
     Add to Cart

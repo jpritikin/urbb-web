@@ -83,7 +83,7 @@ function initHardcoverInfoModal(): void {
     const modal = document.getElementById('hardcover-info-modal');
     const infoBtn = document.querySelector<HTMLButtonElement>('.hardcover-info-btn');
     const addToCartBtn = document.querySelector<HTMLButtonElement>(
-        '[data-variant-id="gid://shopify/ProductVariant/48590233764083"]'
+        '[data-product-key="hardcover"]'
     );
     if (!modal || !infoBtn) return;
 

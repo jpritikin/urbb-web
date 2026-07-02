@@ -1,7 +1,8 @@
 const STORAGE_KEY = 'urbb_cart';
 
 export interface CartItem {
-    variantId: string;
+    variantId: string; // Shopify GID, used by shopifyClient.ts
+    productKey?: string; // backend-agnostic key, used by stripeClient.ts (see functions/config/products.ts)
     title: string;
     price: number;
     quantity: number;

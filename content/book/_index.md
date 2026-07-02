@@ -76,6 +76,7 @@ Consider this an invitation. Faith optional. Courage required.
     <p class="shop-item-price">$0</p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590233764083"
+        data-product-key="hardcover"
         data-title="Religion Unburdened by Belief — Hardcover Collector's Edition"
         data-price="0">
         Add to Cart
@@ -99,6 +100,7 @@ Consider this an invitation. Faith optional. Courage required.
     <p class="shop-item-price">$0</p>
     <button class="order-button paperback-order-btn"
         data-variant-id="gid://shopify/ProductVariant/48590238417139"
+        data-product-key="paperback"
         data-title="Religion Unburdened by Belief — Paperback Collector's Edition"
         data-price="0">
         Add to Cart

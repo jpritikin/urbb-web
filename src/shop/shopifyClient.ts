@@ -1,3 +1,5 @@
+import type { CheckoutLineItem } from './checkoutClient.js';
+
 const GRAPHQL_URL = `https://${window.__SHOPIFY_DOMAIN__}/api/2024-01/graphql.json`;
 const TOKEN = window.__SHOPIFY_STOREFRONT_TOKEN__;
 
@@ -34,12 +36,7 @@ export async function fetchVariantPrices(variantIds: string[]): Promise<Map<stri
     return map;
 }
 
-export interface CheckoutLineItem {
-    variantId: string;
-    quantity: number;
-}
-
-export async function createCheckout(lineItems: CheckoutLineItem[]): Promise<string> {
+export async function createCheckout(lineItems: CheckoutLineItem[], _country: string): Promise<string> {
     const data = await query(`
         mutation cartCreate($input: CartInput!) {
             cartCreate(input: $input) {
