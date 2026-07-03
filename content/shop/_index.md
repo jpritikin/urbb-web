@@ -1,7 +1,7 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.6.0"
+version: "v1.6.1"
 ---
 
 ## Why a Shop? 🛍️
@@ -100,7 +100,7 @@ The full ceremony experience. 💧 Wide-mouth foldable straw, rotating handle, p
 
 </div>
 
-<div class="shop-item has-sale">
+<div class="shop-item">
 
 ### 📜 Lifetime Membership Certificate
 
@@ -110,7 +110,7 @@ Printed on archival-quality paper. ✨
 
 <p class="shop-item-price">…</p>
 
-<button class="add-to-cart-btn sale-hint"
+<button class="add-to-cart-btn"
     data-variant-id="gid://shopify/ProductVariant/48590210433267"
     data-product-key="membership-certificate"
     data-title="Lifetime Membership Certificate"
