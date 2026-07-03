@@ -79,7 +79,7 @@ function writeCursor(timestamp: number) {
 async function stripeGet<T>(url: string, secretKey: string): Promise<T> {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${secretKey}` } });
     if (!res.ok) throw new Error(`Stripe API error ${res.status}: ${await res.text()}`);
-    return res.json();
+    return res.json() as Promise<T>;
 }
 
 async function fetchCompletedSessionsSince(sinceTimestamp: number, secretKey: string): Promise<StripeEvent[]> {
