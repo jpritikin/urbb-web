@@ -16,12 +16,6 @@ Dev branch https://dev.urbb-web.pages.dev/
 
 Contact form needs to redirect to https://unburdened.biz/book/download/
 
-snipcart config:
-- Domains
-- Webhooks URL
-- Webhooks shipping configuration (enable + webhook url)
-
 cloudflare variables and secrets:
 - ENVIRONMENT
 - PRINTFUL_API_KEY
-- SNIPCART_SECRET_API_KEY
