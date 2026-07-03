@@ -72,6 +72,7 @@ const LULU_TIER2: CountryOption[] = [
   { code: 'PK', name: 'Pakistan' },
   { code: 'PH', name: 'Philippines' },
   { code: 'JM', name: 'Jamaica' },
+  { code: 'HK', name: 'Hong Kong SAR' },
 ];
 
 const PRINTFUL_FREE: CountryOption[] = [{ code: 'US', name: 'United States' }];

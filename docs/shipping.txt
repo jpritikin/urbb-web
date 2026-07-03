@@ -13,6 +13,4 @@ United Kingdom, United States: free shipping
 
 Canada, Ireland: $4
 
-Australia, New Zealand, Singapore, Ghana, Kenya, Nigeria, South Africa, India, Pakistan, Philippines, Jamaica: $10.2
-
-
+Australia, New Zealand, Singapore, Ghana, Kenya, Nigeria, South Africa, India, Pakistan, Philippines, Jamaica, Hong Kong: $10.2
