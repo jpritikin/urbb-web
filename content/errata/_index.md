@@ -21,8 +21,12 @@ This one comes with a caveat the size of Colorado: My favorites are *spectacular
 
 ## 👁️ Missed by Every Eye
 
-On page 323, the phrase "feitio preparation ceremony" contains a redundancy: _feitio_ already means preparation. The corrected text should read "feitio ceremony."
+On page 323, the phrase "feitio preparation ceremony" contains a redundancy: _feitio_ already means preparation. The corrected text should read "feitio ceremony."[^portuguese]
 
 I know. Your copy is pristine. The margins are unblemished. The spine still has that satisfying crack. The thought of taking a pen to it feels like vandalism. But I promise you: as the author, I am formally, officially, and with great ceremony granting you permission to cross out that one little word. A single thin line through "preparation." That's all. The page will survive. You might even feel a small thrill of liberation. 🖊️
 
 If you truly can't bring yourself to do it, pencil works too. Or a very tiny sticky note. I won't judge.
+
+## Notes
+
+[^portuguese]: Yes, I caught this myself. 1,366-day Duolingo streak, level 46. My Portuguese has reached the altitude where redundancies in Santo Daime terminology start to itch. [Nicholas Carter](https://www.fiverr.com/thisisstrange) missed it. Some might call this a minor linguistic footnote. I call it evidence. Day 1 of the streak, *feitio* would have gotten a blank stare. Day 1,366, I'm quietly correcting mixed language terminology. The owl still threatens me daily. It has not once congratulated me on this.
