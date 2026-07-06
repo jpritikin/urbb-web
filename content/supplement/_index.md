@@ -144,7 +144,7 @@ The recordings here exist somewhere in the liminal space between "technically ad
 
 ## Bibliography
 
-You know those spiritual bestsellers that open each chapter with a quote from the Upanishads? The ones invoking "quantum principles" and "the field of pure potentiality"? That distill millennia of Eastern philosophy into exactly seven convenient laws? That present "universal energy" and "infinite organizing power" as self-evident truths requiring no empirical support beyond Rumi agreeing with Lao Tzu? The ones that never cite a single peer-reviewed study?
+You know those spiritual bestsellers that open each chapter with a quote from the Upanishads? The ones invoking "quantum principles" and "the field of pure potentiality"? That distill millennia of Eastern philosophy into exactly seven convenient laws? That present "universal energy" and "infinite organizing power" as self-evident truths requiring no empirical support beyond Rumi agreeing with Lao Tzu? The ones that never cite a single peer-reviewed study?[^bibliography-jab]
 
 Most spiritual books aren't held to the same standard as other nonfiction. We thought that was embarrassing.
 
@@ -215,3 +215,5 @@ Feeling a strange compulsion to own more than one? That's normal. Probably. We b
 ## Notes
 
 [^personal-collection]: I own two hardcover copies myself, strictly for professional reasons: At book signings, I keep the "every copy is unique" spiel short and just hand attendees two copies to compare side by side. Watching someone's eyes widen when they flip to the same epigraph in both copies and realize the tree-and-vine decorations are subtly different—that's a rush I will not apologize for. I am, unquestionably, the guy with the props, and I have made peace with how good that feels. 😎 That I also enjoy comparing them at home is a completely unrelated fact that I refuse to examine further.
+
+[^bibliography-jab]: To be clear, this is a jab at the whole New Age nonfiction genre that cites Rumi and nothing else. That said, our description does draw specifically on one classic of the form. Although we obviously cannot say who, we can share, obliquely, that the author's name rhymes with *Freepak Wompra*. Yes, these are uncommon words. For your edification, here are the definitions: **freepak** (n.) — a clause in 19th-century maritime insurance law exempting cargo lost to acts deemed "of a spiritual nature." **wompra** (v.) — in birdwatching circles, to confidently identify a common pigeon as a rare species.
