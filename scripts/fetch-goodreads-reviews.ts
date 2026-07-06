@@ -1,9 +1,12 @@
 #!/usr/bin/env npx ts-node
-// Fetches reviews from a GoodReads book page, filters to 4+ stars,
-// and uploads the result as JSON to Cloudflare R2.
+// Fetches reviews from a GoodReads book page, filters to 4+ stars, merges any
+// new ones into the stored set (existing entries, including odds overrides
+// from review-odds.ts, are kept as-is), and uploads the result as JSON to
+// Cloudflare R2.
 // Usage: ts-node fetch-goodreads-reviews.ts [--dry-run] [--list]
-//   --dry-run  print fetched reviews without uploading
+//   --dry-run  print freshly scraped reviews without uploading or merging
 //   --list     print currently stored reviews from R2 (or view https://data.unburdened.biz/reviews.json)
+//   --force    upload even if no new reviews were found
 // Env vars: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 
 import * as fs from "fs";
@@ -23,6 +26,7 @@ interface Review {
     date: string;
     reviewUrl: string;
     text: string;
+    weight?: number;
 }
 
 async function fetch(url: string): Promise<string> {
@@ -156,17 +160,48 @@ async function main() {
     }
 
     const existing = await fetchFromR2();
-    const existingUrls = new Set(existing.map((r) => r.reviewUrl));
-    const newReviews = filtered.filter((r) => !existingUrls.has(r.reviewUrl));
+    const scrapedByUrl = new Map(filtered.map((r) => [r.reviewUrl, r]));
 
-    if (newReviews.length === 0 && !force) return;
+    const newReviews = filtered.filter(
+        (r) => !existing.some((e) => e.reviewUrl === r.reviewUrl)
+    );
+    const removedReviews = existing.filter((e) => !scrapedByUrl.has(e.reviewUrl));
+    const updatedReviews: { before: Review; after: Review }[] = [];
 
-    if (force) {
-        console.log(`Force uploading ${filtered.length} review(s).`);
-    } else {
+    const kept = existing
+        .filter((e) => scrapedByUrl.has(e.reviewUrl))
+        .map((e) => {
+            const scraped = scrapedByUrl.get(e.reviewUrl)!;
+            const changed =
+                scraped.reviewer !== e.reviewer ||
+                scraped.stars !== e.stars ||
+                scraped.date !== e.date ||
+                scraped.text !== e.text;
+            if (changed) {
+                updatedReviews.push({ before: e, after: scraped });
+                return { ...scraped, weight: e.weight };
+            }
+            return e;
+        });
+
+    const hasChanges = newReviews.length > 0 || removedReviews.length > 0 || updatedReviews.length > 0;
+    if (!hasChanges && !force) return;
+
+    if (newReviews.length > 0) {
         console.log(`${newReviews.length} new review(s): ${newReviews.map((r) => r.reviewer).join(", ")}`);
     }
-    const output = JSON.stringify({ reviews: filtered, fetchedAt: new Date().toISOString() }, null, 2);
+    if (updatedReviews.length > 0) {
+        console.log(`${updatedReviews.length} review(s) edited on Goodreads: ${updatedReviews.map((u) => u.after.reviewer).join(", ")}`);
+    }
+    if (removedReviews.length > 0) {
+        console.log(`${removedReviews.length} review(s) removed/hidden on Goodreads: ${removedReviews.map((r) => r.reviewer).join(", ")}`);
+    }
+    if (force && !hasChanges) {
+        console.log(`Force uploading ${kept.length} review(s), no changes detected.`);
+    }
+
+    const merged = [...kept, ...newReviews];
+    const output = JSON.stringify({ reviews: merged, fetchedAt: new Date().toISOString() }, null, 2);
     await uploadToR2(output);
 }
 

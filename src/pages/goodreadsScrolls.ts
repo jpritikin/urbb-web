@@ -5,6 +5,7 @@ interface Review {
     stars: number;
     date: string;
     text: string;
+    weight?: number;
 }
 
 const PARODY_REVIEWS: Review[] = [
@@ -87,6 +88,16 @@ function cardContentHtml(review: Review, emoji: string): string {
     </div>`;
 }
 
+function weightedPick(reviews: Review[]): Review {
+    const total = reviews.reduce((sum, r) => sum + (r.weight ?? 1), 0);
+    let roll = Math.random() * total;
+    for (const r of reviews) {
+        roll -= r.weight ?? 1;
+        if (roll <= 0) return r;
+    }
+    return reviews[reviews.length - 1];
+}
+
 /** Hands out reviews at random while ensuring no two critters carry the same one
  * (unless the pool is too small to avoid it). */
 class ReviewAllocator {
@@ -98,7 +109,7 @@ class ReviewAllocator {
         if (previous) this.held.delete(previous);
         const available = this.pool.filter(r => !this.held.has(r));
         const choices = available.length > 0 ? available : this.pool;
-        const choice = choices[Math.floor(Math.random() * choices.length)];
+        const choice = weightedPick(choices);
         this.held.add(choice);
         return choice;
     }
