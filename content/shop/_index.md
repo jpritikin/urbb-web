@@ -104,9 +104,11 @@ The full ceremony experience. 💧 Wide-mouth foldable straw, rotating handle, p
 
 ### 📜 Lifetime Membership Certificate
 
-Beautiful certificate suitable for framing and wall display. 🖼️ Demonstrates your commitment to the Way of Open Inquiry. ✨
+Beautiful certificate suitable for framing and wall display.[^multiples] 🖼️ Demonstrates your commitment to the Way of Open Inquiry. ✨
 
 Printed on archival-quality paper. ✨
+
+[^multiples]: One certificate covers one wall. If you maintain a home altar, an office cubicle, *and* a van, you'll need three—this is just physics, not a sales tactic. 🖼️🖼️🖼️ Also: Membership carries forward. Each additional copy immunizes one more future lifetime against the seductive nonsense of charismatic teachers who lack actual insight. That future you will already have a certificate, so there's no need to go join *their* thing. Consider it the opposite of consecutive life sentences: Instead of stacking punishment across incarnations, you're stacking grace.
 
 <p class="shop-item-price">…</p>
 
