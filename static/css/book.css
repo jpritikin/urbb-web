@@ -575,6 +575,47 @@
     background-color: var(--book-accent-glow);
 }
 
+.price-increase-hint {
+    position: relative;
+    cursor: help;
+    margin-left: 0.35rem;
+    display: inline-block;
+}
+
+.price-increase-hint:hover {
+    animation: price-wobble 1s ease-in-out;
+}
+
+.price-increase-hint::after {
+    content: "Order before the price increase!";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-0.35rem);
+    background-color: #ef4444;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.price-increase-hint:hover::after {
+    opacity: 1;
+}
+
+@keyframes price-wobble {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    20% { transform: translateY(-4px) rotate(-8deg); }
+    40% { transform: translateY(-2px) rotate(6deg); }
+    60% { transform: translateY(-1px) rotate(-2deg); }
+    80% { transform: translateY(0px) rotate(1deg); }
+}
+
 .book-page .prose .format-card--disabled {
     opacity: 0.5;
     filter: grayscale(0.4);

@@ -28,7 +28,12 @@ export async function initAddToCartButtons() {
     const setPriceEl = (btn: HTMLButtonElement, text: string) => {
         const priceEl = btn.closest('p')?.previousElementSibling ?? btn.previousElementSibling;
         if (priceEl?.classList.contains('shop-item-price')) {
-            priceEl.textContent = text;
+            const firstChild = priceEl.firstChild;
+            if (firstChild?.nodeType === Node.TEXT_NODE) {
+                firstChild.textContent = text;
+            } else {
+                priceEl.insertBefore(document.createTextNode(text), firstChild);
+            }
         }
     };
 

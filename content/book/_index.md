@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.10"
+version: "v1.5.11"
 ---
 
 <div id="publisher-teasers-anchor"></div>
@@ -73,7 +73,7 @@ Consider this an invitation. Faith optional. Courage required.
     <p>A ritual object as unique as your own practice. ✨ Features a mesmerizing flip-book animation in the
   margins and index of terms. 🔍 Intimidating thickness. Substantial enough to anchor your ceremonial altar—or serve as one. 🕯️ Free domestic shipping. 📦</p>
     <button class="hardcover-info-btn" aria-haspopup="dialog">ℹ️ Print info</button>
-    <p class="shop-item-price">$0</p>
+    <p class="shop-item-price">$0<span class="price-increase-hint">⏳</span></p>
     <button class="order-button"
         data-variant-id="gid://shopify/ProductVariant/48590233764083"
         data-product-key="hardcover"
