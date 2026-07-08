@@ -6,11 +6,11 @@ version: "v1.6.1"
 
 ## Why a Shop? 🛍️
 
-There's a real tension at the heart of this project. I want community around this work. Yet, workshops, retreat programs, video series, guided meditation apps create ongoing personal relationships, financial dependencies, and social pressure to conform. These are exactly the dynamics that written guidance is designed to avoid. 🛡️
+There's a real tension here. I want community around this work, but workshops, retreats, video series, and guided meditation apps create personal relationships, financial dependencies, and social pressure to conform—exactly the dynamics written guidance is designed to avoid. 🛡️
 
 So no workshops. No "advanced practitioner" tiers. No mailing list. No social media.[^cope]
 
-But the desire for connection doesn't disappear. This shop is our attempt to honor that impulse honestly—a way to participate, show solidarity, and support the work without anyone gaining inappropriate influence. You get a water bottle. We get to keep the lights on. Nobody owes anybody anything. ✨
+But the desire for connection doesn't disappear. This shop is our attempt to honor that impulse ethically: you get a water bottle, we get to keep the lights on, nobody owes anybody anything. ✨
 
 [^cope]: I am, of course, completely fine with this. Totally fine. Absolutely not refreshing other teachers' retreat sign-up pages at 2am, watching them fill up in minutes, telling myself I could do that too if I just wanted to sell out a little. Nope. Not me. I have *principles*.
 
