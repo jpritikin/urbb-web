@@ -1,13 +1,13 @@
 ---
 title: "Podcast"
-version: "v1.0.2"
+version: "v1.0.3"
 ---
 
-## 🎙️ The Podcast That Doesn't Exist (Yet)
+## 🎙️ The Podcast That's Almost Not Not Happening
 
-There is no podcast. Not yet, anyway.
+There is no podcast. Not officially. But a [YouTube playlist](https://www.youtube.com/watch?v=Dkf7jwk-PnA&list=PLTcd41MPSBgs) has been quietly growing into something suspiciously podcast-shaped. 👀
 
-But if there's interest, I'm open to recording one. The book makes some bold claims that deserve pushback, elaboration, or at minimum, a raised eyebrow. 🤨
+If there's more interest, I'm open to making it official. The book makes some bold claims that deserve pushback, elaboration, or at minimum, a raised eyebrow. 🤨
 
 ## Who Wants to Talk to Me?
 
