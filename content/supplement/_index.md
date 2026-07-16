@@ -1,11 +1,32 @@
 ---
 title: "Online Supplement"
-version: "v1.7.1"
+version: "v1.7.3"
 ---
 
 ## What is This?
 
 An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to 📄 paper. This supplement offers an interactive IFS (Internal Family Systems) therapist simulator, Santo Daime hymn recordings, and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
+
+## You Finished the Book. Now What?
+
+Great, you finished it! But did you leave a review?
+
+I'll be honest about why I'm asking so directly. Finding an audience for a book that mashes up IFS therapy, neurophenomenology, and psychedelics is not easy. There's no obvious shelf for this. Word-of-mouth is the main distribution channel for something this weird.
+
+Here's the encouraging part: When readers do find the book, the reviews tend to land positive. The struggle isn't the reception, it's the discovery. You finding this page means you're the kind of reader the book was written for. A review from you helps the next person like you actually find it.
+
+If you're willing, a few honest sentences on [Goodreads](https://www.goodreads.com/book/show/249868833-religion-unburdened-by-belief), [StoryGraph](
+https://app.thestorygraph.com/book_reviews/a2f0013f-7845-48ef-84a0-c5918dc14430), and [LibraryThing](
+https://www.librarything.com/work/36493793/t/Religion-Unburdened-by-Belief-The-Way-of-Open-Inquiry) would mean a lot.
+
+<div id="review-pledge-container">
+  <label id="review-pledge-label">
+    <input type="checkbox" id="review-pledge-checkbox">
+    I've left a review, or I will soon 🤞
+  </label>
+</div>
+
+<div id="rest-of-page">
 
 ## 🛡️ Spoiler-Free Zone
 
@@ -217,3 +238,5 @@ Feeling a strange compulsion to own more than one? That's normal. Probably. We b
 [^personal-collection]: I own two hardcover copies myself, strictly for professional reasons: At book signings, I keep the "every copy is unique" spiel short and just hand attendees two copies to compare side by side. Watching someone's eyes widen when they flip to the same epigraph in both copies and realize the tree-and-vine decorations are subtly different—that's a rush I will not apologize for. I am, unquestionably, the guy with the props, and I have made peace with how good that feels. 😎 That I also enjoy comparing them at home is a completely unrelated fact that I refuse to examine further.
 
 [^bibliography-jab]: To be clear, this is a jab at the whole New Age nonfiction genre that cites Rumi and nothing else. That said, our description does draw specifically on one classic of the form. Although we obviously cannot say who, we can share, obliquely, that the author's name rhymes with *Freepak Wompra*. Yes, these are uncommon words. For your edification, here are the definitions: **freepak** (n.) — a clause in 19th-century maritime insurance law exempting cargo lost to acts deemed "of a spiritual nature." **wompra** (v.) — in birdwatching circles, to confidently identify a common pigeon as a rare species.
+
+</div>

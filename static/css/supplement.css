@@ -775,4 +775,66 @@ article li {
   transform: translateY(-1px);
 }
 
+#review-pledge-container {
+  text-align: center;
+  margin: 1.5rem 0 2rem;
+}
+
+#review-pledge-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.4rem;
+  border: 2px dotted var(--daime-gold);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+#review-pledge-label:hover {
+  background: rgba(255, 215, 0, 0.1);
+  border-style: solid;
+}
+
+#review-pledge-checkbox {
+  width: 1.2em;
+  height: 1.2em;
+  accent-color: var(--daime-gold);
+  cursor: pointer;
+}
+
+#rest-of-page {
+  position: relative;
+  transition: filter 0.3s ease;
+}
+
+#rest-of-page.review-gate-locked {
+  cursor: pointer;
+  filter: grayscale(0.6);
+  user-select: none;
+}
+
+#rest-of-page.review-gate-locked > * {
+  pointer-events: none;
+}
+
+#rest-of-page.review-gate-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.12) 75%, rgba(0, 0, 0, 0.12)),
+    linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.12) 75%, rgba(0, 0, 0, 0.12));
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  z-index: 5;
+}
+
+.dark #rest-of-page.review-gate-locked::after {
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.1)),
+    linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.1));
+}
+
 /* Animation classes defined in animations.css */
