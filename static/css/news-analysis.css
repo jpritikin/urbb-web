@@ -175,6 +175,8 @@ body:has(#cy) {
 #teaser-pie {
   flex-shrink: 0;
   display: block;
+  width: 96px;
+  height: 96px;
 }
 .teaser-pie-legend {
   display: flex;
