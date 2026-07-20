@@ -3,6 +3,8 @@ languageCode = 'en-us'
 title = 'Unburdened'
 buildFuture = true
 
+ignoreFiles = ['\.map$']
+
 [outputFormats.Atom]
 mediaType = "application/atom+xml"
 baseName = "atom"
