@@ -138,7 +138,12 @@ function buildLattice(
 
     const isAxisEdge = (gstart[0] === gend[0] && gstart[0] === 0) || (gstart[1] === gend[1] && gstart[1] === 0);
     if (!isAxisEdge) {
-      segments.push({ ai: gstart[0], aj: gstart[1], bi: gend[0], bj: gend[1], scale: cellScale });
+      const points: [number, number][] = [gstart, ...midIndices, gend];
+      for (let m = 0; m < points.length - 1; m++) {
+        const [ai, aj] = points[m];
+        const [bi, bj] = points[m + 1];
+        segments.push({ ai, aj, bi, bj, scale: cellScale });
+      }
     }
 
     const t = cellScale > 1 ? Math.log2(cellScale) / Math.log2(ROOT_CELL_SCALE) : 0;
