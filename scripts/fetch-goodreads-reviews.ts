@@ -12,6 +12,7 @@
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { chromium } from "playwright";
+import { likesToWeight } from "./reviewWeight";
 
 const BOOK_URL =
     "https://www.goodreads.com/book/show/249868833-religion-unburdened-by-belief";
@@ -26,7 +27,9 @@ interface Review {
     date: string;
     reviewUrl: string;
     text: string;
-    weight?: number;
+    likes: number;
+    weight: number;
+    weightOverride?: number;
 }
 
 async function fetch(url: string): Promise<string> {
@@ -44,43 +47,64 @@ async function fetch(url: string): Promise<string> {
     }
 }
 
+interface ApolloReview {
+    __typename?: string;
+    text?: string;
+    rating?: number;
+    createdAt?: number;
+    likeCount?: number;
+    creator?: { __ref?: string };
+    shelving?: { webUrl?: string };
+}
+
+interface ApolloUser {
+    __typename?: string;
+    name?: string;
+    webUrl?: string;
+}
+
+function formatDate(epochMillis: number): string {
+    return new Date(epochMillis).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+    });
+}
+
+// Reviews, ratings, like counts, and reviewer info are all embedded as
+// Apollo cache state in the page's __NEXT_DATA__ script tag, so we read
+// structured data directly rather than parsing rendered DOM markup.
 function parseReviews(html: string): Review[] {
+    const nextDataMatch = html.match(
+        /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/
+    );
+    if (!nextDataMatch) return [];
+
+    const apolloState: Record<string, ApolloReview | ApolloUser> =
+        JSON.parse(nextDataMatch[1])?.props?.pageProps?.apolloState ?? {};
+
     const reviews: Review[] = [];
-    const articleRe =
-        /<article class="ReviewCard" aria-label="Review by ([^"]+)">([\s\S]*?)(?=<article class="ReviewCard"|<\/div><\/div><div class="ReviewsList__listContext"|$)/g;
+    for (const value of Object.values(apolloState)) {
+        if (value.__typename !== "Review") continue;
+        const r = value as ApolloReview;
+        const reviewUrl = r.shelving?.webUrl ?? "";
+        if (!reviewUrl || r.rating == null || !r.creator?.__ref) continue;
 
-    let m: RegExpExecArray | null;
-    while ((m = articleRe.exec(html)) !== null) {
-        const reviewer = m[1].trim();
-        const body = m[2];
+        const user = apolloState[r.creator.__ref] as ApolloUser | undefined;
+        const text = (r.text ?? "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim();
+        const likes = r.likeCount ?? 0;
 
-        const ratingMatch = body.match(/aria-label="Rating (\d+) out of 5"/);
-        if (!ratingMatch) continue;
-        const stars = parseInt(ratingMatch[1], 10);
-
-        const reviewerUrlMatch = body.match(
-            /href="(https:\/\/www\.goodreads\.com\/user\/show\/[^"]+)"/
-        );
-        const reviewerUrl = reviewerUrlMatch ? reviewerUrlMatch[1] : "";
-
-        const reviewUrlMatch = body.match(
-            /href="(https:\/\/www\.goodreads\.com\/review\/show\/[^"]+)"/
-        );
-        const reviewUrl = reviewUrlMatch ? reviewUrlMatch[1] : "";
-
-        const dateMatch = body.match(
-            /goodreads\.com\/review\/show\/[^"]+">([^<]+)<\/a>/
-        );
-        const date = dateMatch ? dateMatch[1].trim() : "";
-
-        const textMatch = body.match(
-            /<span class="Formatted">([\s\S]*?)<\/span>/
-        );
-        const text = textMatch
-            ? textMatch[1].replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim()
-            : "";
-
-        reviews.push({ reviewer, reviewerUrl, stars, date, reviewUrl, text });
+        reviews.push({
+            reviewer: (user?.name ?? "").trim(),
+            reviewerUrl: user?.webUrl ?? "",
+            stars: r.rating,
+            date: r.createdAt != null ? formatDate(r.createdAt) : "",
+            reviewUrl,
+            text,
+            likes,
+            weight: likesToWeight(likes),
+        });
     }
 
     return reviews;
@@ -176,10 +200,15 @@ async function main() {
                 scraped.reviewer !== e.reviewer ||
                 scraped.stars !== e.stars ||
                 scraped.date !== e.date ||
-                scraped.text !== e.text;
+                scraped.text !== e.text ||
+                scraped.likes !== e.likes;
             if (changed) {
                 updatedReviews.push({ before: e, after: scraped });
-                return { ...scraped, weight: e.weight };
+                return {
+                    ...scraped,
+                    weight: e.weightOverride ?? scraped.weight,
+                    weightOverride: e.weightOverride,
+                };
             }
             return e;
         });
