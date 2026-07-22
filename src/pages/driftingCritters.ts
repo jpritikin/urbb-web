@@ -3,11 +3,7 @@
 // publisherTeasers (image teasers).
 
 export function isDebugMode(): boolean {
-    const param = new URLSearchParams(window.location.search).get('debug');
-    if (param === '0') return false;
-    if (param === '1') return true;
-    const host = window.location.hostname;
-    return host !== 'unburdened.biz' && host !== 'www.unburdened.biz';
+    return new URLSearchParams(window.location.search).get('debug') === '1';
 }
 
 // ── 2D Perlin noise ──────────────────────────────────────────────────────────

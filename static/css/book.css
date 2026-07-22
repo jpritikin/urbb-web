@@ -101,6 +101,11 @@
         -1px -1px 0 #fff,
         1px -1px 0 #fff,
         -1px 1px 0 #fff;
+    /* Firefox/WebRender doesn't apply CSS transform (rotate) to color emoji
+       glyphs unless the element is forced onto an intermediate compositing
+       surface. A permanent near-invisible filter forces that surface.
+       https://bugzilla.mozilla.org/show_bug.cgi?id=2055177 */
+    filter: saturate(1.01);
 }
 
 .gr-scroll-inner {
@@ -278,6 +283,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Same Firefox/WebRender color-emoji-under-transform bug as .gr-scroll-seal.
+       https://bugzilla.mozilla.org/show_bug.cgi?id=2055177 */
+    filter: saturate(1.01);
 }
 
 .publisher-teaser-critter .gr-scroll-seal {
