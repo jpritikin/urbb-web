@@ -517,6 +517,12 @@
     margin: 0 !important;
 }
 
+.book-page .prose blockquote strong,
+.book-page .prose .blurb-caveat strong {
+    color: var(--book-accent);
+    font-weight: 700;
+}
+
 /* Book Formats */
 .book-page .prose .book-formats {
     display: grid;
