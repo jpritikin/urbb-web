@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.11"
+version: "v1.5.13"
 ---
 
 <div id="publisher-teasers-anchor"></div>
@@ -43,7 +43,7 @@ Examining your beliefs—especially cherished religious ones—requires courage 
 
 ## Why Citations?
 
-Spiritual books enjoy a double standard. Invoke quantum consciousness, cite Rumi agreeing with Lao Tzu, and nobody asks for your sources. This book declines that exemption.
+Spiritual books {{< hover-swap "enjoy" "are disgraced by" >}} a double standard. Invoke quantum consciousness, cite Rumi agreeing with Lao Tzu, and nobody questions your logic. This book declines that exemption.
 
 Claims throughout this book connect to peer-reviewed research. The citations are real and clickable in the [online supplement](/supplement/#bibliography). 🔬
 
@@ -154,7 +154,7 @@ We know you need everything on paper. 📄 [Here's your sell sheet.](/sell-sheet
 
 ## Plan Your Read 🗺️
 
-Ordered your copy? Wonderful. Now the real question: *which* book are you reading? 📚
+Ordered your copy? Wonderful. Now the real question: *Which* book are you reading? 📚
 
 *Religion Unburdened by Belief* contains optional sections, sidebars, deep dives, and detours. Some readers want every word. Others prefer the lean, essential path. The Reading Planner lets you build your personalized reading journey—toggle sections in and out and watch your word count adjust in real time. ✨
 

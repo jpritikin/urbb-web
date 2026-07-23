@@ -442,3 +442,29 @@
         font-size: 1rem;
     }
 }
+
+/* ── Hover-Swap Text ── */
+
+.hover-swap {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+}
+
+.hover-swap > span {
+    display: none;
+}
+
+.hover-swap::after {
+    content: attr(data-default);
+}
+
+.hover-swap:hover > span,
+.hover-swap:focus-visible > span {
+    display: inline;
+}
+
+.hover-swap:hover::after,
+.hover-swap:focus-visible::after {
+    content: "";
+}

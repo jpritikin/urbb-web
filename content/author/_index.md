@@ -1,6 +1,6 @@
 ---
 title: "About the Author"
-version: "v1.0.0"
+version: "v1.1.0"
 aliases:
   - /contact/
 ---
@@ -13,7 +13,7 @@ Joshua Pritikin brings a unique blend of technical expertise and psychological i
 
 In 2022, Pritikin made a significant career transition from software and statistics to psychological counseling, where he now serves clients through his private practice. He earned the distinction of **IFS Certified Practitioner** in 2024 ([IFS Institute directory](https://ifs-institute.com/practitioners/all/110287)). He works with adult individuals and couples. 🌿
 
-The Pritikin name carries a legacy in the health and wellness space, due to the work of Nathan Pritikin. Nathan developed the renowned Pritikin Program—a low-fat, high-fiber eating plan that gained widespread recognition in the 1970s. As Nathan's grandson, Joshua draws inspiration from this legacy of meaningful impact on human wellbeing. With a slightly different focus, he hopes to make similarly significant contributions to the world through his own work.
+The Pritikin name carries a legacy in the health and wellness space, due to the work of Nathan Pritikin. Nathan developed the renowned Pritikin Program—a low-fat, high-fiber eating plan that gained widespread recognition in the 1970s. As Nathan's grandson, Joshua draws inspiration from this legacy of meaningful impact on human wellbeing. With a slightly different focus, he hopes to {{< hover-swap "make similarly significant contributions to the world through his own work" "sell at least one viral car magnet" >}}.
 
 ## Education & Training
 

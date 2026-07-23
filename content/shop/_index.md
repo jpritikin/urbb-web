@@ -155,8 +155,6 @@ Show your commitment to conviction minimization with this premium car magnet.
 
 Weather-resistant, perfect for cars, fridges, or filing cabinets. 🚙🧲
 
-**Free with any order.** 🎁
-
 <p class="shop-item-price">…</p>
 
 <button class="add-to-cart-btn"
