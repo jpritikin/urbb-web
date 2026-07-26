@@ -51,7 +51,7 @@ Claims throughout this book connect to peer-reviewed research. The citations are
 >
 > *—BookLife/Publishers Weekly*
 
-<p class="blurb-caveat"><em>We couldn't resist bolding the parts that gesture toward our <strong>serious scholarship</strong>.</em></p>
+<p class="blurb-caveat"><em>We couldn't resist bolding the parts that gesture toward our <strong><span class="rainbow-letters">serious scholarship</span></strong>.</em></p>
 
 ## Way of Open Inquiry
 
