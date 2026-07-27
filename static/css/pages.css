@@ -459,12 +459,10 @@
     content: attr(data-default);
 }
 
-.hover-swap:hover > span,
-.hover-swap:focus-visible > span {
+.hover-swap.is-swapped > span {
     display: inline;
 }
 
-.hover-swap:hover::after,
-.hover-swap:focus-visible::after {
+.hover-swap.is-swapped::after {
     content: "";
 }

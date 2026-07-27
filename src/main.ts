@@ -2,12 +2,17 @@ import ImageSlider from './pages/imageSlider.js';
 import ButtonVisibilityManager from './pages/buttonVisibility.js';
 import { initBookNav } from './pages/bookNav.js';
 import { initCurtainStars } from './pages/curtainStars.js';
+import { initHoverSwap } from './pages/hoverSwap.js';
 import { initCartDrawer, openCart, syncBadge } from './shop/cartDrawer.js';
 import { getCart } from './shop/cart.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('image-curtain')) {
         initCurtainStars();
+    }
+
+    if (document.querySelector('.hover-swap')) {
+        initHoverSwap();
     }
 
     const cartBtns = document.querySelectorAll('.cart-icon-btn');
