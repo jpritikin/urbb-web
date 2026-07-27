@@ -416,6 +416,62 @@
     border-color: #ff6b6b;
 }
 
+/* Angel wing decoration */
+.angel-wing {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 22vw;
+    max-width: 14rem;
+    pointer-events: none;
+    z-index: 1;
+    filter: drop-shadow(0 0 12px rgba(255, 223, 128, 0.55));
+    animation: angelWingFlutter 4s ease-in-out infinite;
+}
+
+.angel-wing-left {
+    right: 100%;
+    transform: scaleX(-1);
+}
+
+.angel-wing-right {
+    left: 100%;
+}
+
+.angel-wing-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+@keyframes angelWingFlutter {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-0.5rem) rotate(-2deg);
+    }
+}
+
+.angel-wing-left {
+    animation-name: angelWingFlutterLeft;
+}
+
+@keyframes angelWingFlutterLeft {
+    0%, 100% {
+        transform: scaleX(-1) translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: scaleX(-1) translateY(-0.5rem) rotate(-2deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .angel-wing {
+        width: 16vw;
+    }
+}
+
 @keyframes yogaBorderPulse {
     0%, 100% {
         outline-width: 10px;

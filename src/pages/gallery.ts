@@ -1,5 +1,7 @@
 import { AnimationLoop } from '../utils/animationLoop.js';
 import { initFractalPlayground } from './fractalPlayground.js';
+import { playAngelChorus } from './angelChorus.js';
+import { buildAngelWingSvg } from './angelWing.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initFractalPlayground();
@@ -381,20 +383,34 @@ function showImagePopup(img: HTMLImageElement, allowRotation = true) {
     popupImg.style.transform = `rotate(${rotation}deg)`;
   }
 
+  const leftWing = document.createElement('div');
+  leftWing.className = 'angel-wing angel-wing-left';
+  leftWing.innerHTML = buildAngelWingSvg();
+
+  const rightWing = document.createElement('div');
+  rightWing.className = 'angel-wing angel-wing-right';
+  rightWing.innerHTML = buildAngelWingSvg();
+
+  const chorus = playAngelChorus();
+  const closePopup = () => {
+    chorus.stop();
+    document.body.removeChild(popupOverlay);
+  };
+
   const closeButton = document.createElement('button');
   closeButton.className = 'image-popup-close';
   closeButton.innerHTML = '&times;';
-  closeButton.addEventListener('click', () => {
-    document.body.removeChild(popupOverlay);
-  });
+  closeButton.addEventListener('click', closePopup);
 
   popupOverlay.addEventListener('click', (e) => {
     if (e.target === popupOverlay) {
-      document.body.removeChild(popupOverlay);
+      closePopup();
     }
   });
 
+  popupContent.appendChild(leftWing);
   popupContent.appendChild(popupImg);
+  popupContent.appendChild(rightWing);
   popupContent.appendChild(closeButton);
   popupOverlay.appendChild(popupContent);
   document.body.appendChild(popupOverlay);
