@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wrapper && img) {
       (wrapper as HTMLElement).style.cursor = 'pointer';
       wrapper.addEventListener('click', () => {
-        showImagePopup(img, false);
+        showYogaImagePopup(img);
       });
     }
   });
@@ -363,25 +363,75 @@ function initSlidingPuzzle(container: HTMLElement, tiles: HTMLElement[]) {
 // Popups
 // ---------------------------------------------------------------------------
 
-function showImagePopup(img: HTMLImageElement, allowRotation = true) {
-  const existingPopup = document.querySelector('.image-popup-overlay');
-  if (existingPopup) return;
-
+// Shared overlay/close-button shell used by both popup variants below. Each
+// variant is responsible for building and appending its own popup image and
+// any decoration into popupContent before this returns.
+function createImagePopupShell(onClose: () => void): { popupOverlay: HTMLElement; popupContent: HTMLElement } {
   const popupOverlay = document.createElement('div');
   popupOverlay.className = 'image-popup-overlay';
 
   const popupContent = document.createElement('div');
   popupContent.className = 'image-popup-content';
 
+  const closeButton = document.createElement('button');
+  closeButton.className = 'image-popup-close';
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', onClose);
+
+  popupOverlay.addEventListener('click', (e) => {
+    if (e.target === popupOverlay) {
+      onClose();
+    }
+  });
+
+  popupContent.appendChild(closeButton);
+  popupOverlay.appendChild(popupContent);
+  document.body.appendChild(popupOverlay);
+
+  return { popupOverlay, popupContent };
+}
+
+// Gallery photos ("A Life Among the Influential"): plain enlarge-on-click,
+// with the occasional rotation glitch. No angel decoration - that belongs
+// only to the yoga section.
+function showImagePopup(img: HTMLImageElement) {
+  if (document.querySelector('.image-popup-overlay')) return;
+
   const popupImg = document.createElement('img');
   popupImg.src = img.src;
   popupImg.alt = img.alt;
   popupImg.className = 'image-popup-img';
 
-  if (allowRotation && Math.random() < 0.2) {
+  if (Math.random() < 0.2) {
     const rotation = Math.random() < 0.5 ? 90 : 270;
-    popupImg.style.transform = `rotate(${rotation}deg)`;
+    popupImg.style.setProperty('--popup-img-rotation', `${rotation}deg`);
   }
+
+  const { popupOverlay, popupContent } = createImagePopupShell(() => {
+    document.body.removeChild(popupOverlay);
+  });
+  popupContent.insertBefore(popupImg, popupContent.firstChild);
+}
+
+// Yoga section: enlarge-on-click with flanking angel wing decoration and a
+// synthesized angel chorus. Never rotates.
+//
+// Layout is computed in JS rather than pure CSS: the popup's height is
+// fixed at the image's natural aspect ratio (capped to fit the viewport),
+// and the image's width is its natural width at that height, clamped to
+// whatever room remains after reserving a fixed pixel budget for both
+// wings. On a wide screen there's slack, so the image renders undistorted;
+// once the viewport is too narrow to fit wings + natural-width image, the
+// image's width alone shrinks below its natural size while height stays
+// fixed, producing a real aspect-ratio squash - reliably at any viewport,
+// not just below a fixed breakpoint.
+function showYogaImagePopup(img: HTMLImageElement) {
+  if (document.querySelector('.image-popup-overlay')) return;
+
+  const popupImg = document.createElement('img');
+  popupImg.src = img.src;
+  popupImg.alt = img.alt;
+  popupImg.className = 'image-popup-img';
 
   const leftWing = document.createElement('div');
   leftWing.className = 'angel-wing angel-wing-left';
@@ -392,28 +442,41 @@ function showImagePopup(img: HTMLImageElement, allowRotation = true) {
   rightWing.innerHTML = buildAngelWingSvg();
 
   const chorus = playAngelChorus();
-  const closePopup = () => {
+  const { popupOverlay, popupContent } = createImagePopupShell(() => {
     chorus.stop();
+    window.removeEventListener('resize', layoutYogaPopup);
     document.body.removeChild(popupOverlay);
-  };
-
-  const closeButton = document.createElement('button');
-  closeButton.className = 'image-popup-close';
-  closeButton.innerHTML = '&times;';
-  closeButton.addEventListener('click', closePopup);
-
-  popupOverlay.addEventListener('click', (e) => {
-    if (e.target === popupOverlay) {
-      closePopup();
-    }
   });
+  popupContent.classList.add('image-popup-content--yoga');
 
-  popupContent.appendChild(leftWing);
-  popupContent.appendChild(popupImg);
-  popupContent.appendChild(rightWing);
-  popupContent.appendChild(closeButton);
-  popupOverlay.appendChild(popupContent);
-  document.body.appendChild(popupOverlay);
+  popupContent.insertBefore(leftWing, popupContent.firstChild);
+  popupContent.insertBefore(popupImg, leftWing.nextSibling);
+  popupContent.insertBefore(rightWing, popupImg.nextSibling);
+
+  function layoutYogaPopup() {
+    const wingBudget = parseFloat(getComputedStyle(popupContent).getPropertyValue('--wing-budget')) *
+      parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+    const naturalRatio = (popupImg.naturalWidth || 1) / (popupImg.naturalHeight || 1);
+
+    // Height depends only on the viewport's height bound - never on
+    // viewport width or how much room the wings need. This is what keeps
+    // the image's height fixed while its width alone squeezes.
+    const height = window.innerHeight * 0.9;
+    const naturalWidthAtHeight = height * naturalRatio;
+    const availableImgWidth = Math.max(0, window.innerWidth * 0.9 - 2 * wingBudget);
+    const width = Math.min(naturalWidthAtHeight, availableImgWidth);
+
+    popupImg.style.height = `${height}px`;
+    popupImg.style.width = `${width}px`;
+  }
+
+  if (popupImg.complete) {
+    layoutYogaPopup();
+  } else {
+    popupImg.addEventListener('load', layoutYogaPopup, { once: true });
+  }
+  window.addEventListener('resize', layoutYogaPopup);
 }
 
 function showLawsuitPopup() {

@@ -365,6 +365,7 @@
 }
 
 .image-popup-img {
+    --popup-img-rotation: 0deg;
     max-width: 100%;
     max-height: 90vh;
     width: auto;
@@ -372,6 +373,7 @@
     object-fit: contain;
     border: 3px solid #d4d4d8;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transform: rotate(var(--popup-img-rotation));
 }
 
 .dark .image-popup-img {
@@ -416,13 +418,27 @@
     border-color: #ff6b6b;
 }
 
-/* Angel wing decoration */
+/* Angel wing decoration (yoga popup only) */
+.image-popup-content--yoga {
+    --wing-budget: 10rem;
+    max-width: 90vw;
+    align-items: stretch;
+}
+
+.image-popup-content--yoga .image-popup-img {
+    /* Explicit width/height are set inline by layoutYogaPopup() in
+       gallery.ts, computed from the image's natural aspect ratio and the
+       actual viewport - only squashing (object-fit: fill) once the wings'
+       fixed budget doesn't leave room for the natural width. */
+    flex: 0 0 auto;
+    max-width: none;
+    max-height: none;
+    object-fit: fill;
+}
+
 .angel-wing {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    width: 22vw;
-    max-width: 14rem;
+    flex: 0 0 var(--wing-budget);
+    width: var(--wing-budget);
     pointer-events: none;
     z-index: 1;
     filter: drop-shadow(0 0 12px rgba(255, 223, 128, 0.55));
@@ -430,12 +446,7 @@
 }
 
 .angel-wing-left {
-    right: 100%;
     transform: scaleX(-1);
-}
-
-.angel-wing-right {
-    left: 100%;
 }
 
 .angel-wing-svg {
@@ -467,8 +478,8 @@
 }
 
 @media (max-width: 768px) {
-    .angel-wing {
-        width: 16vw;
+    .image-popup-content--yoga {
+        --wing-budget: 7rem;
     }
 }
 
