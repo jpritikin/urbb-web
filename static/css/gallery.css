@@ -497,6 +497,28 @@
 }
 
 /* Yoga section */
+.yoga-section-bg {
+    position: relative;
+}
+
+.yoga-section-bg::before {
+    content: "";
+    position: absolute;
+    inset: -2rem 0 0;
+    height: 100%;
+    background-image: url("/images/gallery/yoga-mandala.svg");
+    background-repeat: repeat-y;
+    background-position: top center;
+    background-size: min(70vw, 32rem);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.dark .yoga-section-bg::before {
+    opacity: 0.3;
+}
+
 .yoga-header {
     display: flex;
     justify-content: center;

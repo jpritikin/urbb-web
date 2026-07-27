@@ -1,7 +1,7 @@
 ---
 title: "Gallery"
 subtitle: "Moments with Luminaries"
-version: "v1.3.3"
+version: "v1.3.4"
 ---
 
 ## Book Sizzle Reel
@@ -153,6 +153,8 @@ From groundbreaking researchers in psychedelic science 🍄 to spiritual leaders
 
 ## 🧘 Yoga with Joshua
 
+<div class="yoga-section-bg">
+
 <div class="yoga-header">
   <img src="/images/gallery/yoga-logo.webp" alt="Yoga with Joshua logo" class="yoga-logo">
 </div>
@@ -191,6 +193,8 @@ If you're interested in joining a session, reach out through the contact page.
     </div>
     <p class="caption"><em>Adho Mukha Svanasana.</em> Downward Dog is where everything integrates—length through the spine, weight through the hands, breath returning to normal. We close here.</p>
   </div>
+</div>
+
 </div>
 
 ### The Aftermath
