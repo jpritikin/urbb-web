@@ -54,12 +54,17 @@ interface ApolloReview {
     createdAt?: number;
     likeCount?: number;
     creator?: { __ref?: string };
-    shelving?: { webUrl?: string };
+    shelving?: { __ref?: string; webUrl?: string };
 }
 
 interface ApolloUser {
     __typename?: string;
     name?: string;
+    webUrl?: string;
+}
+
+interface ApolloShelving {
+    __typename?: string;
     webUrl?: string;
 }
 
@@ -81,14 +86,17 @@ function parseReviews(html: string): Review[] {
     );
     if (!nextDataMatch) return [];
 
-    const apolloState: Record<string, ApolloReview | ApolloUser> =
+    const apolloState: Record<string, ApolloReview | ApolloUser | ApolloShelving> =
         JSON.parse(nextDataMatch[1])?.props?.pageProps?.apolloState ?? {};
 
     const reviews: Review[] = [];
     for (const value of Object.values(apolloState)) {
         if (value.__typename !== "Review") continue;
         const r = value as ApolloReview;
-        const reviewUrl = r.shelving?.webUrl ?? "";
+        const shelving = r.shelving?.__ref
+            ? (apolloState[r.shelving.__ref] as ApolloShelving | undefined)
+            : (r.shelving as ApolloShelving | undefined);
+        const reviewUrl = shelving?.webUrl ?? "";
         if (!reviewUrl || r.rating == null || !r.creator?.__ref) continue;
 
         const user = apolloState[r.creator.__ref] as ApolloUser | undefined;
@@ -212,6 +220,16 @@ async function main() {
             }
             return e;
         });
+
+    const MAX_PLAUSIBLE_REMOVALS = 1;
+    if (removedReviews.length > MAX_PLAUSIBLE_REMOVALS) {
+        throw new Error(
+            `Refusing to upload: ${removedReviews.length} review(s) would be removed in one run ` +
+            `(${removedReviews.map((r) => r.reviewer).join(", ")}). This usually means the scrape ` +
+            `failed or Goodreads changed its page structure, not that reviews were actually deleted. ` +
+            `Investigate with --dry-run before using --force to proceed anyway.`
+        );
+    }
 
     const hasChanges = newReviews.length > 0 || removedReviews.length > 0 || updatedReviews.length > 0;
     if (!hasChanges && !force) return;
