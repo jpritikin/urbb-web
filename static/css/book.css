@@ -956,3 +956,54 @@
 .map-attribution a {
     color: inherit;
 }
+
+.scholar-reveal {
+    margin: 1rem 0;
+}
+
+.scholar-reveal summary {
+    color: var(--book-accent);
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    list-style: none;
+}
+
+.scholar-reveal summary::-webkit-details-marker {
+    display: none;
+}
+
+.scholar-reveal summary::before {
+    content: '▸ ';
+}
+
+.scholar-reveal[open] summary::before {
+    content: '▾ ';
+}
+
+.scholar-reveal summary:hover {
+    color: var(--book-accent-hover);
+}
+
+.scholar-reveal ul {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 0.5rem;
+}
+
+.scholar-reveal li {
+    padding: 0.5rem 0;
+    border-top: 1px dotted var(--book-accent-light);
+}
+
+.scholar-name {
+    font-weight: 600;
+    color: var(--book-text);
+}
+
+.scholar-credential {
+    margin: 0.15rem 0 0;
+    font-size: 0.9rem;
+    color: var(--book-text-muted);
+    line-height: 1.5;
+}

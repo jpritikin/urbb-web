@@ -2,7 +2,7 @@
 title: "Religion Unburdened by Belief:"
 subtitle: "The Way of Open Inquiry"
 layout: book
-version: "v1.5.13"
+version: "v1.5.14"
 ---
 
 <div id="publisher-teasers-anchor"></div>
@@ -51,7 +51,9 @@ Claims throughout this book connect to peer-reviewed research. The citations are
 >
 > *—BookLife/Publishers Weekly*
 
-<p class="blurb-caveat"><em>We couldn't resist bolding the parts that gesture toward our <strong><span class="rainbow-letters">serious scholarship</span></strong>.</em></p>
+<p class="blurb-caveat"><em>We couldn't resist bolding the parts that gesture toward <strong><span class="rainbow-letters">our serious scholarship</span></strong>.</em></p>
+
+<div id="scholars-reveal-anchor"></div>
 
 ## Way of Open Inquiry
 

@@ -1,6 +1,7 @@
 import { initAddToCartButtons } from '../shop/addToCart.js';
 import { initGoodreadsScrolls } from './goodreadsScrolls.js';
 import { initPublisherTeasers } from './publisherTeasers.js';
+import { initScholarReveal } from './scholarReveal.js';
 
 interface Blurb {
     full: string;
@@ -289,4 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scrollAnchor) initGoodreadsScrolls(scrollAnchor);
     const teaserAnchor = document.getElementById('publisher-teasers-anchor');
     if (teaserAnchor) initPublisherTeasers(teaserAnchor);
+    const scholarsAnchor = document.getElementById('scholars-reveal-anchor');
+    if (scholarsAnchor) initScholarReveal(scholarsAnchor);
 });
