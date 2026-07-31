@@ -3,6 +3,7 @@ interface Scholar {
     surname: string;
     credential: string;
     url?: string;
+    scholarUrl?: string;
 }
 
 function renderScholarMarkdown(credential: string): string {
@@ -13,7 +14,7 @@ function renderScholars(scholars: Scholar[]): string {
     const sorted = [...scholars].sort((a, b) => a.surname.localeCompare(b.surname));
     return sorted.map(s => `
         <li>
-            <span class="scholar-name">${s.surname}, ${s.given}</span>${s.url ? ` — <a href="${s.url}" target="_blank" rel="noopener">review</a>` : ''}
+            <span class="scholar-name">${s.surname}, ${s.given}</span>${s.url ? ` — <a href="${s.url}" target="_blank" rel="noopener">review</a>` : ''}${s.scholarUrl ? ` <a href="${s.scholarUrl}" target="_blank" rel="noopener" title="Google Scholar profile">🎓</a>` : ''}
             <p class="scholar-credential">${renderScholarMarkdown(s.credential)}</p>
         </li>
     `).join('');
