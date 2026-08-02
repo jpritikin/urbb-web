@@ -1,6 +1,5 @@
 ---
 title: "Gallery"
-subtitle: "Moments with Luminaries"
 version: "v1.3.4"
 ---
 
