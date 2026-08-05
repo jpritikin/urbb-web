@@ -118,6 +118,40 @@ function parseReviews(html: string): Review[] {
     return reviews;
 }
 
+// Simple LCS-based word diff, rendered as [-removed-] {+added+} inline.
+function wordDiff(before: string, after: string): string {
+    const a = before.split(/\s+/).filter(Boolean);
+    const b = after.split(/\s+/).filter(Boolean);
+    const m = a.length;
+    const n = b.length;
+    const lcs: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = m - 1; i >= 0; i--) {
+        for (let j = n - 1; j >= 0; j--) {
+            lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+        }
+    }
+
+    const parts: string[] = [];
+    let i = 0, j = 0;
+    while (i < m && j < n) {
+        if (a[i] === b[j]) {
+            parts.push(a[i]);
+            i++;
+            j++;
+        } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
+            parts.push(`[-${a[i]}-]`);
+            i++;
+        } else {
+            parts.push(`{+${b[j]}+}`);
+            j++;
+        }
+    }
+    while (i < m) parts.push(`[-${a[i++]}-]`);
+    while (j < n) parts.push(`{+${b[j++]}+}`);
+
+    return parts.join(" ");
+}
+
 function r2Env() {
     const accountId = process.env.R2_ACCOUNT_ID;
     const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -235,10 +269,20 @@ async function main() {
     if (!hasChanges && !force) return;
 
     if (newReviews.length > 0) {
-        console.log(`${newReviews.length} new review(s): ${newReviews.map((r) => r.reviewer).join(", ")}`);
+        console.log(`${newReviews.length} new review(s):`);
+        newReviews.forEach((r) => console.log(`  ${r.reviewer}  ${r.reviewUrl}`));
     }
     if (updatedReviews.length > 0) {
-        console.log(`${updatedReviews.length} review(s) edited on Goodreads: ${updatedReviews.map((u) => u.after.reviewer).join(", ")}`);
+        console.log(`${updatedReviews.length} review(s) edited on Goodreads:`);
+        updatedReviews.forEach((u) => {
+            console.log(`  ${u.after.reviewer}  ${u.after.reviewUrl}`);
+            if (u.before.likes !== u.after.likes) {
+                console.log(`    likes: ${u.before.likes} -> ${u.after.likes}`);
+            }
+            if (u.before.text !== u.after.text) {
+                console.log(`    text: ${wordDiff(u.before.text, u.after.text)}`);
+            }
+        });
     }
     if (removedReviews.length > 0) {
         console.log(`${removedReviews.length} review(s) removed/hidden on Goodreads: ${removedReviews.map((r) => r.reviewer).join(", ")}`);
