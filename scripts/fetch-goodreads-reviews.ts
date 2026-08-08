@@ -184,10 +184,34 @@ async function fetchFromR2(): Promise<Review[]> {
 
 const CACHE_MAX_AGE_SECONDS = 12 * 60 * 60; // 12 hours
 
+// Before overwriting the live object, snapshot it under a dated key so past
+// versions can always be diffed or restored (best-effort; skipped if the
+// live object doesn't exist yet).
+async function backupExistingToR2(): Promise<void> {
+    const creds = r2Env();
+    if (!creds) throw new Error("Missing R2 credentials: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY");
+    const { accountId, accessKeyId, secretAccessKey } = creds;
+    const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const backupKey = R2_OBJECT_KEY.replace(/\.json$/, `-${dateStamp}.json`);
+    try {
+        execSync(
+            `AWS_ACCESS_KEY_ID=${accessKeyId} AWS_SECRET_ACCESS_KEY=${secretAccessKey} AWS_REQUEST_CHECKSUM_CALCULATION=when_required ` +
+            `aws s3 cp s3://${R2_BUCKET}/${R2_OBJECT_KEY} s3://${R2_BUCKET}/${backupKey} ` +
+            `--endpoint-url ${endpoint} --region auto`,
+            { stdio: "pipe" }
+        );
+    } catch (e) {
+        const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
+        if (!stderr.includes("does not exist")) throw e;
+    }
+}
+
 async function uploadToR2(json: string): Promise<void> {
     const creds = r2Env();
     if (!creds) throw new Error("Missing R2 credentials: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY");
     const { accountId, accessKeyId, secretAccessKey } = creds;
+    await backupExistingToR2();
     const tmpFile = `/tmp/${R2_OBJECT_KEY}`;
     fs.writeFileSync(tmpFile, json);
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
