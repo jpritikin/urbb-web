@@ -32,6 +32,8 @@ interface Review {
     weightOverride?: number;
 }
 
+const DEBUG_DIR = `${process.env.HOME}/.cache/urbb-web`;
+
 async function fetch(url: string): Promise<string> {
     const browser = await chromium.launch();
     try {
@@ -40,7 +42,15 @@ async function fetch(url: string): Promise<string> {
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
         });
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-        await page.waitForSelector("article.ReviewCard", { timeout: 60000 });
+        try {
+            await page.waitForSelector("article.ReviewCard", { timeout: 90000 });
+        } catch (e) {
+            fs.mkdirSync(DEBUG_DIR, { recursive: true });
+            await page.screenshot({ path: `${DEBUG_DIR}/fetch-timeout.png`, fullPage: true });
+            fs.writeFileSync(`${DEBUG_DIR}/fetch-timeout.html`, await page.content());
+            console.error(`Timed out waiting for reviews; saved debug artifacts to ${DEBUG_DIR}/fetch-timeout.{html,png}`);
+            throw e;
+        }
         return await page.content();
     } finally {
         await browser.close();
