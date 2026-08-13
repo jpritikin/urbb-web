@@ -837,4 +837,26 @@ article li {
     linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.1) 75%, rgba(255, 255, 255, 0.1));
 }
 
+.force-field-hit {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.force-field-hit .hex-tile {
+  position: absolute;
+  width: 60px;
+  height: 52px;
+  transform: translate(-50%, -50%);
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  border: 2px solid var(--daime-gold);
+  box-shadow: 0 0 14px 2px rgba(255, 215, 0, 0.6);
+  background: rgba(255, 215, 0, 0.15);
+  opacity: 0;
+}
+
+.force-field-hit .hex-tile.hex-burst {
+  animation: force-field-hex-burst 0.7s ease-out forwards;
+}
+
 /* Animation classes defined in animations.css */
