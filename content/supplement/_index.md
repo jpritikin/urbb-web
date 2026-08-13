@@ -7,7 +7,7 @@ version: "v1.7.3"
 
 An **online supplement** extends a printed book into the digital realm. It offers materials that don't translate well to 📄 paper. This supplement offers an interactive IFS (Internal Family Systems) therapist simulator, Santo Daime hymn recordings, and an interactive bibliography with direct links to peer reviewed academic sources. These resources complement the printed text.
 
-## You Finished the Book. Now What?
+## Nudge
 
 Great, you finished it! But did you leave a review?
 
