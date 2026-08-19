@@ -98,6 +98,6 @@ Is there anything you'd like to add?
 
 **Ti0:** What's your website? How can people find your book?
 
-**Joshua:** If you go to unburdened.biz—B-I-Z—that's the book's website. And my therapy practice is [Estrela Counseling](estrelacounseling.com)—Portuguese spelling of Estrela.
+**Joshua:** If you go to unburdened.biz—B-I-Z—that's the book's website. And my therapy practice is [Estrela Counseling](https://estrelacounseling.com)—Portuguese spelling of Estrela.
 
 **Ti0:** I'll add it to the description. Thank you very much for sharing your time and your work. We'll put this out in the world.
