@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="facebook-domain-verification" content="ewxj0ivfm7yxsfahjl2s6pjl8m2dce" />
-    <meta name="page-version" content="v1.7.3">
+    <meta name="page-version" content="v1.7.6">
     <title>{{ .Site.Title }}</title>
     {{ partial "favicon.html" . }}
     {{ partial "meta-pixel.html" . }}
@@ -74,6 +74,15 @@
             cursor: ew-resize;
             transform: translateX(-50%);
             z-index: 10;
+        }
+
+        @keyframes slider-grab-hint {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .slider.grab-hint {
+            animation: slider-grab-hint 0.6s ease-in-out 1;
         }
         .side-button-wrapper {
             position: relative;

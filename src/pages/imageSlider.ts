@@ -22,6 +22,8 @@ class ImageSlider {
     private audioPlayStartTime: number | null = null;
     private totalAudioPlayTime = 0;
     private flipButtonRevealed = false;
+    private hasBeenGrabbed = false;
+    private grabHintTimer: number | null = null;
 
     constructor(containerId: string, onManipulated?: () => void) {
         const pageVersion = document.querySelector('meta[name="page-version"]')?.getAttribute('content') || 'unknown';
@@ -57,6 +59,20 @@ class ImageSlider {
             this.createAudioUnlockPrompt();
             setInterval(() => this.checkFlipButtonReveal(), 100);
         }
+
+        window.setTimeout(() => this.scheduleGrabHint(1000), 1000);
+    }
+
+    private scheduleGrabHint(delay = 3000 + Math.random() * 2000): void {
+        if (this.hasBeenGrabbed) return;
+
+        this.grabHintTimer = window.setTimeout(() => {
+            if (this.hasBeenGrabbed) return;
+            this.slider.classList.remove('grab-hint');
+            void this.slider.offsetWidth;
+            this.slider.classList.add('grab-hint');
+            this.scheduleGrabHint();
+        }, delay);
     }
 
     private getCurrentAudioPlayTime(): number {
@@ -240,6 +256,12 @@ class ImageSlider {
 
         this.container.addEventListener('click', (e) => {
             if (e.target === this.slider || this.slider.contains(e.target as Node)) return;
+            this.hasBeenGrabbed = true;
+            this.slider.classList.remove('grab-hint');
+            if (this.grabHintTimer !== null) {
+                clearTimeout(this.grabHintTimer);
+                this.grabHintTimer = null;
+            }
             this.updatePosition(e.clientX, e.clientY);
             this.onManipulated?.();
         });
@@ -247,6 +269,12 @@ class ImageSlider {
 
     private startDragging(): void {
         this.isDragging = true;
+        this.hasBeenGrabbed = true;
+        this.slider.classList.remove('grab-hint');
+        if (this.grabHintTimer !== null) {
+            clearTimeout(this.grabHintTimer);
+            this.grabHintTimer = null;
+        }
         const cursor = this.mode === 'horizontal' ? 'ew-resize' : 'ns-resize';
         this.container.style.cursor = cursor;
         this.onManipulated?.();
