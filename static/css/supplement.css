@@ -859,4 +859,14 @@ article li {
   animation: force-field-hex-burst 0.7s ease-out forwards;
 }
 
+.confirm-burst-emoji {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10;
+  font-size: 1.4rem;
+  transform: translate(-50%, -50%);
+  margin-left: -0.7rem;
+  margin-top: -0.7rem;
+}
+
 /* Animation classes defined in animations.css */

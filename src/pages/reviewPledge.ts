@@ -1,5 +1,62 @@
 const STORAGE_KEY = 'review-pledge-checked';
 
+const CONFIRM_EMOJIS = ['💋', '🎉', '🎊', '🪄', '💎', '🔑', '❤️', '💥', '💦'];
+const CONFIRM_ROTATED_EMOJIS = new Set(['💋', '🔑']);
+const CONFIRM_EMOJI_SPEED = 90;
+const CONFIRM_EMOJI_DURATION_MS = 900;
+const CONFIRM_WAVE_COUNT = 10;
+const CONFIRM_WAVE_INTERVAL_MS = 250;
+
+function spawnConfirmWave(originX: number, originY: number): void {
+    const r = Math.random();
+    const count = r < 0.6 ? 1 : r < 0.9 ? 2 : 3;
+
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = CONFIRM_EMOJI_SPEED * (0.5 + Math.random() * 0.5);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        const emoji = CONFIRM_EMOJIS[Math.floor(Math.random() * CONFIRM_EMOJIS.length)];
+        const shouldRotate = CONFIRM_ROTATED_EMOJIS.has(emoji);
+        const angularVelocity = shouldRotate ? (Math.random() - 0.5) * 400 : 0;
+
+        const el = document.createElement('span');
+        el.className = 'confirm-burst-emoji';
+        el.textContent = emoji;
+        el.style.left = `${originX}px`;
+        el.style.top = `${originY}px`;
+        document.body.appendChild(el);
+
+        const start = performance.now();
+        const animate = (now: number) => {
+            const age = now - start;
+            const t = Math.min(1, age / CONFIRM_EMOJI_DURATION_MS);
+            const x = originX + vx * (age / 1000);
+            const y = originY + vy * (age / 1000);
+            const scale = 1 + t;
+            const rotation = shouldRotate ? 45 + angularVelocity * (age / 1000) : 0;
+            el.style.transform = `translate(${x - originX}px, ${y - originY}px) rotate(${rotation}deg) scale(${scale})`;
+            el.style.opacity = String(1 - t);
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                el.remove();
+            }
+        };
+        requestAnimationFrame(animate);
+    }
+}
+
+function spawnConfirmBurst(originEl: HTMLElement): void {
+    const rect = originEl.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+
+    for (let wave = 0; wave < CONFIRM_WAVE_COUNT; wave++) {
+        setTimeout(() => spawnConfirmWave(originX, originY), wave * CONFIRM_WAVE_INTERVAL_MS);
+    }
+}
+
 const HEX_WIDTH = 60;
 const HEX_HEIGHT = 52;
 const HEX_COL_SPACING = HEX_WIDTH * 0.75;
@@ -80,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyState(checkbox.checked);
 
     checkbox.addEventListener('change', () => {
+        if (checkbox.checked) spawnConfirmBurst(checkbox);
         localStorage.setItem(STORAGE_KEY, String(checkbox.checked));
         applyState(checkbox.checked);
     });
