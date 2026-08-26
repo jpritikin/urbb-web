@@ -107,6 +107,9 @@
         .side-button.visible {
             opacity: 1;
         }
+        .side-button.visible a {
+            animation: sideButtonFlash 0.7s ease;
+        }
         .side-button a {
             display: flex;
             align-items: center;
@@ -136,6 +139,35 @@
         }
         .mobile-button.visible {
             opacity: 1;
+        }
+        .mobile-button.visible a {
+            animation: sideButtonFlash 0.7s ease;
+        }
+        @keyframes sideButtonFlash {
+            0% {
+                filter: brightness(1) contrast(1);
+                text-shadow: none;
+            }
+            15% {
+                filter: brightness(2.2) contrast(1.8);
+                text-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+            }
+            30% {
+                filter: brightness(0.7) contrast(1.2);
+                text-shadow: none;
+            }
+            45% {
+                filter: brightness(2.2) contrast(1.8);
+                text-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+            }
+            65% {
+                filter: brightness(0.85) contrast(1.1);
+                text-shadow: none;
+            }
+            100% {
+                filter: brightness(1) contrast(1);
+                text-shadow: none;
+            }
         }
         @media (min-width: 769px) {
             .side-button {
