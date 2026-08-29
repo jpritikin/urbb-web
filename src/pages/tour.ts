@@ -358,14 +358,10 @@ function setupMobileFixedBar(): HTMLElement | null {
     if (window.innerWidth > 767) return null;
 
     const inlineBar = document.getElementById('tour-total-bar-inline')!;
-    const fixed = document.createElement('div');
+    const fixed = inlineBar.cloneNode(true) as HTMLElement;
+    fixed.id = '';
     fixed.className = 'tour-total-bar-fixed';
-    fixed.innerHTML = `
-        <div class="tour-total-label">Your reading:</div>
-        <div class="tour-total-display">
-            <span id="tour-word-display-fixed" class="tour-word-counter"></span>
-            <span class="tour-total-unit">words</span>
-        </div>`;
+    fixed.querySelector('.tour-word-counter')!.id = 'tour-word-display-fixed';
     document.documentElement.appendChild(fixed);
 
     const observer = new IntersectionObserver(
