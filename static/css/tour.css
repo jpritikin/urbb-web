@@ -261,6 +261,16 @@
     color: white;
 }
 
+.tour-toggle:hover:not(:disabled) {
+    background: #16a34a;
+    color: white;
+}
+
+.tour-toggle[aria-pressed="true"]:hover:not(:disabled) {
+    background: #15803d;
+    border-color: #15803d;
+}
+
 .dark .tour-toggle {
     border-color: #4ade80;
     color: #4ade80;
@@ -269,6 +279,16 @@
 .dark .tour-toggle[aria-pressed="true"] {
     background: #4ade80;
     color: #18181b;
+}
+
+.dark .tour-toggle:hover:not(:disabled) {
+    background: #4ade80;
+    color: #18181b;
+}
+
+.dark .tour-toggle[aria-pressed="true"]:hover:not(:disabled) {
+    background: #86efac;
+    border-color: #86efac;
 }
 
 .tour-bar-track {
