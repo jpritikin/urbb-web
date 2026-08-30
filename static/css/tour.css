@@ -376,17 +376,13 @@
         background: #ffffff;
         z-index: 20;
         align-items: center;
+        justify-content: center;
         gap: 0.75rem;
         transition: opacity 0.3s;
     }
 
     .dark .tour-total-bar-fixed {
         background: #18181b;
-    }
-
-    .tour-total-bar-fixed .tour-total-label {
-        margin: 0;
-        white-space: nowrap;
     }
 
     .tour-total-bar-fixed .tour-total-display {
@@ -413,6 +409,12 @@
     text-transform: uppercase;
     color: #71717a;
     margin-bottom: 0.5rem;
+}
+
+@media (max-width: 767px) {
+    .tour-total-label {
+        display: none;
+    }
 }
 
 .tour-total-display {
