@@ -402,12 +402,18 @@ export function initTour(): void {
         const audiobookT = (audiobookWords - minTotal) / (maxTotal - minTotal);
         audiobookMarker.style.left = `${audiobookT * 100}%`;
 
+        function syncAudiobookSelection(): void {
+            const matches = data.choices.every(c => included.get(c.id) === c.audiobook);
+            audiobookBtn.classList.toggle('tour-audiobook-btn--selected', matches);
+        }
+
         audiobookBtn.addEventListener('click', () => {
             stopShuffle();
             for (const choice of data.choices) {
                 applyToggle(choice, choice.audiobook, true);
             }
             syncSliderToWords(audiobookWords);
+            syncAudiobookSelection();
         });
         const WORDS_PER_PAGE = 250;
 
@@ -459,6 +465,7 @@ export function initTour(): void {
             }
             const p = physics.get(choice.id)!;
             p.target = nowIncluded ? choice.words : 0;
+            syncAudiobookSelection();
             if (!skipSliderSync) {
                 const words = data.baseWords + data.choices.reduce((s, c) => s + (included.get(c.id) ? c.words : 0), 0);
                 syncSliderToWords(words);
@@ -563,6 +570,7 @@ export function initTour(): void {
             });
         }
 
+        syncAudiobookSelection();
         display.setTarget(latentSum);
         display.render(latentSum);
         sidebarDisplay.setTarget(latentSum);
