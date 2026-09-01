@@ -98,14 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const isDesktopHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  let anyYogaImageOpened = false;
+
   document.querySelectorAll('.yoga-item').forEach((item) => {
     const wrapper = item.querySelector('.yoga-image-wrapper');
     const img = item.querySelector('img') as HTMLImageElement;
     if (wrapper && img) {
       (wrapper as HTMLElement).style.cursor = 'pointer';
-      wrapper.addEventListener('click', () => {
+      const open = () => {
+        anyYogaImageOpened = true;
         showYogaImagePopup(img);
-      });
+      };
+      wrapper.addEventListener('click', open);
+      if (isDesktopHoverCapable) {
+        wrapper.addEventListener('mouseenter', () => {
+          if (!anyYogaImageOpened) open();
+        });
+      }
     }
   });
 

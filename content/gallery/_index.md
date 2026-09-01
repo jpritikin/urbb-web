@@ -1,6 +1,6 @@
 ---
 title: "Gallery"
-version: "v1.3.4"
+version: "v1.3.5"
 ---
 
 ## Book Sizzle Reel
