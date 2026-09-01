@@ -95,9 +95,36 @@ function teaserToCritter(teaser: Teaser, index: number, total: number): Critter 
     };
 }
 
+function watchForVideoPlay(onPlay: () => void): void {
+    const iframe = document.querySelector<HTMLIFrameElement>('.video-embed iframe');
+    if (!iframe) return;
+
+    // YouTube posts state changes via postMessage once the player has jsapi enabled.
+    const src = new URL(iframe.src);
+    src.searchParams.set('enablejsapi', '1');
+    iframe.src = src.toString();
+
+    const YT_PLAYING = 1;
+    let fired = false;
+    window.addEventListener('message', e => {
+        if (fired || e.source !== iframe.contentWindow) return;
+        let data: any;
+        try { data = JSON.parse(e.data); } catch { return; }
+        if (data.event === 'infoDelivery' && data.info?.playerState === YT_PLAYING) {
+            fired = true;
+            onPlay();
+        }
+    });
+
+    // Ask the player to start reporting its state (no-op until the API is ready).
+    iframe.addEventListener('load', () => {
+        iframe.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+    });
+}
+
 export function initPublisherTeasers(anchorEl: HTMLElement): void {
     const anchorEndEl = document.getElementById('publisher-teasers-anchor-end');
-    spawnCritterLayer(TEASERS.map((t, i) => teaserToCritter(t, i, TEASERS.length)), {
+    const layer = spawnCritterLayer(TEASERS.map((t, i) => teaserToCritter(t, i, TEASERS.length)), {
         anchorEl,
         anchorEndEl,
         buildModal,
@@ -106,4 +133,5 @@ export function initPublisherTeasers(anchorEl: HTMLElement): void {
         maxOnscreen: TEASERS.length,
         debugNamespace: '__publisherTeasers',
     });
+    watchForVideoPlay(() => layer.flee());
 }

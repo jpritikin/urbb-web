@@ -65,6 +65,11 @@ export interface Critter {
     onRespawn?(card: HTMLElement, emoji: string): void;
 }
 
+export interface CritterLayerHandle {
+    /** Send every critter offscreen and stop them from ever returning. */
+    flee(): void;
+}
+
 export interface CritterLayerOptions {
     anchorEl: HTMLElement;
     anchorEndEl?: HTMLElement | null;
@@ -85,7 +90,7 @@ const DEFAULT_EMOJI_OFFSETS: Record<string, number> = { '🦋': -100, '🐝': 18
 
 // ── Drift state ──────────────────────────────────────────────────────────────
 
-type AnimPhase = 'waiting' | 'drifting';
+type AnimPhase = 'waiting' | 'drifting' | 'fleeing' | 'gone';
 
 interface DriftState {
     el: HTMLElement;
@@ -244,7 +249,7 @@ function resolveCollisions(states: DriftState[], dt: number, bandTop: number, ba
  * `items[i].buildCard()`, and clicking it calls `items[i].openModal(modal)`
  * on the shared modal returned by `options.buildModal()`.
  */
-export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions): void {
+export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions): CritterLayerHandle {
     const {
         anchorEl, anchorEndEl = null, buildModal,
         cardWidthRem, cardHeightPx,
@@ -317,6 +322,8 @@ export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions
 
         for (let i = 0; i < states.length; i++) {
             const state = states[i];
+
+            if (state.phase === 'gone') continue;
 
             if (state.phase === 'waiting') {
                 const viewY = pageToViewportY(state.pageY);
@@ -405,6 +412,36 @@ export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions
                     }
                 } else {
                     state.nextDestAt = 0;
+                }
+                continue;
+            }
+
+            if (state.phase === 'fleeing') {
+                state.t += dt;
+                const fleeDirX: -1 | 1 = state.x + cardWidthPx / 2 < window.innerWidth / 2 ? -1 : 1;
+                // Ease into the exit instead of snapping to full speed immediately.
+                state.vx += fleeDirX * ACCEL * 1.5 * dt;
+                const frictionFactor = Math.pow(FRICTION, dt);
+                state.vy *= frictionFactor;
+                state.x += state.vx * dt;
+                state.pageY += state.vy * dt;
+                state.rot = perlin2(state.permRot, state.t * 0.1, 0.5) * 15;
+
+                const offLeft = state.x + cardWidthPx < -ORIGIN_RADIUS;
+                const offRight = state.x > window.innerWidth + ORIGIN_RADIUS;
+                if (offLeft || offRight) {
+                    state.phase = 'gone';
+                    state.el.style.visibility = 'hidden';
+                    continue;
+                }
+
+                const viewY = pageToViewportY(state.pageY);
+                state.el.style.transform = `translate(${state.x}px, ${viewY}px) rotate(${state.rot}deg)`;
+                const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
+                if (speed > 1) {
+                    const heading = Math.atan2(state.vy, state.vx) * 180 / Math.PI;
+                    const offset = emojiOffsets[state.critterEmoji] ?? 0;
+                    state.sealEl.style.transform = `rotate(${heading - offset}deg)`;
                 }
             }
         }
@@ -528,4 +565,15 @@ export function spawnCritterLayer(items: Critter[], options: CritterLayerOptions
     }
 
     requestAnimationFrame(tick);
+
+    return {
+        flee(): void {
+            for (const state of states) {
+                if (state.phase === 'waiting' || state.phase === 'drifting') {
+                    state.phase = 'fleeing';
+                    state.el.style.visibility = '';
+                }
+            }
+        },
+    };
 }
