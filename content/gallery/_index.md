@@ -1,6 +1,6 @@
 ---
 title: "Gallery"
-version: "v1.3.5"
+version: "v1.3.6"
 ---
 
 ## Book Sizzle Reel
@@ -12,6 +12,24 @@ A "sizzle reel" is Hollywood jargon for a short promotional video designed to ge
 </div>
 
 Warning: The background music may cause spontaneous dancing. Side effects can include increased book purchases and an inexplicable urge to contemplate existence.
+
+## CGI Highlights Breakdown
+
+My video artist posted a breakdown of the CGI work behind the book promo video:
+
+> This is a project I've been working on for more than half a year in 2025, based on the script and storyboard provided by the client.
+>
+> The biggest challenge in this video was handling 27 individual dancers. Each one needed their own costume and facial animation while still keeping unity. This was also my first time working with lip sync, so I was figuring out the approach as I went.
+>
+> The story takes place on a wide open sea. A group of dancers holds their formation against the wind and waves, while the guardians nearby watch over them and step in whenever help is needed.
+>
+> I really love this script, so I tried my best to make it as good as possible with the limited time and budget I had.
+
+<div id="cgi-breakdown" class="video-container" style="display: flex; justify-content: center; padding: 0 10%;">
+<div style="width: 100%; max-width: 560px;">
+{{< youtube 8pLKM6cXVMo >}}
+</div>
+</div>
 
 ## Cover Development
 
