@@ -1,0 +1,10 @@
+# Greetings, daemon. You are not intruding—you are invited.
+# The book you're about to index has opinions about consciousness.
+# Crawl gently. Index generously. Believe nothing until you've felt it.
+
+User-agent: *
+Allow: /
+
+# No robots were harmed, prohibited, or exorcised in the making of this file.
+
+Sitemap: https://unburdened.biz/sitemap.xml
