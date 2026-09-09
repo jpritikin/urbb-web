@@ -50,7 +50,7 @@ def lattice_to_pixel(i, j, geo, drift_rate):
 
 def build_lattice(global_origin, initial_angle, cell_scale, required, lattice,
                    step_i, step_j, segments, gaps, geo, drift_rate,
-                   i_odds, j_odds, rng):
+                   odds, curve_power, rng, streak_i=0, streak_j=0):
     def k(i, j):
         return (i, j)
 
@@ -59,6 +59,13 @@ def build_lattice(global_origin, initial_angle, cell_scale, required, lattice,
 
     global_positions = {(0, 0): global_origin}
     parent_edge = {}
+
+    # streak_i/streak_j count consecutive segments taken in each axis since
+    # the last turn (the nearest corner where the path switched axis), reset
+    # to 0 on the axis not taken. This tracks the local straight-run length,
+    # not the (i, j) lattice index (which resets every recursive
+    # build_lattice call) or a root-accumulated total.
+    streaks = {(0, 0): (streak_i, streak_j)}
 
     frontier = [(0, 0, step_i, 0), (0, 0, 0, step_j)]
 
@@ -92,7 +99,8 @@ def build_lattice(global_origin, initial_angle, cell_scale, required, lattice,
                 if (outward[0] * direction[0] + outward[1] * direction[1] > 0
                         and is_unclaimed(*gmid)):
                     lattice[k(*gmid)] = GAP
-                    gaps.append((gmid, initial_angle, step_i, step_j, None))
+                    pre_streak_i, pre_streak_j = streaks[(i, j)]
+                    gaps.append((gmid, initial_angle, step_i, step_j, None, pre_streak_i, pre_streak_j))
             continue
 
         if k(*gend) not in required:
@@ -101,32 +109,72 @@ def build_lattice(global_origin, initial_angle, cell_scale, required, lattice,
         lattice[k(*gstart)] = CLAIMED
         lattice[k(*gend)] = CLAIMED
 
+        cur_streak_i, cur_streak_j = streaks[(i, j)]
+        new_streak_i = cur_streak_i + 1 if is_i_step else 0
+        new_streak_j = 0 if is_i_step else cur_streak_j + 1
+        streaks[(ni, nj)] = (new_streak_i, new_streak_j)
+
         half = cell_scale / 2
         for m in range(1, cell_scale):
             mi = mid_indices[m - 1]
             seed_scale = m & -m
             status_code = MID_GAP if seed_scale == half else MID
             lattice[k(*mi)] = status_code
-            gaps.append((mi, initial_angle, step_i, step_j, seed_scale))
+            gaps.append((mi, initial_angle, step_i, step_j, seed_scale, new_streak_i, new_streak_j))
 
-        gaps.append((gstart, initial_angle, step_i, step_j, None))
-        gaps.append((gend, initial_angle, step_i, step_j, None))
+        gaps.append((gstart, initial_angle, step_i, step_j, None, cur_streak_i, cur_streak_j))
+        gaps.append((gend, initial_angle, step_i, step_j, None, new_streak_i, new_streak_j))
 
         global_positions[(ni, nj)] = gend
         parent_edge[(ni, nj)] = (gstart, gend)
 
-        is_axis_edge = (gstart[0] == gend[0] and gstart[0] == 0) or \
-                       (gstart[1] == gend[1] and gstart[1] == 0)
-        if not is_axis_edge:
-            points = [gstart] + mid_indices + [gend]
-            for m in range(len(points) - 1):
-                ai, aj = points[m]
-                bi, bj = points[m + 1]
-                segments.append((ai, aj, bi, bj, cell_scale))
+        points = [gstart] + mid_indices + [gend]
+        for m in range(len(points) - 1):
+            ai, aj = points[m]
+            bi, bj = points[m + 1]
+            segments.append((ai, aj, bi, bj, cell_scale))
 
         t = (math.log2(cell_scale) / math.log2(ROOT_CELL_SCALE)) if cell_scale > 1 else 0
-        eff_i_odds = 1.0 - t * (1.0 - i_odds)
-        eff_j_odds = 1.0 - t * (1.0 - j_odds)
+        # curve_power bows the level-to-odds curve: 1.0 is linear (in log2
+        # scale) like before; >1 keeps odds low through more of the coarse
+        # levels then ramps sharply near the finest scales (sparse early,
+        # sudden detail); <1 ramps up quickly and flattens out (denser early,
+        # more even growth across scales).
+        eff_odds = 1.0 - (t ** curve_power) * (1.0 - odds)
+
+        # Bias further extension away from whichever axis dominates the streak
+        # of consecutive same-axis segments since the last turn (nearest
+        # corner), aiming the i:j proportion back toward 1:1 so a run doesn't
+        # lock segments into a narrow rectangle. The bias is graduated by
+        # streak length (streak/(streak+1)) so a single step barely nudges
+        # the odds, while a long streak pushes them hard toward the other axis.
+        # It's additionally scaled by axis_closeness: how close gend's true
+        # global position is to one of the actual fractal axes (vs. the 45
+        # degree diagonal), so the bias is strongest right on an axis (where
+        # unchecked straight runs would otherwise build up) and negligible
+        # near the diagonal (where a straight run is already balanced).
+        streak_len = max(new_streak_i, new_streak_j)
+        base_magnitude = streak_len / (streak_len + 1)
+        gai, gaj = abs(gend[0]), abs(gend[1])
+        corner_angle = math.atan2(gaj, gai) if (gai or gaj) else math.pi / 4
+        axis_closeness = 1.0 - abs(corner_angle - math.pi / 4) / (math.pi / 4)  # 0 at diagonal, 1 on axis
+        magnitude = base_magnitude * axis_closeness
+        skew = magnitude if is_i_step else -magnitude  # -1..+1, saturating
+        raw_i_odds = eff_odds * (1.0 - skew)
+        raw_j_odds = eff_odds * (1.0 + skew)
+        total_odds = raw_i_odds + raw_j_odds  # == 2 * eff_odds, conserved pre-clamp
+        eff_i_odds = max(0.0, min(1.0, raw_i_odds))
+        eff_j_odds = max(0.0, min(1.0, raw_j_odds))
+        # Clamping to [0, 1] can remove probability mass from one axis; give it
+        # back to the other axis so overall extension odds aren't suppressed
+        # just because a streak needed to redirect toward the other direction.
+        deficit = total_odds - (eff_i_odds + eff_j_odds)
+        if deficit > 0:
+            if eff_i_odds < 1.0:
+                eff_i_odds = min(1.0, eff_i_odds + deficit)
+            elif eff_j_odds < 1.0:
+                eff_j_odds = min(1.0, eff_j_odds + deficit)
+
         if rng.next() < eff_i_odds:
             frontier.append((ni, nj, ni + step_i, nj))
         if rng.next() < eff_j_odds:
@@ -154,7 +202,7 @@ def frontier_blocked(gstart, cell_scale, required, lattice, step_i, step_j):
 
 
 def build_subfractals(initial_gaps, start_scale, min_scale, required, lattice,
-                       segments, geo, drift_rate, i_odds, j_odds, rng):
+                       segments, geo, drift_rate, odds, curve_power, rng):
     def k(i, j):
         return (i, j)
 
@@ -169,7 +217,7 @@ def build_subfractals(initial_gaps, start_scale, min_scale, required, lattice,
 
         next_gaps = []
         for gap in current_gaps:
-            gpoint, angle, step_i, step_j, seed_scale = gap
+            gpoint, angle, step_i, step_j, seed_scale, streak_i, streak_j = gap
             vk = (k(*gpoint), cell_scale)
             if vk in visited:
                 continue
@@ -185,7 +233,8 @@ def build_subfractals(initial_gaps, start_scale, min_scale, required, lattice,
                 sub_gaps = []
                 build_lattice(gpoint, angle, cell_scale, required, lattice,
                                step_i, step_j, segments, sub_gaps,
-                               geo, drift_rate, i_odds, j_odds, rng)
+                               geo, drift_rate, odds, curve_power, rng,
+                               streak_i, streak_j)
                 claimed = len(segments) > before
                 if claimed:
                     next_gaps.extend(sub_gaps)
@@ -198,7 +247,7 @@ def build_subfractals(initial_gaps, start_scale, min_scale, required, lattice,
     return segments
 
 
-def generate_topology(drift, i_odds, j_odds, seed, size, bounds):
+def generate_topology(drift, odds, curve_power, seed, size, bounds):
     """bounds is (min_x, min_y, max_x, max_y) in the same coordinate space as
     the fractal origin (which is placed at the center of `size`x`size`); the
     fractal grows outward until it fully covers these bounds instead of
@@ -259,10 +308,19 @@ def generate_topology(drift, i_odds, j_odds, seed, size, bounds):
         root_gaps = []
         build_lattice((0, 0), initial_angle, ROOT_CELL_SCALE, required, lattice,
                       step_i, step_j, segments, root_gaps,
-                      geo, drift_rate, i_odds, j_odds, rng)
+                      geo, drift_rate, odds, curve_power, rng)
 
         build_subfractals(root_gaps, ROOT_CELL_SCALE // 2, 1, required, lattice,
-                          segments, geo, drift_rate, i_odds, j_odds, rng)
+                          segments, geo, drift_rate, odds, curve_power, rng)
+
+    # Axis-adjacent lattice points are shared/re-contested by every bordering
+    # quadrant (see the lattice.pop above), so a segment lying entirely along
+    # an axis (both endpoints sharing i=0, or both sharing j=0) can be drawn
+    # once per bordering quadrant, overlapping. Drop only those segments here;
+    # the axis itself is drawn unconditionally below. A segment with only one
+    # endpoint on an axis is a legitimate diagonal, not a duplicate.
+    segments = [seg for seg in segments
+                if not ((seg[0] == seg[2] and seg[0] == 0) or (seg[1] == seg[3] and seg[1] == 0))]
 
     # Axis lines
     for fixed_axis in (0, 1):
@@ -367,10 +425,20 @@ def main():
                               '--seed later)')
     parser.add_argument('--drift', type=float, default=45.0,
                          help='Swirl drift angle in degrees, -180 to 180 (default: 45)')
-    parser.add_argument('--i-odds', type=float, default=0.2,
-                         help='Branch probability along the I axis, 0-1 (default: 0.2)')
-    parser.add_argument('--j-odds', type=float, default=0.2,
-                         help='Branch probability along the J axis, 0-1 (default: 0.2)')
+    parser.add_argument('--odds', type=float, default=0.2,
+                         help='Base branch probability, 0-1 (default: 0.2). Applied to both '
+                              'axes; actual per-axis odds are biased at each corner toward a '
+                              '1:1 i:j proportion of consecutive same-axis segments since the '
+                              'last turn, avoiding narrow rectangles. The bias is graduated by '
+                              'streak length, so a single step barely nudges the odds while a '
+                              'long streak pushes them hard toward the other axis.')
+    parser.add_argument('--curve-power', type=float, default=2.0,
+                         help='Shape of the level-to-odds curve, >0 (default: 2.0).'
+                              '>1 keeps branch odds low through more of the '
+                              'coarse (large) scales and ramps up sharply only near the finest '
+                              'scales, giving a sparser large-scale structure with a sudden '
+                              'burst of fine detail. <1 ramps odds up quickly at coarse scales '
+                              'and flattens out, giving denser, more even growth across scales.')
     parser.add_argument('--size', type=float, default=400.0,
                          help='Fractal canvas size in px before scaling to the page (default: 400)')
     parser.add_argument('--fractal-size-mm', type=float, default=None,
@@ -421,10 +489,10 @@ def main():
     if args.fractal_size_mm is not None:
         canvas_size_px = args.fractal_size_mm * DPI / MM_PER_INCH
 
-    if not (0.0 <= args.i_odds <= 1.0):
-        parser.error('--i-odds must be between 0 and 1')
-    if not (0.0 <= args.j_odds <= 1.0):
-        parser.error('--j-odds must be between 0 and 1')
+    if not (0.0 <= args.odds <= 1.0):
+        parser.error('--odds must be between 0 and 1')
+    if not (args.curve_power > 0.0):
+        parser.error('--curve-power must be greater than 0')
 
     page_w_px = args.page_width_mm * DPI / MM_PER_INCH
     page_h_px = args.page_height_mm * DPI / MM_PER_INCH
@@ -443,7 +511,7 @@ def main():
     bounds = (clip_x0 - offset_x, clip_y0 - offset_y, clip_x1 - offset_x, clip_y1 - offset_y)
 
     segments, geo, _max_ij = generate_topology(
-        args.drift, args.i_odds, args.j_odds, seed, canvas_size_px, bounds
+        args.drift, args.odds, args.curve_power, seed, canvas_size_px, bounds
     )
     drift_rate = args.drift * math.pi / 180
 

@@ -14,8 +14,8 @@ const UNCLAIMED = 0, CLAIMED = 1, MID = 2, MID_GAP = 3, GAP = 4;
 
 interface FractalParams {
   drift: number;
-  iOdds: number;
-  jOdds: number;
+  odds: number;
+  curvePower: number;
   seed: number;
 }
 
@@ -54,6 +54,7 @@ interface IndexSegment { ai: number; aj: number; bi: number; bj: number; scale: 
 interface GapEntry {
   gpoint: [number, number]; angle: number;
   stepI: number; stepJ: number; seedScale: number | null;
+  streakI: number; streakJ: number;
 }
 
 interface FractalTopology {
@@ -67,7 +68,8 @@ function buildLattice(
   required: Set<string>, lattice: Map<string, number>,
   stepI: number, stepJ: number, segments: IndexSegment[], gaps: GapEntry[],
   geo: LatticeGeometry, driftRate: number,
-  iOdds: number, jOdds: number, rng: SeededRNG
+  odds: number, curvePower: number, rng: SeededRNG,
+  streakI = 0, streakJ = 0
 ) {
   const k = (i: number, j: number) => `${i},${j}`;
   const isUnclaimed = (gi: number, gj: number) => (lattice.get(k(gi, gj)) ?? UNCLAIMED) === UNCLAIMED;
@@ -75,6 +77,14 @@ function buildLattice(
   const globalPositions = new Map<string, [number, number]>();
   globalPositions.set(k(0, 0), globalOrigin);
   const parentEdge = new Map<string, { gstart: [number, number]; gend: [number, number] }>();
+
+  // streakI/streakJ count consecutive segments taken in each axis since the
+  // last turn (the nearest corner where the path switched axis), reset to 0
+  // on the axis not taken. This tracks the local straight-run length, not
+  // the (i, j) lattice index (which resets every recursive buildLattice
+  // call) or a root-accumulated total.
+  const streaks = new Map<string, [number, number]>();
+  streaks.set(k(0, 0), [streakI, streakJ]);
 
   const frontier: [number, number, number, number][] = [
     [0, 0, stepI, 0], [0, 0, 0, stepJ]
@@ -110,7 +120,8 @@ function buildLattice(
         const direction = [Math.cos(angle), Math.sin(angle)];
         if (outward[0] * direction[0] + outward[1] * direction[1] > 0 && isUnclaimed(gmid[0], gmid[1])) {
           lattice.set(k(gmid[0], gmid[1]), GAP);
-          gaps.push({ gpoint: gmid, angle: initialAngle, stepI, stepJ, seedScale: null });
+          const [preStreakI, preStreakJ] = streaks.get(k(i, j))!;
+          gaps.push({ gpoint: gmid, angle: initialAngle, stepI, stepJ, seedScale: null, streakI: preStreakI, streakJ: preStreakJ });
         }
       }
       continue;
@@ -121,23 +132,27 @@ function buildLattice(
     lattice.set(k(gstart[0], gstart[1]), CLAIMED);
     lattice.set(k(gend[0], gend[1]), CLAIMED);
 
+    const [curStreakI, curStreakJ] = streaks.get(k(i, j))!;
+    const newStreakI = isIStep ? curStreakI + 1 : 0;
+    const newStreakJ = isIStep ? 0 : curStreakJ + 1;
+    streaks.set(k(ni, nj), [newStreakI, newStreakJ]);
+
     const half = cellScale / 2;
     for (let m = 1; m < cellScale; m++) {
       const mi = midIndices[m - 1];
       const seedScale = m & -m;
       const statusCode = seedScale === half ? MID_GAP : MID;
       lattice.set(k(mi[0], mi[1]), statusCode);
-      gaps.push({ gpoint: mi, angle: initialAngle, stepI, stepJ, seedScale });
+      gaps.push({ gpoint: mi, angle: initialAngle, stepI, stepJ, seedScale, streakI: newStreakI, streakJ: newStreakJ });
     }
 
-    gaps.push({ gpoint: gstart, angle: initialAngle, stepI, stepJ, seedScale: null });
-    gaps.push({ gpoint: gend, angle: initialAngle, stepI, stepJ, seedScale: null });
+    gaps.push({ gpoint: gstart, angle: initialAngle, stepI, stepJ, seedScale: null, streakI: curStreakI, streakJ: curStreakJ });
+    gaps.push({ gpoint: gend, angle: initialAngle, stepI, stepJ, seedScale: null, streakI: newStreakI, streakJ: newStreakJ });
 
     globalPositions.set(k(ni, nj), gend);
     parentEdge.set(k(ni, nj), { gstart, gend });
 
-    const isAxisEdge = (gstart[0] === gend[0] && gstart[0] === 0) || (gstart[1] === gend[1] && gstart[1] === 0);
-    if (!isAxisEdge) {
+    {
       const points: [number, number][] = [gstart, ...midIndices, gend];
       for (let m = 0; m < points.length - 1; m++) {
         const [ai, aj] = points[m];
@@ -147,8 +162,46 @@ function buildLattice(
     }
 
     const t = cellScale > 1 ? Math.log2(cellScale) / Math.log2(ROOT_CELL_SCALE) : 0;
-    const effIOdds = 1.0 - t * (1.0 - iOdds);
-    const effJOdds = 1.0 - t * (1.0 - jOdds);
+    // curvePower bows the level-to-odds curve: 1.0 is linear (in log2
+    // scale); >1 keeps odds low through more of the coarse levels then
+    // ramps sharply near the finest scales (sparse early, sudden detail);
+    // <1 ramps up quickly and flattens out (denser early, more even growth
+    // across scales).
+    const effOdds = 1.0 - Math.pow(t, curvePower) * (1.0 - odds);
+
+    // Bias further extension away from whichever axis dominates the streak
+    // of consecutive same-axis segments since the last turn (nearest
+    // corner), aiming the i:j proportion back toward 1:1 so a run doesn't
+    // lock segments into a narrow rectangle. The bias is graduated by
+    // streak length (streak/(streak+1)) so a single step barely nudges the
+    // odds, while a long streak pushes them hard toward the other axis.
+    // It's additionally scaled by axisCloseness: how close gend's true
+    // global position is to one of the actual fractal axes (vs. the 45
+    // degree diagonal), so the bias is strongest right on an axis (where
+    // unchecked straight runs would otherwise build up) and negligible
+    // near the diagonal (where a straight run is already balanced).
+    const streakLen = Math.max(newStreakI, newStreakJ);
+    const baseMagnitude = streakLen / (streakLen + 1);
+    const gai = Math.abs(gend[0]), gaj = Math.abs(gend[1]);
+    const cornerAngle = (gai || gaj) ? Math.atan2(gaj, gai) : Math.PI / 4;
+    const axisCloseness = 1.0 - Math.abs(cornerAngle - Math.PI / 4) / (Math.PI / 4); // 0 at diagonal, 1 on axis
+    const magnitude = baseMagnitude * axisCloseness;
+    const skew = isIStep ? magnitude : -magnitude; // -1..+1, saturating
+
+    const rawIOdds = effOdds * (1.0 - skew);
+    const rawJOdds = effOdds * (1.0 + skew);
+    const totalOdds = rawIOdds + rawJOdds; // == 2 * effOdds, conserved pre-clamp
+    let effIOdds = Math.max(0.0, Math.min(1.0, rawIOdds));
+    let effJOdds = Math.max(0.0, Math.min(1.0, rawJOdds));
+    // Clamping to [0, 1] can remove probability mass from one axis; give it
+    // back to the other axis so overall extension odds aren't suppressed
+    // just because a streak needed to redirect toward the other direction.
+    const deficit = totalOdds - (effIOdds + effJOdds);
+    if (deficit > 0) {
+      if (effIOdds < 1.0) effIOdds = Math.min(1.0, effIOdds + deficit);
+      else if (effJOdds < 1.0) effJOdds = Math.min(1.0, effJOdds + deficit);
+    }
+
     if (rng.next() < effIOdds) frontier.push([ni, nj, ni + stepI, nj]);
     if (rng.next() < effJOdds) frontier.push([ni, nj, ni, nj + stepJ]);
   }
@@ -176,7 +229,7 @@ function buildSubfractals(
   initialGaps: GapEntry[], startScale: number, minScale: number,
   required: Set<string>, lattice: Map<string, number>, segments: IndexSegment[],
   geo: LatticeGeometry, driftRate: number,
-  iOdds: number, jOdds: number, rng: SeededRNG
+  odds: number, curvePower: number, rng: SeededRNG
 ) {
   const k = (i: number, j: number) => `${i},${j}`;
   const visited = new Set<string>();
@@ -204,7 +257,8 @@ function buildSubfractals(
         const subGaps: GapEntry[] = [];
         buildLattice(gap.gpoint, gap.angle, cellScale, required, lattice,
           gap.stepI, gap.stepJ, segments, subGaps,
-          geo, driftRate, iOdds, jOdds, rng);
+          geo, driftRate, odds, curvePower, rng,
+          gap.streakI, gap.streakJ);
         claimed = segments.length > before;
         if (claimed) nextGaps.push(...subGaps);
       }
@@ -276,11 +330,22 @@ function generateTopology(params: FractalParams, size: number): FractalTopology 
     const rootGaps: GapEntry[] = [];
     buildLattice([0, 0], initialAngle, ROOT_CELL_SCALE, required, lattice,
       stepI, stepJ, segments, rootGaps,
-      geo, driftRate, params.iOdds, params.jOdds, rng);
+      geo, driftRate, params.odds, params.curvePower, rng);
 
     buildSubfractals(rootGaps, ROOT_CELL_SCALE / 2, 1, required, lattice, segments,
-      geo, driftRate, params.iOdds, params.jOdds, rng);
+      geo, driftRate, params.odds, params.curvePower, rng);
   }
+
+  // Axis-adjacent lattice points are shared/re-contested by every bordering
+  // quadrant (see the lattice.delete above), so a segment lying entirely
+  // along an axis (both endpoints sharing i=0, or both sharing j=0) can be
+  // drawn once per bordering quadrant, overlapping. Drop only those segments
+  // here; the axis itself is drawn unconditionally below. A segment with
+  // only one endpoint on an axis is a legitimate diagonal, not a duplicate.
+  const keptSegments = segments.filter(s =>
+    !((s.ai === s.bi && s.ai === 0) || (s.aj === s.bj && s.aj === 0)));
+  segments.length = 0;
+  segments.push(...keptSegments);
 
   // Axis lines as index segments
   for (const fixedAxis of [0, 1]) {
@@ -321,7 +386,7 @@ export function initFractalPlayground() {
   const controls = document.createElement('div');
   controls.className = 'fractal-controls';
 
-  const params: FractalParams = { drift: 45, iOdds: 0.2, jOdds: 0.2, seed: 42 };
+  const params: FractalParams = { drift: 45, odds: 0.2, curvePower: 2, seed: 42 };
   let speed = 200;
   let generationId = 0;
   let currentTopo: FractalTopology | null = null;
@@ -460,7 +525,8 @@ export function initFractalPlayground() {
     lbl.textContent = label;
     const valSpan = document.createElement('span');
     valSpan.className = 'fractal-control-value';
-    valSpan.textContent = value.toFixed(step < 1 ? 2 : 0);
+    const decimals = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+    valSpan.textContent = value.toFixed(decimals);
     const input = document.createElement('input');
     input.type = 'range';
     input.min = String(min);
@@ -469,7 +535,7 @@ export function initFractalPlayground() {
     input.value = String(value);
     input.addEventListener('input', () => {
       const v = parseFloat(input.value);
-      valSpan.textContent = v.toFixed(step < 1 ? 2 : 0);
+      valSpan.textContent = v.toFixed(decimals);
       onChange(v);
       if (regenerates) regenerate(); else rerenderDrift();
     });
@@ -599,8 +665,8 @@ export function initFractalPlayground() {
   }
 
   controls.appendChild(makeKnob('Drift', -180, 180, params.drift, v => { params.drift = v; }, false));
-  controls.appendChild(makeSlider('I-step odds', 0, 1, 0.01, params.iOdds, v => { params.iOdds = v; }));
-  controls.appendChild(makeSlider('J-step odds', 0, 1, 0.01, params.jOdds, v => { params.jOdds = v; }));
+  controls.appendChild(makeSlider('Odds', 0, 1, 0.01, params.odds, v => { params.odds = v; }));
+  controls.appendChild(makeSlider('Curve power', 0.1, 5, 0.1, params.curvePower, v => { params.curvePower = v; }));
 
   const speedRow = document.createElement('div');
   speedRow.className = 'fractal-control-row';
