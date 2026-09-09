@@ -17,6 +17,7 @@ interface FractalParams {
   odds: number;
   curvePower: number;
   seed: number;
+  gridDensity: number;
 }
 
 class SeededRNG {
@@ -274,7 +275,7 @@ function generateTopology(params: FractalParams, size: number): FractalTopology 
   const k = (i: number, j: number) => `${i},${j}`;
 
   const origin: [number, number] = [size / 2, size / 2];
-  const baseLength = size / 6;
+  const baseLength = size / 6 / params.gridDensity;
   const initialAngle = 0;
 
   const driftRate = params.drift * Math.PI / 180;
@@ -386,7 +387,7 @@ export function initFractalPlayground() {
   const controls = document.createElement('div');
   controls.className = 'fractal-controls';
 
-  const params: FractalParams = { drift: 45, odds: 0.2, curvePower: 2, seed: 42 };
+  const params: FractalParams = { drift: 45, odds: 0.2, curvePower: 2, seed: 42, gridDensity: 1 };
   let speed = 200;
   let generationId = 0;
   let currentTopo: FractalTopology | null = null;
@@ -665,6 +666,7 @@ export function initFractalPlayground() {
   }
 
   controls.appendChild(makeKnob('Drift', -180, 180, params.drift, v => { params.drift = v; }, false));
+  controls.appendChild(makeSlider('Grid density', 1, 3, 0.1, params.gridDensity, v => { params.gridDensity = v; }));
   controls.appendChild(makeSlider('Odds', 0, 1, 0.01, params.odds, v => { params.odds = v; }));
   controls.appendChild(makeSlider('Curve power', 0.1, 5, 0.1, params.curvePower, v => { params.curvePower = v; }));
 
