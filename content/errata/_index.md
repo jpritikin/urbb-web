@@ -1,6 +1,6 @@
 ---
 title: "Errata"
-version: "v1.0.0"
+version: "v1.1.0"
 ---
 
 The book has been out for ten days and there's already an errata page. Science moves faster than ink dries. So here we are—collecting the updates, corrections, and "how did we miss that?" moments. This is the book's living edge, a place for new findings before the next edition catches up.
@@ -18,6 +18,10 @@ Stahl's identification of a plausible recipe for soma (or kykeon) is the kind of
 ### 🌱 Cannabis: More Favorites [TODO]
 
 This one comes with a caveat the size of Colorado: My favorites are *spectacular*. But are they really? Even taking the same precisely measured recipes, will two people following the same protocol have similar experiences? The cannabis experimentation journal that I featured in Chapter 8 was [not a fictional conceit](https://brambles.joshuapritikin.com/docs/psychoactive/cannabis/).
+
+## Books I Wish I'd Cited
+
+[Farhad Dalal's *CBT: The Cognitive Behavioural Tsunami: Politics, Power and the Corruptions of Science*](https://www.karnacbooks.com/product/cbt-the-cognitive-behavioural-tsunami-politics-power-and-the-corruptions-of-science/93746/) crossed my desk too late to make the bibliography. Dalal argues that CBT's science isn't just thin, it's corrupt: a managerialist fetish for measurement that mistakes "the countable" for "the real," propped up by NICE, IAPT, and the broader neoliberal appetite for symptom reduction as a substitute for actual healing.
 
 ## 👁️ Missed by Every Eye
 
