@@ -1,6 +1,6 @@
 ---
 title: "Errata"
-version: "v1.1.0"
+version: "v1.2.0"
 ---
 
 The book has been out for ten days and there's already an errata page. Science moves faster than ink dries. So here we are—collecting the updates, corrections, and "how did we miss that?" moments. This is the book's living edge, a place for new findings before the next edition catches up.
@@ -18,6 +18,10 @@ Stahl's identification of a plausible recipe for soma (or kykeon) is the kind of
 ### 🌱 Cannabis: More Favorites [TODO]
 
 This one comes with a caveat the size of Colorado: My favorites are *spectacular*. But are they really? Even taking the same precisely measured recipes, will two people following the same protocol have similar experiences? The cannabis experimentation journal that I featured in Chapter 8 was [not a fictional conceit](https://brambles.joshuapritikin.com/docs/psychoactive/cannabis/).
+
+### 🔮 Predicting Combinations
+
+What happens when you mix psychedelics? The book mostly sticks to substances one at a time, but I've built an interactive app that makes specific, falsifiable predictions about the subjective effects of combining various psychedelics. Poke at my [combination predictions](https://brambles.joshuapritikin.com/docs/psychoactive/inward/) and see where I've stuck my neck out.
 
 ## Books I Wish I'd Cited
 
