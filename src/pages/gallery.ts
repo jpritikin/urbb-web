@@ -101,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const isDesktopHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   let anyYogaImageOpened = false;
 
+  const yogaWrappers: { wrapper: Element; img: HTMLImageElement }[] = [];
+
   document.querySelectorAll('.yoga-item').forEach((item) => {
     const wrapper = item.querySelector('.yoga-image-wrapper');
     const img = item.querySelector('img') as HTMLImageElement;
@@ -115,9 +117,31 @@ document.addEventListener('DOMContentLoaded', () => {
         wrapper.addEventListener('mouseenter', () => {
           if (!anyYogaImageOpened) open();
         });
+      } else {
+        yogaWrappers.push({ wrapper, img });
       }
     }
   });
+
+  if (!isDesktopHoverCapable && yogaWrappers.length > 0) {
+    const scrollObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && !anyYogaImageOpened) {
+            anyYogaImageOpened = true;
+            const match = yogaWrappers.find((y) => y.wrapper === entry.target);
+            if (match) {
+              showYogaImagePopup(match.img);
+            }
+            scrollObserver.disconnect();
+            break;
+          }
+        }
+      },
+      { threshold: 0.5 }
+    );
+    yogaWrappers.forEach(({ wrapper }) => scrollObserver.observe(wrapper));
+  }
 
   if (galleryContainer) {
     initSlidingPuzzle(galleryContainer, galleryItemsArray);
