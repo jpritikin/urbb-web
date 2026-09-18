@@ -18,6 +18,15 @@
   }
 }
 
+@keyframes review-pledge-highlight-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @keyframes glitch-flash {
   0%, 100% {
     opacity: 0;
