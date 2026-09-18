@@ -1,6 +1,6 @@
 ---
 title: "Online Supplement"
-version: "v1.7.5"
+version: "v1.7.6"
 ---
 
 ## What is This?
@@ -162,6 +162,18 @@ The recordings here exist somewhere in the liminal space between "technically ad
     </p>
   </div>
 </div>
+
+## The Josie Proffit Interrogation
+
+After reading the book, [Josie Proffit](https://latterdaydepththerapy.substack.com/) ambushed me with seventeen questions for her Substack, *Latter Day Depth Therapy*. 🎙️ It runs long, and it goes deep—pressing on the book's ideas from angles the book itself never quite takes, and occasionally catching me out. (There is a confession in here about how one of the book's "aha" moments got built. This magician did not want to reveal the trick.)
+
+Here's a taste, on why written guidance can be safer than a living teacher:
+
+> A book can't be flattered into believing it deserves your devotion, and it can't quietly expand its claim on your life as you become more invested. It also won't get clingy when you leave. Just close it, no goodbye tour required.
+
+Which is a little awkward, seeing as I am, at this very moment, alive and in conversation.
+
+Read the full interview, or listen to the audio version I recorded: [What If Religion Didn't Require Belief?](https://latterdaydepththerapy.substack.com/p/what-if-religion-didnt-require-belief)
 
 ## Bibliography
 
