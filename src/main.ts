@@ -3,6 +3,7 @@ import ButtonVisibilityManager from './pages/buttonVisibility.js';
 import { initBookNav } from './pages/bookNav.js';
 import { initCurtainStars } from './pages/curtainStars.js';
 import { initHoverSwap } from './pages/hoverSwap.js';
+import { initHeadingAnchors } from './pages/headingAnchors.js';
 import { initCartDrawer, openCart, syncBadge } from './shop/cartDrawer.js';
 import { getCart } from './shop/cart.js';
 
@@ -13,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.querySelector('.hover-swap')) {
         initHoverSwap();
+    }
+
+    if (document.querySelector('.heading-copy')) {
+        initHeadingAnchors();
     }
 
     const cartBtns = document.querySelectorAll('.cart-icon-btn');

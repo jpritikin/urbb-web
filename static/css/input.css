@@ -20,6 +20,10 @@
     @apply text-xl font-bold mt-8 mb-4;
   }
 
+  h2, h3, h4, h5, h6 {
+    @apply scroll-mt-24;
+  }
+
   a {
     @apply text-sky-400 underline underline-offset-2 hover:text-sky-300;
   }
@@ -37,6 +41,10 @@
 
   .footnotes ol {
     @apply list-decimal pl-6;
+  }
+
+  .heading-copy {
+    @apply cursor-pointer;
   }
 }
 
