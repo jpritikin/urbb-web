@@ -35,7 +35,7 @@ I know. Your copy is pristine. The margins are unblemished. The spine still has 
 
 If you truly can't bring yourself to do it, pencil works too. Or a very tiny sticky note. I won't judge.
 
-## The BookLife Jab: A Re-Examination
+## The BookLife Jab: A Calm Re-Examination
 
 Back in April, the BookLife review came in and I reacted in a way that needs unpacking. But first, the timeline.
 
@@ -43,9 +43,9 @@ After processing feedback from a series of 19 remarkably talented beta readers (
 
 Then, on Feb 23, I started recording the audiobook and worked on it through the end of March. I shouldn't have been surprised that reading the text aloud surfaced a number of awkward phrasings and redundant clauses that had survived every prior pass, including Carter's.[^process] I corrected those. Later still, listening back to my own audiobook recording with a print copy open in front of me, I found even more items to fix, and continued finding them up to the offset printer's deadline. The version of the book sold today incorporates the full pile of those later corrections.
 
-BookLife delivered their review on Apr 2. I was disappointed to receive a grade of A- for editing, but it was understandable. Between Feb 20 and the publication date, I inserted 17.1k and deleted 20.3k words. No small amount of churn for a "final" draft.
+BookLife delivered their review on Apr 2. I was disappointed to receive a grade of A- for editing, but it was understandable. Between Feb 20 and the publication date, I inserted 17.1k and deleted 20.3k words. No small amount of churn for a "final" draft. But the editing grade wasn't what got under my skin.
 
-But I'm getting ahead of myself. On April 26, with the June 15 release deadline approaching, I added a final entry to the end-of-book review section:
+"A preening quality infects Pritikin's playfulness, which readers may find indulgent." That line, maligning the final chapter, registered as a gut punch. The reviewer was clearly taking its excess at face value, not as performance. How should I feel about that? A parody indistinguishable from its target could signal supreme craft. But it could also mean the wink failed. My reaction was impulsive. On April 26, with the June 15 release deadline rapidly approaching, I added an entry to the end-of-book review section:
 
 > **Belief**: The last chapter's satirical content reflects the author's preening self-indulgence.
 >
@@ -53,17 +53,15 @@ But I'm getting ahead of myself. On April 26, with the June 15 release deadline 
 >
 > **Caveat**: BookLife apparently took the parody at face value. When satire lives inside the thing it mocks, some readers will simply see the thing.
 
-It was impulsive. I was reacting to what sounded like criticism in BookLife's review of the final chapter: "a preening quality infects Pritikin's playfulness, which readers may find indulgent." I read that as a sign the reviewer had taken the chapter's excess at face value, not as performance.
+Was this enough? A part of me thought so. Most of me didn't. As of today (Sep 18), the book has only garnered 17 Goodreads reviews against a target of 30. Every time I reload the page (at least {{< hover-swap "daily" "three times a day" >}}), I also wonder whether my publicist undersold the book. She favored conservative pitching angles, focusing on the first chapter, largely avoiding the two hot-button topics: psychedelics and religion.[^marketing] Or maybe that was my fault. I myself only recently gained enough distance from the manuscript to appreciate what I'd actually written.
 
-I registered that review as a gut punch. Will anybody appreciate the final chapter as the parody I intended? As of today (Sep 18), the book has only garnered 17 Goodreads reviews against a target of 30. Every time I reload the page (at least {{< hover-swap "daily" "three times a day" >}}), I also wonder whether my publicist undersold the book. She favored conservative pitching angles, focusing on the first chapter, largely avoiding the two hot-button topics: psychedelics and religion.[^marketing] Or maybe that was my fault. I myself only recently gained enough distance from the manuscript to appreciate what I'd actually written.
-
-But suppose BookLife had genuinely missed the parody. How should I feel about that? A parody indistinguishable from its target could signal supreme craft. It could also mean the wink failed. And for a debut author still finding an audience, a review that mischaracterizes the book carries a real cost.
-
-These concerns were circling while I was consumed trying to get the word out. I've published 28 interviews so far. But I finally found time to revisit the BookLife review today. As preparation, I reread the review carefully. I noticed that, before proceeding to the clause I had fixated on in April, the sentence actually begins by noting that the final chapter "edges between prank and capstone." The word "prank" **is** there. What's the opposite of a gut punch? I think I'm feeling that now.
+I exiled these concerns to the background while I was consumed trying to get the word out. I've given 28 interviews so far. But I finally found time to revisit the BookLife review today. As preparation, I reread the review carefully. Oh shit—I'd missed something. Right before the clause I fixated on in April is this: the final chapter "edges between prank and capstone." The word "prank" **is** there. What's the opposite of a gut punch? I think I'm feeling that now.
 
 I did not see the word "prank" in April, weigh it, and set it aside. I read past it, and I kept reading past it for five months, until today.
 
-But a doubt lingers. BookLife named the register, but proceeded to criticize the chapter anyway. So what was BookLife's true position? We'll probably never know. If BookLife missed the parody, the jab was appropriate. On the other hand, if BookLife did credit it, as the word "prank" suggests, then I owe BookLife an apology. No, wait, this is Chapter 8. Wounded pride reaches for a rebuttal before it reaches for banality—reading comprehension. Imagine that: without meaning to, I'm still in character, channeling the fragile megalomaniac, enacting the performance.[^channeling] Both doors open to the same room, and I'm already in it.
+But doubt lingers. BookLife named the register, but proceeded to criticize the chapter anyway. So what was BookLife's true position? We'll probably never know. If BookLife missed the parody, the jab was appropriate. On the other hand, if BookLife credited it, as the word "prank" suggests, then I owe BookLife an apology.
+
+I could already feel the dignity of it, the gracious mea culpa. The correction for this very page was half-written—*Update, Sep 18: In the spirit of intellectual honesty that this book claims to champion, I must now*—No, wait, this is Chapter 8. Wounded pride reaches for a rebuttal before it reaches for banality—reading comprehension. Imagine that: without meaning to, I'm still in character, channeling the fragile megalomaniac, enacting the performance.[^channeling] Both doors open to the same room, and I'm already in it. No correction needed.
 
 ## Notes
 
@@ -71,6 +69,6 @@ But a doubt lingers. BookLife named the register, but proceeded to criticize the
 
 [^channeling]: That fragile megalomaniac feels so natural. Am I channeling it or is it me?
 
-[^marketing]: Is it genius to sell a book about psychedelic religion without using either of those words? Quite a trick, considering "religion" is literally the first word of the title.
+[^marketing]: Is it genius to sell a book about psychedelic religion without using either of those words? Quite a trick, considering "religion" is literally the first word of the title. And yet—credit where due—she landed me a placement in the Oct 2026 issue of Creations Magazine.
 
 [^process]: I can hardly blame Carter for this. He couldn't give me unlimited time; he did what he could and moved on. It was my own inexperience that scheduled the audiobook before the proofreading. Or is that just hindsight talking? Is there a non-shitty process for getting to a polished manuscript?
