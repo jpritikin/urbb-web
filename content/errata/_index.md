@@ -67,7 +67,7 @@ But a doubt lingers. BookLife named the register, but proceeded to criticize the
 
 ## Notes
 
-[^portuguese]: Yes, I caught this myself. 1,366-day Duolingo streak, level 46. My Portuguese has reached the altitude where redundancies in Santo Daime terminology start to itch. [Nicholas Carter](https://www.fiverr.com/thisisstrange) missed it. Some might call this a minor linguistic footnote. I call it evidence. Day 1 of the streak, *feitio* would have gotten a blank stare. Day 1,366, I'm quietly correcting mixed language terminology. The owl still threatens me daily. It has not once congratulated me on this.
+[^portuguese]: Yes, I caught this myself. 1,366-day Duolingo streak, level 46. The owl still threatens me daily. It has not once congratulated me on this.
 
 [^channeling]: That fragile megalomaniac feels so natural. Am I channeling it or is it me?
 
