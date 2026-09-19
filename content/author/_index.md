@@ -1,6 +1,6 @@
 ---
 title: "About the Author"
-version: "v1.1.0"
+version: "v1.2.0"
 aliases:
   - /contact/
 ---
@@ -31,9 +31,11 @@ Joshua offers counseling in Oregon under [ORS 675.825(4)(a)](https://oregon.publ
 
 [Book a free consultation](https://estrelacounseling.com/docs/staff/joshua/).
 
-## Direct Email
+## Contact
 
 I keep a sacred inbox. That means it is swept, dusted, and unsullied by spam or NFT pitches from your cousin's crypto guru, etc. I keep it the way some people relate to good china: rarely used, immaculately maintained, and faintly resentful of anyone who chips it. 📵 {{< hover-swap "But obviously you would never chip it, because I asked nicely and you seem like a person of tremendous integrity." "Violators will be karmically rerouted to an eternal customer service hold line playing smooth jazz." >}}
 
 - [bro (at) estrelacounseling (dot) com](mailto:bro@estrelacounseling.com)
 - [jpritikin (at) pobox (dot) com](mailto:jpritikin@pobox.com)
+- [LinkedIn](https://www.linkedin.com/in/joshuapritikin/)
+- [Facebook](https://www.facebook.com/joshua.pritikin)
