@@ -1001,6 +1001,24 @@
     color: var(--book-text);
 }
 
+.scholar-statement-btn {
+    font: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--color-sky-600);
+    text-decoration: none;
+}
+
+.scholar-statement-btn:hover {
+    text-decoration: underline;
+}
+
+.dark .scholar-statement-btn {
+    color: var(--color-sky-400);
+}
+
 .scholar-credential {
     margin: 0.15rem 0 0;
     font-size: 0.9rem;
