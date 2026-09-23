@@ -1,0 +1,1 @@
+{{ $speaker := .Get 0 }}<div class="say" data-speaker="{{ $speaker }}">{{ .Inner | .Page.RenderString }}</div>

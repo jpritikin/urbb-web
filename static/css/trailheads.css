@@ -1,0 +1,102 @@
+.dialogue {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.say {
+    max-width: 42rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1.25rem;
+    line-height: 1.6;
+    opacity: 0;
+    transform: translateY(0.75rem);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.say.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.say p {
+    margin: 0;
+}
+
+.say[data-speaker="naomi"] {
+    align-self: flex-start;
+    background: rgb(16 185 129 / 0.12);
+    border: 1px dashed rgb(16 185 129 / 0.5);
+    border-bottom-left-radius: 0.25rem;
+}
+
+.say[data-speaker="renata"] {
+    align-self: flex-end;
+    background: rgb(217 119 6 / 0.12);
+    border: 1px dashed rgb(217 119 6 / 0.5);
+    border-bottom-right-radius: 0.25rem;
+}
+
+.dark .say[data-speaker="naomi"] {
+    background: rgb(16 185 129 / 0.1);
+    color: rgb(228 228 231);
+}
+
+.dark .say[data-speaker="renata"] {
+    background: rgb(217 119 6 / 0.1);
+    color: rgb(228 228 231);
+}
+
+@media (min-width: 900px) {
+    .dialogue {
+        position: relative;
+    }
+
+    .dialogue.is-staggered {
+        display: block;
+    }
+
+    .dialogue.is-staggered .say {
+        position: absolute;
+        max-width: none;
+        left: 0;
+        width: 100%;
+        transform: translateY(0.75rem);
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out,
+            left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), right 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+            width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dialogue.is-staggered .say.is-visible {
+        transform: translateY(0);
+    }
+
+    .dialogue.is-staggered .say.is-dealt[data-speaker="naomi"] {
+        width: calc(50% - 1rem);
+    }
+
+    .dialogue.is-staggered .say.is-dealt[data-speaker="renata"] {
+        left: auto;
+        right: 0;
+        width: calc(50% - 1rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .say {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .dialogue.is-staggered .say {
+        left: 0;
+        width: calc(50% - 1rem);
+        transform: none;
+    }
+
+    .dialogue.is-staggered .say[data-speaker="renata"] {
+        left: auto;
+        right: 0;
+    }
+}

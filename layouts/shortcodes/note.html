@@ -1,0 +1,6 @@
+{{- $id := .Get 0 -}}
+{{- $index := 0 -}}
+{{- range $i, $n := .Page.Params.notes -}}
+  {{- if eq $n.id $id }}{{ $index = add $i 1 }}{{ end -}}
+{{- end -}}
+<sup id="fnref:{{ $id }}"><a href="#fn:{{ $id }}" class="footnote-ref">{{ $index }}</a></sup>

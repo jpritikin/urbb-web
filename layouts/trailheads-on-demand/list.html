@@ -1,0 +1,35 @@
+{{ define "main" }}
+<link rel="stylesheet" href="/css/trailheads.css">
+<script type="module" src="/js/pages/trailheads.js"></script>
+<script>console.log('trailheads-on-demand {{ .Params.version }}');</script>
+<article>
+    <header class="mb-8">
+        <h1 class="text-4xl mb-2 text-zinc-900 dark:text-gray-100">{{ .Title }}</h1>
+        {{ if .Params.subtitle }}
+        <p class="text-xl text-zinc-600 dark:text-zinc-400 italic">{{ .Params.subtitle }}</p>
+        {{ end }}
+    </header>
+    {{ if .Params.epigraph }}
+    <div class="prose dark:prose-invert prose-lg max-w-none mb-8
+        prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:italic prose-p:leading-relaxed
+        prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline [&_a:hover]:underline">
+        {{ .Params.epigraph | markdownify }}
+    </div>
+    {{ end }}
+    <div class="dialogue">
+        {{ .Content }}
+    </div>
+    {{ if .Params.notes }}
+    <div class="prose dark:prose-invert prose-lg max-w-none mt-8 footnotes">
+        <h2>Notes</h2>
+        <ol>
+            {{ range .Params.notes }}
+            <li id="fn:{{ .id }}">
+                <p>{{ .text }} <a href="#fnref:{{ .id }}" class="footnote-backref">↩︎</a></p>
+            </li>
+            {{ end }}
+        </ol>
+    </div>
+    {{ end }}
+</article>
+{{ end }}
