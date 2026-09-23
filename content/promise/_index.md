@@ -41,6 +41,6 @@ Feeling that pull and not being swept away by it is the skill, one you can't jus
 
 ## Applications
 
-**Politics.** How do we select people we can trust with power? [*Incorruptible Institutions Need Incorruptible People First*](https://brambles.joshuapritikin.com/posts/incorruptible-and-the-missing-mechanism/)
+**Politics.** [How do we select people we can trust with power?](https://brambles.joshuapritikin.com/posts/incorruptible-and-the-missing-mechanism/)
 
-**IFS Practitioner training.** *Coming soon.*
+**IFS Practitioner training.** A dramatized dialogue: [Trailheads on Demand](/trailheads-on-demand/)
