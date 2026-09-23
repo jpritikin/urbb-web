@@ -1,8 +1,12 @@
 ---
 title: "Shop"
 subtitle: "Support Your Practice with Sacred Items"
-version: "v1.6.1"
+version: "v1.7.0"
 ---
+
+<div class="not-prose rounded-lg border-2 border-dotted border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 mb-6 text-center">
+<p class="text-zinc-800 dark:text-zinc-200 m-0">📖 Looking to order the book? <a href="/book/#order-your-copy" class="text-sky-600 dark:text-sky-400 font-semibold">Get your copy here</a>.</p>
+</div>
 
 ## Why a Shop? 🛍️
 
