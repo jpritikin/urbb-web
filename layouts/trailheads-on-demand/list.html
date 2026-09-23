@@ -10,8 +10,8 @@
         {{ end }}
     </header>
     {{ if .Params.epigraph }}
-    <div class="prose dark:prose-invert prose-lg max-w-none mb-8
-        prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:italic prose-p:leading-relaxed
+    <div class="prose dark:prose-invert prose-lg max-w-none mb-8 italic
+        text-zinc-600 dark:text-zinc-400 leading-relaxed
         prose-a:text-sky-600 dark:prose-a:text-sky-400 prose-a:no-underline [&_a:hover]:underline">
         {{ .Params.epigraph | markdownify }}
     </div>
