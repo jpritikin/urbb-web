@@ -6,6 +6,7 @@ import { initHoverSwap } from './pages/hoverSwap.js';
 import { initHeadingAnchors } from './pages/headingAnchors.js';
 import { initCartDrawer, openCart, syncBadge } from './shop/cartDrawer.js';
 import { getCart } from './shop/cart.js';
+import { initPromiseSun } from './pages/promiseSun.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('image-curtain')) {
@@ -36,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.querySelector('.book-page')) {
         initBookNav();
+    }
+
+    if (document.getElementById('promise-sun')) {
+        initPromiseSun();
     }
 
     const themeToggle = document.getElementById('theme-toggle');
