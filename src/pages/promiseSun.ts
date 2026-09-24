@@ -1,16 +1,17 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const RAY_COUNT = 25;
+const RAY_COUNT = 15;
 const RAY_GAP = 20;
 const RAY_INNER_RADIUS = 80;
 const RAY_OUTER_RADIUS = 2600;
-const RAY_HALF_ANGLE_DEG = 1.25;
+const RAY_HALF_ANGLE_MIN_DEG = 0.75;
+const RAY_HALF_ANGLE_MAX_DEG = 1.75;
 const RAY_ANGLE_MIN_DEG = 90;
-const RAY_ANGLE_MAX_DEG = 270;
+const RAY_ANGLE_MAX_DEG = 180;
 const CORE_RADIUS = 90;
 const HUE_MIN = 0;
 const HUE_MAX = 70;
 const FADE_PERIOD_MIN_SEC = 8;
-const FADE_PERIOD_MAX_SEC = 25;
+const FADE_PERIOD_MAX_SEC = 20;
 const RAY_MAX_OPACITY = 0.5;
 const SPARKLES_PER_RAY_PER_1000PX = 25;
 const SPARKLE_SPEED_MIN_PXPS = 6;
@@ -28,11 +29,13 @@ interface Ray {
     periodSec: number;
     phase: number;
     angleDeg: number;
+    halfAngleDeg: number;
 }
 
 interface Sparkle {
     element: SVGPathElement;
     angleDeg: number;
+    halfAngleDeg: number;
     progress: number;
     speed: number;
     offsetRatio: number;
@@ -42,12 +45,27 @@ interface Sparkle {
     crossAngleTargetDeg: number;
 }
 
+const RAY_MAX_OVERLAP_RATIO = 0.5;
+const RAY_PLACEMENT_MAX_ATTEMPTS = 200;
+
 function randomBetween(min: number, max: number): number {
     return min + Math.random() * (max - min);
 }
 
-function makeRayPath(cx: number, cy: number, angleDeg: number): SVGPathElement {
-    const half = (RAY_HALF_ANGLE_DEG * Math.PI) / 180;
+function pickRayAngle(existingRays: { angleDeg: number; halfAngleDeg: number }[], halfAngleDeg: number): number {
+    for (let attempt = 0; attempt < RAY_PLACEMENT_MAX_ATTEMPTS; attempt++) {
+        const angle = randomBetween(RAY_ANGLE_MIN_DEG, RAY_ANGLE_MAX_DEG);
+        const overlaps = existingRays.some((other) => {
+            const minSeparationDeg = (halfAngleDeg + other.halfAngleDeg) * (1 - RAY_MAX_OVERLAP_RATIO);
+            return Math.abs(angle - other.angleDeg) < minSeparationDeg;
+        });
+        if (!overlaps) return angle;
+    }
+    return randomBetween(RAY_ANGLE_MIN_DEG, RAY_ANGLE_MAX_DEG);
+}
+
+function makeRayPath(cx: number, cy: number, angleDeg: number, halfAngleDeg: number): SVGPathElement {
+    const half = (halfAngleDeg * Math.PI) / 180;
     const angle = (angleDeg * Math.PI) / 180;
     const innerRadius = RAY_INNER_RADIUS + RAY_GAP;
 
@@ -102,8 +120,9 @@ export function initPromiseSun(): () => void {
     const rayGroup = document.createElementNS(SVG_NS, 'g');
     const rays: Ray[] = [];
     for (let i = 0; i < RAY_COUNT; i++) {
-        const angle = randomBetween(RAY_ANGLE_MIN_DEG, RAY_ANGLE_MAX_DEG);
-        const path = makeRayPath(cx, cy, angle);
+        const halfAngleDeg = randomBetween(RAY_HALF_ANGLE_MIN_DEG, RAY_HALF_ANGLE_MAX_DEG);
+        const angle = pickRayAngle(rays, halfAngleDeg);
+        const path = makeRayPath(cx, cy, angle, halfAngleDeg);
         const hue = randomBetween(HUE_MIN, HUE_MAX);
         const color = `hsl(${hue}, 90%, 60%)`;
 
@@ -129,6 +148,7 @@ export function initPromiseSun(): () => void {
             periodSec: randomBetween(FADE_PERIOD_MIN_SEC, FADE_PERIOD_MAX_SEC),
             phase: Math.random() * Math.PI * 2,
             angleDeg: angle,
+            halfAngleDeg,
         });
     }
     svg.appendChild(defs);
@@ -151,6 +171,7 @@ export function initPromiseSun(): () => void {
             sparkles.push({
                 element: path,
                 angleDeg: ray.angleDeg,
+                halfAngleDeg: ray.halfAngleDeg,
                 progress: Math.random(),
                 speed: randomBetween(SPARKLE_SPEED_MIN_PXPS, SPARKLE_SPEED_MAX_PXPS) / visibleRayLength,
                 offsetRatio: (Math.random() - 0.5) * 2,
@@ -190,8 +211,8 @@ export function initPromiseSun(): () => void {
     let lastElapsedSec = 0;
 
     function updateSparklePositions() {
-        const half = (RAY_HALF_ANGLE_DEG * Math.PI) / 180;
         for (const sparkle of sparkles) {
+            const half = (sparkle.halfAngleDeg * Math.PI) / 180;
             const rayAngle = (sparkle.angleDeg * Math.PI) / 180;
             const radius = RAY_INNER_RADIUS + RAY_GAP + sparkle.progress * (RAY_OUTER_RADIUS - RAY_INNER_RADIUS - RAY_GAP);
             const spread = sparkle.offsetRatio * half;
