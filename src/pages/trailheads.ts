@@ -17,11 +17,40 @@ document.addEventListener('DOMContentLoaded', () => {
   lines.forEach((line) => visibilityObserver.observe(line));
 
   const dialogue = document.querySelector('.dialogue') as HTMLElement | null;
+  let dealObserver: IntersectionObserver | null = null;
+  let relayout: (() => void) | null = null;
   if (dialogue) {
-    const relayout = initStaggeredDialogue(dialogue);
-    initCardDeal(dialogue, relayout);
+    relayout = initStaggeredDialogue(dialogue);
+    dealObserver = initCardDeal(dialogue, relayout);
   }
+
+  initPartTheSea(lines, visibilityObserver, dealObserver, relayout);
 });
+
+// Lets readers skip the scroll-triggered reveal: forces every bubble to its
+// final visible/dealt state immediately, then relayouts once so the
+// staggered positions settle without waiting for further scrolling.
+function initPartTheSea(
+  lines: NodeListOf<Element>,
+  visibilityObserver: IntersectionObserver,
+  dealObserver: IntersectionObserver | null,
+  relayout: (() => void) | null
+) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'part-the-sea';
+  button.textContent = '🌊 Part the Sea';
+  button.addEventListener('click', () => {
+    lines.forEach((line) => {
+      line.classList.add('is-visible', 'is-dealt');
+      visibilityObserver.unobserve(line);
+      dealObserver?.unobserve(line);
+    });
+    relayout?.();
+    button.remove();
+  });
+  document.body.appendChild(button);
+}
 
 // On wide screens the dialogue splits into two columns (left = one speaker,
 // right = the other). Independent column flow can't guarantee each turn's
@@ -101,9 +130,9 @@ function settledHeight(turn: HTMLElement): number {
 // to close/open the gap. The CSS transition on `top` (with the same bouncy
 // easing as left/right/width) is what makes that shift read as bubbles
 // bouncing into their new resting place rather than jumping.
-function initCardDeal(dialogue: HTMLElement, relayout: () => void) {
+function initCardDeal(dialogue: HTMLElement, relayout: () => void): IntersectionObserver | null {
   const mediaQuery = window.matchMedia('(min-width: 900px)');
-  if (!mediaQuery.matches) return;
+  if (!mediaQuery.matches) return null;
 
   const dealObserver = new IntersectionObserver(
     (entries) => {
@@ -119,4 +148,5 @@ function initCardDeal(dialogue: HTMLElement, relayout: () => void) {
   );
 
   dialogue.querySelectorAll('.say').forEach((line) => dealObserver.observe(line));
+  return dealObserver;
 }
