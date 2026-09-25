@@ -7,6 +7,7 @@ import { initHeadingAnchors } from './pages/headingAnchors.js';
 import { initCartDrawer, openCart, syncBadge } from './shop/cartDrawer.js';
 import { getCart } from './shop/cart.js';
 import { initPromiseSun } from './pages/promiseSun.js';
+import { initPromiseClouds } from './pages/promiseClouds.js';
 import { fetchCosignerCount } from './pages/cosigners.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -69,6 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById('promise-sun')) {
         initPromiseSun();
+    }
+
+    if (document.getElementById('promise-clouds')) {
+        initPromiseClouds();
     }
 
     if (themeToggle) {
