@@ -2,12 +2,16 @@
   {
     "given": "Chelsea",
     "surname": "Goucher",
-    "credential": "?",
+    "credential": "B.A.",
+    "credentialNoteOverrides": {
+        "B.A.": "in Economics"
+    },
     "specialties": ["yoga", "intuitive coaching", "psychedelic facilitation"],
     "location": "Sevierville, TN",
+    "practicingSince": 2021,
     "url": "https://awakeningchandra.com/",
     "bio": "Fascinated by the intersection of consciousness expansion with personal growth and our collective evolution. Drawing on her background of overcoming addiction, people-pleasing, and co-dependency and her years of working in the policy, non-profit, and corporate worlds, she helps her clients tap into their creativity, sense of purpose, and self-love in order to live with the integrity and authenticity necessary to change our social systems from the inside out. Find her on Instagram or Substack under Awakening Chandra.",
-    "lastChecked": "2026-09-24"
+    "lastChecked": "2026-09-25"
   },
   {
     "given": "Shervon",
