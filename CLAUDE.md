@@ -24,6 +24,8 @@ This dual nature - simultaneously useful and self-parodying - should inform the 
 
 ## Code Organization
 
+I generally have `npm run dev` already started.
+
 Segregate page-specific details from site-wide styles and layouts. Information should have the smallest possible scope:
 - Page-specific CSS goes in separate files (e.g., `gallery.css`, `book.css`)
 - Section-specific layouts go in `layouts/{section}/` directories
