@@ -1,4 +1,9 @@
+import { initCosigners } from './cosigners.js';
+
 document.addEventListener('DOMContentLoaded', () => {
+  const cosignersAnchor = document.getElementById('cosigners-anchor');
+  if (cosignersAnchor) initCosigners(cosignersAnchor);
+
   const lines = document.querySelectorAll('.say');
   if (lines.length === 0) return;
 

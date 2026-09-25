@@ -1,0 +1,54 @@
+[
+  {
+    "given": "Chelsea",
+    "surname": "Goucher",
+    "credential": "?",
+    "specialties": ["yoga", "intuitive coaching", "psychedelic facilitation"],
+    "location": "Sevierville, TN",
+    "url": "https://awakeningchandra.com/",
+    "bio": "Fascinated by the intersection of consciousness expansion with personal growth and our collective evolution. Drawing on her background of overcoming addiction, people-pleasing, and co-dependency and her years of working in the policy, non-profit, and corporate worlds, she helps her clients tap into their creativity, sense of purpose, and self-love in order to live with the integrity and authenticity necessary to change our social systems from the inside out. Find her on Instagram or Substack under Awakening Chandra.",
+    "lastChecked": "2026-09-24"
+  },
+  {
+    "given": "Shervon",
+    "surname": "Laurice",
+    "credential": "LCPC, MBPT",
+    "specialties": ["depression", "anxiety", "PTSD", "trauma", "chronic pain"],
+    "location": "Silver Spring, MD",
+    "practicingSince": 2003,
+    "url": "https://restoretranquility.com",
+    "bio": "With more than 23 years of experience, she specializes in supporting individuals navigating depression, anxiety, PTSD, trauma, and chronic pain. As a Licensed Clinical Professional Counselor (LCPC), Mindfulness-Based Psychedelic Therapist (MBPT), and certified Life Coach and Yoga Therapist, she blends evidence-based therapy with mindfulness and holistic practices.",
+    "lastChecked": "2026-09-24"
+  },
+  {
+    "given": "Michelle",
+    "surname": "Dixon",
+    "credential": "PhD",
+    "credentialNote": "in Economics, not a clinical field",
+    "specialties": ["IFS-informed parts work", "EMDR-inspired processing", "somatic awareness", "trauma"],
+    "location": "Sydney, Australia",
+    "url": "https://michelle-dixon.com/",
+    "bio": "Trauma specialist integrating IFS-informed parts work, EMDR-inspired bilateral processing, somatic awareness, and mindfulness in trauma-informed practice. Works with developmental trauma, attachment wounds, and nervous system dysregulation in Sydney and online. Host of a podcast featuring in-depth interviews with two respected, legally operating US-based psychedelic training programs, bringing firsthand researched insight into the field.",
+    "lastChecked": "2026-09-24"
+  },
+  {
+    "given": "Josie",
+    "surname": "Proffit",
+    "credential": "LCMHC",
+    "specialties": [],
+    "location": "?",
+    "url": "https://latterdaydepththerapy.substack.com/",
+    "bio": "",
+    "lastChecked": "2026-09-24"
+  },
+  {
+    "given": "Jo",
+    "surname": "Distefano",
+    "credential": "?",
+    "specialties": ["couples", "family", "relationship counselling"],
+    "location": "Sunshine Coast, Australia",
+    "url": "https://evolvingconnectionscounselling.com.au/",
+    "bio": "Founder and lead counsellor at Evolving Connections Counselling, bringing thousands of hours of experience helping individuals, couples, and families on the Sunshine Coast rebuild trust and strengthen connection. Known for her warm, inclusive approach, she creates a safe space for clients of all backgrounds, guiding them toward healthier relationships, deeper understanding, and a brighter future.",
+    "lastChecked": "2026-09-24"
+  }
+]
