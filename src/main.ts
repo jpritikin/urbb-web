@@ -40,10 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initBookNav();
     }
 
-    if (document.getElementById('promise-sun')) {
-        initPromiseSun();
-    }
-
     const cosignerCount = document.getElementById('cosigner-count');
     if (cosignerCount) {
         fetchCosignerCount().then(count => { cosignerCount.textContent = String(count); });
@@ -70,6 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     setTheme(getPreferredTheme());
+
+    if (document.getElementById('promise-sun')) {
+        initPromiseSun();
+    }
 
     if (themeToggle) {
         themeToggle.addEventListener('click', () => {

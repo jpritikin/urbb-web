@@ -13,6 +13,7 @@ const HUE_MAX = 70;
 const FADE_PERIOD_MIN_SEC = 8;
 const FADE_PERIOD_MAX_SEC = 20;
 const RAY_MAX_OPACITY = 0.5;
+const SPARKLE_MAX_OPACITY = 0.9;
 const SPARKLES_PER_RAY_PER_1000PX = 25;
 const SPARKLE_SPEED_MIN_PXPS = 6;
 const SPARKLE_SPEED_MAX_PXPS = 14;
@@ -211,6 +212,8 @@ export function initPromiseSun(): () => void {
     let lastElapsedSec = 0;
 
     function updateSparklePositions() {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const sparkleMaxOpacity = isDarkMode ? SPARKLE_MAX_OPACITY / 3 : SPARKLE_MAX_OPACITY;
         for (const sparkle of sparkles) {
             const half = (sparkle.halfAngleDeg * Math.PI) / 180;
             const rayAngle = (sparkle.angleDeg * Math.PI) / 180;
@@ -235,7 +238,7 @@ export function initPromiseSun(): () => void {
 
             const fadeIn = Math.min(1, sparkle.progress * 8);
             const fadeOut = Math.min(1, (1 - sparkle.progress) * 4);
-            sparkle.element.setAttribute('opacity', String(0.9 * fadeIn * fadeOut * sparkle.flicker));
+            sparkle.element.setAttribute('opacity', String(sparkleMaxOpacity * fadeIn * fadeOut * sparkle.flicker));
         }
     }
 
