@@ -1,6 +1,6 @@
 ---
 title: "Trailheads on Demand"
-version: "v1.7.0"
+version: "v1.8.0"
 epigraph: "Written for [Internal Family Systems](https://ifs-institute.com/) practitioners familiar with the model’s terminology (parts, blending, Self-energy, and the like), and inspired by [Psychedelic Medicine and Internal Family Systems (IFS) Therapy](https://brambles.joshuapritikin.com/posts/lovas-et-al-2026/). Let me be clear that Ayahuasca is illegal in the U.S. except in certain circumstances. No training track sanctions what Naomi is about to propose, but her reasoning for it deserves consideration."
 notes:
   - id: book

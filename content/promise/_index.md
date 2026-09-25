@@ -1,6 +1,6 @@
 ---
 title: "Promise"
-version: "v1.0.0"
+version: "v1.1.0"
 ---
 
 ## Introduction
@@ -43,4 +43,4 @@ Feeling that pull and not being swept away by it is the skill, one you can’t j
 
 **Politics.** [How do we select people we can trust with power?](https://brambles.joshuapritikin.com/posts/incorruptible-and-the-missing-mechanism/)
 
-**IFS Practitioner training.** A dramatized dialogue: [Trailheads on Demand](/trailheads-on-demand/)
+**IFS Practitioner training.** A dramatized dialogue: [Trailheads on Demand](/trailheads-on-demand/) (<span id="cosigner-count">?</span> co-signers)

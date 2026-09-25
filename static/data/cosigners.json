@@ -24,7 +24,9 @@
     "given": "Michelle",
     "surname": "Dixon",
     "credential": "PhD",
-    "credentialNote": "in Economics, not a clinical field",
+    "credentialNoteOverrides": {
+        "PhD": "in Economics"
+    },
     "specialties": ["IFS-informed parts work", "EMDR-inspired processing", "somatic awareness", "trauma"],
     "location": "Sydney, Australia",
     "url": "https://michelle-dixon.com/",

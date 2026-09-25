@@ -2,7 +2,7 @@ interface Cosigner {
     given: string;
     surname: string;
     credential: string;
-    credentialNote?: string;
+    credentialNoteOverrides?: Record<string, string>;
     specialties: string[];
     location: string;
     practicingSince?: number;
@@ -28,17 +28,24 @@ function sortValue(c: Cosigner, key: SortKey): string | number {
     }
 }
 
-function renderCredential(c: Cosigner): string {
-    if (!c.credentialNote) return c.credential;
-    return `<span class="cosigner-tooltip-trigger" tabindex="0">${c.credential}<span class="cosigner-tooltip">${c.credentialNote}</span></span>`;
+function renderCredential(c: Cosigner, glossary: Record<string, string>): string {
+    return c.credential
+        .split(', ')
+        .map(acronym => {
+            const note = c.credentialNoteOverrides?.[acronym] ?? glossary[acronym];
+            return note
+                ? `<span class="cosigner-tooltip-trigger" tabindex="0">${acronym}<span class="cosigner-tooltip">${note}</span></span>`
+                : acronym;
+        })
+        .join(', ');
 }
 
-function renderRow(c: Cosigner, i: number): string {
+function renderRow(c: Cosigner, i: number, glossary: Record<string, string>): string {
     const years = yearsPracticing(c);
     return `
         <tr>
             <td><a href="${c.url}" target="_blank" rel="noopener">${c.given} ${c.surname}</a>${c.bio ? ` <button type="button" class="cosigner-bio-btn" data-cosigner-index="${i}" aria-expanded="false">bio ▾</button>` : ''}</td>
-            <td>${renderCredential(c)}</td>
+            <td>${renderCredential(c, glossary)}</td>
             <td>${c.location}</td>
             <td>${years !== null ? years : '?'}</td>
             <td>${c.specialties.join(', ') || '?'}</td>
@@ -49,7 +56,7 @@ function renderRow(c: Cosigner, i: number): string {
     `;
 }
 
-function renderTable(cosigners: Cosigner[]): string {
+function renderTable(cosigners: Cosigner[], glossary: Record<string, string>): string {
     return `
         <div class="cosigner-table-scroll">
             <table class="cosigner-table">
@@ -62,15 +69,23 @@ function renderTable(cosigners: Cosigner[]): string {
                         <th data-sort-key="specialties" tabindex="0">Specialties</th>
                     </tr>
                 </thead>
-                <tbody>${cosigners.map(renderRow).join('')}</tbody>
+                <tbody>${cosigners.map((c, i) => renderRow(c, i, glossary)).join('')}</tbody>
             </table>
         </div>
     `;
 }
 
-export async function initCosigners(anchor: HTMLElement): Promise<void> {
+export async function fetchCosignerCount(): Promise<number> {
     const response = await fetch('/data/cosigners.json');
     const cosigners: Cosigner[] = await response.json();
+    return cosigners.length;
+}
+
+export async function initCosigners(anchor: HTMLElement): Promise<void> {
+    const [cosigners, glossary]: [Cosigner[], Record<string, string>] = await Promise.all([
+        fetch('/data/cosigners.json').then(r => r.json()),
+        fetch('/data/credential-glossary.json').then(r => r.json()),
+    ]);
     if (cosigners.length === 0) return;
 
     let sortKey: SortKey = 'name';
@@ -78,7 +93,7 @@ export async function initCosigners(anchor: HTMLElement): Promise<void> {
     let sorted = [...cosigners].sort((a, b) => a.surname.localeCompare(b.surname));
 
     function render(): void {
-        anchor.innerHTML = renderTable(sorted);
+        anchor.innerHTML = renderTable(sorted, glossary);
         wireEvents();
     }
 

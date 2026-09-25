@@ -7,6 +7,7 @@ import { initHeadingAnchors } from './pages/headingAnchors.js';
 import { initCartDrawer, openCart, syncBadge } from './shop/cartDrawer.js';
 import { getCart } from './shop/cart.js';
 import { initPromiseSun } from './pages/promiseSun.js';
+import { fetchCosignerCount } from './pages/cosigners.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('image-curtain')) {
@@ -41,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById('promise-sun')) {
         initPromiseSun();
+    }
+
+    const cosignerCount = document.getElementById('cosigner-count');
+    if (cosignerCount) {
+        fetchCosignerCount().then(count => { cosignerCount.textContent = String(count); });
     }
 
     const themeToggle = document.getElementById('theme-toggle');
