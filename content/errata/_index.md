@@ -11,9 +11,9 @@ The book has been out for ten days and there's already an errata page. Science m
 
 The book covers DMT's role in ayahuasca, but the brew's other components also deserve attention. Tetrahydroharmine (THH)'s subjective effects are distinctive and fascinating. Visit my [fluid opinion](https://brambles.joshuapritikin.com/docs/psychoactive/thh/).
 
-### Kykeon 🍷 Rediscovered?
+### Kykeon 🍷 Rediscovered!
 
-Stahl's identification of a plausible recipe for soma (or kykeon) is the kind of claim that sounds too dramatic to be real. But I encourage you to meander through the [Stahl shrine](https://brambles.joshuapritikin.com/docs/psychoactive/stahl-shrine/) and judge for yourself.
+Stahl's identification of a plausible recipe for kykeon (or soma) is the kind of claim that sounds too dramatic to be real. But I encourage you to meander through the [Stahl shrine](https://brambles.joshuapritikin.com/docs/psychoactive/stahl-shrine/) and judge for yourself.
 
 ### Cannabis: More Favorites 🌱 [TODO]
 
