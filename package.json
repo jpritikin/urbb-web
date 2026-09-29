@@ -12,8 +12,9 @@
     "build:bundle": "esbuild src/bundled/newsAnalysis.ts --bundle --outfile=static/js/pages/newsAnalysis.js --platform=browser --target=es2020 --minify",
     "build:css": "NODE_ENV=production postcss ./static/css/input.css -o ./static/css/output.css",
     "gen:simdata": "npx tsx scripts/genSimData.ts",
-    "build": "npm run gen:simdata && npm run build:ts && npm run build:bundle && npm run build:css && hugo --minify",
+    "build": "npm run gen:simdata && npm run build:ts && npm run build:bundle && npm run build:css && npm run validate:links && hugo --minify",
     "start": "hugo server",
+    "validate:links": "node scripts/validate-links.mjs",
     "test": "npx tsx test/runTests.ts",
     "test:conversation": "npx tsx --test test/runConversationTests.ts"
   },
