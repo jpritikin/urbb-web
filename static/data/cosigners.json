@@ -41,10 +41,11 @@
     "given": "Josie",
     "surname": "Proffit",
     "credential": "LCMHC",
-    "specialties": [],
-    "location": "?",
+    "specialties": ["Coherence Therapy", "perfectionism", "people-pleasing", "anxiety", "identity transitions"],
+    "location": "Tremonton, Utah",
     "url": "https://latterdaydepththerapy.substack.com/",
-    "bio": "",
+    "bio": "I'm fascinated by the question of why we remain stuck in patterns we consciously want to change.",
+    "practicingSince": 2021,
     "lastChecked": "2026-09-24"
   },
   {
