@@ -24,6 +24,8 @@ const SPARKLE_CROSS_ANGLE_MIN_DEG = 70;
 const SPARKLE_CROSS_ANGLE_MAX_DEG = 110;
 const SPARKLE_CROSS_ANGLE_RATE_DEG_PER_SEC = 8;
 const MAX_FRAME_DELTA_SEC = 0.1;
+const ECLIPSE_FADE_SEC = 2.5;
+const MOON_RADIUS_RATIO = 1.1;
 
 interface Ray {
     element: SVGPathElement;
@@ -192,12 +194,20 @@ export function initPromiseSun(): () => void {
     core.setAttribute('fill', 'url(#promise-core-fill)');
     svg.appendChild(core);
 
+    const moon = document.createElementNS(SVG_NS, 'circle');
+    moon.setAttribute('cx', String(cx));
+    moon.setAttribute('cy', String(cy));
+    moon.setAttribute('r', String(CORE_RADIUS * MOON_RADIUS_RATIO));
+    moon.setAttribute('fill', 'var(--promise-moon-color)');
+    moon.setAttribute('opacity', '0');
+    svg.appendChild(moon);
+
     container.appendChild(svg);
 
     const style = document.createElement('style');
     style.textContent = `
-        #promise-sun { --promise-core-color-1: #fde68a; --promise-core-color-2: #f59e0b; --promise-core-color-3: #d97706; }
-        .dark #promise-sun { --promise-core-color-1: #fcd34d; --promise-core-color-2: #ea580c; --promise-core-color-3: #9a3412; }
+        #promise-sun { --promise-core-color-1: #fde68a; --promise-core-color-2: #f59e0b; --promise-core-color-3: #d97706; --promise-moon-color: #1c1917; }
+        .dark #promise-sun { --promise-core-color-1: #fcd34d; --promise-core-color-2: #ea580c; --promise-core-color-3: #9a3412; --promise-moon-color: #0c0a09; }
         .promise-sun-svg { display: block; position: absolute; top: 0; right: 0; }
     `;
     container.appendChild(style);
@@ -210,10 +220,27 @@ export function initPromiseSun(): () => void {
     let rafId: number | null = null;
     let startTime: number | null = null;
     let lastElapsedSec = 0;
+    const eclipseToggle = document.getElementById('eclipse-toggle') as HTMLInputElement | null;
+    let eclipseLevel = eclipseToggle?.checked ? 1 : 0;
+
+    function applyEclipse() {
+        moon.setAttribute('opacity', String(eclipseLevel));
+        core.setAttribute('opacity', String(1 - eclipseLevel));
+    }
+    applyEclipse();
+
+    function applyStaticEclipse() {
+        eclipseLevel = eclipseToggle?.checked ? 1 : 0;
+        applyEclipse();
+        for (const ray of rays) {
+            ray.element.setAttribute('opacity', String(RAY_MAX_OPACITY * 0.5 * (1 - eclipseLevel)));
+        }
+    }
+    if (reduceMotion) eclipseToggle?.addEventListener('change', applyStaticEclipse);
 
     function updateSparklePositions() {
         const isDarkMode = document.documentElement.classList.contains('dark');
-        const sparkleMaxOpacity = isDarkMode ? SPARKLE_MAX_OPACITY / 3 : SPARKLE_MAX_OPACITY;
+        const sparkleMaxOpacity = (isDarkMode ? SPARKLE_MAX_OPACITY / 3 : SPARKLE_MAX_OPACITY) * (1 - eclipseLevel);
         for (const sparkle of sparkles) {
             const half = (sparkle.halfAngleDeg * Math.PI) / 180;
             const rayAngle = (sparkle.angleDeg * Math.PI) / 180;
@@ -248,9 +275,16 @@ export function initPromiseSun(): () => void {
         const deltaSec = Math.min(elapsedSec - lastElapsedSec, MAX_FRAME_DELTA_SEC);
         lastElapsedSec = elapsedSec;
 
+        const eclipseTarget = eclipseToggle?.checked ? 1 : 0;
+        const eclipseStep = deltaSec / ECLIPSE_FADE_SEC;
+        eclipseLevel = Math.abs(eclipseTarget - eclipseLevel) <= eclipseStep
+            ? eclipseTarget
+            : eclipseLevel + Math.sign(eclipseTarget - eclipseLevel) * eclipseStep;
+        applyEclipse();
+
         for (const ray of rays) {
             const wave = 0.5 + 0.5 * Math.sin((elapsedSec / ray.periodSec) * Math.PI * 2 + ray.phase);
-            ray.element.setAttribute('opacity', String(wave * RAY_MAX_OPACITY));
+            ray.element.setAttribute('opacity', String(wave * RAY_MAX_OPACITY * (1 - eclipseLevel)));
         }
 
         const pulse = 1 + 0.05 * Math.sin(elapsedSec * (Math.PI * 2) / 6);
@@ -289,9 +323,7 @@ export function initPromiseSun(): () => void {
     if (!reduceMotion) {
         rafId = requestAnimationFrame(frame);
     } else {
-        for (const ray of rays) {
-            ray.element.setAttribute('opacity', String(RAY_MAX_OPACITY * 0.5));
-        }
+        applyStaticEclipse();
         for (const sparkle of sparkles) {
             sparkle.element.setAttribute('opacity', '0');
         }
@@ -300,6 +332,7 @@ export function initPromiseSun(): () => void {
     return () => {
         if (rafId !== null) cancelAnimationFrame(rafId);
         window.removeEventListener('resize', onResize);
+        eclipseToggle?.removeEventListener('change', applyStaticEclipse);
         container.innerHTML = '';
     };
 }
