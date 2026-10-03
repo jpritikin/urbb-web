@@ -1,4 +1,5 @@
 import { Cloud } from '../cloud/cloudShape.js';
+import { viewportScale } from '../utils/viewportScale.js';
 
 const MAX_CLOUDS = 4;
 const CLOUD_SCALE = 1.6;
@@ -134,7 +135,8 @@ export function initPromiseClouds(): () => void {
         spawnCloud(x, y);
     }
 
-    for (let i = 0; i < MAX_CLOUDS; i++) {
+    const cloudCount = Math.round(MAX_CLOUDS * viewportScale(container.clientWidth));
+    for (let i = 0; i < cloudCount; i++) {
         const { x, y } = randomInitialPosition();
         spawnCloud(x, y);
     }

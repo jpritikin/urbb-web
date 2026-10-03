@@ -1,5 +1,7 @@
+import { viewportScale } from '../utils/viewportScale.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const RAY_COUNT = 15;
+const DESKTOP_RAY_COUNT = 15;
 const RAY_GAP = 20;
 const RAY_INNER_RADIUS = 80;
 const RAY_OUTER_RADIUS = 2600;
@@ -122,7 +124,8 @@ export function initPromiseSun(): () => void {
 
     const rayGroup = document.createElementNS(SVG_NS, 'g');
     const rays: Ray[] = [];
-    for (let i = 0; i < RAY_COUNT; i++) {
+    const rayCount = Math.round(DESKTOP_RAY_COUNT * viewportScale(sunContainer.clientWidth));
+    for (let i = 0; i < rayCount; i++) {
         const halfAngleDeg = randomBetween(RAY_HALF_ANGLE_MIN_DEG, RAY_HALF_ANGLE_MAX_DEG);
         const angle = pickRayAngle(rays, halfAngleDeg);
         const path = makeRayPath(cx, cy, angle, halfAngleDeg);
