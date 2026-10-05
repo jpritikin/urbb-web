@@ -1,15 +1,19 @@
 ---
 title: "Errata"
-version: "v1.4.0"
+version: "v1.4.1"
 ---
 
 The book has been out for ten days and there's already an errata page. Science moves faster than ink dries. So here we are—collecting the updates, corrections, and "how did we miss that?" moments. This is the book's living edge, a place for new findings before the next edition catches up.
 
 ## More Psychedelics
 
-### 🌿 Ayahuasca: Beyond DMT
+### Ayahuasca: Beyond DMT
 
-The book covers DMT's role in ayahuasca, but the brew's other components also deserve attention. Tetrahydroharmine (THH)'s subjective effects are distinctive and fascinating. Visit my [fluid opinion](https://brambles.joshuapritikin.com/docs/psychoactive/thh/).
+The book covers 🌿 DMT's role in ayahuasca, but the brew's other components also deserve attention. Tetrahydroharmine (THH)'s subjective effects are distinctive and fascinating. Visit my [fluid opinion](https://brambles.joshuapritikin.com/docs/psychoactive/thh/).
+
+### Nausea-Free Ayahuasca™
+
+The rosemary recipe for chronic nausea 🤢 in the Santo Daime chapter works, but it tastes almost as bad as Daime itself. A refinement is much more pleasant. Combine 700 mL of water with four drops of food-grade peppermint (Mentha piperita) essential oil, ten drops of food-grade copaiba essential oil, and a quarter cup of white vinegar (5% acetic acid). Sip as needed to help clear the palate and settle the stomach.
 
 ### Kykeon 🍷 Rediscovered!
 
@@ -34,6 +38,18 @@ On page 323, the phrase "feitio preparation ceremony" contains a redundancy: _fe
 I know. Your copy is pristine. The margins are unblemished. The spine still has that satisfying crack. The thought of taking a pen to it feels like vandalism. But I promise you: as the author, I am formally, officially, and with great ceremony granting you permission to cross out that one little word. A single thin line through "preparation." That's all. The page will survive. You might even feel a small thrill of liberation. 🖊️
 
 If you truly can't bring yourself to do it, pencil works too. Or a very tiny sticky note. I won't judge.
+
+## Another Hymn I Should Have 🚩 Flagged
+
+In the Santo Daime chapter, a footnote calls out "Linha Do Tucum" (_O Cruzeiro_ #108) for endorsing splitting. I should have added a second offender: "[Guardião](https://nossairmandade.com/hymn/2389/Guardi%C3%A3o)" (_Hinário da Fé_, #18). The shaming sits in the middle verse:
+
+> _Aqui não se cria zombeteiro_ \
+> _Não se alimenta sofredor_ \
+> _Os vícios é para ser curado_ \
+> _Esta casa é de Deus_ \
+> _E Deus não tem vício nenhum_
+
+And yet, "Guardião" offers beautiful music and genuine poetry. The melody carries the shaming straight past the part of the mind that would object. It worked on me again. 🙈
 
 ## The BookLife Jab: A Calm Re-Examination
 
