@@ -17,7 +17,7 @@ The rosemary recipe for chronic nausea 🤢 in the Santo Daime chapter works, bu
 
 ### Kykeon 🍷 Rediscovered!
 
-Stahl's identification of a plausible recipe for kykeon (or soma) is the kind of claim that sounds too dramatic to be real. But I encourage you to meander through the [Stahl shrine](https://brambles.joshuapritikin.com/docs/psychoactive/stahl-shrine/) and judge for yourself.
+Stahl's identification of a plausible recipe for kykeon is the kind of claim that sounds too dramatic to be real. But I encourage you to meander through the [Stahl shrine](https://brambles.joshuapritikin.com/docs/psychoactive/stahl-shrine/) and judge for yourself.
 
 ### Cannabis: More Favorites 🌱 [TODO]
 
@@ -38,6 +38,14 @@ On page 323, the phrase "feitio preparation ceremony" contains a redundancy: _fe
 I know. Your copy is pristine. The margins are unblemished. The spine still has that satisfying crack. The thought of taking a pen to it feels like vandalism. But I promise you: as the author, I am formally, officially, and with great ceremony granting you permission to cross out that one little word. A single thin line through "preparation." That's all. The page will survive. You might even feel a small thrill of liberation. 🖊️
 
 If you truly can't bring yourself to do it, pencil works too. Or a very tiny sticky note. I won't judge.
+
+## The "c.f." Catastrophe 😭
+
+Throughout the book, I wrote "c.f." when I meant "cf." At least I was *consistent*, which is the only dignity left to me.
+
+The abbreviation comes from the Latin *confer*, "compare," and it is a single word. It has no internal period, because there is nothing to abbreviate between the "c" and the "f." By inserting one, I have invented a phantom word boundary and dragged a whole readership into it. Somewhere, a Latin teacher felt a disturbance in the Force.
+
+I cannot adequately express my shame. And yet I beg you, please do not correct them. It would be onerous, 82 capitalized and 29 lowercase offenses, an afternoon of your precious life. The fault is mine, not yours. Allow me to carry this burden.
 
 ## Another Hymn I Should Have 🚩 Flagged
 
