@@ -31,6 +31,12 @@ What happens when you mix psychedelics? The book mostly sticks to substances one
 
 [Farhad Dalal's *CBT: The Cognitive Behavioural Tsunami: Politics, Power and the Corruptions of Science*](https://www.karnacbooks.com/product/cbt-the-cognitive-behavioural-tsunami-politics-power-and-the-corruptions-of-science/93746/) crossed my desk too late to make the bibliography. Dalal argues that CBT's science isn't just thin, it's corrupt: a managerialist fetish for measurement that mistakes "the countable" for "the real," propped up by NICE, IAPT, and the broader neoliberal appetite for symptom reduction as a substitute for actual healing.
 
+## A New IFS Technique 🗣️
+
+Cece Sykes has come up with an IFS technique that she calls Self-to-Self communication. Suppose you're talking to your client Ann. You could say something like, "Ann, do you hear how exhausted that part of you is?" Ingenious. Or "Ann, can we listen to your part who is so exhausted?" Instead of speaking to the part, you address Ann's Self about the part, inviting her to listen *with* you.
+
+I'm not sure whether this is a new idea, but it's new to me. I haven't seen it in any of the IFS books I've read. Jump to 22:15 in her [IFS Talks interview](https://open.spotify.com/episode/7A451rasIJmC5WtlxQ6gDK) to hear her describe it.
+
 ## Missed by Every 👁️ Eye
 
 On page 323, the phrase "feitio preparation ceremony" contains a redundancy: _feitio_ already means preparation. The corrected text should read "feitio ceremony."[^portuguese]
@@ -45,7 +51,7 @@ Throughout the book, I wrote "c.f." when I meant "cf." At least I was *consisten
 
 The abbreviation comes from the Latin *confer*, "compare," and it is a single word. It has no internal period, because there is nothing to abbreviate between the "c" and the "f." By inserting one, I have invented a phantom word boundary and dragged a whole readership into it. Somewhere, a Latin teacher felt a disturbance in the Force.
 
-I cannot adequately express my shame. And yet I beg you, please do not correct them. It would be onerous, 82 capitalized and 29 lowercase offenses, an afternoon of your precious life. The fault is mine, not yours. Allow me to carry this burden.
+I cannot adequately express my shame. And yet I beg you, please do not correct them. It would be too onerous, 82 capitalized and 29 lowercase offenses, an afternoon of your precious life. Allow me to carry this burden.
 
 ## Another Hymn I Should Have 🚩 Flagged
 
