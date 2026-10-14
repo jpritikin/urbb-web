@@ -20,13 +20,13 @@
         {{ .Content }}
     </div>
     <div class="prose dark:prose-invert prose-lg max-w-none mt-8">
-        <h2>Co-signers</h2>
+        {{ .RenderString (dict "display" "block") "## Co-signers" }}
         <p class="italic">Co-signed by practitioners who believe IFS trainers should grapple with the prospect of using psychedelics for professional development.</p>
         <div id="cosigners-anchor"></div>
     </div>
     {{ if .Params.notes }}
     <div class="prose dark:prose-invert prose-lg max-w-none mt-8 footnotes">
-        <h2>Notes</h2>
+        {{ .RenderString (dict "display" "block") "## Notes" }}
         <ol>
             {{ range .Params.notes }}
             <li id="fn:{{ .id }}">
