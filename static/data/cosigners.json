@@ -51,11 +51,16 @@
   {
     "given": "Jo",
     "surname": "Distefano",
-    "credential": "?",
-    "specialties": ["couples", "family", "relationship counselling"],
+    "credential": "BSc, PGDip",
+    "credentialNoteOverrides": {
+        "BSc": "in Politics and Health",
+        "PGDip": "in Psychotherapy"
+    },
+    "specialties": ["IFS (Level 3 trained)", "individuals", "couples", "family", "relationship counselling"],
     "location": "Sunshine Coast, Australia",
+    "practicingSince": 2011,
     "url": "https://evolvingconnectionscounselling.com.au/",
     "bio": "Founder and lead counsellor at Evolving Connections Counselling, bringing thousands of hours of experience helping individuals, couples, and families on the Sunshine Coast rebuild trust and strengthen connection. Known for her warm, inclusive approach, she creates a safe space for clients of all backgrounds, guiding them toward healthier relationships, deeper understanding, and a brighter future.",
-    "lastChecked": "2026-09-24"
+    "lastChecked": "2026-10-19"
   }
 ]
