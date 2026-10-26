@@ -15,7 +15,7 @@ The book covers 🌿 DMT's role in ayahuasca, but the brew's other components al
 
 The rosemary recipe for chronic nausea 🤢 in the Santo Daime chapter works, but it tastes almost as bad as Daime itself. A refinement is much more pleasant. Combine 700 mL of water with four drops of food-grade peppermint (Mentha piperita) essential oil, ten drops of food-grade copaiba essential oil, and a quarter cup of white vinegar (5% acetic acid). Sip as needed to help clear the palate and settle the stomach.
 
-### Kykeon 🍷 Rediscovered!
+### Kykeon 🍵 Rediscovered!
 
 Stahl's identification of a plausible recipe for kykeon is the kind of claim that sounds too dramatic to be real. But I encourage you to meander through the [Stahl shrine](https://brambles.joshuapritikin.com/docs/psychoactive/stahl-shrine/) and judge for yourself.
 
