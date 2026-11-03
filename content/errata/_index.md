@@ -13,7 +13,7 @@ The book covers 🌿 DMT's role in ayahuasca, but the brew's other components al
 
 ### Nausea-Free Ayahuasca™
 
-The rosemary recipe for chronic nausea 🤢 in the Santo Daime chapter works, but it tastes almost as bad as Daime itself. A refinement is much more pleasant. Combine 700 mL of water with four drops of food-grade peppermint (Mentha piperita) essential oil, ten drops of food-grade copaiba essential oil, and a quarter cup of white vinegar (5% acetic acid). Sip as needed to help clear the palate and settle the stomach.
+The rosemary recipe for chronic nausea 🤢 in the Santo Daime chapter works, but it tastes almost as bad as Daime itself. A refinement is much more pleasant. Combine 650 mL of water with four drops of food-grade peppermint (Mentha piperita) essential oil, eight drops of food-grade copaiba essential oil, and a half cup of white vinegar (5% acetic acid). Sip as needed to help clear the palate and settle the stomach.
 
 ### Kykeon 🍵 Rediscovered!
 
