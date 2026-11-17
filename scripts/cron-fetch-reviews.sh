@@ -3,13 +3,14 @@ set -euo pipefail
 source ~/.config/urbb/r2-credentials
 cd "$(dirname "$0")/.."
 
-LOG_DIR="$HOME/.cache/urbb-web"
-LOG_FILE="$LOG_DIR/fetch-reviews.log"
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.local/share/ms-playwright}"
+export URBB_STATE_DIR="${URBB_STATE_DIR:-$HOME/.local/state/urbb-web}"
+LOG_FILE="$URBB_STATE_DIR/fetch-reviews.log"
 MAX_LOG_LINES=2000
-mkdir -p "$LOG_DIR"
+mkdir -p "$URBB_STATE_DIR"
 
 set +e
-output="$(npx ts-node --project scripts/tsconfig.json scripts/fetch-goodreads-reviews.ts 2>&1)"
+output="$(npx tsx scripts/fetch-goodreads-reviews.ts 2>&1)"
 status=$?
 set -e
 

@@ -1,11 +1,11 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S npx tsx
 // Adjusts the odds that a Goodreads review gets featured on the site, by
 // setting a `weightOverride` field on the review in reviews.json (R2), which
 // takes precedence over the like-count-derived `weight` set by fetch-goodreads-reviews.ts.
 // Usage:
-//   ts-node review-odds.ts list                    print all reviews with reviewer key and weight
-//   ts-node review-odds.ts set <reviewer> <weight>  set the odds multiplier for a review (e.g. 0.2 to reduce)
-//   ts-node review-odds.ts clear <reviewer>         remove the override, reverting to the like-derived weight
+//   npx tsx review-odds.ts list                    print all reviews with reviewer key and weight
+//   npx tsx review-odds.ts set <reviewer> <weight>  set the odds multiplier for a review (e.g. 0.2 to reduce)
+//   npx tsx review-odds.ts clear <reviewer>         remove the override, reverting to the like-derived weight
 // Env vars: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 
 import * as fs from "fs";

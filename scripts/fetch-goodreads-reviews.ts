@@ -1,15 +1,17 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S npx tsx
 // Fetches reviews from a GoodReads book page, filters to 4+ stars, merges any
 // new ones into the stored set (existing entries, including odds overrides
 // from review-odds.ts, are kept as-is), and uploads the result as JSON to
 // Cloudflare R2.
-// Usage: ts-node fetch-goodreads-reviews.ts [--dry-run] [--list]
+// Usage: npx tsx fetch-goodreads-reviews.ts [--dry-run] [--list]
 //   --dry-run  print freshly scraped reviews without uploading or merging
 //   --list     print currently stored reviews from R2 (or view https://data.unburdened.biz/reviews.json)
 //   --force    upload even if no new reviews were found
 // Env vars: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+// Optional: URBB_STATE_DIR (where debug artifacts go; defaults to the system temp dir)
 
 import * as fs from "fs";
+import * as os from "os";
 import { execSync } from "child_process";
 import { chromium } from "playwright";
 import { likesToWeight } from "./reviewWeight";
@@ -32,7 +34,7 @@ interface Review {
     weightOverride?: number;
 }
 
-const DEBUG_DIR = `${process.env.HOME}/.cache/urbb-web`;
+const DEBUG_DIR = process.env.URBB_STATE_DIR ?? os.tmpdir();
 
 async function fetch(url: string): Promise<string> {
     const browser = await chromium.launch();

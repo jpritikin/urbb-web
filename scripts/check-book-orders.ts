@@ -1,12 +1,12 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env -S npx tsx
 // Polls Stripe for checkout.session.completed events containing Acutrack/Lulu
 // book line items and prints new orders to stdout (cron emails stdout output).
-// Usage: ts-node check-book-orders.ts [--dry-run]
+// Usage: npx tsx check-book-orders.ts [--dry-run]
 //   --dry-run  print new orders without advancing the cursor
 // Env vars: STRIPE_SECRET_KEY (env or .env file)
 //
 // Cron entry:
-//   */15 * * * * cd /home/joshua/urbb-web && npx ts-node scripts/check-book-orders.ts
+//   */15 * * * * cd /home/joshua/urbb-web && npx tsx scripts/check-book-orders.ts
 
 import * as fs from "fs";
 import * as path from "path";
